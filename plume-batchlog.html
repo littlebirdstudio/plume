@@ -396,6 +396,29 @@ function findFormula(id) {
   for (var i = 0; i < forms.length; i++) if (forms[i].id === id) return forms[i];
   return null;
 }
+// Find the lye ingredient in the library. Tries INCI match first ("Sodium Hydroxide"
+// or "Potassium Hydroxide"), then falls back to name keywords.
+function findLyeIngredient(lyeType) {
+  var inciTarget = lyeType === 'koh' ? 'potassium hydroxide' : 'sodium hydroxide';
+  var nameKeyA   = lyeType === 'koh' ? 'koh'                  : 'naoh';
+  var nameKeyB   = lyeType === 'koh' ? 'potassium hydroxide'  : 'sodium hydroxide';
+  // First pass: exact INCI match
+  for (var i = 0; i < ings.length; i++) {
+    var inci = (ings[i].inci || '').toLowerCase();
+    if (inci === inciTarget) return ings[i];
+  }
+  // Second pass: INCI contains
+  for (var j = 0; j < ings.length; j++) {
+    var inci2 = (ings[j].inci || '').toLowerCase();
+    if (inci2.indexOf(inciTarget) >= 0) return ings[j];
+  }
+  // Third pass: name match (e.g. "Sodium hydroxide (lye)" or "NaOH")
+  for (var k = 0; k < ings.length; k++) {
+    var nm = (ings[k].name || '').toLowerCase();
+    if (nm.indexOf(nameKeyA) >= 0 || nm.indexOf(nameKeyB) >= 0) return ings[k];
+  }
+  return null;
+}
 
 // ── Stats ──
 function renderStats() {
@@ -565,9 +588,9 @@ function onFormulaChange() {
   }
   // Show cure row only for soap
   document.getElementById('f-cure-row').style.display = isSoapType(newFormula.type) ? 'flex' : 'none';
-  // Default yield to formula batchSize if present
-  if (newFormula.batchSize && !document.getElementById('f-yield').value) {
-    document.getElementById('f-yield').value = newFormula.batchSize;
+  // Default yield to 100g if blank (formulas don't store batchSize -- that's a session-only field)
+  if (!document.getElementById('f-yield').value) {
+    document.getElementById('f-yield').value = isSoapType(newFormula.type) ? 1000 : 100;
   }
   recalcPreview();
 }
@@ -589,44 +612,121 @@ function recalcPreview() {
     return;
   }
 
-  // Compute total grams of the formula at its current spec
-  // For soap, lines have gramsFixed (oil weight model); for others, lines have pct of yield
+  // Compute each line's gram amount at the requested yield.
+  // Mirrors the canonical model in plume-formulations.html:
+  //   - Each line references its ingredient by l.ingId
+  //   - For non-soap: line is either pct-based (% of batch) or pinned-grams-based
+  //     (fixed gramsFixed, applied at the formula's recorded batchSize). Pct lines
+  //     scale with yield, pinned-grams lines also scale (treated as % of batchSize).
+  //   - Add-ins (l.addin): non-soap add-ins use gramsFixed at formula's batchSize
+  //   - For soap: oil lines use pct of total oils, scale with yield as "oil weight"
+  //   - Soap add-ins (l.soapAddin): traditionally PPO (per pound of oils);
+  //     they live OUTSIDE the oil 100% by convention
   var lines = newFormula.lines || [];
   var soap  = isSoapType(newFormula.type);
-
+  var formulaBs = parseFloat(newFormula.batchSize) || 100;
   var preview = [];
+
   if (soap) {
-    // For soap, lines are typically gramsFixed. Sum the oil grams.
-    // Then scale to yieldG / sum-of-oils ratio.
-    var oilSum = 0;
-    lines.forEach(function(l) {
-      var g = parseFloat(l.gramsFixed);
-      if (!isNaN(g) && g > 0 && !l.soapAddin) oilSum += g;
-    });
-    var ratio = (oilSum > 0) ? (yieldG / oilSum) : 1;
-    lines.forEach(function(l) {
-      var ing = findIng(l.ingredientId);
+    // For soap, yield IS the oil weight (soap makers think in oil grams)
+    var oilLines = lines.filter(function(l) { return !l.soapAddin; });
+    var totalOilPct = 0;
+    oilLines.forEach(function(l) { totalOilPct += parseFloat(l.pct) || 0; });
+
+    oilLines.forEach(function(l) {
+      var ing = findIng(l.ingId);
       if (!ing) return;
-      var g = parseFloat(l.gramsFixed);
-      if (isNaN(g) || g <= 0) return;
-      preview.push({
-        ingredientId:   ing.id,
-        ingredientName: ing.name,
-        grams: g * ratio,
-        available: calcIngStockG(ing)
-      });
-    });
-  } else {
-    // Non-soap: lines are percent. amount = (pct/100) * yieldG.
-    lines.forEach(function(l) {
-      var ing = findIng(l.ingredientId);
-      if (!ing) return;
-      var pct = parseFloat(l.pct);
-      if (isNaN(pct) || pct <= 0) return;
+      var pct = parseFloat(l.pct) || 0;
+      if (pct <= 0) return;
       preview.push({
         ingredientId:   ing.id,
         ingredientName: ing.name,
         grams: (pct / 100) * yieldG,
+        available: calcIngStockG(ing)
+      });
+    });
+
+    // Soap addins -- traditionally PPO (per pound of oils). We approximate
+    // by scaling the recorded gramsFixed by (yield / formula batchSize).
+    var addinLines = lines.filter(function(l) { return l.soapAddin; });
+    var scale = (formulaBs > 0) ? (yieldG / formulaBs) : 1;
+    addinLines.forEach(function(l) {
+      var ing = findIng(l.ingId);
+      if (!ing) return;
+      var g = parseFloat(l.gramsFixed) || 0;
+      if (g <= 0) return;
+      preview.push({
+        ingredientId:   ing.id,
+        ingredientName: ing.name,
+        grams: g * scale,
+        available: calcIngStockG(ing)
+      });
+    });
+
+    // ── Lye computation (matches recalcSoap in plume-formulations.html) ──
+    // Read the formula's stored soap settings
+    var s         = newFormula.soapSettings || {};
+    var superfat  = parseFloat(s.superfat) || 5;
+    var lyeType   = s.lyeType || 'naoh';
+    var lyeKey    = lyeType === 'koh' ? 'koh' : 'naoh';
+    var kohPurity = lyeType === 'koh' ? (parseFloat(s.kohPurity) || 90) / 100 : 1;
+
+    var pureLye = 0;
+    oilLines.forEach(function(l) {
+      var ing = findIng(l.ingId);
+      if (!ing) return;
+      var g   = (parseFloat(l.pct) || 0) / 100 * yieldG;
+      if (!ing.soap || !ing.soap[lyeKey]) return; // missing SAP -- skip
+      pureLye += g * ing.soap[lyeKey] * (1 - superfat / 100);
+    });
+    var actualLye = kohPurity > 0 ? pureLye / kohPurity : pureLye;
+
+    if (actualLye > 0) {
+      var lyeIng = findLyeIngredient(lyeType);
+      if (lyeIng) {
+        preview.push({
+          ingredientId:   lyeIng.id,
+          ingredientName: lyeIng.name,
+          grams: actualLye,
+          available: calcIngStockG(lyeIng)
+        });
+      } else {
+        // Lye ingredient not found in library; mark with sentinel so warning shows
+        preview.push({
+          ingredientId:   null,
+          ingredientName: (lyeType === 'koh' ? 'Potassium Hydroxide (KOH)' : 'Sodium Hydroxide (NaOH)') + ' -- not in your ingredient library',
+          grams: actualLye,
+          available: null,
+          missing: true
+        });
+      }
+    }
+  } else {
+    // Non-soap: every line resolves to a gram amount
+    lines.forEach(function(l) {
+      var ing = findIng(l.ingId);
+      if (!ing) return;
+      var grams = 0;
+      if (l.addin) {
+        // Add-ins: scale gramsFixed by (yield / formula batchSize)
+        var ag    = parseFloat(l.gramsFixed) || 0;
+        var scale = (formulaBs > 0) ? (yieldG / formulaBs) : 1;
+        grams = ag * scale;
+      } else if (l.pinned) {
+        // Pinned grams: treat as fixed proportion of batchSize, scale to yield
+        var gf    = parseFloat(l.gramsFixed) || 0;
+        var scl   = (formulaBs > 0) ? (yieldG / formulaBs) : 1;
+        grams = gf * scl;
+      } else {
+        // Standard pct line
+        var pct = parseFloat(l.pct) || 0;
+        grams = (pct / 100) * yieldG;
+      }
+      if (grams <= 0) return;
+      preview.push({
+        ingredientId:   ing.id,
+        ingredientName: ing.name,
+        grams: grams,
         available: calcIngStockG(ing)
       });
     });
@@ -646,7 +746,17 @@ function renderPreviewRows() {
   }
   var html = '';
   var lowStockItems = [];
+  var missingItems  = [];
   newPreview.forEach(function(p, idx) {
+    if (p.missing) {
+      missingItems.push(p);
+      html += '<div class="ing-preview-row low">' +
+        '<div class="ing-preview-name">' + esc(p.ingredientName) + '</div>' +
+        '<div style="text-align:right;color:var(--warning);font-weight:500;font-size:12px">' + p.grams.toFixed(2) + 'g</div>' +
+        '<div style="text-align:right;color:var(--warning);font-size:11px">add to library</div>' +
+        '</div>';
+      return;
+    }
     var low = (p.available !== null && p.available < p.grams);
     if (low) lowStockItems.push(p);
     var availTxt = p.available === null
@@ -661,14 +771,19 @@ function renderPreviewRows() {
   });
   body.innerHTML = html;
 
+  var warnings = [];
+  if (missingItems.length) {
+    warnings.push('Lye ingredient not found in your library. Add it to the Ingredients module so it can be tracked in stock and appear on labels.');
+  }
   if (lowStockItems.length) {
     var links = lowStockItems.map(function(p) {
       return '<a href="plume-ingredients.html#ing=' + encodeURIComponent(p.ingredientId) + '" target="_blank" rel="noopener">' + esc(p.ingredientName) + '</a>';
     }).join(', ');
-    warnBox.innerHTML = '<div class="stock-warning">Insufficient stock for: ' + links + '. Update stock in the Ingredients module, then reopen this form to recheck.</div>';
-  } else {
-    warnBox.innerHTML = '';
+    warnings.push('Insufficient stock for: ' + links + '. Update stock in the Ingredients module, then reopen this form to recheck.');
   }
+  warnBox.innerHTML = warnings.length
+    ? '<div class="stock-warning">' + warnings.join('<br><br>') + '</div>'
+    : '';
 }
 
 function onPreviewAmt(idx, v) {
