@@ -582,7 +582,7 @@ function exportData() {
   var blob = new Blob([JSON.stringify({ formulations: forms }, null, 2)], { type: 'application/json' });
   var a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'aerie-formulations-' + new Date().toISOString().slice(0,10) + '.json';
+  a.download = 'plume-formulations-' + new Date().toISOString().slice(0,10) + '.json';
   a.click();
 }
 

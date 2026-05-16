@@ -1575,7 +1575,7 @@ function exportData() {
   var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
   var a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'plume-backup-' + new Date().toISOString().slice(0,10) + '.json';
+  a.download = 'plume-ingredients-' + new Date().toISOString().slice(0,10) + '.json';
   a.click();
 }
 
