@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plume - Batch Log</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --cream:        #F7F4EF;
+  --cream-dark:   #EDE8DF;
+  --cream-border: #D8D0C4;
+  --white:        #FDFCFA;
+  --bark:         #7C6A54;
+  --bark-light:   #A08C74;
+  --bark-dark:    #4A3F32;
+  --sage:         #7A8C6E;
+  --sage-light:   #EDF0EA;
+  --sage-dark:    #4E5E44;
+  --sage-border:  #C0CEBA;
+  --clay:         #C27B5A;
+  --clay-light:   #F5EBE4;
+  --clay-dark:    #8A4A2E;
+  --ink:          #2C2520;
+  --ink-light:    #6B5E54;
+  --ink-lighter:  #9C8E84;
+  --warning:        #B07020;
+  --warning-bg:     #FDF3E3;
+  --warning-border: #E8D0A0;
+  --danger:         #A03020;
+  --danger-bg:      #FCE8E4;
+  --danger-border:  #E8C0B8;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);min-height:100vh;font-size:14px;line-height:1.6}
+
+/* ── Header / nav ── */
+.app-header{background:var(--bark-dark);color:var(--cream);padding:1.25rem 2rem;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid var(--bark)}
+.brand-name{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:300;letter-spacing:0.12em;color:var(--cream);line-height:1}
+.brand-sub{font-size:10px;letter-spacing:0.25em;text-transform:uppercase;color:var(--bark-light);font-weight:300}
+.hdr-actions{display:flex;gap:8px;align-items:center}
+
+/* ── Buttons ── */
+.btn{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;letter-spacing:0.04em;padding:7px 16px;border-radius:3px;border:1px solid var(--cream-border);background:transparent;color:var(--ink);cursor:pointer;transition:all 0.15s;white-space:nowrap}
+.btn:hover{background:var(--cream-dark)}
+.btn-primary{background:var(--bark);color:var(--cream);border-color:var(--bark)}
+.btn-primary:hover{background:var(--bark-dark)}
+.btn-ghost{background:transparent;border-color:rgba(253,252,250,0.3);color:var(--cream)}
+.btn-ghost:hover{background:rgba(253,252,250,0.1)}
+.btn-danger{color:var(--danger);border-color:var(--danger-border)}
+.btn-danger:hover{background:var(--danger-bg)}
+.btn-sage{background:var(--sage);color:var(--cream);border-color:var(--sage)}
+.btn-sage:hover{background:var(--sage-dark)}
+.btn-sm{font-size:11px;padding:4px 10px}
+
+/* ── Layout ── */
+.app-body{max-width:1060px;margin:0 auto;padding:2rem}
+.sec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem}
+.sec-title{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:300;color:var(--bark-dark)}
+.toolbar{display:flex;gap:10px;margin-bottom:1.25rem;flex-wrap:wrap;align-items:center}
+.search-inp{font-family:'DM Sans',sans-serif;font-size:13px;padding:7px 12px;border:1px solid var(--cream-border);border-radius:3px;background:var(--white);color:var(--ink);flex:1;min-width:200px;outline:none}
+.search-inp:focus{border-color:var(--bark-light)}
+.filter-sel{font-family:'DM Sans',sans-serif;font-size:12px;padding:7px 10px;border:1px solid var(--cream-border);border-radius:3px;background:var(--white);color:var(--ink);outline:none;cursor:pointer}
+
+/* ── Stats ── */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1.75rem}
+.stat-card{background:var(--white);border:1px solid var(--cream-border);border-radius:4px;padding:1rem 1.25rem}
+.stat-label{font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:var(--ink-lighter);margin-bottom:4px;font-weight:500}
+.stat-value{font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:300;color:var(--bark-dark);line-height:1}
+
+/* ── List / table ── */
+.table-wrap{background:var(--white);border:1px solid var(--cream-border);border-radius:4px;overflow:hidden}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{background:var(--cream-dark);color:var(--ink-light);font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;padding:10px 14px;text-align:left;border-bottom:1px solid var(--cream-border)}
+tbody tr{cursor:pointer;transition:background 0.1s}
+tbody tr:hover td{background:var(--cream)}
+td{padding:10px 14px;border-bottom:1px solid var(--cream-border);vertical-align:middle;color:var(--ink)}
+tbody tr:last-child td{border-bottom:none}
+
+/* Group rows (for By formula / By status views) */
+.group-row td{background:var(--cream-dark);font-family:'Cormorant Garamond',serif;font-size:16px;color:var(--bark-dark);padding:8px 14px;cursor:default}
+.group-row:hover td{background:var(--cream-dark)}
+
+/* Pills */
+.type-pill{display:inline-block;font-size:10px;font-weight:500;letter-spacing:0.08em;padding:2px 8px;border-radius:20px;text-transform:uppercase}
+.type-prod{background:var(--sage-light);color:var(--sage-dark)}
+.type-test{background:var(--clay-light);color:var(--clay-dark)}
+.status-pill{display:inline-block;font-size:10px;font-weight:500;letter-spacing:0.08em;padding:2px 8px;border-radius:20px;text-transform:uppercase}
+.status-curing{background:var(--warning-bg);color:var(--warning)}
+.status-ready{background:var(--sage-light);color:var(--sage-dark)}
+.status-depleted{background:var(--cream-dark);color:var(--ink-lighter)}
+
+.empty-state{text-align:center;padding:4rem 2rem;color:var(--ink-lighter)}
+.empty-state p{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:300;margin-bottom:8px}
+
+/* ── Modal ── */
+.modal-ov{display:none;position:fixed;inset:0;background:rgba(44,37,32,0.55);z-index:100;overflow-y:auto;padding:2rem 1rem}
+.modal-ov.open{display:flex;align-items:flex-start;justify-content:center}
+.modal{background:var(--white);border-radius:6px;border:1px solid var(--cream-border);padding:1.75rem;width:100%;max-width:720px;margin:auto}
+.modal-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;padding-bottom:1rem;border-bottom:1px solid var(--cream-border)}
+.modal-title{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:400;color:var(--bark-dark)}
+.modal-x{background:none;border:none;font-size:22px;cursor:pointer;color:var(--ink-lighter);line-height:1;padding:2px 6px}
+.modal-x:hover{color:var(--ink)}
+.modal-foot{display:flex;justify-content:flex-end;gap:10px;margin-top:1.5rem;padding-top:1.25rem;border-top:1px solid var(--cream-border)}
+.modal-section{font-size:10px;font-weight:500;letter-spacing:0.15em;text-transform:uppercase;color:var(--ink-lighter);padding:12px 0 8px;border-top:1px solid var(--cream-border);margin-top:4px;display:flex;align-items:center;justify-content:space-between}
+
+/* ── Form ── */
+.field{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.field label{font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-light)}
+.field input,.field select,.field textarea{font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 10px;border:1px solid var(--cream-border);border-radius:3px;background:var(--white);color:var(--ink);outline:none}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--bark-light)}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.form-full{grid-column:1/-1}
+
+/* ── Ingredient preview rows ── */
+.ing-preview-hdr{display:grid;grid-template-columns:1fr 90px 90px;gap:8px;padding:6px 10px;font-size:9px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-lighter)}
+.ing-preview-row{display:grid;grid-template-columns:1fr 90px 90px;gap:8px;align-items:center;padding:6px 10px;background:var(--white);border:1px solid var(--cream-border);border-radius:3px;margin-bottom:4px}
+.ing-preview-row.low{background:var(--warning-bg);border-color:var(--warning-border)}
+.ing-preview-name{font-size:13px;color:var(--ink)}
+.ing-preview-amt{font-family:'DM Sans',sans-serif;font-size:12px;padding:5px 7px;border:1px solid var(--cream-border);border-radius:3px;background:var(--white);text-align:right;outline:none}
+.ing-preview-amt:focus{border-color:var(--bark-light)}
+.ing-preview-stock{font-size:11px;color:var(--ink-lighter);text-align:right}
+.ing-preview-stock.warn{color:var(--warning);font-weight:500}
+.stock-warning{background:var(--warning-bg);border:1px solid var(--warning-border);border-radius:3px;padding:8px 12px;margin:8px 0;font-size:12px;color:var(--warning)}
+.stock-warning a{color:var(--warning);text-decoration:underline;font-weight:500}
+
+/* ── Footer ── */
+.app-footer{text-align:center;padding:2rem;margin-top:3rem;font-size:11px;color:var(--ink-lighter);border-top:1px solid var(--cream-border);letter-spacing:0.06em}
+
+/* ── Helpful inline notes ── */
+.note-inline{font-size:11px;color:var(--ink-lighter);margin-top:4px}
+.note-clay{font-size:11px;color:var(--clay);margin-top:4px}
+.batch-name-display{font-family:'Cormorant Garamond',serif;font-weight:400;color:var(--ink)}
+.batch-meta{font-size:11px;color:var(--ink-lighter);display:block;margin-top:2px}
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div>
+    <div class="brand-name">Plume</div>
+    <div class="brand-sub">by Little Bird Studio &middot; Batch Log</div>
+  </div>
+  <div class="hdr-actions">
+    <a href="plume-ingredients.html" target="_blank" rel="noopener" class="btn btn-ghost">Ingredients</a>
+    <a href="plume-formulations.html" target="_blank" rel="noopener" class="btn btn-ghost">Formulations</a>
+    <a href="plume-packaging.html" target="_blank" rel="noopener" class="btn btn-ghost">Packaging</a>
+    <a href="plume-costing.html" target="_blank" rel="noopener" class="btn btn-ghost">Costing</a>
+    <button class="btn btn-ghost" onclick="exportData()">Export</button>
+    <button class="btn btn-ghost" onclick="document.getElementById('import-input').click()">Import</button>
+    <input type="file" id="import-input" accept=".json" style="display:none" onchange="importData(event)">
+    <button class="btn btn-primary" onclick="openNewBatch()">+ Add batch</button>
+  </div>
+</header>
+
+<div class="app-body">
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-label">Total batches</div><div class="stat-value" id="s-total">0</div></div>
+    <div class="stat-card"><div class="stat-label">Curing</div><div class="stat-value" id="s-curing">0</div></div>
+    <div class="stat-card"><div class="stat-label">Ready</div><div class="stat-value" id="s-ready">0</div></div>
+    <div class="stat-card"><div class="stat-label">This month</div><div class="stat-value" id="s-month">0</div></div>
+  </div>
+
+  <div class="sec-header"><div class="sec-title">Batches</div></div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <input class="search-inp" type="text" id="search" placeholder="Search by formula or batch name..." oninput="renderList()">
+    <select class="filter-sel" id="f-view" onchange="renderList()">
+      <option value="recent">Recent</option>
+      <option value="formula">By formula</option>
+      <option value="status">By status</option>
+    </select>
+    <select class="filter-sel" id="f-type" onchange="renderList()">
+      <option value="">All types</option>
+      <option value="production">Production only</option>
+      <option value="test">Tests only</option>
+    </select>
+  </div>
+
+  <!-- List -->
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:14%">Date</th>
+          <th>Formula / batch</th>
+          <th style="width:10%">Yield</th>
+          <th style="width:12%">Type</th>
+          <th style="width:14%">Status</th>
+          <th style="width:10%">Packaged</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- ── New batch modal ── -->
+<div class="modal-ov" id="m-new">
+  <div class="modal">
+    <div class="modal-hdr">
+      <div class="modal-title">New batch</div>
+      <button class="modal-x" onclick="closeModal('m-new')">&#x2715;</button>
+    </div>
+
+    <div class="form-grid">
+      <div class="field form-full">
+        <label>Formula</label>
+        <select id="f-formula" onchange="onFormulaChange()">
+          <option value="">-- Pick a formula --</option>
+        </select>
+        <div class="note-inline" id="formula-hint" style="display:none"></div>
+      </div>
+      <div class="field">
+        <label>Date made</label>
+        <input type="date" id="f-date">
+      </div>
+      <div class="field">
+        <label>Yield (grams)</label>
+        <input type="number" id="f-yield" step="1" min="0" oninput="recalcPreview()">
+      </div>
+      <div class="field">
+        <label>Batch type</label>
+        <select id="f-type-sel" onchange="renderList()">
+          <option value="production">Production</option>
+          <option value="test">Test</option>
+        </select>
+      </div>
+      <div class="field" id="f-cure-row" style="display:none">
+        <label>Cure time</label>
+        <select id="f-cure">
+          <option value="4">4 weeks</option>
+          <option value="6">6 weeks</option>
+        </select>
+      </div>
+      <div class="field form-full">
+        <label>Batch name (optional)</label>
+        <input type="text" id="f-name" placeholder="Auto-generated if blank: 'Formula name -- date'">
+      </div>
+      <div class="field form-full">
+        <label>Notes</label>
+        <textarea id="f-notes" rows="2" placeholder="Deviations from recipe, observations..."></textarea>
+      </div>
+    </div>
+
+    <!-- Ingredient preview -->
+    <div class="modal-section"><span>Ingredients to consume</span><span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--ink-lighter)">edit any amount to override</span></div>
+    <div id="preview-warning"></div>
+    <div class="ing-preview-hdr">
+      <span>Ingredient</span>
+      <span style="text-align:right">Amount (g)</span>
+      <span style="text-align:right">In stock</span>
+    </div>
+    <div id="preview-body"></div>
+
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('m-new')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveBatch()">Save batch</button>
+    </div>
+  </div>
+</div>
+
+<footer class="app-footer">
+  Plume by Little Bird Studio &middot; Batch Log &middot; v0.5
+</footer>
+
+<script>
+// ── Storage keys (sibling to other modules, keep legacy aerie- prefix) ──
+var ING_KEY    = 'aerie-ingredients-v2';
+var FORM_KEY   = 'aerie-formulations-v1';
+var PKG_KEY    = 'aerie-packaging-v2';
+var BATCH_KEY  = 'aerie-batches-v1';
+
+// ── In-memory state ──
+var ings    = [];
+var forms   = [];
+var pkgs    = [];
+var batches = [];
+
+// New-batch form state
+var newPreview = []; // [{ ingredientId, ingredientName, grams, available }]
+var newFormula = null;
+
+// ── Load / save ──
+function loadData() {
+  try { var r = localStorage.getItem(ING_KEY);   if (r) ings    = JSON.parse(r); } catch(e) {}
+  try { var r = localStorage.getItem(FORM_KEY);  if (r) forms   = JSON.parse(r); } catch(e) {}
+  try { var r = localStorage.getItem(PKG_KEY);   if (r) pkgs    = JSON.parse(r); } catch(e) {}
+  try { var r = localStorage.getItem(BATCH_KEY); if (r) batches = JSON.parse(r); } catch(e) {}
+  renderStats();
+  renderList();
+  populateFormulaPicker();
+}
+function saveBatches() {
+  try { localStorage.setItem(BATCH_KEY, JSON.stringify(batches)); }
+  catch(e) { alert('Could not save -- browser storage may be full.'); }
+}
+
+// ── Export / import ──
+function exportData() {
+  var blob = new Blob([JSON.stringify({ batches: batches }, null, 2)], { type: 'application/json' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'plume-batches-' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+}
+function importData(e) {
+  var file = e.target.files[0]; if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      var data = JSON.parse(ev.target.result);
+      var arr  = data.batches || (Array.isArray(data) ? data : []);
+      if (!confirm('Import ' + arr.length + ' batches? Duplicates by id will be skipped.')) return;
+      var existing = {};
+      batches.forEach(function(b) { existing[b.id] = true; });
+      var added = 0;
+      arr.forEach(function(b) { if (!existing[b.id]) { batches.push(b); added++; } });
+      saveBatches();
+      renderStats();
+      renderList();
+      alert('Imported ' + added + ' batches.');
+    } catch(err) { alert('Could not read file.'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+// ── Utilities ──
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function fmtDate(iso) {
+  if (!iso) return '--';
+  var d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  var mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()];
+  return mo + ' ' + d.getDate() + ', ' + d.getFullYear();
+}
+function todayISO() {
+  var d = new Date();
+  var mm = String(d.getMonth()+1).padStart(2,'0');
+  var dd = String(d.getDate()).padStart(2,'0');
+  return d.getFullYear() + '-' + mm + '-' + dd;
+}
+function addWeeks(isoDate, weeks) {
+  var d = new Date(isoDate + 'T00:00:00');
+  d.setDate(d.getDate() + weeks * 7);
+  var mm = String(d.getMonth()+1).padStart(2,'0');
+  var dd = String(d.getDate()).padStart(2,'0');
+  return d.getFullYear() + '-' + mm + '-' + dd;
+}
+
+// ── Soap detection (matches formulations logic) ──
+function isSoapType(type) {
+  return type === 'cp-soap' || type === 'hp-soap' || type === 'soap';
+}
+
+// ── Stock helpers (read-only for now -- decrement comes in a later block) ──
+function lotQtyToGrams(qty, unit, density) {
+  var q = parseFloat(qty);
+  if (isNaN(q) || q <= 0) return 0;
+  var d = parseFloat(density) || 1.0;
+  if (unit === 'g')     return q;
+  if (unit === 'mL')    return q * d;
+  if (unit === 'fl oz') return q * 29.5735 * d;
+  if (unit === 'oz')    return q * 28.3495;
+  if (unit === 'lb')    return q * 453.592;
+  return q;
+}
+function calcIngStockG(ing) {
+  if (!ing || !ing.lots) return null;
+  var total = 0; var any = false;
+  ing.lots.forEach(function(l) {
+    if (l.referenceOnly) return;
+    var qty  = l.qtyPurchased || l.stock || '';
+    var unit = l.qtyUnit      || l.stockUnit || 'g';
+    if (qty) {
+      total += lotQtyToGrams(qty, unit, ing.density);
+      any = true;
+    }
+  });
+  return any ? total : null;
+}
+function findIng(id) {
+  for (var i = 0; i < ings.length; i++) if (ings[i].id === id) return ings[i];
+  return null;
+}
+function findFormula(id) {
+  for (var i = 0; i < forms.length; i++) if (forms[i].id === id) return forms[i];
+  return null;
+}
+
+// ── Stats ──
+function renderStats() {
+  document.getElementById('s-total').textContent = batches.length;
+  var curing = 0, ready = 0, monthCount = 0;
+  var now = new Date();
+  var thisMonth = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+  batches.forEach(function(b) {
+    if (b.status === 'curing') curing++;
+    if (b.status === 'ready')  ready++;
+    if (b.date && b.date.indexOf(thisMonth) === 0) monthCount++;
+  });
+  document.getElementById('s-curing').textContent = curing;
+  document.getElementById('s-ready').textContent  = ready;
+  document.getElementById('s-month').textContent  = monthCount;
+}
+
+// ── List rendering ──
+function renderList() {
+  var tbody = document.getElementById('tbody');
+  var search   = (document.getElementById('search').value || '').toLowerCase();
+  var viewMode = document.getElementById('f-view').value;
+  var typeFilt = document.getElementById('f-type').value;
+
+  var rows = batches.filter(function(b) {
+    if (typeFilt && b.batchType !== typeFilt) return false;
+    if (search) {
+      var hay = ((b.formulaName||'') + ' ' + (b.batchName||'') + ' ' + (b.notes||'')).toLowerCase();
+      if (hay.indexOf(search) < 0) return false;
+    }
+    return true;
+  });
+
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><p>' +
+      (batches.length ? 'No batches match your filters' : 'No batches yet') + '</p>' +
+      '<span>' + (batches.length ? 'Try clearing the search or filter' : 'Click "+ Add batch" to log your first production') + '</span></div></td></tr>';
+    return;
+  }
+
+  // Sort by date desc within group
+  rows.sort(function(a,b) {
+    var ad = a.date || '0', bd = b.date || '0';
+    return bd.localeCompare(ad);
+  });
+
+  var html = '';
+  if (viewMode === 'recent') {
+    rows.forEach(function(b) { html += rowHtml(b); });
+  } else if (viewMode === 'formula') {
+    var groups = {};
+    rows.forEach(function(b) {
+      var key = b.formulaName || '(no formula)';
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(b);
+    });
+    Object.keys(groups).sort().forEach(function(k) {
+      html += '<tr class="group-row"><td colspan="6">' + esc(k) + ' &middot; ' + groups[k].length + '</td></tr>';
+      groups[k].forEach(function(b) { html += rowHtml(b); });
+    });
+  } else if (viewMode === 'status') {
+    var groups = { curing:[], ready:[], depleted:[] };
+    rows.forEach(function(b) {
+      var s = b.status || 'ready';
+      if (!groups[s]) groups[s] = [];
+      groups[s].push(b);
+    });
+    var labels = { curing: 'Curing', ready: 'Ready', depleted: 'Depleted' };
+    ['curing','ready','depleted'].forEach(function(s) {
+      if (groups[s].length) {
+        html += '<tr class="group-row"><td colspan="6">' + labels[s] + ' &middot; ' + groups[s].length + '</td></tr>';
+        groups[s].forEach(function(b) { html += rowHtml(b); });
+      }
+    });
+  }
+
+  tbody.innerHTML = html;
+}
+
+function rowHtml(b) {
+  var pkgCount = (b.packagingRuns || []).reduce(function(s,r) { return s + (parseFloat(r.quantity)||0); }, 0);
+  var typeBadge = b.batchType === 'test'
+    ? '<span class="type-pill type-test">Test</span>'
+    : '<span class="type-pill type-prod">Production</span>';
+  var statusBadge;
+  if (b.status === 'curing') {
+    var readyTxt = b.readyDate ? 'ready ' + fmtDate(b.readyDate) : '';
+    statusBadge = '<span class="status-pill status-curing">Curing</span>' +
+      (readyTxt ? '<div class="batch-meta">' + readyTxt + '</div>' : '');
+  } else if (b.status === 'depleted') {
+    statusBadge = '<span class="status-pill status-depleted">Depleted</span>';
+  } else {
+    statusBadge = '<span class="status-pill status-ready">Ready</span>';
+  }
+  var nameDisplay = b.batchName
+    ? esc(b.batchName) + '<div class="batch-meta">' + esc(b.formulaName||'') + '</div>'
+    : '<span class="batch-name-display">' + esc(b.formulaName||'(no formula)') + '</span>';
+  return '<tr onclick="openBatchDetail(\'' + b.id + '\')">' +
+    '<td>' + fmtDate(b.date) + '</td>' +
+    '<td>' + nameDisplay + '</td>' +
+    '<td>' + (b.actualYield || b.targetYield || '--') + 'g</td>' +
+    '<td>' + typeBadge + '</td>' +
+    '<td>' + statusBadge + '</td>' +
+    '<td>' + (pkgCount > 0 ? pkgCount + ' units' : '<span style="color:var(--ink-lighter)">--</span>') + '</td>' +
+    '</tr>';
+}
+
+// ── New batch flow ──
+function populateFormulaPicker() {
+  var sel = document.getElementById('f-formula');
+  // Reset to first option then add formulas
+  sel.innerHTML = '<option value="">-- Pick a formula --</option>';
+  // Sort formulas by status then name
+  var sorted = forms.slice().sort(function(a,b) {
+    var sa = a.status || 'draft', sb = b.status || 'draft';
+    if (sa !== sb) return sa.localeCompare(sb);
+    return (a.name||'').localeCompare(b.name||'');
+  });
+  sorted.forEach(function(f) {
+    var statusLbl = f.status && f.status !== 'approved' ? ' [' + f.status + ']' : '';
+    sel.innerHTML += '<option value="' + f.id + '">' + esc(f.name || '(unnamed)') + statusLbl + '</option>';
+  });
+}
+
+function openNewBatch() {
+  // Reset form
+  document.getElementById('f-formula').value = '';
+  document.getElementById('f-date').value    = todayISO();
+  document.getElementById('f-yield').value   = '';
+  document.getElementById('f-type-sel').value = 'production';
+  document.getElementById('f-cure').value     = '4';
+  document.getElementById('f-cure-row').style.display = 'none';
+  document.getElementById('f-name').value   = '';
+  document.getElementById('f-notes').value  = '';
+  document.getElementById('formula-hint').style.display = 'none';
+  document.getElementById('preview-body').innerHTML = '<div style="padding:1rem;text-align:center;color:var(--ink-lighter);font-size:12px">Pick a formula and yield to see ingredients</div>';
+  document.getElementById('preview-warning').innerHTML = '';
+  newPreview = [];
+  newFormula = null;
+  openModal('m-new');
+}
+
+function onFormulaChange() {
+  var id = document.getElementById('f-formula').value;
+  if (!id) {
+    newFormula = null;
+    document.getElementById('formula-hint').style.display = 'none';
+    document.getElementById('f-cure-row').style.display = 'none';
+    document.getElementById('f-type-sel').value = 'production';
+    recalcPreview();
+    return;
+  }
+  newFormula = findFormula(id);
+  if (!newFormula) return;
+  // Show hint with formula status & type
+  var hint = document.getElementById('formula-hint');
+  var bits = [];
+  if (newFormula.type)   bits.push(newFormula.type.replace('-',' '));
+  if (newFormula.status) bits.push('status: ' + newFormula.status);
+  hint.textContent = bits.join(' \u00b7 ');
+  hint.style.display = bits.length ? 'block' : 'none';
+  // Default batch type from formula status
+  if (newFormula.status === 'testing' || newFormula.status === 'draft') {
+    document.getElementById('f-type-sel').value = 'test';
+  } else {
+    document.getElementById('f-type-sel').value = 'production';
+  }
+  // Show cure row only for soap
+  document.getElementById('f-cure-row').style.display = isSoapType(newFormula.type) ? 'flex' : 'none';
+  // Default yield to formula batchSize if present
+  if (newFormula.batchSize && !document.getElementById('f-yield').value) {
+    document.getElementById('f-yield').value = newFormula.batchSize;
+  }
+  recalcPreview();
+}
+
+function recalcPreview() {
+  var body = document.getElementById('preview-body');
+  var warnBox = document.getElementById('preview-warning');
+  if (!newFormula) {
+    body.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--ink-lighter);font-size:12px">Pick a formula and yield to see ingredients</div>';
+    warnBox.innerHTML = '';
+    newPreview = [];
+    return;
+  }
+  var yieldG = parseFloat(document.getElementById('f-yield').value);
+  if (!yieldG || yieldG <= 0) {
+    body.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--ink-lighter);font-size:12px">Enter a yield to compute ingredient amounts</div>';
+    warnBox.innerHTML = '';
+    newPreview = [];
+    return;
+  }
+
+  // Compute total grams of the formula at its current spec
+  // For soap, lines have gramsFixed (oil weight model); for others, lines have pct of yield
+  var lines = newFormula.lines || [];
+  var soap  = isSoapType(newFormula.type);
+
+  var preview = [];
+  if (soap) {
+    // For soap, lines are typically gramsFixed. Sum the oil grams.
+    // Then scale to yieldG / sum-of-oils ratio.
+    var oilSum = 0;
+    lines.forEach(function(l) {
+      var g = parseFloat(l.gramsFixed);
+      if (!isNaN(g) && g > 0 && !l.soapAddin) oilSum += g;
+    });
+    var ratio = (oilSum > 0) ? (yieldG / oilSum) : 1;
+    lines.forEach(function(l) {
+      var ing = findIng(l.ingredientId);
+      if (!ing) return;
+      var g = parseFloat(l.gramsFixed);
+      if (isNaN(g) || g <= 0) return;
+      preview.push({
+        ingredientId:   ing.id,
+        ingredientName: ing.name,
+        grams: g * ratio,
+        available: calcIngStockG(ing)
+      });
+    });
+  } else {
+    // Non-soap: lines are percent. amount = (pct/100) * yieldG.
+    lines.forEach(function(l) {
+      var ing = findIng(l.ingredientId);
+      if (!ing) return;
+      var pct = parseFloat(l.pct);
+      if (isNaN(pct) || pct <= 0) return;
+      preview.push({
+        ingredientId:   ing.id,
+        ingredientName: ing.name,
+        grams: (pct / 100) * yieldG,
+        available: calcIngStockG(ing)
+      });
+    });
+  }
+
+  newPreview = preview;
+  renderPreviewRows();
+}
+
+function renderPreviewRows() {
+  var body = document.getElementById('preview-body');
+  var warnBox = document.getElementById('preview-warning');
+  if (!newPreview.length) {
+    body.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--ink-lighter);font-size:12px">This formula has no usable ingredient lines</div>';
+    warnBox.innerHTML = '';
+    return;
+  }
+  var html = '';
+  var lowStockItems = [];
+  newPreview.forEach(function(p, idx) {
+    var low = (p.available !== null && p.available < p.grams);
+    if (low) lowStockItems.push(p);
+    var availTxt = p.available === null
+      ? '<span style="color:var(--ink-lighter)">no stock data</span>'
+      : (low ? '<span class="ing-preview-stock warn">' + p.available.toFixed(0) + 'g</span>'
+             : p.available.toFixed(0) + 'g');
+    html += '<div class="ing-preview-row' + (low ? ' low' : '') + '">' +
+      '<div class="ing-preview-name">' + esc(p.ingredientName) + '</div>' +
+      '<input class="ing-preview-amt" type="number" step="0.01" value="' + p.grams.toFixed(2) + '" oninput="onPreviewAmt(' + idx + ', this.value)">' +
+      '<div style="text-align:right">' + availTxt + '</div>' +
+      '</div>';
+  });
+  body.innerHTML = html;
+
+  if (lowStockItems.length) {
+    var links = lowStockItems.map(function(p) {
+      return '<a href="plume-ingredients.html#ing=' + encodeURIComponent(p.ingredientId) + '" target="_blank" rel="noopener">' + esc(p.ingredientName) + '</a>';
+    }).join(', ');
+    warnBox.innerHTML = '<div class="stock-warning">Insufficient stock for: ' + links + '. Update stock in the Ingredients module, then reopen this form to recheck.</div>';
+  } else {
+    warnBox.innerHTML = '';
+  }
+}
+
+function onPreviewAmt(idx, v) {
+  var n = parseFloat(v);
+  if (!isNaN(n) && n >= 0) {
+    newPreview[idx].grams = n;
+  }
+  // Re-render to refresh "low stock" highlighting
+  renderPreviewRows();
+}
+
+function saveBatch() {
+  if (!newFormula) { alert('Please pick a formula.'); return; }
+  var yieldG = parseFloat(document.getElementById('f-yield').value);
+  if (!yieldG || yieldG <= 0) { alert('Please enter a yield in grams.'); return; }
+  var date = document.getElementById('f-date').value || todayISO();
+  var batchType = document.getElementById('f-type-sel').value;
+  var batchName = document.getElementById('f-name').value.trim();
+  var notes     = document.getElementById('f-notes').value.trim();
+  var soap      = isSoapType(newFormula.type);
+  var cureWks   = soap ? parseInt(document.getElementById('f-cure').value, 10) || 4 : null;
+  var readyDate = soap ? addWeeks(date, cureWks) : date;
+  var status    = soap ? 'curing' : 'ready';
+
+  if (!batchName) {
+    batchName = (newFormula.name || 'Batch') + ' -- ' + date;
+  }
+
+  var ingredientSnapshot = newPreview.map(function(p) {
+    return {
+      ingredientId:   p.ingredientId,
+      ingredientName: p.ingredientName,
+      grams:          parseFloat(p.grams) || 0
+    };
+  });
+
+  var b = {
+    id:                String(Date.now()) + '-' + Math.random().toString(36).slice(2,7),
+    date:              date,
+    formulaId:         newFormula.id,
+    formulaName:       newFormula.name,
+    formulaType:       newFormula.type || '',
+    batchName:         batchName,
+    targetYield:       yieldG,
+    actualYield:       yieldG,
+    cureWeeks:         cureWks,
+    readyDate:         readyDate,
+    batchType:         batchType,
+    status:            status,
+    notes:             notes,
+    ingredientSnapshot: ingredientSnapshot,
+    packagingRuns:     [],
+    createdAt:         new Date().toISOString(),
+    updatedAt:         new Date().toISOString()
+  };
+
+  batches.push(b);
+  saveBatches();
+  closeModal('m-new');
+  renderStats();
+  renderList();
+}
+
+// ── Batch detail (placeholder for Block 3) ──
+function openBatchDetail(id) {
+  alert('Batch detail view will be built in the next block. Batch ID: ' + id);
+}
+
+// ── Modal helpers ──
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// ── Boot ──
+loadData();
+</script>
+
+</body>
+</html>
