@@ -357,9 +357,9 @@ function addWeeks(isoDate, weeks) {
   return d.getFullYear() + '-' + mm + '-' + dd;
 }
 
-// ── Soap detection (matches formulations logic) ──
+// ── Soap detection (matches isSoap() in plume-formulations.html) ──
 function isSoapType(type) {
-  return type === 'cp-soap' || type === 'hp-soap' || type === 'soap';
+  return type === 'Cold Process Soap' || type === 'Hot Process Soap';
 }
 
 // ── Stock helpers (read-only for now -- decrement comes in a later block) ──
