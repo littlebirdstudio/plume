@@ -1493,6 +1493,7 @@ function saveFormula() {
     status:       document.getElementById('f-status').value,
     notes:        document.getElementById('f-notes').value,
     instructions: document.getElementById('f-instruct').value,
+    addinsInTotal: getAddinsInTotal(),
     lines:        fLines.map(function(l) { return Object.assign({}, l); }),
     soapSettings: isSoap() ? {
       superfat:  parseFloat(document.getElementById('soap-superfat').value)   || 5,
@@ -1528,6 +1529,7 @@ function saveVersion() {
     notes:        document.getElementById('f-notes').value,
     instructions: document.getElementById('f-instruct').value,
     lines:        fLines.map(function(l) { return Object.assign({}, l); }),
+    addinsInTotal: getAddinsInTotal(),
     version:      nv,
     versions:     (f.versions || []).concat([snap]),
     updatedAt:    new Date().toISOString()
