@@ -1,0 +1,2027 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plume - Formulations</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* ──────────────────────────────────────────────────────────────
+     PALETTE — the warm/natural studio feel.
+     Edit these to retheme the whole module.
+     ────────────────────────────────────────────────────────────── */
+
+  /* Surfaces — page background, cards, dividers */
+  --cream:        #F7F4EF;
+  --cream-dark:   #EDE8DF;
+  --cream-border: #D8D0C4;
+  --white:        #FDFCFA;
+
+  /* Bark — primary brand tones (headers, buttons, accents) */
+  --bark:       #7C6A54;
+  --bark-light: #A08C74;
+  --bark-dark:  #4A3F32;
+
+  /* Sage — "good/in-stock/positive" tones */
+  --sage:        #7A8C6E;
+  --sage-light:  #EDF0EA;
+  --sage-dark:   #4E5E44;
+  --sage-border: #C0CEBA; /* soft outline tint for sage-accented controls */
+
+  /* Clay — warm accent / blush highlight */
+  --clay:       #C27B5A;
+  --clay-light: #F5EBE4; /* also used as the in-stock row tint */
+  --clay-dark:  #8A4A2E;
+  --clay-hover: #EFDFD5; /* slightly deeper blush for hovered in-stock rows */
+
+  /* Ink — text */
+  --ink:         #2C2520;
+  --ink-light:   #6B5E54;
+  --ink-lighter: #9C8E84;
+
+  /* Status — warnings and errors */
+  --warning:        #B07020;
+  --warning-bg:     #FDF3E3;
+  --warning-border: #E8D0A0; /* soft outline tint for warning-accented controls */
+  --danger:         #A03020;
+  --danger-bg:      #FCE8E4;
+  --danger-border:  #E8C0B8; /* soft outline tint for danger-accented controls */
+  --success:        #4E5E44;
+
+  /* ──────────────────────────────────────────────────────────────
+     CATEGORICAL — functional color codes.
+     These signal "what kind of thing" (water phase, oil phase, etc).
+     Usually you want these to stay visually distinct even when the
+     palette above changes — they're for recognition, not for theme.
+     ────────────────────────────────────────────────────────────── */
+
+  /* Phase badges (Ingredients, Formulations) */
+  --ph-water-bg:     #E4EEF8; --ph-water-fg:     #2A5C8A;
+  --ph-oil-bg:       #F5ECD8; --ph-oil-fg:       #7A4E10;
+  --ph-cool-down-bg: #E4F0EA; --ph-cool-down-fg: #2A5C40;
+  --ph-active-bg:    #EDE8F8; --ph-active-fg:    #4A3A8A;
+  --ph-other:        #888780; /* "other" phase dot in formulations */
+
+  /* Phase dots (Formulations editor) — pure swatch tones, no bg */
+  --dot-water:     #378ADD;
+  --dot-oil:       #BA7517;
+  --dot-cool-down: #1D9E75;
+  --dot-active:    #7F77DD;
+
+  /* Soap quality bars (Formulations) — fatty acid profile indicators */
+  --q-hardness:     #7C6A54; /* aligns with --bark */
+  --q-cleansing:    #5A8A9F;
+  --q-conditioning: #7A8C6E; /* aligns with --sage */
+  --q-lather:       #C2955A;
+  --q-ins:          #9C6E8A;
+
+  /* Packaging type badges (Packaging) */
+  --pk-container-bg: #E4EEF8; --pk-container-fg: #2A5C8A;
+  --pk-label-bg:     #EDE8F8; --pk-label-fg:     #4A3A8A;
+  --pk-box-bg:       #F5ECD8; --pk-box-fg:       #7A4E10;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);min-height:100vh;font-size:14px;line-height:1.6}
+.app-header{background:var(--bark-dark);color:var(--cream);padding:1.25rem 2rem;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid var(--bark)}
+.brand-name{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:300;letter-spacing:0.12em;color:var(--cream);line-height:1}
+.brand-sub{font-size:10px;letter-spacing:0.25em;text-transform:uppercase;color:var(--bark-light);font-weight:300}
+.hdr-actions{display:flex;gap:8px;align-items:center}
+.app-nav{background:var(--bark-dark);border-bottom:1px solid var(--bark);padding:0 2rem;display:flex}
+.nav-tab{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;letter-spacing:0.06em;padding:10px 18px;border:none;background:transparent;color:var(--bark-light);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all 0.15s}
+.nav-tab:hover{color:var(--cream)}
+.nav-tab.active{color:var(--cream);border-bottom-color:var(--cream)}
+.btn{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;letter-spacing:0.04em;padding:7px 16px;border-radius:3px;border:1px solid var(--cream-border);background:transparent;color:var(--ink);cursor:pointer;transition:all 0.15s;white-space:nowrap}
+.btn:hover{background:var(--cream-dark)}
+.btn-primary{background:var(--bark);color:var(--cream);border-color:var(--bark)}
+.btn-primary:hover{background:var(--bark-dark)}
+.btn-ghost{background:transparent;border-color:rgba(253,252,250,0.3);color:var(--cream)}
+.btn-ghost:hover{background:rgba(253,252,250,0.1)}
+.btn-danger{color:var(--danger);border-color:var(--danger-border)}
+.btn-danger:hover{background:var(--danger-bg)}
+.btn-sm{font-size:11px;padding:4px 10px}
+.btn:disabled{opacity:0.4;cursor:not-allowed}
+.app-body{max-width:1100px;margin:0 auto;padding:2rem}
+.sec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem}
+.sec-title{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:300;color:var(--bark-dark)}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.fcard{background:var(--white);border:1px solid var(--cream-border);border-radius:6px;padding:1.25rem;cursor:pointer;transition:border-color 0.15s}
+.fcard:hover{border-color:var(--bark-light)}
+.fcard-name{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:400;color:var(--bark-dark);margin-bottom:4px}
+.fcard-meta{font-size:12px;color:var(--ink-lighter);margin-bottom:10px}
+.fcard-tags{display:flex;gap:6px;flex-wrap:wrap}
+.tag{font-size:10px;font-weight:500;letter-spacing:0.06em;padding:2px 8px;border-radius:20px;background:var(--cream-dark);color:var(--ink-light);text-transform:uppercase}
+.fcard-foot{display:flex;justify-content:space-between;align-items:center;margin-top:1rem;padding-top:0.75rem;border-top:1px solid var(--cream-border);font-size:12px;color:var(--ink-lighter)}
+.empty{text-align:center;padding:5rem 2rem;color:var(--ink-lighter)}
+.empty p{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:300;margin-bottom:8px;color:var(--ink-light)}
+#editor-view{display:none}
+.ed-layout{display:grid;grid-template-columns:1fr 340px;gap:24px;align-items:start}
+.ed-main{min-width:0}
+.ed-sidebar{position:sticky;top:1rem}
+.ed-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.5rem;gap:1rem}
+.ed-name{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:300;color:var(--bark-dark);border:none;border-bottom:1px solid var(--cream-border);background:transparent;width:100%;outline:none;padding:2px 0;line-height:1.3}
+.ed-name:focus{border-bottom-color:var(--bark)}
+.ed-name::placeholder{color:var(--ink-lighter)}
+.meta-card{background:var(--white);border:1px solid var(--cream-border);border-radius:6px;padding:1rem;margin-bottom:1.5rem}
+.meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.meta-full{grid-column:1/-1}
+.mf label{display:block;font-size:10px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-lighter);margin-bottom:4px}
+.mf input,.mf select,.mf textarea{font-family:'DM Sans',sans-serif;font-size:13px;padding:6px 8px;border:1px solid var(--cream-border);border-radius:3px;background:var(--white);color:var(--ink);width:100%;outline:none}
+.mf input:focus,.mf select:focus,.mf textarea:focus{border-color:var(--bark-light)}
+.mf textarea{resize:vertical;min-height:60px}
+.phase-group{margin-bottom:1.5rem}
+.phase-label{font-size:10px;font-weight:500;letter-spacing:0.15em;text-transform:uppercase;color:var(--ink-lighter);padding:6px 0;border-bottom:1px solid var(--cream-border);margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.pdot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.dot-water{background:var(--dot-water)}.dot-oil{background:var(--dot-oil)}.dot-cool-down{background:var(--dot-cool-down)}.dot-active{background:var(--dot-active)}.dot-other{background:var(--ph-other)}
+.col-hdr{display:grid;grid-template-columns:1fr 84px 58px 84px 76px auto;gap:6px;padding:0 10px 4px;font-size:9px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-lighter)}
+.ing-row{display:grid;grid-template-columns:1fr 84px 58px 84px 76px auto;gap:6px;align-items:center;padding:7px 10px;border-radius:4px;margin-bottom:4px;background:var(--white);border:1px solid var(--cream-border);transition:border-color 0.1s}
+.ing-row:hover{border-color:var(--bark-light)}
+.ing-row.warn{border-color:var(--warning);background:var(--warning-bg)}
+.ing-row.addin{border-style:dashed;border-color:var(--cream-border);background:var(--cream)}
+.ing-name-btn{background:none;border:none;cursor:pointer;font-weight:500;font-size:13px;color:var(--ink);padding:0;text-align:left;text-decoration:underline;text-decoration-color:var(--cream-border)}
+.ing-name-btn:hover{color:var(--bark)}
+.ing-inci{font-size:11px;color:var(--ink-lighter);font-style:italic}
+.ing-inp{font-family:'DM Sans',sans-serif;font-size:13px;padding:5px 6px;border:1px solid var(--cream-border);border-radius:3px;background:var(--cream);color:var(--ink);width:100%;text-align:right;outline:none;cursor:text}
+.ing-inp:focus{border-color:var(--bark-light);background:var(--white)}
+.ing-inp.pinned{background:var(--sage-light);border-color:var(--sage);color:var(--sage-dark)}
+.warn-txt{font-size:10px;color:var(--warning);grid-column:1/-1;padding:0 0 4px}
+.pin-btn{font-family:'DM Sans',sans-serif;font-size:10px;font-weight:500;border-radius:20px;cursor:pointer;width:58px;height:28px;display:flex;align-items:center;justify-content:center;gap:3px;padding:0 6px;transition:all 0.15s;flex-shrink:0;white-space:nowrap;border:1.5px solid var(--cream-border);background:var(--cream-dark);color:var(--ink-lighter)}
+.pin-btn:hover{border-color:var(--bark-light);color:var(--bark);background:var(--cream)}
+.pin-btn.pinned{border-color:var(--sage-dark);background:var(--sage);color:var(--white)}
+.pin-btn.pinned:hover{background:var(--sage-dark)}
+.ing-cost{font-size:12px;color:var(--ink-lighter);text-align:right;font-variant-numeric:tabular-nums}
+.ing-rm{background:none;border:none;cursor:pointer;color:var(--ink-lighter);font-size:16px;padding:2px 4px;line-height:1}
+.ing-rm:hover{color:var(--danger)}
+.pinned-badge{font-size:9px;color:var(--sage-dark);background:var(--sage-light);padding:1px 6px;border-radius:10px;margin-left:5px}
+.addin-badge{font-size:9px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;padding:2px 7px;border-radius:20px;background:var(--clay-light);color:var(--clay);margin-left:6px}
+.drops-row{grid-column:1/-1;display:flex;align-items:center;gap:8px;padding:3px 0 4px;font-size:12px;color:var(--ink-light)}
+.drops-inp{font-family:'DM Sans',sans-serif;font-size:12px;padding:3px 6px;border:1px solid var(--cream-border);border-radius:3px;background:var(--cream);color:var(--ink);width:54px;text-align:right;outline:none}
+.drops-inp:focus{border-color:var(--bark-light);background:var(--white)}
+.add-bar{display:flex;gap:8px;margin-top:0.75rem;align-items:center}
+.ing-search{font-family:'DM Sans',sans-serif;font-size:13px;padding:7px 12px;border:1px solid var(--cream-border);border-radius:3px;background:var(--white);color:var(--ink);flex:1;outline:none}
+.ing-search:focus{border-color:var(--bark-light)}
+.ing-search::placeholder{color:var(--ink-lighter)}
+.srch-wrap{position:relative;flex:1}
+.ing-dd{position:fixed;background:var(--white);border:1px solid var(--cream-border);border-radius:4px;box-shadow:0 4px 16px rgba(44,37,32,0.12);z-index:1000;max-height:260px;overflow-y:auto;width:380px}
+.dd-item{padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--cream-dark);display:flex;justify-content:space-between;align-items:center}
+.dd-item:last-child{border-bottom:none}
+.dd-item:hover{background:var(--cream)}
+.dd-name{font-size:13px;font-weight:500;color:var(--ink)}
+.dd-inci{font-size:11px;font-style:italic;color:var(--ink-lighter)}
+.dd-phase{font-size:10px;padding:2px 6px;border-radius:10px;background:var(--cream-dark);color:var(--ink-light);white-space:nowrap}
+.sb-panel{background:var(--white);border:1px solid var(--cream-border);border-radius:6px;overflow:hidden;margin-bottom:16px}
+.sb-hdr{background:var(--cream-dark);padding:8px 14px;font-size:10px;font-weight:500;letter-spacing:0.15em;text-transform:uppercase;color:var(--ink-light);display:flex;align-items:center;justify-content:space-between}
+.sb-body{padding:14px}
+.batch-ctrl{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.batch-inp{font-family:'DM Sans',sans-serif;font-size:20px;font-weight:300;color:var(--bark-dark);border:none;border-bottom:1px solid var(--cream-border);background:transparent;width:90px;outline:none;text-align:right;padding:2px 0}
+.batch-inp:focus{border-bottom-color:var(--bark)}
+.batch-unit{font-size:13px;color:var(--ink-light)}
+.total-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.total-val{font-size:18px;font-weight:500;font-variant-numeric:tabular-nums}
+.t-ok{color:var(--success)}.t-over{color:var(--danger)}.t-under{color:var(--warning)}
+.pct-outer{height:4px;background:var(--cream-border);border-radius:2px;margin-bottom:10px}
+.pct-inner{height:100%;border-radius:2px;transition:width 0.2s}
+.bar-ok{background:var(--sage)}.bar-over{background:var(--danger)}.bar-under{background:var(--warning)}
+.cost-row{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid var(--cream-dark);color:var(--ink-light)}
+.cost-row:last-child{border-bottom:none}
+.inci-list{font-size:12px;color:var(--ink-light);line-height:1.8}
+.inci-item{display:flex;gap:6px;align-items:baseline}
+.inci-num{font-size:10px;color:var(--ink-lighter);min-width:16px}
+.ver-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--cream-dark);font-size:12px}
+.ver-row:last-child{border-bottom:none}
+.ver-label{font-weight:500;color:var(--ink)}
+.ver-date{color:var(--ink-lighter)}
+.use-entry{padding:8px 0;border-bottom:1px solid var(--cream-dark);font-size:12px}
+.use-entry:last-child{border-bottom:none}
+.use-hdr{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px}
+.use-date{font-weight:500;color:var(--ink)}
+.use-meta{color:var(--ink-lighter);font-size:11px}
+.use-notes{color:var(--ink-light);line-height:1.5;white-space:pre-wrap}
+.use-del{background:none;border:none;cursor:pointer;color:var(--ink-lighter);font-size:13px;padding:0 2px}
+.use-del:hover{color:var(--danger)}
+.modal-ov{display:none;position:fixed;inset:0;background:rgba(44,37,32,0.55);z-index:100;overflow-y:auto;padding:2rem 1rem}
+.modal-ov.open{display:flex;align-items:flex-start;justify-content:center}
+.modal{background:var(--white);border-radius:6px;border:1px solid var(--cream-border);padding:1.75rem;width:100%;max-width:520px;margin:auto}
+.modal-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;padding-bottom:1rem;border-bottom:1px solid var(--cream-border)}
+.modal-title{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:400;color:var(--bark-dark)}
+.modal-x{background:none;border:none;font-size:22px;cursor:pointer;color:var(--ink-lighter);line-height:1;padding:2px 6px}
+.modal-x:hover{color:var(--ink)}
+.modal-foot{display:flex;justify-content:flex-end;gap:10px;margin-top:1.5rem;padding-top:1.25rem;border-top:1px solid var(--cream-border)}
+.field{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.field label{font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-light)}
+.field input,.field select,.field textarea{font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 10px;border:1px solid var(--cream-border);border-radius:3px;background:var(--white);color:var(--ink);outline:none}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--bark-light)}
+.field textarea{resize:vertical;min-height:70px}
+.back-lnk{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-light);cursor:pointer;background:none;border:none;padding:0;font-family:'DM Sans',sans-serif;margin-bottom:1.5rem}
+.back-lnk:hover{color:var(--bark)}
+.id-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.id-field{margin-bottom:10px}
+.id-field label{font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-lighter);display:block;margin-bottom:3px}
+.id-field p{font-size:13px;color:var(--ink);line-height:1.6}
+@media print{.app-header,.app-nav,.ed-sidebar,.add-bar,.ed-header .btn,.back-lnk,.ing-rm,.pin-btn{display:none!important}body{background:white;font-size:12px}.app-body{max-width:100%;padding:0}.ed-layout{grid-template-columns:1fr}.ing-row{border:none;border-bottom:1px solid #ddd;border-radius:0;padding:5px 0}.phase-label{border-bottom:2px solid #333;margin-bottom:4px}}
+.soap-col-hdr{display:grid;grid-template-columns:1fr 84px 84px 90px 80px auto;gap:6px;padding:0 10px 4px;font-size:9px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-lighter)}
+.soap-row{display:grid;grid-template-columns:1fr 84px 84px 90px 80px auto;gap:6px;align-items:center;padding:7px 10px;border-radius:4px;margin-bottom:4px;background:var(--white);border:1px solid var(--cream-border)}
+.soap-row:hover{border-color:var(--bark-light)}
+.soap-row.no-sap{border-color:var(--warning);background:var(--warning-bg)}
+.soap-inp{font-family:'DM Sans',sans-serif;font-size:13px;padding:5px 6px;border:1px solid var(--cream-border);border-radius:3px;background:var(--cream);color:var(--ink);width:100%;text-align:right;outline:none}
+.soap-inp:focus{border-color:var(--bark-light);background:var(--white)}
+.soap-ctrl{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.soap-ctrl label{font-size:10px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-lighter);white-space:nowrap}
+.soap-ctrl input,.soap-ctrl select{font-family:'DM Sans',sans-serif;font-size:13px;padding:5px 8px;border:1px solid var(--cream-border);border-radius:3px;background:var(--white);color:var(--ink);outline:none}
+.soap-ctrl input:focus,.soap-ctrl select:focus{border-color:var(--bark-light)}
+.lye-result{display:flex;flex-direction:column;gap:6px}
+.lye-row{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--cream-dark);font-size:13px}
+.lye-row:last-child{border-bottom:none}
+.lye-label{color:var(--ink-light)}
+.lye-val{font-weight:500;color:var(--bark-dark);font-variant-numeric:tabular-nums}
+.lye-val.missing{color:var(--ink-lighter);font-weight:400;font-style:italic}
+.quality-bar-wrap{margin-top:10px}
+.quality-item{margin-bottom:8px}
+.quality-lbl{display:flex;justify-content:space-between;font-size:11px;color:var(--ink-light);margin-bottom:3px}
+.quality-track{height:6px;background:var(--cream-border);border-radius:3px;overflow:hidden}
+.quality-fill{height:100%;border-radius:3px;transition:width 0.3s}
+.q-hardness{background:var(--q-hardness)}.q-cleansing{background:var(--q-cleansing)}.q-conditioning{background:var(--q-conditioning)}.q-lather{background:var(--q-lather)}.q-ins{background:var(--q-ins)}
+.soap-addins-note{font-size:11px;color:var(--clay);margin-top:8px;padding:6px 10px;background:var(--clay-light);border-radius:3px;border-left:2px solid var(--clay)}
+@media(max-width:800px){.soap-row{grid-template-columns:1fr 90px 80px auto}.soap-col-hdr{grid-template-columns:1fr 90px 80px auto}}
+
+/* ── Footer ── */
+.app-footer {
+  text-align: center;
+  padding: 2rem;
+  margin-top: 3rem;
+  font-size: 11px;
+  color: var(--ink-lighter);
+  border-top: 1px solid var(--cream-border);
+  letter-spacing: 0.06em;
+}
+
+/* ── Palette swatch picker ── */
+.palette-swatch-grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; }
+.palette-swatch { display:flex; flex-direction:column; align-items:stretch; gap:6px; padding:6px; border:1px solid var(--cream-border); border-radius:5px; background:var(--white); cursor:pointer; font-family:'DM Sans',sans-serif; transition:border-color 0.12s, transform 0.08s; }
+.palette-swatch:hover { border-color:var(--bark-light); transform:translateY(-1px); }
+.palette-swatch.active { border-color:var(--bark); border-width:2px; padding:5px; box-shadow:0 0 0 2px var(--cream); }
+.palette-swatch-stripes { display:flex; height:32px; border-radius:3px; overflow:hidden; border:1px solid var(--cream-border); }
+.palette-swatch-stripes span { flex:1; height:100%; display:block; }
+.palette-swatch-label { font-size:11px; color:var(--ink-light); text-align:center; letter-spacing:0.02em; }
+.palette-swatch.active .palette-swatch-label { color:var(--ink); font-weight:600; }
+</style>
+</head>
+<body>
+<header class="app-header">
+  <div>
+    <div class="brand-name">Plume</div>
+    <div class="brand-sub">by Little Bird Studio &middot; Formulations</div>
+  </div>
+  <div class="hdr-actions">
+    <a href="plume-ingredients.html" target="_blank" rel="noopener" class="btn btn-ghost">Ingredients</a>
+    <a href="plume-packaging.html" target="_blank" rel="noopener" class="btn btn-ghost">Packaging</a>
+    <a href="plume-costing.html" target="_blank" rel="noopener" class="btn btn-ghost">Costing</a>
+    <span style="width:1px;height:20px;background:rgba(253,252,250,0.2);margin:0 4px"></span>
+    <button class="btn btn-ghost" onclick="exportData()">Export backup</button>
+    <label class="btn btn-ghost" style="cursor:pointer">Import<input type="file" accept=".json" style="display:none" onchange="importData(event)"></label>
+    <button class="btn btn-ghost" onclick="openSettings()" title="Settings &amp; appearance">⚙ Settings</button>
+  </div>
+</header>
+<nav class="app-nav">
+  <button class="nav-tab active" id="nav-list" onclick="goList()">All formulations</button>
+  <button class="nav-tab" id="nav-ed" style="display:none">Editor</button>
+</nav>
+<div class="app-body">
+  <div id="list-view">
+    <div class="sec-header">
+      <div class="sec-title">Your formulations</div>
+      <button class="btn btn-primary" onclick="newFormula()">+ New formulation</button>
+    </div>
+    <div id="fcard-container"></div>
+  </div>
+  <div id="editor-view">
+    <button class="back-lnk" onclick="goList()">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12L6 8l4-4"/></svg>
+      All formulations
+    </button>
+    <div class="ed-layout">
+      <div class="ed-main">
+        <div class="ed-header">
+          <div style="flex:1">
+            <input class="ed-name" id="f-name" placeholder="Formula name..." oninput="markDirty()">
+            <div style="font-size:12px;color:var(--ink-lighter);margin-top:4px" id="f-ver-lbl"></div>
+          </div>
+          <div style="display:flex;gap:8px;flex-shrink:0">
+            <button class="btn" onclick="printFormula()">Print</button>
+            <button class="btn" onclick="saveVersion()">Save version</button>
+            <button class="btn btn-primary" onclick="saveFormula()">Save</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteFormula()">Delete</button>
+          </div>
+        </div>
+        <div class="meta-card">
+          <div class="meta-grid">
+            <div class="mf">
+              <label>Product type</label>
+              <select id="f-type" onchange="onTypeChange()">
+                <option value="">-- select --</option>
+                <option>Facial serum</option><option>Face cream</option><option>Face oil</option>
+                <option>Eye cream</option><option>Toner / mist</option><option>Cleanser</option>
+                <option>Exfoliant / scrub</option><option>Mask</option><option>Body lotion</option>
+                <option>Body butter</option><option>Body oil</option><option>Lip balm</option>
+                <option>Hair serum</option><option>Hair mask</option><option>Shampoo bar</option>
+                <option>Deodorant</option><option>Other</option>
+                <option disabled>──────────</option>
+                <option>Cold Process Soap</option><option>Hot Process Soap</option>
+              </select>
+            </div>
+            <div class="mf">
+              <label>Status</label>
+              <select id="f-status" onchange="markDirty()">
+                <option value="draft">Draft</option><option value="testing">Testing</option>
+                <option value="approved">Approved</option><option value="retired">Retired</option>
+              </select>
+            </div>
+            <div class="mf meta-full">
+              <label>Intention / purpose</label>
+              <textarea id="f-notes" rows="2" placeholder="What is this formula for? Goals, target skin type, inspiration..." oninput="markDirty()"></textarea>
+            </div>
+            <div class="mf meta-full">
+              <label>Formulation instructions</label>
+              <textarea id="f-instruct" rows="3" placeholder="Step-by-step process: temperatures, mixing order, special handling..." oninput="markDirty()"></textarea>
+            </div>
+            <div class="mf meta-full" id="addin-total-row" style="display:none">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                <input type="checkbox" id="f-addins-in-total" onchange="onAddinsInTotalChange()" style="width:auto;margin:0">
+                <span>Count add-ins toward total %</span>
+              </label>
+              <div style="font-size:11px;color:var(--ink-lighter);margin-top:4px;line-height:1.5">
+                Standard cosmetic practice includes fragrance, essential oils, and preservatives in the 100% batch total. Turn this off only if you want to track those amounts outside the formula percentage.
+                <span id="addin-soap-note" style="display:none">Soap recipes traditionally calculate fragrance and additives PPO (per pound of oils), separate from the oil total — add-ins are always outside the oil 100% for soap.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="phase-groups"></div>
+        <div class="add-bar">
+          <div class="srch-wrap">
+            <input class="ing-search" id="ing-search" placeholder="Search ingredients to add..." oninput="searchIngs(this.value)" autocomplete="off">
+            <div class="ing-dd" id="ing-dd" style="display:none"></div>
+          </div>
+          <button class="btn btn-sm" id="addin-btn" onclick="toggleAddin()" title="Add as add-in: drops/grams only, not counted in formula %">Add-in</button>
+        </div>
+        <div id="addin-note" style="font-size:11px;color:var(--clay);margin-top:4px;display:none">Add-in mode on -- next ingredient will not be counted in formula %</div>
+        <div id="ing-count" style="margin-top:0.5rem;font-size:12px;color:var(--ink-lighter)"></div>
+      </div>
+      <div class="ed-sidebar">
+        <div class="sb-panel" id="sb-soap-lye" style="display:none">
+          <div class="sb-hdr">Lye calculator</div>
+          <div class="sb-body">
+            <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap">
+              <div style="flex:1;min-width:80px">
+                <div style="font-size:10px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-lighter);margin-bottom:4px">Superfat %</div>
+                <input type="number" id="soap-superfat" value="5" min="0" max="30" step="0.5" style="font-family:'DM Sans',sans-serif;font-size:14px;padding:5px 8px;border:1px solid var(--cream-border);border-radius:3px;background:var(--white);color:var(--ink);width:100%;outline:none" oninput="recalcSoap()">
+              </div>
+              <div style="flex:1;min-width:80px">
+                <div style="font-size:10px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-lighter);margin-bottom:4px">Lye type</div>
+                <select id="soap-lye-type" onchange="recalcSoap()" style="font-family:'DM Sans',sans-serif;font-size:13px;padding:5px 8px;border:1px solid var(--cream-border);border-radius:3px;background:var(--white);color:var(--ink);width:100%;outline:none">
+                  <option value="naoh">NaOH (bar)</option>
+                  <option value="koh">KOH (liquid)</option>
+                </select>
+              </div>
+            </div>
+            <div id="soap-koh-purity-row" style="display:none;margin-bottom:10px">
+              <div style="font-size:10px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-lighter);margin-bottom:4px">KOH purity %</div>
+              <input type="number" id="soap-koh-purity" value="90" min="80" max="100" step="1" style="font-family:'DM Sans',sans-serif;font-size:13px;padding:5px 8px;border:1px solid var(--cream-border);border-radius:3px;background:var(--white);color:var(--ink);width:100%;outline:none" oninput="recalcSoap()">
+              <div style="font-size:10px;color:var(--ink-lighter);margin-top:3px">Most commercial KOH is 90% — adjust if you know your actual purity</div>
+            </div>
+            <div style="margin-bottom:10px">
+              <div style="font-size:10px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-lighter);margin-bottom:4px">Water calculation method</div>
+              <select id="soap-lye-method" onchange="onLyeMethodChange()" style="font-family:'DM Sans',sans-serif;font-size:12px;padding:5px 8px;border:1px solid var(--cream-border);border-radius:3px;background:var(--white);color:var(--ink);width:100%;outline:none">
+                <option value="concentration">Lye concentration %</option>
+                <option value="water_pct">Water as % of oils</option>
+              </select>
+            </div>
+            <div id="soap-conc-row" style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+              <div style="flex:1">
+                <div style="font-size:10px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-lighter);margin-bottom:4px">Lye concentration %</div>
+                <input type="number" id="soap-lye-conc" value="33" min="20" max="50" step="0.5" style="font-family:'DM Sans',sans-serif;font-size:14px;padding:5px 8px;border:1px solid var(--cream-border);border-radius:3px;background:var(--white);color:var(--ink);width:100%;outline:none" oninput="recalcSoap()">
+              </div>
+              <div style="font-size:11px;color:var(--ink-lighter);margin-top:18px">lye / (lye + water)</div>
+            </div>
+            <div id="soap-water-row" style="display:none;align-items:center;gap:8px;margin-bottom:10px">
+              <div style="flex:1">
+                <div style="font-size:10px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-lighter);margin-bottom:4px">Water as % of oils</div>
+                <input type="number" id="soap-water-pct" value="38" min="20" max="50" step="1" style="font-family:'DM Sans',sans-serif;font-size:14px;padding:5px 8px;border:1px solid var(--cream-border);border-radius:3px;background:var(--white);color:var(--ink);width:100%;outline:none" oninput="recalcSoap()">
+              </div>
+            </div>
+            <div class="lye-result" id="lye-result">
+              <div style="font-size:12px;color:var(--ink-lighter)">Add oils to calculate lye.</div>
+            </div>
+          </div>
+        </div>
+        <div class="sb-panel" id="sb-soap-quality" style="display:none">
+          <div class="sb-hdr">Soap quality</div>
+          <div class="sb-body" id="soap-quality-body">
+            <div style="font-size:12px;color:var(--ink-lighter)">Quality scores calculate from fatty acid profiles.</div>
+          </div>
+        </div>
+        <div class="sb-panel">
+          <div class="sb-hdr" id="batch-panel-hdr">Batch size</div>
+          <div class="sb-body">
+            <div class="batch-ctrl">
+              <input class="batch-inp" type="text" inputmode="decimal" id="batch-sz" value="100" onclick="this.select()" oninput="onBatchIn(this.value)" onblur="onBatchBlur(this.value)">
+              <span class="batch-unit">grams</span>
+            </div>
+            <div style="font-size:11px;color:var(--ink-lighter);margin-bottom:8px;display:none" id="batch-soap-note">Oils must total 100% of this weight. Lye and water are calculated on top.</div>
+            <div id="batch-btns-skincare" style="display:flex;gap:6px;flex-wrap:wrap">
+              <button class="btn btn-sm" onclick="setBatch(50)">50g</button>
+              <button class="btn btn-sm" onclick="setBatch(100)">100g</button>
+              <button class="btn btn-sm" onclick="setBatch(250)">250g</button>
+              <button class="btn btn-sm" onclick="setBatch(500)">500g</button>
+              <button class="btn btn-sm" onclick="setBatch(1000)">1kg</button>
+            </div>
+            <div id="batch-btns-soap" style="display:none;gap:6px;flex-wrap:wrap">
+              <button class="btn btn-sm" onclick="setBatch(500)">500g</button>
+              <button class="btn btn-sm" onclick="setBatch(1000)">1kg</button>
+              <button class="btn btn-sm" onclick="setBatch(1500)">1.5kg</button>
+              <button class="btn btn-sm" onclick="setBatch(2000)">2kg</button>
+              <button class="btn btn-sm" onclick="setBatch(3000)">3kg</button>
+            </div>
+          </div>
+        </div>
+        <div class="sb-panel">
+          <div class="sb-hdr">Formula total</div>
+          <div class="sb-body">
+            <div class="total-row">
+              <span style="font-size:12px;color:var(--ink-light)">Total percentage</span>
+              <span class="total-val" id="total-pct">0.00%</span>
+            </div>
+            <div class="pct-outer"><div class="pct-inner" id="pct-bar" style="width:0%"></div></div>
+            <div style="font-size:12px;color:var(--ink-lighter)" id="total-note">Add ingredients to begin</div>
+          </div>
+        </div>
+        <div class="sb-panel">
+          <div class="sb-hdr">Cost estimate</div>
+          <div class="sb-body" id="cost-panel">
+            <div style="font-size:12px;color:var(--ink-lighter)">Add ingredient costs in the library to see estimates.</div>
+          </div>
+        </div>
+        <div class="sb-panel">
+          <div class="sb-hdr">
+            INCI list
+            <button class="btn btn-sm" id="copy-btn" onclick="copyInci()" style="font-size:10px;padding:3px 8px">Copy</button>
+          </div>
+          <div class="sb-body" id="inci-panel">
+            <div style="font-size:12px;color:var(--ink-lighter)">INCI list generates as you add ingredients.</div>
+          </div>
+        </div>
+        <div class="sb-panel" id="ver-panel" style="display:none">
+          <div class="sb-hdr">Version history</div>
+          <div class="sb-body" id="ver-body"></div>
+        </div>
+        <div class="sb-panel">
+          <div class="sb-hdr">
+            Usage log
+            <button class="btn btn-sm" onclick="openUsage()" style="font-size:10px;padding:3px 8px">+ Log use</button>
+          </div>
+          <div class="sb-body" id="use-panel">
+            <div style="font-size:12px;color:var(--ink-lighter)">No uses logged yet.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- New formula modal -->
+<div class="modal-ov" id="m-new">
+  <div class="modal">
+    <div class="modal-hdr"><div class="modal-title">New formulation</div><button class="modal-x" onclick="closeModal('m-new')">x</button></div>
+    <div class="field"><label>Formula name *</label><input type="text" id="new-name" placeholder="e.g. Plume Rose Facial Serum"></div>
+    <div class="field">
+      <label>Product type</label>
+      <select id="new-type">
+        <option value="">-- select --</option>
+        <option>Facial serum</option><option>Face cream</option><option>Face oil</option>
+        <option>Eye cream</option><option>Toner / mist</option><option>Cleanser</option>
+        <option>Exfoliant / scrub</option><option>Mask</option><option>Body lotion</option>
+        <option>Body butter</option><option>Body oil</option><option>Lip balm</option>
+        <option>Hair serum</option><option>Hair mask</option><option>Shampoo bar</option>
+        <option>Deodorant</option><option>Other</option>
+        <option disabled>──────────</option>
+        <option>Cold Process Soap</option><option>Hot Process Soap</option>
+      </select>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('m-new')">Cancel</button>
+      <button class="btn btn-primary" onclick="createFormula()">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- Usage log modal -->
+<div class="modal-ov" id="m-use">
+  <div class="modal">
+    <div class="modal-hdr"><div class="modal-title">Log a use</div><button class="modal-x" onclick="closeModal('m-use')">x</button></div>
+    <div class="field"><label>Date made *</label><input type="date" id="ul-date"></div>
+    <div class="field"><label>Batch size made (g)</label><input type="text" inputmode="decimal" id="ul-batch" placeholder="e.g. 100"></div>
+    <div class="field"><label>Version used</label><input type="text" id="ul-ver" readonly style="background:var(--cream-dark)"></div>
+    <div class="field"><label>Outcome notes</label><textarea id="ul-notes" rows="4" placeholder="How did it turn out? Texture, scent, stability, feedback, what you would change..."></textarea></div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('m-use')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveUseEntry()">Save entry</button>
+    </div>
+  </div>
+</div>
+
+<!-- Ingredient detail modal -->
+<div class="modal-ov" id="m-ing">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-hdr"><div class="modal-title" id="id-name"></div><button class="modal-x" onclick="closeModal('m-ing')">x</button></div>
+    <div id="id-body"></div>
+  </div>
+</div>
+
+<!-- Settings & appearance modal -->
+<div class="modal-ov" id="m-settings">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-hdr">
+      <div class="modal-title">Settings &amp; appearance</div>
+      <button class="modal-x" onclick="closeModal('m-settings')">x</button>
+    </div>
+    <div style="padding:0">
+      <div style="font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-lighter);margin-bottom:10px">Appearance</div>
+      <div style="padding:8px 0 18px">
+        <div style="font-size:12px;color:var(--ink-lighter);line-height:1.4;margin-bottom:12px">Choose a color palette for this module. Phase badges and quality bars stay consistent across all palettes. Each module remembers its own palette choice.</div>
+        <div id="palette-swatches" class="palette-swatch-grid"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Data & state ──────────────────────────────────────
+var ING_KEY  = 'aerie-ingredients-v2';
+var FORM_KEY = 'aerie-formulations-v1';
+var ings  = [];
+var forms = [];
+var curId = null;
+var dirty = false;
+var addinMode = false;
+var fLines = [];
+
+// ── Persistence ───────────────────────────────────────
+function loadAll() {
+  try { var r = localStorage.getItem(ING_KEY);  if (r) ings  = JSON.parse(r); } catch(e) {}
+  try { var r = localStorage.getItem(FORM_KEY); if (r) forms = JSON.parse(r); } catch(e) {}
+  renderCards();
+}
+
+function saveAll() {
+  try { localStorage.setItem(FORM_KEY, JSON.stringify(forms)); }
+  catch(e) { alert('Could not save -- browser storage may be full.'); }
+}
+
+function exportData() {
+  var blob = new Blob([JSON.stringify({ formulations: forms }, null, 2)], { type: 'application/json' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'aerie-formulations-' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+}
+
+function importData(e) {
+  var file = e.target.files[0]; if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      var data = JSON.parse(ev.target.result);
+      var arr = data.formulations || (Array.isArray(data) ? data : []);
+      if (!confirm('Import ' + arr.length + ' formulations? Duplicates by name will be skipped.')) return;
+      var ex = new Set(forms.map(function(f) { return f.name.toLowerCase(); }));
+      var added = 0;
+      arr.forEach(function(f) { if (!ex.has((f.name||'').toLowerCase())) { forms.push(f); added++; } });
+      saveAll(); renderCards();
+      alert('Imported ' + added + ' formulations.');
+    } catch(err) { alert('Could not read file.'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+// ── Utilities ─────────────────────────────────────────
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function markDirty() { dirty = true; }
+
+function isSoap() {
+  var t = document.getElementById('f-type').value;
+  return t === 'Cold Process Soap' || t === 'Hot Process Soap';
+}
+
+// ── Per-formula: should add-ins count toward total %? ──
+// Stored on the formula as `addinsInTotal` (Boolean). Soap formulas ignore
+// this setting entirely — soap-addins always live outside the oil 100% by
+// convention (PPO). For non-soap, default to FALSE for any formula that
+// predates the setting (so existing totals don't visibly shift), and TRUE
+// for newly-created formulas (matching standard cosmetic practice).
+function getAddinsInTotal() {
+  if (isSoap()) return false; // soap-addins (soapAddin lines) are always out
+  var cb = document.getElementById('f-addins-in-total');
+  return !!(cb && cb.checked);
+}
+function onAddinsInTotalChange() { markDirty(); recalc(); }
+function updateAddinTotalRow() {
+  var row     = document.getElementById('addin-total-row');
+  var soapNot = document.getElementById('addin-soap-note');
+  if (isSoap()) {
+    // Hide the toggle but show the soap note as a tiny clarifier below
+    // the type select. Easiest: just keep the row visible but checkbox
+    // disabled, with the soap note revealed and the checkbox label dimmed.
+    row.style.display = 'block';
+    var cb = document.getElementById('f-addins-in-total');
+    cb.checked  = false;
+    cb.disabled = true;
+    row.style.opacity = '0.6';
+    soapNot.style.display = 'inline';
+  } else {
+    row.style.display = 'block';
+    var cb2 = document.getElementById('f-addins-in-total');
+    cb2.disabled = false;
+    row.style.opacity = '1';
+    soapNot.style.display = 'none';
+  }
+}
+
+function bestCpg(ing) {
+  var lots = ing.lots || (ing.cost ? [{ costPerG: ing.cost }] : []);
+  var costs = lots.map(function(l) { return parseFloat(l.costPerG); }).filter(function(c) { return !isNaN(c) && c > 0; });
+  return costs.length ? Math.min.apply(null, costs) : null;
+}
+
+function calcBatchCost(lines, bs) {
+  var total = 0, hasAny = false;
+  lines.forEach(function(l) {
+    var ing = ings.find(function(i) { return i.id === l.ingId; });
+    if (!ing) return;
+    var cpg = bestCpg(ing); if (cpg === null) return;
+    var g = l.pinned ? (parseFloat(l.gramsFixed)||0) : (parseFloat(l.pct)||0)/100*bs;
+    total += cpg * g; hasAny = true;
+  });
+  return hasAny ? total : null;
+}
+
+// ── Navigation ────────────────────────────────────────
+function goList() {
+  if (dirty && !confirm('You have unsaved changes. Leave without saving?')) return;
+  document.getElementById('list-view').style.display = 'block';
+  document.getElementById('editor-view').style.display = 'none';
+  document.getElementById('nav-list').classList.add('active');
+  document.getElementById('nav-ed').style.display = 'none';
+  dirty = false;
+  renderCards();
+}
+
+function showEditor(name) {
+  document.getElementById('list-view').style.display = 'none';
+  document.getElementById('editor-view').style.display = 'block';
+  document.getElementById('nav-list').classList.remove('active');
+  var tab = document.getElementById('nav-ed');
+  tab.style.display = 'inline-block';
+  tab.classList.add('active');
+  tab.textContent = name && name.length > 20 ? name.slice(0,20) + '...' : (name || 'Editor');
+}
+
+// ── Cards list ────────────────────────────────────────
+function renderCards() {
+  var el = document.getElementById('fcard-container');
+  if (!forms.length) {
+    el.innerHTML = '<div class="empty"><p>No formulations yet</p><span style="font-size:13px">Click "+ New formulation" to start building your first formula.</span></div>';
+    return;
+  }
+  var html = '<div class="cards-grid">';
+  forms.forEach(function(f) {
+    var phases = {}, phList = [];
+    (f.lines||[]).forEach(function(l) {
+      var ing = ings.find(function(i) { return i.id === l.ingId; });
+      if (ing && !phases[ing.phase]) { phases[ing.phase] = true; phList.push(ing.phase); }
+    });
+    var cost = calcBatchCost(f.lines||[], 100);
+    var costStr = cost !== null ? ('~$' + cost.toFixed(2) + '/100g') : 'No cost data';
+    var dateStr = f.updatedAt ? new Date(f.updatedAt).toLocaleDateString() : '--';
+    html += '<div class="fcard" onclick="openFormula(\'' + f.id + '\')">';
+    html += '<div class="fcard-name">' + esc(f.name) + '</div>';
+    html += '<div class="fcard-meta">' + esc(f.type || 'Formula') + ' &middot; v' + (f.version||1) + ' &middot; ' + (f.lines||[]).length + ' ingredients</div>';
+    html += '<div class="fcard-tags">';
+    phList.forEach(function(p) { html += '<span class="tag">' + p + '</span>'; });
+    html += '<span class="tag" style="background:var(--sage-light);color:var(--sage-dark)">' + (f.status||'draft') + '</span>';
+    html += '</div>';
+    html += '<div class="fcard-foot"><span>' + costStr + '</span><span>' + dateStr + '</span></div>';
+    html += '</div>';
+  });
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+// ── Formula create / open ─────────────────────────────
+function newFormula() {
+  document.getElementById('new-name').value = '';
+  document.getElementById('new-type').value = '';
+  openModal('m-new');
+  setTimeout(function() { document.getElementById('new-name').focus(); }, 100);
+}
+
+function createFormula() {
+  var name = document.getElementById('new-name').value.trim();
+  if (!name) { alert('Please enter a formula name.'); return; }
+  var t = document.getElementById('new-type').value;
+  var isSoapType = t === 'Cold Process Soap' || t === 'Hot Process Soap';
+  var f = {
+    id: Date.now().toString() + Math.random().toString(36).slice(2,5),
+    name: name, type: t,
+    status: 'draft', version: 1, notes: '', instructions: '',
+    // Default: skincare counts add-ins toward 100% (standard practice).
+    // Soap doesn't use this setting (always PPO convention).
+    addinsInTotal: !isSoapType,
+    lines: [], versions: [], usageLog: [],
+    createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
+  };
+  forms.push(f); saveAll(); closeModal('m-new'); openFormula(f.id);
+}
+
+function openFormula(id) {
+  var f = forms.find(function(x) { return x.id === id; });
+  if (!f) return;
+  curId = id;
+  fLines = (f.lines||[]).map(function(l) { return Object.assign({}, l); });
+  dirty = false;
+  document.getElementById('f-name').value = f.name;
+  document.getElementById('f-type').value = f.type || '';
+  document.getElementById('f-status').value = f.status || 'draft';
+  document.getElementById('f-notes').value = f.notes || '';
+  document.getElementById('f-instruct').value = f.instructions || '';
+  document.getElementById('f-ver-lbl').textContent = 'Version ' + (f.version||1);
+  // Restore addin-in-total setting. Legacy formulas without the field
+  // default to FALSE so their existing totals don't visibly change.
+  document.getElementById('f-addins-in-total').checked = !!f.addinsInTotal;
+  restoreSoapSettings(f);
+  renderVersionHistory(f); renderUseLog(f);
+  showEditor(f.name); updateSoapUI(); updateAddinTotalRow(); renderLines(); recalc();
+}
+
+function restoreSoapSettings(f) {
+  var s = f.soapSettings || {};
+  document.getElementById('soap-superfat').value    = s.superfat  || 5;
+  document.getElementById('soap-lye-conc').value    = s.lyeConc   || 33;
+  document.getElementById('soap-water-pct').value   = s.waterPct  || 38;
+  document.getElementById('soap-lye-type').value    = s.lyeType   || 'naoh';
+  document.getElementById('soap-koh-purity').value  = s.kohPurity || 90;
+  var method = s.lyeMethod || 'concentration';
+  document.getElementById('soap-lye-method').value  = method;
+  document.getElementById('soap-koh-purity-row').style.display = (s.lyeType === 'koh') ? 'block' : 'none';
+  document.getElementById('soap-conc-row').style.display  = method === 'concentration' ? 'flex' : 'none';
+  document.getElementById('soap-water-row').style.display = method === 'water_pct'     ? 'flex' : 'none';
+}
+
+// ── Soap UI switching ─────────────────────────────────
+function onTypeChange() { markDirty(); updateSoapUI(); updateAddinTotalRow(); renderLines(); recalc(); }
+
+function updateSoapUI() {
+  var soap = isSoap();
+  // Soap-specific sidebar panels
+  document.getElementById('sb-soap-lye').style.display     = soap ? 'block' : 'none';
+  document.getElementById('sb-soap-quality').style.display = soap ? 'block' : 'none';
+  // Batch / oil weight panel
+  document.getElementById('batch-panel-hdr').textContent        = soap ? 'Total oil weight' : 'Batch size';
+  document.getElementById('batch-soap-note').style.display      = soap ? 'block' : 'none';
+  document.getElementById('batch-btns-skincare').style.display  = soap ? 'none'  : 'flex';
+  document.getElementById('batch-btns-soap').style.display      = soap ? 'flex'  : 'none';
+  // Nudge batch size to sensible default when switching modes
+  var bsEl = document.getElementById('batch-sz');
+  if (soap && parseFloat(bsEl.value) <= 100) bsEl.value = 1000;
+  if (!soap && parseFloat(bsEl.value) >= 500) bsEl.value = 100;
+  // Hide formula % total for soap (lye calc replaces it)
+  document.querySelectorAll('.sb-panel').forEach(function(p) {
+    var hdr = p.querySelector('.sb-hdr');
+    if (hdr && hdr.textContent.trim() === 'Formula total') p.style.display = soap ? 'none' : 'block';
+  });
+  // Add-in button label
+  var btn = document.getElementById('addin-btn');
+  if (btn) btn.textContent = soap ? 'Add-in (additive)' : 'Add-in';
+  // Search placeholder
+  var srch = document.getElementById('ing-search');
+  if (srch) srch.placeholder = soap ? 'Search oils, butters, lye, additives...' : 'Search ingredients to add...';
+  // Hide any open addin note
+  document.getElementById('addin-note').style.display = 'none';
+  addinMode = false;
+}
+
+function onLyeMethodChange() {
+  var method = document.getElementById('soap-lye-method').value;
+  document.getElementById('soap-conc-row').style.display  = method === 'concentration' ? 'flex' : 'none';
+  document.getElementById('soap-water-row').style.display = method === 'water_pct'     ? 'flex' : 'none';
+  recalcSoap();
+}
+
+// ── Soap rendering ────────────────────────────────────
+function renderSoapLines() {
+  var bs       = parseFloat(document.getElementById('batch-sz').value) || 1000;
+  var lyeType  = document.getElementById('soap-lye-type').value || 'naoh';
+  var lyeKey   = lyeType === 'koh' ? 'koh' : 'naoh';
+  var lyeLabel = lyeType === 'koh' ? 'KOH' : 'NaOH';
+  var superfat = parseFloat(document.getElementById('soap-superfat').value) || 5;
+
+  var oils   = fLines.filter(function(l) { return !l.soapAddin; });
+  var addins = fLines.filter(function(l) { return l.soapAddin; });
+  var totalOilPct = oils.reduce(function(s, l) { return s + (parseFloat(l.pct) || 0); }, 0);
+  var totalOilG   = totalOilPct / 100 * bs;
+
+  // Column header
+  var colHdr = oils.length ? ('<div class="soap-col-hdr">' +
+    '<span>Oil / Butter</span>' +
+    '<span style="text-align:right">%</span>' +
+    '<span style="text-align:right">Grams</span>' +
+    '<span style="text-align:right">' + lyeLabel + ' contrib.</span>' +
+    '<span style="text-align:right">Line cost</span>' +
+    '<span></span></div>') : '';
+
+  // Oil rows
+  var oilHtml = '';
+  fLines.forEach(function(l, idx) {
+    if (l.soapAddin) return;
+    var ing = ings.find(function(i) { return i.id === l.ingId; });
+    if (!ing) return;
+    var pct      = parseFloat(l.pct) || 0;
+    var gFromPct = pct / 100 * bs;
+    var sap      = ing.soap && ing.soap[lyeKey] ? ing.soap[lyeKey] : null;
+    var sapAltKey   = lyeType === 'koh' ? 'naoh' : 'koh';
+    var sapAltLabel = lyeType === 'koh' ? 'NaOH' : 'KOH';
+    var sapAlt   = ing.soap && ing.soap[sapAltKey] ? ing.soap[sapAltKey] : null;
+    var lyeContrib  = sap && gFromPct > 0 ? ((gFromPct * sap) * (1 - superfat / 100)).toFixed(2) + 'g' : '--';
+    var cpg      = bestCpg(ing);
+    var lCost    = cpg !== null && gFromPct > 0 ? '$' + (cpg * gFromPct).toFixed(2) : '--';
+    var dispPct  = pct > 0 ? pct.toFixed(2) : (l.pct || '');
+    var dispG    = gFromPct > 0 ? gFromPct.toFixed(2) : '';
+
+    oilHtml += '<div class="soap-row' + (!sap && pct > 0 ? ' no-sap' : '') + '">';
+    oilHtml += '<div>';
+    oilHtml += '<button class="ing-name-btn" onclick="showIngDetail(\'' + ing.id + '\')">' + esc(ing.name) + '</button>';
+    if (sap) {
+      oilHtml += '<div style="font-size:10px;color:var(--sage-dark);margin-top:1px">' +
+        lyeLabel + ' SAP: ' + sap +
+        (sapAlt ? '&nbsp;&middot;&nbsp;' + sapAltLabel + ': ' + sapAlt : '') + '</div>';
+    } else {
+      oilHtml += '<div style="font-size:10px;color:var(--ink-lighter);margin-top:1px">No ' + lyeLabel + ' SAP &mdash; add in Ingredients library</div>';
+    }
+    oilHtml += '<div class="ing-inci">' + esc(ing.inci) + '</div>';
+    oilHtml += '</div>';
+    oilHtml += '<input class="soap-inp" type="text" inputmode="decimal" value="' + dispPct + '" placeholder="0.00"' +
+      ' onclick="this.select()" oninput="onSoapPct(' + idx + ',this.value)" onblur="onSoapPctB(' + idx + ',this.value)"' +
+      ' id="soap-pct-' + idx + '">';
+    oilHtml += '<input class="soap-inp" type="text" inputmode="decimal" value="' + dispG + '" placeholder="0.0"' +
+      ' onclick="this.select()" oninput="onSoapGrams(' + idx + ',this.value)" onblur="onSoapGramsB(' + idx + ',this.value)"' +
+      ' id="soap-g-' + idx + '">';
+    oilHtml += '<div style="font-size:13px;color:var(--ink-light);text-align:right;padding-right:4px">' + lyeContrib + '</div>';
+    oilHtml += '<div style="font-size:12px;color:var(--ink-lighter);text-align:right">' + lCost + '</div>';
+    oilHtml += '<button class="ing-rm" onclick="rmLine(' + idx + ')">x</button>';
+    oilHtml += '</div>';
+  });
+
+  // Additive rows
+  var addinHtml = '';
+  if (addins.length) {
+    addinHtml += '<div class="phase-group" style="margin-top:1rem">' +
+      '<div class="phase-label" style="color:var(--clay)">' +
+      '<span class="pdot" style="background:var(--clay)"></span>' +
+      'Additives / add-ins <span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:10px;margin-left:4px">' +
+      '(fragrance, colorants, exfoliants)</span></div>';
+    fLines.forEach(function(l, idx) {
+      if (!l.soapAddin) return;
+      var ing = ings.find(function(i) { return i.id === l.ingId; });
+      if (!ing) return;
+      var g      = parseFloat(l.gramsFixed) || 0;
+      var pctPPO = totalOilG > 0 && g > 0 ? (g / totalOilG * 100).toFixed(2) + '% PPO' : '--';
+      var cpg    = bestCpg(ing);
+      var lCost  = cpg !== null && g > 0 ? '$' + (cpg * g).toFixed(2) : '--';
+      addinHtml += '<div class="soap-row addin">';
+      addinHtml += '<div><button class="ing-name-btn" onclick="showIngDetail(\'' + ing.id + '\')">' + esc(ing.name) + '</button>' +
+        '<span class="addin-badge" style="margin-left:6px">add-in</span>';
+      addinHtml += '<div class="ing-inci">' + esc(ing.inci) + '</div></div>';
+      addinHtml += '<div style="font-size:12px;color:var(--ink-lighter);text-align:right;padding-right:4px">--</div>';
+      addinHtml += '<input class="soap-inp" type="text" inputmode="decimal" value="' + (g || '') + '" placeholder="0"' +
+        ' onclick="this.select()" oninput="onSoapG(' + idx + ',this.value)" onblur="onSoapGB(' + idx + ',this.value)">';
+      addinHtml += '<div style="font-size:12px;color:var(--ink-lighter);text-align:right;padding-right:4px">' + pctPPO + '</div>';
+      addinHtml += '<div style="font-size:12px;color:var(--ink-lighter);text-align:right">' + lCost + '</div>';
+      addinHtml += '<button class="ing-rm" onclick="rmLine(' + idx + ')">x</button>';
+      addinHtml += '</div>';
+    });
+    addinHtml += '</div>';
+  }
+
+  // Total % status row
+  var overLimit = totalOilPct > 100.005;
+  var atLimit   = Math.abs(totalOilPct - 100) < 0.05;
+  var totalMsg  = atLimit    ? 'Oils total 100% \u2713'
+                : overLimit  ? 'Over 100% by ' + (totalOilPct - 100).toFixed(2) + '% \u2014 reduce an oil'
+                :              (100 - totalOilPct).toFixed(2) + '% remaining';
+  var totalBg   = overLimit  ? 'var(--danger-bg)' : (atLimit ? 'var(--sage-light)' : 'var(--warning-bg)');
+  var totalFg   = overLimit  ? 'var(--danger)'    : (atLimit ? 'var(--success)'    : 'var(--warning)');
+  var totalRow  = oils.length ? ('<div style="display:flex;justify-content:space-between;align-items:center;' +
+    'padding:8px 10px;font-size:12px;font-weight:500;margin-top:4px;border-radius:3px;' +
+    'background:' + totalBg + ';color:' + totalFg + '">' +
+    '<span>' + totalMsg + '</span>' +
+    '<span>' + totalOilPct.toFixed(2) + '% \u2014 ' + totalOilG.toFixed(0) + 'g</span></div>') : '';
+
+  var empty = !oils.length ? '<div style="color:var(--ink-lighter);font-size:13px;padding:1rem 0">No oils yet \u2014 search below to add your first one.</div>' : '';
+
+  document.getElementById('phase-groups').innerHTML =
+    '<div style="font-size:10px;font-weight:500;letter-spacing:0.15em;text-transform:uppercase;color:var(--ink-lighter);' +
+    'padding:6px 0;border-bottom:1px solid var(--cream-border);margin-bottom:8px">Oils &amp; butters ' +
+    '<span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:11px">\u2014 % of total oil weight</span></div>' +
+    colHdr + (oilHtml || empty) + totalRow + addinHtml;
+
+  document.getElementById('ing-count').textContent = oils.length
+    ? oils.length + ' oil' + (oils.length !== 1 ? 's' : '') + ' \u2014 ' +
+      totalOilPct.toFixed(1) + '% of ' + bs.toFixed(0) + 'g oil weight (' + totalOilG.toFixed(0) + 'g)' +
+      (addins.length ? ' / ' + addins.length + ' add-in' + (addins.length !== 1 ? 's' : '') : '')
+    : '';
+}
+
+// ── Soap input handlers ───────────────────────────────
+function onSoapPct(idx, v) {
+  var bs = parseFloat(document.getElementById('batch-sz').value) || 1000;
+  var p  = parseFloat(v.replace(',', '.')) || 0;
+  fLines[idx].pct = v.replace(',', '.');
+  fLines[idx].gramsFixed = '';
+  markDirty();
+  var gEl = document.getElementById('soap-g-' + idx);
+  if (gEl) gEl.value = p > 0 ? (p / 100 * bs).toFixed(2) : '';
+  recalcSoap();
+}
+
+function onSoapPctB(idx, v) {
+  fLines[idx].pct = v.replace(',', '.'); fLines[idx].gramsFixed = '';
+  markDirty(); renderLines(); recalcSoap();
+}
+
+function onSoapGrams(idx, v) {
+  var bs = parseFloat(document.getElementById('batch-sz').value) || 1000;
+  var g  = parseFloat(v.replace(',', '.')) || 0;
+  var p  = bs > 0 && g > 0 ? (g / bs * 100) : 0;
+  fLines[idx].pct = p > 0 ? p.toFixed(4) : '';
+  fLines[idx].gramsFixed = v.replace(',', '.');
+  markDirty();
+  var pEl = document.getElementById('soap-pct-' + idx);
+  if (pEl) pEl.value = p > 0 ? p.toFixed(2) : '';
+  recalcSoap();
+}
+
+function onSoapGramsB(idx, v) {
+  var bs = parseFloat(document.getElementById('batch-sz').value) || 1000;
+  var g  = parseFloat(v.replace(',', '.')) || 0;
+  fLines[idx].pct = bs > 0 && g > 0 ? (g / bs * 100).toFixed(4) : '';
+  fLines[idx].gramsFixed = v.replace(',', '.');
+  markDirty(); renderLines(); recalcSoap();
+}
+
+// Additive (soap add-in) gram handlers
+function onSoapG(idx, v)  { fLines[idx].gramsFixed = v.replace(',', '.'); markDirty(); recalcSoap(); }
+function onSoapGB(idx, v) { fLines[idx].gramsFixed = v.replace(',', '.'); markDirty(); renderLines(); recalcSoap(); }
+
+// ── Soap calculations ─────────────────────────────────
+function recalcSoap() {
+  var bs        = parseFloat(document.getElementById('batch-sz').value) || 1000;
+  var superfat  = parseFloat(document.getElementById('soap-superfat').value) || 5;
+  var lyeMethod = document.getElementById('soap-lye-method').value || 'concentration';
+  var lyeType   = document.getElementById('soap-lye-type').value   || 'naoh';
+  var lyeKey    = lyeType === 'koh' ? 'koh' : 'naoh';
+  var lyeLabel  = lyeType === 'koh' ? 'KOH' : 'NaOH';
+  var kohPurity = lyeType === 'koh' ? (parseFloat(document.getElementById('soap-koh-purity').value) || 90) / 100 : 1;
+
+  // Show/hide KOH purity field
+  document.getElementById('soap-koh-purity-row').style.display = lyeType === 'koh' ? 'block' : 'none';
+
+  var oils = fLines.filter(function(l) { return !l.soapAddin; });
+  var totalOilPct = oils.reduce(function(s, l) { return s + (parseFloat(l.pct) || 0); }, 0);
+  var totalOilG   = totalOilPct / 100 * bs;
+
+  // Pure lye needed (100% purity basis)
+  var pureLye = 0; var missingSap = 0;
+  oils.forEach(function(l) {
+    var ing = ings.find(function(i) { return i.id === l.ingId; });
+    var g   = (parseFloat(l.pct) || 0) / 100 * bs;
+    if (!ing || !ing.soap || !ing.soap[lyeKey]) { if (g > 0) missingSap++; return; }
+    pureLye += g * ing.soap[lyeKey] * (1 - superfat / 100);
+  });
+  // Actual lye to weigh (adjusted for purity)
+  var actualLye = kohPurity > 0 ? pureLye / kohPurity : pureLye;
+
+  // Water amount
+  var waterG;
+  if (lyeMethod === 'concentration') {
+    var lyeConc = parseFloat(document.getElementById('soap-lye-conc').value) || 33;
+    waterG = pureLye > 0 ? pureLye * (100 - lyeConc) / lyeConc : 0;
+  } else {
+    var waterPct = parseFloat(document.getElementById('soap-water-pct').value) || 38;
+    waterG = totalOilG * (waterPct / 100);
+  }
+
+  var totalBatch      = totalOilG + actualLye + waterG;
+  var lyeConc_actual  = (pureLye + waterG) > 0 ? (pureLye / (pureLye + waterG) * 100) : 0;
+  var waterPct_actual = totalOilG > 0 ? (waterG / totalOilG * 100) : 0;
+
+  // Lye result panel
+  var lyeEl = document.getElementById('lye-result');
+  if (totalOilG === 0) {
+    lyeEl.innerHTML = '<div style="font-size:12px;color:var(--ink-lighter)">Add oils to calculate lye.</div>';
+  } else if (totalOilPct > 100.005) {
+    lyeEl.innerHTML = '<div style="font-size:12px;color:var(--danger);padding:6px 8px;background:var(--danger-bg);border-radius:3px">' +
+      'Oils exceed 100% \u2014 lye calculation paused. Reduce your oil percentages first.</div>';
+  } else {
+    var kohNote = lyeType === 'koh' && kohPurity < 1
+      ? ' <span style="font-size:10px;color:var(--ink-lighter)">(at ' + Math.round(kohPurity*100) + '% purity)</span>' : '';
+    lyeEl.innerHTML =
+      '<div class="lye-row"><span class="lye-label">Oil weight</span>' +
+        '<span class="lye-val">' + totalOilG.toFixed(1) + 'g</span></div>' +
+      '<div class="lye-row"><span class="lye-label">' + lyeLabel + ' to weigh' + (missingSap ? ' (approx)' : '') + '</span>' +
+        '<span class="lye-val' + (missingSap ? ' missing' : '') + '">' + actualLye.toFixed(1) + 'g' + kohNote +
+        (missingSap ? ' <span style="font-size:10px;color:var(--warning)">(' + missingSap + ' missing SAP)</span>' : '') + '</span></div>' +
+      (lyeType === 'koh' && kohPurity < 1
+        ? '<div class="lye-row"><span class="lye-label" style="font-size:11px;color:var(--ink-lighter)">Pure KOH needed</span>' +
+          '<span style="font-size:11px;color:var(--ink-lighter)">' + pureLye.toFixed(1) + 'g</span></div>' : '') +
+      '<div class="lye-row"><span class="lye-label">Distilled water</span>' +
+        '<span class="lye-val">' + waterG.toFixed(1) + 'g</span></div>' +
+      '<div class="lye-row"><span class="lye-label" style="font-size:11px;color:var(--ink-lighter)">Water as % of oils</span>' +
+        '<span style="font-size:11px;color:var(--ink-lighter)">' + waterPct_actual.toFixed(1) + '%</span></div>' +
+      '<div class="lye-row"><span class="lye-label" style="font-size:11px;color:var(--ink-lighter)">Lye concentration</span>' +
+        '<span style="font-size:11px;color:var(--ink-lighter)">' + lyeConc_actual.toFixed(1) + '%</span></div>' +
+      '<div class="lye-row" style="border-top:1px solid var(--cream-border);margin-top:4px;padding-top:8px">' +
+        '<span class="lye-label" style="font-weight:500;color:var(--ink)">Est. total batch</span>' +
+        '<span class="lye-val" style="font-size:16px">' + totalBatch.toFixed(0) + 'g</span></div>';
+  }
+
+  // Soap quality bars (weighted fatty acid scores)
+  var FA = { lauric:0, myristic:0, palmitic:0, stearic:0, ricinoleic:0, oleic:0, linoleic:0, linolenic:0 };
+  var hasFa = false;
+  oils.forEach(function(l) {
+    var ing = ings.find(function(i) { return i.id === l.ingId; });
+    var g   = (parseFloat(l.pct) || 0) / 100 * bs;
+    if (!ing || !ing.soap || !ing.soap.fa || g === 0 || totalOilG === 0) return;
+    var w = g / totalOilG;
+    Object.keys(ing.soap.fa).forEach(function(k) { FA[k] = (FA[k] || 0) + ing.soap.fa[k] * w; hasFa = true; });
+  });
+
+  var qEl = document.getElementById('soap-quality-body');
+  if (!hasFa || totalOilG === 0) {
+    qEl.innerHTML = '<div style="font-size:12px;color:var(--ink-lighter)">Quality scores calculate from fatty acid profiles.</div>';
+  } else {
+    var hardness     = Math.round(FA.lauric + FA.myristic + FA.palmitic + FA.stearic);
+    var cleansing    = Math.round(FA.lauric + FA.myristic);
+    var conditioning = Math.round(FA.ricinoleic + FA.oleic + FA.linoleic + FA.linolenic);
+    var lather       = Math.round(FA.lauric + FA.myristic + FA.ricinoleic);
+    var ins          = Math.round(FA.lauric*5.71 + FA.myristic*5.54 + FA.palmitic*4.18 + FA.stearic*3.28 +
+                                  FA.oleic*1.81 + FA.ricinoleic*3.19 + FA.linoleic*0.95 + FA.linolenic*0.47);
+    function qBar(label, val, min, max, cls) {
+      var pct     = Math.min(100, Math.max(0, val));
+      var inRange = val >= min && val <= max;
+      return '<div class="quality-item">' +
+        '<div class="quality-lbl"><span>' + label + '</span>' +
+        '<span>' + val + ' <span style="font-size:9px;color:var(--ink-lighter)">(ideal ' + min + '\u2013' + max + ')</span></span></div>' +
+        '<div class="quality-track"><div class="quality-fill ' + cls + '" style="width:' + pct + '%;opacity:' + (inRange ? '1' : '0.45') + '"></div></div></div>';
+    }
+    qEl.innerHTML =
+      qBar('Hardness',     hardness,     29, 54, 'q-hardness') +
+      qBar('Cleansing',    cleansing,    12, 22, 'q-cleansing') +
+      qBar('Conditioning', conditioning, 44, 69, 'q-conditioning') +
+      qBar('Lather',       lather,       16, 48, 'q-lather') +
+      '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--cream-dark)">' +
+        '<div class="quality-lbl"><span>INS score</span>' +
+        '<span>' + ins + ' <span style="font-size:9px;color:var(--ink-lighter)">(ideal 136\u2013170)</span></span></div>' +
+        '<div class="quality-track"><div class="quality-fill q-ins" style="width:' + Math.min(100, ins/2) + '%;opacity:' +
+          (ins >= 136 && ins <= 170 ? '1' : '0.45') + '"></div></div></div>' +
+      '<div style="font-size:10px;color:var(--ink-lighter);margin-top:8px">Faded bars are outside ideal range</div>';
+  }
+
+  // Cost panel
+  var cEl = document.getElementById('cost-panel');
+  var tc = 0; var hasCost = false;
+  fLines.forEach(function(l) {
+    var ing = ings.find(function(i) { return i.id === l.ingId; });
+    if (!ing) return;
+    var cpg = bestCpg(ing); if (cpg === null) return;
+    var g = l.soapAddin ? (parseFloat(l.gramsFixed) || 0) : ((parseFloat(l.pct) || 0) / 100 * bs);
+    tc += cpg * g; hasCost = true;
+  });
+  if (hasCost && totalBatch > 0) {
+    cEl.innerHTML =
+      '<div class="cost-row"><span>Total batch cost</span><span>$' + tc.toFixed(2) + '</span></div>' +
+      '<div class="cost-row"><span>Per 100g</span><span>$' + (tc / totalBatch * 100).toFixed(2) + '</span></div>';
+  } else {
+    cEl.innerHTML = '<div style="font-size:12px;color:var(--ink-lighter)">Add ingredient costs in the library to see estimates.</div>';
+  }
+
+  // INCI panel (sorted by % descending)
+  var iEl = document.getElementById('inci-panel');
+  var oilsForInci   = fLines.filter(function(l) { return !l.soapAddin; });
+  var addinsForInci = fLines.filter(function(l) { return l.soapAddin; });
+  if (!oilsForInci.length && !addinsForInci.length) {
+    iEl.innerHTML = '<div style="font-size:12px;color:var(--ink-lighter)">INCI list generates as you add ingredients.</div>';
+  } else {
+    var sorted = oilsForInci.slice().sort(function(a, b) { return (parseFloat(b.pct) || 0) - (parseFloat(a.pct) || 0); });
+    var ihtml = '<div class="inci-list">';
+    var n = 0;
+    sorted.forEach(function(l) {
+      var ing = ings.find(function(x) { return x.id === l.ingId; }); if (!ing) return;
+      ihtml += '<div class="inci-item"><span class="inci-num">' + (++n) + '.</span><span>' + esc(ing.inci) + '</span></div>';
+    });
+    addinsForInci.forEach(function(l) {
+      var ing = ings.find(function(x) { return x.id === l.ingId; }); if (!ing) return;
+      ihtml += '<div class="inci-item"><span class="inci-num">' + (++n) + '.</span><span>' + esc(ing.inci) +
+        ' <span style="font-size:10px;color:var(--clay)">(add-in)</span></span></div>';
+    });
+    ihtml += '</div>';
+    iEl.innerHTML = ihtml;
+  }
+}
+
+// ── Skincare rendering ────────────────────────────────
+function renderLines() {
+  if (isSoap()) { renderSoapLines(); return; }
+  var phases  = ['water','oil','cool-down','active','other'];
+  var phNames = { water:'Water phase', oil:'Oil phase', 'cool-down':'Cool-down phase', active:'Active phase', other:'Other' };
+  var bs = parseFloat(document.getElementById('batch-sz').value) || 100;
+  var grouped = {}; phases.forEach(function(p) { grouped[p] = []; });
+  var addins = [];
+  fLines.forEach(function(l, idx) {
+    if (l.addin) { addins.push({ l:l, idx:idx }); return; }
+    var ing = ings.find(function(i) { return i.id === l.ingId; });
+    var ph  = ing ? ing.phase : 'other';
+    if (!grouped[ph]) grouped[ph] = [];
+    grouped[ph].push({ l:l, idx:idx, ing:ing });
+  });
+  var hasAny = phases.some(function(p) { return grouped[p].length > 0; }) || addins.length > 0;
+  var colHdr = hasAny ? '<div class="col-hdr"><span></span><span style="text-align:right">%</span>' +
+    '<span style="text-align:center">pin</span><span style="text-align:right">grams</span>' +
+    '<span style="text-align:right">line cost</span><span></span></div>' : '';
+  var html = '';
+  phases.forEach(function(p) {
+    if (!grouped[p] || !grouped[p].length) return;
+    html += '<div class="phase-group"><div class="phase-label"><span class="pdot dot-' + p + '"></span>' + phNames[p] + '</div>';
+    grouped[p].forEach(function(r) { html += buildRow(r.l, r.idx, r.ing, bs, false); });
+    html += '</div>';
+  });
+  if (addins.length) {
+    html += '<div class="phase-group"><div class="phase-label" style="color:var(--clay)">' +
+      '<span class="pdot" style="background:var(--clay)"></span>Add-ins ' +
+      '<span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:10px;margin-left:4px">(not counted in formula %)</span></div>';
+    addins.forEach(function(r) {
+      var ing = ings.find(function(i) { return i.id === r.l.ingId; });
+      html += buildRow(r.l, r.idx, ing, bs, true);
+    });
+    html += '</div>';
+  }
+  document.getElementById('phase-groups').innerHTML = colHdr +
+    (html || '<div style="color:var(--ink-lighter);font-size:13px;padding:1rem 0">No ingredients yet -- search below to add your first one.</div>');
+  var fc = fLines.filter(function(l) { return !l.addin; }).length;
+  var ac = fLines.filter(function(l) { return l.addin; }).length;
+  var parts = [];
+  if (fc) parts.push(fc + ' ingredient' + (fc !== 1 ? 's' : ''));
+  if (ac) parts.push(ac + ' add-in' + (ac !== 1 ? 's' : ''));
+  document.getElementById('ing-count').textContent = parts.join(' / ');
+}
+
+function buildRow(l, idx, ing, bs, isAddin) {
+  if (!ing) return '';
+  var pinned = !!l.pinned;
+  var pct    = parseFloat(l.pct) || 0;
+  var gf     = parseFloat(l.gramsFixed) || 0;
+  var dispPct, dispGrams;
+  if (isAddin)     { dispPct = ''; dispGrams = l.gramsFixed || ''; }
+  else if (pinned) { dispPct = bs > 0 ? (gf/bs*100).toFixed(2) : ''; dispGrams = gf.toFixed(2); }
+  else             { dispPct = l.pct !== undefined && l.pct !== '' ? pct.toFixed(2) : ''; dispGrams = pct > 0 ? (pct/100*bs).toFixed(2) : ''; }
+  var gNum   = parseFloat(dispGrams) || 0;
+  var cpg    = bestCpg(ing);
+  var lCost  = cpg !== null ? ('$' + (cpg*gNum).toFixed(3)) : '--';
+  var effPct = pinned && bs > 0 ? gf/bs*100 : pct;
+  var over   = !isAddin && ing.max && effPct > parseFloat(ing.max);
+  var under  = !isAddin && ing.min && effPct > 0 && effPct < parseFloat(ing.min);
+  var warn   = over || under;
+  var dpg    = l.dropsPerG || 20;
+  var dropsDisp = l.drops || (gNum > 0 ? Math.round(gNum*dpg) : '') || '';
+  var row = '<div class="ing-row' + (warn?' warn':'') + (isAddin?' addin':'') + '">';
+  row += '<div>';
+  row += '<div><button class="ing-name-btn" onclick="showIngDetail(\'' + ing.id + '\')">' + esc(ing.name) + '</button>';
+  if (ing.flag === 'yes') row += '<span style="font-size:10px;color:var(--warning);margin-left:4px">&#9679;</span>';
+  if (pinned && !isAddin) row += '<span class="pinned-badge">pinned</span>';
+  if (isAddin) row += '<span class="addin-badge">add-in</span>';
+  row += '</div>';
+  row += '<div class="ing-inci">' + esc(ing.inci) + '</div>';
+  if (warn) row += '<div class="warn-txt">' + (over ? 'Over max (' + ing.max + '%) ' : '') + (under ? 'Under min (' + ing.min + '%)' : '') + '</div>';
+  if (isAddin) {
+    row += '<div class="drops-row"><span style="color:var(--ink-lighter)">approx</span>';
+    row += '<input class="drops-inp" value="' + dropsDisp + '" placeholder="drops" onclick="this.select()" oninput="onDrops(' + idx + ',this.value,' + dpg + ')">';
+    row += '<span>drops</span><span style="color:var(--ink-lighter)">(' + dpg + '/g)</span>';
+    row += '<button class="btn btn-sm" style="font-size:10px;padding:2px 7px" onclick="editDpg(' + idx + ')">ratio</button></div>';
+  }
+  row += '</div>';
+  if (isAddin) {
+    row += '<div style="font-size:11px;color:var(--ink-lighter);text-align:right;grid-column:2/4">not in %</div>';
+  } else {
+    row += '<input class="ing-inp" type="text" inputmode="decimal" value="' + dispPct + '" placeholder="0.00" onclick="this.select()" oninput="onPct(' + idx + ',this.value)" onblur="onPctB(' + idx + ',this.value)">';
+    row += '<button class="pin-btn' + (pinned?' pinned':'') + '" onclick="togglePin(' + idx + ')" title="' +
+      (pinned ? 'Pinned: gram amount stays fixed when batch changes' : 'Click to pin this gram amount') + '">' +
+      (pinned ? 'Pinned' : 'Pin g') + '</button>';
+  }
+  row += '<input class="ing-inp' + (pinned&&!isAddin?' pinned':'') + '" type="text" inputmode="decimal" value="' + dispGrams + '" placeholder="0.00" onclick="this.select()"';
+  if (isAddin) row += ' oninput="onAG(' + idx + ',this.value)" onblur="onAGB(' + idx + ',this.value)">';
+  else         row += ' oninput="onGrams(' + idx + ',this.value)" onblur="onGramsB(' + idx + ',this.value)">';
+  row += '<div class="ing-cost">' + lCost + '</div>';
+  row += '<button class="ing-rm" onclick="rmLine(' + idx + ')">x</button>';
+  row += '</div>';
+  return row;
+}
+
+// ── Batch size controls ───────────────────────────────
+function onBatchIn(v)   { var n=parseFloat(v.replace(',','.')); if(!isNaN(n)&&n>0){renderLines();recalc();} }
+function onBatchBlur(v) { var n=parseFloat(v.replace(',','.')); if(isNaN(n)||n<=0) document.getElementById('batch-sz').value=isSoap()?'1000':'100'; renderLines();recalc(); }
+function setBatch(g)    { document.getElementById('batch-sz').value=g; renderLines();recalc(); }
+
+// ── Skincare input handlers ───────────────────────────
+function onPct(idx, v) {
+  var c  = v.replace(',','.');
+  var bs = parseFloat(document.getElementById('batch-sz').value) || 100;
+  fLines[idx].pct = c; fLines[idx].pinned = false; markDirty();
+  updateGramsDisplay(idx, (parseFloat(c)||0) > 0 ? ((parseFloat(c)||0)/100*bs).toFixed(2) : '');
+  recalc();
+}
+function onPctB(idx, v)   { fLines[idx].pct=v.replace(',','.'); fLines[idx].pinned=false; markDirty(); renderLines(); recalc(); }
+
+function onGrams(idx, v) {
+  var c  = v.replace(',','.');
+  var bs = parseFloat(document.getElementById('batch-sz').value) || 100;
+  var g  = parseFloat(c) || 0;
+  fLines[idx].gramsFixed = c; fLines[idx].pinned = false;
+  var p  = bs > 0 && g > 0 ? (g/bs*100).toFixed(2) : '';
+  fLines[idx].pct = p;
+  updatePctDisplay(idx, p); markDirty(); recalc();
+}
+function onGramsB(idx, v) {
+  var c  = v.replace(',','.');
+  var bs = parseFloat(document.getElementById('batch-sz').value) || 100;
+  var g  = parseFloat(c) || 0;
+  fLines[idx].gramsFixed = c;
+  fLines[idx].pct = bs > 0 && g > 0 ? (g/bs*100).toFixed(4) : '';
+  fLines[idx].pinned = false; markDirty(); renderLines(); recalc();
+}
+function onAG(idx, v)  { fLines[idx].gramsFixed=v.replace(',','.'); fLines[idx].drops=''; markDirty(); recalc(); }
+function onAGB(idx, v) { fLines[idx].gramsFixed=v.replace(',','.'); markDirty(); renderLines(); recalc(); }
+function onDrops(idx, v, dpg) {
+  var d = parseFloat(v) || 0;
+  fLines[idx].drops = v;
+  fLines[idx].gramsFixed = d > 0 ? (d/dpg).toFixed(4) : '';
+  markDirty(); recalc();
+}
+function editDpg(idx) {
+  var cur = fLines[idx].dropsPerG || 20;
+  var v   = prompt('Drops per gram for this ingredient:\n(Common: EOs approx 20, thicker oils approx 15, water-thin approx 25)', cur);
+  if (v === null) return;
+  var n = parseFloat(v);
+  if (isNaN(n) || n <= 0) { alert('Please enter a positive number.'); return; }
+  fLines[idx].dropsPerG = n; markDirty(); renderLines(); recalc();
+}
+
+function updateGramsDisplay(idx, val) {
+  var fi = 0; for (var i = 0; i < idx; i++) { if (!fLines[i].addin) fi++; }
+  var rows = document.querySelectorAll('.ing-row:not(.addin)');
+  if (rows[fi]) { var inp = rows[fi].querySelectorAll('input.ing-inp'); if (inp[1]) inp[1].value = val; }
+}
+function updatePctDisplay(idx, val) {
+  var fi = 0; for (var i = 0; i < idx; i++) { if (!fLines[i].addin) fi++; }
+  var rows = document.querySelectorAll('.ing-row:not(.addin)');
+  if (rows[fi]) { var inp = rows[fi].querySelectorAll('input.ing-inp'); if (inp[0]) inp[0].value = val; }
+}
+
+function togglePin(idx) {
+  var bs = parseFloat(document.getElementById('batch-sz').value) || 100;
+  var l  = fLines[idx];
+  if (l.pinned) {
+    var g = parseFloat(l.gramsFixed) || 0;
+    fLines[idx].pct = bs > 0 ? (g/bs*100).toFixed(4) : '0'; fLines[idx].pinned = false;
+  } else {
+    var p = parseFloat(l.pct) || 0;
+    fLines[idx].gramsFixed = (p/100*bs).toFixed(4); fLines[idx].pinned = true;
+  }
+  markDirty(); renderLines(); recalc();
+}
+
+function rmLine(idx) { fLines.splice(idx, 1); markDirty(); renderLines(); recalc(); }
+
+// ── Ingredient search / add ───────────────────────────
+function posDD() {
+  var s  = document.getElementById('ing-search');
+  var dd = document.getElementById('ing-dd');
+  var r  = s.getBoundingClientRect();
+  var h  = Math.min(260, dd.scrollHeight);
+  var sb = window.innerHeight - r.bottom - 8;
+  var sa = r.top - 8;
+  dd.style.left  = r.left + 'px';
+  dd.style.width = Math.max(r.width, 380) + 'px';
+  if (sb >= h || sb >= sa) {
+    dd.style.top = (r.bottom + 4) + 'px'; dd.style.bottom = 'auto'; dd.style.maxHeight = Math.min(260, sb) + 'px';
+  } else {
+    dd.style.bottom = (window.innerHeight - r.top + 4) + 'px'; dd.style.top = 'auto'; dd.style.maxHeight = Math.min(260, sa) + 'px';
+  }
+}
+
+function searchIngs(q) {
+  var dd = document.getElementById('ing-dd');
+  if (!q.trim()) { dd.style.display = 'none'; return; }
+  var have = new Set(fLines.map(function(l) { return l.ingId; }));
+  var res  = ings.filter(function(i) {
+    return !i.archived && !have.has(i.id) &&
+      (i.name.toLowerCase().indexOf(q.toLowerCase()) >= 0 || i.inci.toLowerCase().indexOf(q.toLowerCase()) >= 0);
+  }).slice(0, 12);
+  if (!res.length) { dd.style.display = 'none'; return; }
+  var html = '';
+  res.forEach(function(i) {
+    html += '<div class="dd-item" onclick="addIng(\'' + i.id + '\')">';
+    html += '<div><div class="dd-name">' + esc(i.name) + '</div><div class="dd-inci">' + esc(i.inci) + '</div></div>';
+    html += '<span class="dd-phase">' + i.phase + '</span></div>';
+  });
+  dd.innerHTML = html; dd.style.display = 'block'; posDD();
+}
+
+window.addEventListener('scroll', function() {
+  var dd = document.getElementById('ing-dd');
+  if (dd && dd.style.display !== 'none') posDD();
+}, true);
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.srch-wrap')) document.getElementById('ing-dd').style.display = 'none';
+});
+
+function addIng(id) {
+  var l = { ingId: id, pct: '', gramsFixed: '', pinned: false };
+  if (isSoap()) {
+    if (addinMode) { l.soapAddin = true; resetAddinMode(); }
+  } else {
+    if (addinMode) { l.addin = true; l.drops = ''; l.dropsPerG = 20; resetAddinMode(); }
+  }
+  fLines.push(l);
+  document.getElementById('ing-search').value = '';
+  document.getElementById('ing-dd').style.display = 'none';
+  markDirty(); renderLines(); if (isSoap()) recalcSoap(); else recalc();
+}
+
+function resetAddinMode() {
+  addinMode = false;
+  var btn = document.getElementById('addin-btn');
+  btn.style.background = ''; btn.style.color = ''; btn.style.borderColor = '';
+  document.getElementById('addin-note').style.display = 'none';
+}
+
+function toggleAddin() {
+  addinMode = !addinMode;
+  var btn  = document.getElementById('addin-btn');
+  var note = document.getElementById('addin-note');
+  btn.style.background  = addinMode ? 'var(--clay)' : '';
+  btn.style.color       = addinMode ? 'var(--white)' : '';
+  btn.style.borderColor = addinMode ? 'var(--clay)' : '';
+  note.style.display    = addinMode ? 'block' : 'none';
+  note.textContent      = isSoap()
+    ? 'Add-in mode on \u2014 next ingredient will be added as an additive (not counted in lye calc)'
+    : 'Add-in mode on -- next ingredient will not be counted in formula %';
+}
+
+// ── Skincare recalc ───────────────────────────────────
+function recalc() {
+  if (isSoap()) { recalcSoap(); return; }
+  var bs    = parseFloat(document.getElementById('batch-sz').value) || 100;
+  var addinsCount = getAddinsInTotal();
+  var total = 0;
+  fLines.forEach(function(l) {
+    // When the per-formula setting includes add-ins in the total, every
+    // line contributes. For add-in lines, the contribution is derived
+    // from their gram amount (they don't have a pct field), so divide by
+    // batch size. Otherwise, addins are skipped exactly as before.
+    if (l.addin) {
+      if (!addinsCount) return;
+      var addinG = parseFloat(l.gramsFixed) || 0;
+      total += bs > 0 ? (addinG / bs * 100) : 0;
+      return;
+    }
+    total += l.pinned ? (bs > 0 ? (parseFloat(l.gramsFixed)||0)/bs*100 : 0) : (parseFloat(l.pct)||0);
+  });
+  var pEl = document.getElementById('total-pct');
+  var bEl = document.getElementById('pct-bar');
+  var nEl = document.getElementById('total-note');
+  pEl.textContent  = total.toFixed(2) + '%';
+  bEl.style.width  = Math.min(total, 100) + '%';
+  if      (Math.abs(total-100) < 0.01) { pEl.className='total-val t-ok';    bEl.className='pct-inner bar-ok';    nEl.textContent='Formula totals 100%'; }
+  else if (total > 100)                 { pEl.className='total-val t-over';  bEl.className='pct-inner bar-over';  nEl.textContent='Over by '+(total-100).toFixed(2)+'% -- adjust percentages'; }
+  else                                  { pEl.className='total-val t-under'; bEl.className='pct-inner bar-under'; nEl.textContent=total>0?(100-total).toFixed(2)+'% remaining':'Add ingredients to begin'; }
+
+  var cEl = document.getElementById('cost-panel');
+  // Cost: when add-ins count, include them in batch cost; otherwise
+  // preserve existing behavior (cost reflects formula-only mass).
+  var fl  = addinsCount ? fLines.slice() : fLines.filter(function(l) { return !l.addin; });
+  var tc  = calcBatchCost(fl, bs);
+  if (tc === null) {
+    cEl.innerHTML = '<div style="font-size:12px;color:var(--ink-lighter)">Add ingredient costs in the library to see estimates here.</div>';
+  } else {
+    var miss = fl.filter(function(l) { var i = ings.find(function(x) { return x.id === l.ingId; }); return i && bestCpg(i) === null; }).length;
+    cEl.innerHTML =
+      '<div class="cost-row"><span>Batch (' + bs + 'g)</span><span>$' + tc.toFixed(2) + '</span></div>' +
+      '<div class="cost-row"><span>Per 100g</span><span>$' + (tc/bs*100).toFixed(2) + '</span></div>' +
+      '<div class="cost-row"><span>Per gram</span><span>$' + (tc/bs).toFixed(4) + '</span></div>' +
+      (miss ? '<div style="font-size:11px;color:var(--ink-lighter);margin-top:6px">' + miss + ' ingredient' + (miss!==1?'s':'') + ' missing cost data</div>' : '');
+  }
+
+  var iEl  = document.getElementById('inci-panel');
+  // INCI: when add-ins count, sort them in alongside formula lines by
+  // concentration. Otherwise, preserve the existing "formula first, then
+  // add-ins appended" ordering.
+  var fl2, al;
+  if (addinsCount) {
+    fl2 = fLines.filter(function(l) { return ings.find(function(i) { return i.id === l.ingId; }); });
+    al  = [];
+  } else {
+    fl2 = fLines.filter(function(l) { return !l.addin && ings.find(function(i) { return i.id === l.ingId; }); });
+    al  = fLines.filter(function(l) { return l.addin  && ings.find(function(i) { return i.id === l.ingId; }); });
+  }
+  fl2.sort(function(a, b) {
+    var pa = a.addin
+      ? (bs > 0 ? (parseFloat(a.gramsFixed)||0)/bs*100 : 0)
+      : (a.pinned ? (bs > 0 ? (parseFloat(a.gramsFixed)||0)/bs*100 : 0) : (parseFloat(a.pct)||0));
+    var pb = b.addin
+      ? (bs > 0 ? (parseFloat(b.gramsFixed)||0)/bs*100 : 0)
+      : (b.pinned ? (bs > 0 ? (parseFloat(b.gramsFixed)||0)/bs*100 : 0) : (parseFloat(b.pct)||0));
+    return pb - pa;
+  });
+  var all = fl2.concat(al);
+  if (!all.length) {
+    iEl.innerHTML = '<div style="font-size:12px;color:var(--ink-lighter)">INCI list generates as you add ingredients.</div>';
+  } else {
+    var ihtml = '<div class="inci-list">';
+    all.forEach(function(l, i) {
+      var ing = ings.find(function(x) { return x.id === l.ingId; });
+      ihtml += '<div class="inci-item"><span class="inci-num">' + (i+1) + '.</span><span>' + esc(ing.inci);
+      if (ing.flag === 'yes') ihtml += ' <span style="color:var(--warning)">&#9679;</span>';
+      if (l.addin) ihtml += ' <span style="font-size:10px;color:var(--clay)">(add-in)</span>';
+      ihtml += '</span></div>';
+    });
+    ihtml += '</div><div style="font-size:10px;color:var(--ink-lighter);margin-top:8px">&#9679; = restricted &middot; add-ins after formula ingredients</div>';
+    iEl.innerHTML = ihtml;
+  }
+}
+
+function copyInci() {
+  var fl  = fLines.filter(function(l) { return !l.addin && ings.find(function(i) { return i.id === l.ingId; }); });
+  fl.sort(function(a, b) { return (parseFloat(b.pct)||0) - (parseFloat(a.pct)||0); });
+  var txt = fl.map(function(l) { return ings.find(function(i) { return i.id === l.ingId; }).inci; }).join(', ');
+  navigator.clipboard.writeText(txt).then(function() {
+    var btn = document.getElementById('copy-btn');
+    btn.textContent = 'Copied!';
+    setTimeout(function() { btn.textContent = 'Copy'; }, 1500);
+  });
+}
+
+// ── Save / version / delete ───────────────────────────
+function saveFormula() {
+  var idx = forms.findIndex(function(f) { return f.id === curId; });
+  if (idx < 0) return;
+  forms[idx] = Object.assign({}, forms[idx], {
+    name:         document.getElementById('f-name').value.trim() || forms[idx].name,
+    type:         document.getElementById('f-type').value,
+    status:       document.getElementById('f-status').value,
+    notes:        document.getElementById('f-notes').value,
+    instructions: document.getElementById('f-instruct').value,
+    lines:        fLines.map(function(l) { return Object.assign({}, l); }),
+    soapSettings: isSoap() ? {
+      superfat:  parseFloat(document.getElementById('soap-superfat').value)   || 5,
+      lyeConc:   parseFloat(document.getElementById('soap-lye-conc').value)   || 33,
+      waterPct:  parseFloat(document.getElementById('soap-water-pct').value)  || 38,
+      lyeMethod: document.getElementById('soap-lye-method').value,
+      lyeType:   document.getElementById('soap-lye-type').value,
+      kohPurity: parseFloat(document.getElementById('soap-koh-purity').value) || 90
+    } : undefined,
+    updatedAt: new Date().toISOString()
+  });
+  saveAll(); dirty = false;
+  document.getElementById('f-ver-lbl').textContent = 'Version ' + (forms[idx].version||1) + ' -- Saved';
+  setTimeout(function() { document.getElementById('f-ver-lbl').textContent = 'Version ' + (forms[idx].version||1); }, 2000);
+}
+
+function saveVersion() {
+  var idx = forms.findIndex(function(f) { return f.id === curId; });
+  if (idx < 0) return;
+  var f    = forms[idx];
+  var snap = {
+    version:      f.version || 1,
+    savedAt:      new Date().toISOString(),
+    lines:        fLines.map(function(l) { return Object.assign({}, l); }),
+    notes:        document.getElementById('f-notes').value,
+    instructions: document.getElementById('f-instruct').value
+  };
+  var nv = (f.version || 1) + 1;
+  forms[idx] = Object.assign({}, f, {
+    name:         document.getElementById('f-name').value.trim() || f.name,
+    type:         document.getElementById('f-type').value,
+    status:       document.getElementById('f-status').value,
+    notes:        document.getElementById('f-notes').value,
+    instructions: document.getElementById('f-instruct').value,
+    lines:        fLines.map(function(l) { return Object.assign({}, l); }),
+    version:      nv,
+    versions:     (f.versions || []).concat([snap]),
+    updatedAt:    new Date().toISOString()
+  });
+  saveAll(); dirty = false;
+  document.getElementById('f-ver-lbl').textContent = 'Version ' + nv;
+  renderVersionHistory(forms[idx]);
+  alert('Version ' + snap.version + ' archived. Now working on version ' + nv + '.');
+}
+
+function renderVersionHistory(f) {
+  var panel    = document.getElementById('ver-panel');
+  var body     = document.getElementById('ver-body');
+  var versions = f.versions || [];
+  if (!versions.length) { panel.style.display = 'none'; return; }
+  panel.style.display = 'block';
+  var html = '';
+  versions.slice().reverse().forEach(function(v) {
+    html += '<div class="ver-row"><div>';
+    html += '<div class="ver-label">Version ' + v.version + '</div>';
+    html += '<div class="ver-date">' + new Date(v.savedAt).toLocaleDateString() + '</div></div>';
+    html += '<button class="btn btn-sm" onclick="restoreVer(' + v.version + ')">Restore</button></div>';
+  });
+  body.innerHTML = html;
+}
+
+function restoreVer(vn) {
+  var f    = forms.find(function(x) { return x.id === curId; });
+  if (!f) return;
+  var snap = (f.versions || []).find(function(v) { return v.version === vn; });
+  if (!snap) return;
+  if (!confirm('Restore to version ' + vn + '? Save your current work first if you want to keep it.')) return;
+  fLines = snap.lines.map(function(l) { return Object.assign({}, l); });
+  document.getElementById('f-notes').value    = snap.notes        || '';
+  document.getElementById('f-instruct').value = snap.instructions || '';
+  dirty = true; renderLines(); recalc();
+}
+
+function deleteFormula() {
+  if (!confirm('Permanently delete this formulation? This cannot be undone.')) return;
+  forms  = forms.filter(function(f) { return f.id !== curId; });
+  saveAll(); curId = null; goList();
+}
+
+// ── Usage log ─────────────────────────────────────────
+function openUsage() {
+  var f = forms.find(function(x) { return x.id === curId; });
+  document.getElementById('ul-date').value  = new Date().toISOString().slice(0,10);
+  document.getElementById('ul-batch').value = document.getElementById('batch-sz').value || '';
+  document.getElementById('ul-ver').value   = 'v' + (f ? (f.version||1) : 1);
+  document.getElementById('ul-notes').value = '';
+  openModal('m-use');
+}
+
+function saveUseEntry() {
+  var date = document.getElementById('ul-date').value;
+  if (!date) { alert('Please enter a date.'); return; }
+  var entry = {
+    id:      Date.now().toString(),
+    date:    date,
+    batch:   document.getElementById('ul-batch').value,
+    version: document.getElementById('ul-ver').value,
+    notes:   document.getElementById('ul-notes').value.trim()
+  };
+  var idx = forms.findIndex(function(f) { return f.id === curId; });
+  if (idx < 0) return;
+  forms[idx].usageLog = (forms[idx].usageLog || []).concat([entry]);
+  saveAll(); closeModal('m-use'); renderUseLog(forms[idx]);
+}
+
+function renderUseLog(f) {
+  var el  = document.getElementById('use-panel');
+  var log = (f.usageLog || []).slice().reverse();
+  if (!log.length) { el.innerHTML = '<div style="font-size:12px;color:var(--ink-lighter)">No uses logged yet.</div>'; return; }
+  var html = '';
+  log.forEach(function(e) {
+    var d = new Date(e.date).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+    html += '<div class="use-entry"><div class="use-hdr">';
+    html += '<span class="use-date">' + d + '</span>';
+    html += '<span class="use-meta">' + (e.version||'') + (e.batch ? ' &middot; ' + e.batch + 'g' : '') + '</span>';
+    html += '<button class="use-del" onclick="delUseEntry(\'' + e.id + '\')">x</button></div>';
+    if (e.notes) html += '<div class="use-notes">' + esc(e.notes) + '</div>';
+    html += '</div>';
+  });
+  el.innerHTML = html;
+}
+
+function delUseEntry(eid) {
+  if (!confirm('Remove this log entry?')) return;
+  var idx = forms.findIndex(function(f) { return f.id === curId; });
+  if (idx < 0) return;
+  forms[idx].usageLog = (forms[idx].usageLog || []).filter(function(e) { return e.id !== eid; });
+  saveAll(); renderUseLog(forms[idx]);
+}
+
+// ── Ingredient detail popup ───────────────────────────
+function showIngDetail(ingId) {
+  var ing = ings.find(function(i) { return i.id === ingId; });
+  if (!ing) return;
+  document.getElementById('id-name').textContent = ing.name;
+  var lots  = ing.lots || (ing.cost ? [{ costPerG: ing.cost }] : []);
+  var costs = lots.map(function(l) { return parseFloat(l.costPerG); }).filter(function(c) { return !isNaN(c) && c > 0; });
+  var bc    = costs.length ? Math.min.apply(null, costs) : null;
+  var html  = '<div style="font-size:12px;font-style:italic;color:var(--ink-lighter);margin-bottom:0.5rem">' + esc(ing.inci) + '</div>';
+  if (ing.functionCategory) {
+    html += '<div style="margin-bottom:1rem"><span style="display:inline-block;font-size:11px;background:var(--cream-dark);color:var(--bark-dark);padding:3px 10px;border-radius:20px;font-weight:500">' + esc(ing.functionCategory) + '</span></div>';
+  }
+  html += '<div class="id-grid">';
+  html += '<div class="id-field"><label>Phase</label><p>' + ing.phase + '</p></div>';
+  html += '<div class="id-field"><label>Restricted</label><p>' + (ing.flag==='yes' ? 'Yes -- has limits' : 'No') + '</p></div>';
+  html += '<div class="id-field"><label>Usage rate</label><p>' + (ing.min||ing.max ? (ing.min||'0') + '% -- ' + (ing.max||'100') + '%' : '--') + '</p></div>';
+  html += '<div class="id-field"><label>Best cost/g</label><p>' + (bc !== null ? '$' + bc.toFixed(4) : '--') + '</p></div>';
+  html += '</div>';
+  if (ing.function)     html += '<div class="id-field"><label>Function</label><p>' + esc(ing.function) + '</p></div>';
+  if (ing.dermalLimits) html += '<div class="id-field"><label>Dermal limits</label><p style="white-space:pre-wrap;line-height:1.6">' + esc(ing.dermalLimits) + '</p></div>';
+  if (ing.notes)        html += '<div class="id-field"><label>Notes</label><p style="white-space:pre-wrap;line-height:1.6">' + esc(ing.notes) + '</p></div>';
+  if (lots.length) {
+    html += '<div class="id-field"><label>Suppliers</label>';
+    lots.forEach(function(l) {
+      if (l.supplier || l.costPerG) html += '<p style="font-size:12px;color:var(--ink-light)">' + esc(l.supplier||'--') + (l.costPerG ? ' &middot; $' + parseFloat(l.costPerG).toFixed(4) + '/g' : '') + '</p>';
+    });
+    html += '</div>';
+  }
+  if (ing.link) html += '<div class="id-field"><label>Resource</label><p><a href="' + ing.link + '" target="_blank" rel="noopener" style="color:var(--sage)">Open link</a></p></div>';
+  html += '<div style="margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--cream-border);text-align:right"><a href="plume-ingredients.html#ing=' + encodeURIComponent(ing.id) + '" target="_blank" rel="noopener" style="font-size:12px;color:var(--sage);text-decoration:none">View in library &rarr;</a></div>';
+  document.getElementById('id-body').innerHTML = html;
+  openModal('m-ing');
+}
+
+// ── Print ─────────────────────────────────────────────
+function printFormula() {
+  var f   = forms.find(function(x) { return x.id === curId; });
+  if (!f) return;
+  var bs  = parseFloat(document.getElementById('batch-sz').value) || 100;
+  var win = window.open('', '_blank');
+  var htitle = f.name;
+
+  if (isSoap()) {
+    // Soap-specific print
+    var superfat  = parseFloat(document.getElementById('soap-superfat').value)  || 5;
+    var lyeType   = document.getElementById('soap-lye-type').value              || 'naoh';
+    var lyeLabel  = lyeType === 'koh' ? 'KOH' : 'NaOH';
+    var lyeKey    = lyeType === 'koh' ? 'koh' : 'naoh';
+    var kohPurity = lyeType === 'koh' ? (parseFloat(document.getElementById('soap-koh-purity').value) || 90) / 100 : 1;
+    var lyeMethod = document.getElementById('soap-lye-method').value            || 'concentration';
+
+    var oils       = fLines.filter(function(l) { return !l.soapAddin; });
+    var addins     = fLines.filter(function(l) { return l.soapAddin; });
+    var totalOilPct = oils.reduce(function(s,l) { return s + (parseFloat(l.pct)||0); }, 0);
+    var totalOilG   = totalOilPct / 100 * bs;
+
+    var pureLye = 0;
+    oils.forEach(function(l) {
+      var ing = ings.find(function(i) { return i.id === l.ingId; });
+      var g   = (parseFloat(l.pct)||0) / 100 * bs;
+      if (!ing || !ing.soap || !ing.soap[lyeKey]) return;
+      pureLye += g * ing.soap[lyeKey] * (1 - superfat / 100);
+    });
+    var actualLye = kohPurity > 0 ? pureLye / kohPurity : pureLye;
+
+    var waterG;
+    if (lyeMethod === 'concentration') {
+      var lyeConc = parseFloat(document.getElementById('soap-lye-conc').value) || 33;
+      waterG = pureLye > 0 ? pureLye * (100 - lyeConc) / lyeConc : 0;
+    } else {
+      var waterPct = parseFloat(document.getElementById('soap-water-pct').value) || 38;
+      waterG = totalOilG * (waterPct / 100);
+    }
+    var totalBatch     = totalOilG + actualLye + waterG;
+    var lyeConc_actual = (pureLye + waterG) > 0 ? (pureLye / (pureLye + waterG) * 100) : 0;
+    var waterPctActual = totalOilG > 0 ? (waterG / totalOilG * 100) : 0;
+
+    var sortedOils = oils.slice().sort(function(a,b) { return (parseFloat(b.pct)||0) - (parseFloat(a.pct)||0); });
+    var oilRows = '';
+    sortedOils.forEach(function(l) {
+      var ing    = ings.find(function(i) { return i.id === l.ingId; }); if (!ing) return;
+      var pct    = parseFloat(l.pct) || 0;
+      var g      = (pct / 100 * bs).toFixed(1);
+      var sapVal = ing.soap && ing.soap[lyeKey] ? ing.soap[lyeKey] : '\u2014';
+      oilRows += '<tr><td style="padding:5px 0;font-weight:500">' + ing.name + '</td>' +
+        '<td style="padding:5px 8px;color:#666;font-size:11px;font-style:italic">' + ing.inci + '</td>' +
+        '<td style="padding:5px 8px;text-align:right;color:#888;font-size:11px">' + sapVal + '</td>' +
+        '<td style="padding:5px 8px;text-align:right">' + pct.toFixed(2) + '%</td>' +
+        '<td style="padding:5px 0;text-align:right;font-weight:500">' + g + 'g</td></tr>';
+    });
+    // Lye and water rows
+    oilRows += '<tr style="background:#f9f9f9"><td style="padding:5px 0;font-weight:500">' + lyeLabel +
+      (lyeType === 'koh' ? ' (90% flakes)' : '') +
+      ' <span style="font-size:10px;font-weight:400;color:#888">at ' + superfat + '% superfat</span></td>' +
+      '<td style="padding:5px 8px;color:#666;font-size:11px;font-style:italic">' + (lyeType === 'koh' ? 'Potassium Hydroxide' : 'Sodium Hydroxide') + '</td>' +
+      '<td style="padding:5px 8px;text-align:right;color:#888;font-size:11px">\u2014</td>' +
+      '<td style="padding:5px 8px;text-align:right">\u2014</td>' +
+      '<td style="padding:5px 0;text-align:right;font-weight:500">' + actualLye.toFixed(1) + 'g</td></tr>';
+    oilRows += '<tr style="background:#f9f9f9"><td style="padding:5px 0;font-weight:500">Distilled water</td>' +
+      '<td style="padding:5px 8px;color:#666;font-size:11px;font-style:italic">Aqua</td>' +
+      '<td style="padding:5px 8px;text-align:right;color:#888;font-size:11px">\u2014</td>' +
+      '<td style="padding:5px 8px;text-align:right">\u2014</td>' +
+      '<td style="padding:5px 0;text-align:right;font-weight:500">' + waterG.toFixed(1) + 'g</td></tr>';
+    oilRows += '<tr style="border-top:2px solid #333">' +
+      '<td colspan="4" style="padding:7px 0;font-weight:600;font-size:12px">Total batch weight</td>' +
+      '<td style="padding:7px 0;text-align:right;font-weight:600;font-size:14px">' + totalBatch.toFixed(0) + 'g</td></tr>';
+
+    var addinRows = '';
+    if (addins.length) {
+      addinRows = '<div class="sec"><div class="sec-title">Additives (not included in lye calc)</div>' +
+        '<table><thead><tr>' +
+        '<th style="text-align:left;padding-bottom:6px;border-bottom:2px solid #333">Additive</th>' +
+        '<th style="text-align:left;padding-bottom:6px;border-bottom:2px solid #333">INCI</th>' +
+        '<th style="text-align:right;padding-bottom:6px;border-bottom:2px solid #333">% PPO</th>' +
+        '<th style="text-align:right;padding-bottom:6px;border-bottom:2px solid #333">Grams</th>' +
+        '</tr></thead><tbody>';
+      addins.forEach(function(l) {
+        var ing = ings.find(function(i) { return i.id === l.ingId; }); if (!ing) return;
+        var g   = parseFloat(l.gramsFixed) || 0;
+        var ppo = totalOilG > 0 && g > 0 ? (g / totalOilG * 100).toFixed(2) + '%' : '\u2014';
+        addinRows += '<tr><td style="padding:5px 0;font-weight:500">' + ing.name + '</td>' +
+          '<td style="padding:5px 8px;color:#666;font-size:11px;font-style:italic">' + ing.inci + '</td>' +
+          '<td style="padding:5px 8px;text-align:right">' + ppo + '</td>' +
+          '<td style="padding:5px 0;text-align:right">' + g.toFixed(1) + 'g</td></tr>';
+      });
+      addinRows += '</tbody></table></div>';
+    }
+
+    var lyeSummary = '<div class="sec"><div class="sec-title">Lye water summary</div>' +
+      '<table style="max-width:360px"><tbody>' +
+      '<tr><td style="padding:4px 0;color:#555">' + lyeLabel + ' to weigh</td><td style="padding:4px 0;text-align:right;font-weight:600">' + actualLye.toFixed(2) + 'g</td></tr>' +
+      (lyeType === 'koh' && kohPurity < 1 ? '<tr><td style="padding:4px 0;color:#555;font-size:11px">Pure KOH needed</td><td style="padding:4px 0;text-align:right;font-size:11px">' + pureLye.toFixed(2) + 'g</td></tr>' : '') +
+      '<tr><td style="padding:4px 0;color:#555">Distilled water</td><td style="padding:4px 0;text-align:right;font-weight:600">' + waterG.toFixed(2) + 'g</td></tr>' +
+      '<tr><td style="padding:4px 0;color:#555;font-size:11px">Lye concentration</td><td style="padding:4px 0;text-align:right;font-size:11px">' + lyeConc_actual.toFixed(1) + '%</td></tr>' +
+      '<tr><td style="padding:4px 0;color:#555;font-size:11px">Water as % of oils</td><td style="padding:4px 0;text-align:right;font-size:11px">' + waterPctActual.toFixed(1) + '%</td></tr>' +
+      '<tr><td style="padding:4px 0;color:#555;font-size:11px">Superfat</td><td style="padding:4px 0;text-align:right;font-size:11px">' + superfat + '%</td></tr>' +
+      '</tbody></table>' +
+      '<p style="font-size:11px;color:#888;margin-top:8px;border-top:1px solid #eee;padding-top:8px">Always add lye to water \u2014 never water to lye. Wear gloves and eye protection.</p></div>';
+
+    var soapInci = sortedOils.map(function(l) { var ing = ings.find(function(i) { return i.id === l.ingId; }); return ing ? ing.inci : ''; }).filter(Boolean);
+    addins.forEach(function(l) { var ing = ings.find(function(i) { return i.id === l.ingId; }); if (ing) soapInci.push(ing.inci); });
+
+    var hmeta = (f.type||'Soap') + ' \u00b7 v' + (f.version||1) + ' \u00b7 ' + (f.status||'draft') + ' \u00b7 Oil weight: ' + bs + 'g \u00b7 Printed ' + new Date().toLocaleDateString();
+    var CSS   = 'body{font-family:Georgia,serif;max-width:720px;margin:40px auto;color:#222;font-size:13px;line-height:1.6}' +
+                'h1{font-size:24px;font-weight:400;margin:0 0 4px}.meta{color:#666;font-size:12px;margin-bottom:24px}' +
+                'table{width:100%;border-collapse:collapse;margin-bottom:10px}td{vertical-align:top}' +
+                '.sec{margin-bottom:20px}.sec-title{font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:#666;border-bottom:1px solid #ccc;padding-bottom:4px;margin-bottom:8px}' +
+                '@media print{body{margin:20px}}';
+    win.document.write('<!DOCTYPE html><html><head><title>' + htitle + '</title><style>' + CSS + '</style></head><body>');
+    win.document.write('<h1>' + htitle + '</h1><div class="meta">' + hmeta + '</div>');
+    if (f.notes) win.document.write('<div class="sec"><div class="sec-title">Intention</div><p>' + f.notes + '</p></div>');
+    win.document.write('<div class="sec"><div class="sec-title">Oils &amp; lye water</div>' +
+      '<table><thead><tr>' +
+      '<th style="text-align:left;padding-bottom:6px;border-bottom:2px solid #333">Ingredient</th>' +
+      '<th style="text-align:left;padding-bottom:6px;border-bottom:2px solid #333">INCI</th>' +
+      '<th style="text-align:right;padding-bottom:6px;border-bottom:2px solid #333">SAP</th>' +
+      '<th style="text-align:right;padding-bottom:6px;border-bottom:2px solid #333">%</th>' +
+      '<th style="text-align:right;padding-bottom:6px;border-bottom:2px solid #333">Grams</th>' +
+      '</tr></thead><tbody>' + oilRows + '</tbody></table></div>');
+    win.document.write(addinRows);
+    win.document.write(lyeSummary);
+    if (f.instructions) win.document.write('<div class="sec"><div class="sec-title">Process instructions</div><p style="white-space:pre-wrap">' + f.instructions + '</p></div>');
+    win.document.write('<div class="sec"><div class="sec-title">INCI list (label order)</div><div style="font-size:11px;color:#666;line-height:1.8">' + soapInci.join(', ') + '</div></div>');
+    win.document.write('<scr' + 'ipt>window.onload=function(){window.print();};<\/scr' + 'ipt><footer class="app-footer">Plume by Little Bird Studio &middot; v0.4 &middot; May 2026</footer></body></html>');
+    win.document.close();
+    return;
+  }
+
+  // Skincare print
+  var phases  = ['water','oil','cool-down','active','other'];
+  var phNames = { water:'Water phase', oil:'Oil phase', 'cool-down':'Cool-down phase', active:'Active phase', other:'Other' };
+  var grouped = {}; phases.forEach(function(p) { grouped[p] = []; });
+  var addins  = [];
+  fLines.forEach(function(l) {
+    if (l.addin) { addins.push(l); return; }
+    var ing = ings.find(function(i) { return i.id === l.ingId; });
+    if (ing) { if (!grouped[ing.phase]) grouped[ing.phase] = []; grouped[ing.phase].push({ l:l, ing:ing }); }
+  });
+  var rows = '';
+  phases.forEach(function(p) {
+    if (!grouped[p] || !grouped[p].length) return;
+    rows += '<tr><td colspan="4" style="padding:8px 0 4px;font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:#666;border-bottom:1px solid #ccc">' + phNames[p] + '</td></tr>';
+    grouped[p].forEach(function(r) {
+      var pct = r.l.pinned ? (bs > 0 ? (parseFloat(r.l.gramsFixed)||0)/bs*100 : 0).toFixed(2) : (parseFloat(r.l.pct)||0).toFixed(2);
+      var g   = r.l.pinned ? (parseFloat(r.l.gramsFixed)||0).toFixed(2) : ((parseFloat(r.l.pct)||0)/100*bs).toFixed(2);
+      rows += '<tr><td style="padding:5px 0;font-weight:500">' + r.ing.name + '</td>' +
+        '<td style="padding:5px 8px;color:#666;font-size:11px;font-style:italic">' + r.ing.inci + '</td>' +
+        '<td style="padding:5px 8px;text-align:right">' + pct + '%</td>' +
+        '<td style="padding:5px 0;text-align:right">' + g + 'g</td></tr>';
+    });
+  });
+  addins.forEach(function(l) {
+    var ing = ings.find(function(i) { return i.id === l.ingId; }); if (!ing) return;
+    var g   = parseFloat(l.gramsFixed) || 0;
+    var dr  = g > 0 ? Math.round(g * (l.dropsPerG||20)) : 0;
+    rows += '<tr><td style="padding:5px 0;font-weight:500">' + ing.name + ' <span style="font-size:10px;color:#888">(add-in)</span></td>' +
+      '<td style="padding:5px 8px;color:#666;font-size:11px;font-style:italic">' + ing.inci + '</td>' +
+      '<td style="text-align:right">--</td>' +
+      '<td style="padding:5px 0;text-align:right">' + g + 'g' + (dr ? ' (~' + dr + ' drops)' : '') + '</td></tr>';
+  });
+  var fl      = fLines.filter(function(l) { return !l.addin && ings.find(function(i) { return i.id === l.ingId; }); });
+  fl.sort(function(a,b) { return (parseFloat(b.pct)||0) - (parseFloat(a.pct)||0); });
+  var inciStr = fl.map(function(l) { return ings.find(function(i) { return i.id === l.ingId; }).inci; }).join(', ');
+  var hmeta   = (f.type||'') + ' v' + (f.version||1) + ' ' + (f.status||'draft') + ' Batch: ' + bs + 'g Printed ' + new Date().toLocaleDateString();
+  var CSS2    = 'body{font-family:Georgia,serif;max-width:700px;margin:40px auto;color:#222;font-size:13px;line-height:1.6}' +
+                'h1{font-size:24px;font-weight:400;margin:0 0 4px}.meta{color:#666;font-size:12px;margin-bottom:24px}' +
+                'table{width:100%;border-collapse:collapse;margin-bottom:20px}td{vertical-align:top}' +
+                '.sec{margin-bottom:20px}.sec-title{font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:#666;border-bottom:1px solid #ccc;padding-bottom:4px;margin-bottom:8px}' +
+                '.inci{font-size:11px;color:#666;line-height:1.8}@media print{body{margin:20px}}';
+  win.document.write('<!DOCTYPE html><html><head><title>' + htitle + '</title><style>' + CSS2 + '</style></head><body>');
+  win.document.write('<h1>' + htitle + '</h1><div class="meta">' + hmeta + '</div>');
+  if (f.notes) win.document.write('<div class="sec"><div class="sec-title">Intention</div><p>' + f.notes + '</p></div>');
+  win.document.write('<div class="sec"><div class="sec-title">Ingredients</div>' +
+    '<table><thead><tr>' +
+    '<th style="text-align:left;padding-bottom:6px;border-bottom:2px solid #333">Ingredient</th>' +
+    '<th style="text-align:left;padding-bottom:6px;border-bottom:2px solid #333">INCI</th>' +
+    '<th style="text-align:right;padding-bottom:6px;border-bottom:2px solid #333">%</th>' +
+    '<th style="text-align:right;padding-bottom:6px;border-bottom:2px solid #333">Grams</th>' +
+    '</tr></thead><tbody>' + rows + '</tbody></table></div>');
+  if (f.instructions) win.document.write('<div class="sec"><div class="sec-title">Formulation instructions</div><p style="white-space:pre-wrap">' + f.instructions + '</p></div>');
+  win.document.write('<div class="sec"><div class="sec-title">INCI list (label order)</div><div class="inci">' + inciStr + '</div></div>');
+  win.document.write('<scr' + 'ipt>window.onload=function(){window.print();};<\/scr' + 'ipt></body></html>');
+  win.document.close();
+}
+
+// ── Modal helpers ─────────────────────────────────────
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-ov').forEach(function(el) {
+  el.addEventListener('click', function(e) { if (e.target === el) el.classList.remove('open'); });
+});
+document.getElementById('m-new').addEventListener('keydown', function(e) { if (e.key === 'Enter') createFormula(); });
+
+// ── Palettes ──────────────────────────────────────────
+// Each palette redefines the palette-level CSS variables (surfaces, bark,
+// sage, clay, ink, status). Categorical colors (phase badges, soap quality
+// bars) are intentionally NOT overridden — they stay consistent across all
+// palettes so "water phase" always reads as blue, etc.
+//
+// Variable names are semantic-by-role, not literal:
+//   --bark  = primary brand tone (headers, primary buttons)
+//   --sage  = "positive/success" tone
+//   --clay  = warm accent / highlight
+// So in the Mulberry palette, --bark is a deep berry; in Eucalyptus, --sage
+// is silvery-mint. The role stays; the color shifts.
+var PALETTES = {
+  'coastal': { label:'Coastal', family:'blue', vars: {
+    '--cream':'#F4F6F8','--cream-dark':'#E7ECF1','--cream-border':'#C9D3DC','--white':'#FCFDFE',
+    '--bark':'#506880','--bark-light':'#7A92A8','--bark-dark':'#2E4256',
+    '--sage':'#6E8C8A','--sage-light':'#E2EBEA','--sage-dark':'#3F5856','--sage-border':'#B8CACA',
+    '--clay':'#C9A074','--clay-light':'#F2E8DA','--clay-dark':'#8A6432','--clay-hover':'#EBD9BE',
+    '--ink':'#1F2A36','--ink-light':'#5A6776','--ink-lighter':'#8E99A6',
+    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
+    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#3F5856'
+  }},
+  'indigo': { label:'Indigo', family:'blue', vars: {
+    '--cream':'#F1F1F6','--cream-dark':'#E4E4EC','--cream-border':'#C6C6D4','--white':'#FBFBFD',
+    '--bark':'#3E4768','--bark-light':'#6970A0','--bark-dark':'#1F2546',
+    '--sage':'#7480A0','--sage-light':'#E5E8F0','--sage-dark':'#454E68','--sage-border':'#BFC5D4',
+    '--clay':'#A88BB8','--clay-light':'#EDE2F2','--clay-dark':'#6E527C','--clay-hover':'#E0CFE8',
+    '--ink':'#1A1D2E','--ink-light':'#525870','--ink-lighter':'#8A8FA4',
+    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
+    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#454E68'
+  }},
+  'mist': { label:'Mist', family:'blue', vars: {
+    '--cream':'#F2F4F4','--cream-dark':'#E5E9E9','--cream-border':'#CAD2D2','--white':'#FBFCFC',
+    '--bark':'#5C7274','--bark-light':'#869A9C','--bark-dark':'#34484A',
+    '--sage':'#6E9290','--sage-light':'#E2EDEC','--sage-dark':'#3F5C5A','--sage-border':'#BAD0CE',
+    '--clay':'#C29A8A','--clay-light':'#F0E4DE','--clay-dark':'#82584A','--clay-hover':'#E7D3C9',
+    '--ink':'#222B2E','--ink-light':'#5C696C','--ink-lighter':'#909A9D',
+    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
+    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#3F5C5A'
+  }},
+  'blush': { label:'Blush', family:'pink', vars: {
+    '--cream':'#F9F2F1','--cream-dark':'#F0E4E2','--cream-border':'#DCC8C6','--white':'#FEFBFB',
+    '--bark':'#8A5868','--bark-light':'#AE7E8C','--bark-dark':'#5A3240',
+    '--sage':'#8A8898','--sage-light':'#ECE9EE','--sage-dark':'#52505E','--sage-border':'#CFCCD6',
+    '--clay':'#D08C82','--clay-light':'#F5E2DE','--clay-dark':'#92524A','--clay-hover':'#EDCEC7',
+    '--ink':'#2C2024','--ink-light':'#6D5860','--ink-lighter':'#A08A91',
+    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
+    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#52505E'
+  }},
+  'petal': { label:'Petal', family:'pink', vars: {
+    '--cream':'#FAF3EE','--cream-dark':'#F2E5DC','--cream-border':'#DCC8B9','--white':'#FEFCFA',
+    '--bark':'#A0584C','--bark-light':'#C68074','--bark-dark':'#6E2E22',
+    '--sage':'#8C8478','--sage-light':'#EDE8E1','--sage-dark':'#544D43','--sage-border':'#CCC5BA',
+    '--clay':'#E89A82','--clay-light':'#FAE3D8','--clay-dark':'#A85A40','--clay-hover':'#F4CFBE',
+    '--ink':'#2E2018','--ink-light':'#705A4E','--ink-lighter':'#A28B7E',
+    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
+    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#544D43'
+  }},
+  'mulberry': { label:'Mulberry', family:'pink', vars: {
+    '--cream':'#F4EDEF','--cream-dark':'#E8DCDF','--cream-border':'#CDB8BE','--white':'#FBF8F9',
+    '--bark':'#7A3E5A','--bark-light':'#9E6480','--bark-dark':'#4E1A30',
+    '--sage':'#857482','--sage-light':'#E7E0E4','--sage-dark':'#4E424B','--sage-border':'#C5B8BF',
+    '--clay':'#B07088','--clay-light':'#EBD8DE','--clay-dark':'#783E50','--clay-hover':'#DEBFC8',
+    '--ink':'#26181E','--ink-light':'#5E4E55','--ink-lighter':'#94808A',
+    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
+    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#4E424B'
+  }},
+  'lavender': { label:'Lavender', family:'purple', vars: {
+    '--cream':'#F5F3F7','--cream-dark':'#EAE5EF','--cream-border':'#D0C8DA','--white':'#FCFBFD',
+    '--bark':'#6E5C8A','--bark-light':'#928AAE','--bark-dark':'#3F3258',
+    '--sage':'#8C8AA0','--sage-light':'#EAE8EE','--sage-dark':'#54526A','--sage-border':'#CECCDA',
+    '--clay':'#B89AC4','--clay-light':'#EEE2F1','--clay-dark':'#7C5A8A','--clay-hover':'#E0CDEA',
+    '--ink':'#221E2E','--ink-light':'#5E5670','--ink-lighter':'#928CA4',
+    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
+    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#54526A'
+  }},
+  'slate': { label:'Slate', family:'purple', vars: {
+    '--cream':'#F1F2F5','--cream-dark':'#E4E6EC','--cream-border':'#C6CBD4','--white':'#FBFBFD',
+    '--bark':'#525C72','--bark-light':'#7C8598','--bark-dark':'#2E3648',
+    '--sage':'#76808E','--sage-light':'#E5E8EC','--sage-dark':'#444C58','--sage-border':'#C2C8D0',
+    '--clay':'#A88AA0','--clay-light':'#ECE2E8','--clay-dark':'#6E5468','--clay-hover':'#DCCBD6',
+    '--ink':'#1E222C','--ink-light':'#555C6C','--ink-lighter':'#8C92A0',
+    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
+    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#444C58'
+  }},
+  'wisteria': { label:'Wisteria', family:'purple', vars: {
+    '--cream':'#F4F2F4','--cream-dark':'#E8E5E9','--cream-border':'#CCC4D0','--white':'#FBFAFC',
+    '--bark':'#7A6A8C','--bark-light':'#9E8FAE','--bark-dark':'#4A3A5C',
+    '--sage':'#84927E','--sage-light':'#E5EAE2','--sage-dark':'#4E5A48','--sage-border':'#BDC8B8',
+    '--clay':'#AE8AB8','--clay-light':'#E8DCE8','--clay-dark':'#724E7C','--clay-hover':'#D8C2DC',
+    '--ink':'#24202C','--ink-light':'#5E566C','--ink-lighter':'#928BA0',
+    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
+    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#4E5A48'
+  }},
+  'forest': { label:'Forest', family:'green', vars: {
+    '--cream':'#F2F4F0','--cream-dark':'#E4E8DE','--cream-border':'#C5CDBE','--white':'#FBFCFA',
+    '--bark':'#4E6A4A','--bark-light':'#789078','--bark-dark':'#2A3E28',
+    '--sage':'#6A8A60','--sage-light':'#E0EAD8','--sage-dark':'#3E5638','--sage-border':'#B5C8AC',
+    '--clay':'#B88858','--clay-light':'#ECDDC8','--clay-dark':'#7A5430','--clay-hover':'#E0CAA8',
+    '--ink':'#1E281C','--ink-light':'#56624E','--ink-lighter':'#8A9282',
+    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
+    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#3E5638'
+  }},
+  'sage-green': { label:'Sage', family:'green', vars: {
+    '--cream':'#F4F5F1','--cream-dark':'#E7E9E2','--cream-border':'#C9CEC0','--white':'#FBFCFA',
+    '--bark':'#6E7A5E','--bark-light':'#929E84','--bark-dark':'#404834',
+    '--sage':'#869A78','--sage-light':'#E8EDE0','--sage-dark':'#4E5C40','--sage-border':'#C2CCB4',
+    '--clay':'#B89A82','--clay-light':'#EBE2D8','--clay-dark':'#7A604E','--clay-hover':'#DDCEC0',
+    '--ink':'#23271E','--ink-light':'#5C624E','--ink-lighter':'#8E9482',
+    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
+    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#4E5C40'
+  }},
+  'eucalyptus': { label:'Eucalyptus', family:'green', vars: {
+    '--cream':'#F1F4F2','--cream-dark':'#E4E9E5','--cream-border':'#C5CFC8','--white':'#FBFCFB',
+    '--bark':'#5E7872','--bark-light':'#8AA09A','--bark-dark':'#324842',
+    '--sage':'#7AA098','--sage-light':'#E0EDE7','--sage-dark':'#436258','--sage-border':'#B6CDC4',
+    '--clay':'#A8B8A0','--clay-light':'#E2EAE0','--clay-dark':'#688070','--clay-hover':'#CFD8C8',
+    '--ink':'#1E2A26','--ink-light':'#566A62','--ink-lighter':'#8C9A92',
+    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
+    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#436258'
+  }}
+};
+
+var PALETTE_KEY = 'plume-palette-formulations';
+var DEFAULT_PALETTE = 'coastal';
+
+function applyPalette(name) {
+  var p = PALETTES[name];
+  if (!p) { p = PALETTES[DEFAULT_PALETTE]; name = DEFAULT_PALETTE; }
+  Object.keys(p.vars).forEach(function(v) {
+    document.documentElement.style.setProperty(v, p.vars[v]);
+  });
+  return name;
+}
+function savePaletteChoice(name) { try { localStorage.setItem(PALETTE_KEY, name); } catch (e) {} }
+function loadPaletteChoice() { try { return localStorage.getItem(PALETTE_KEY) || DEFAULT_PALETTE; } catch (e) { return DEFAULT_PALETTE; } }
+function selectPalette(name) {
+  var applied = applyPalette(name);
+  savePaletteChoice(applied);
+  renderPaletteSwatches();
+}
+function renderPaletteSwatches() {
+  var container = document.getElementById('palette-swatches');
+  if (!container) return;
+  var current = loadPaletteChoice();
+  var names = Object.keys(PALETTES);
+  container.innerHTML = names.map(function(name) {
+    var p = PALETTES[name]; var v = p.vars; var isActive = (name === current);
+    return '<button type="button" class="palette-swatch' + (isActive ? ' active' : '') +
+      '" onclick="selectPalette(\'' + name + '\')" title="' + p.label + '">' +
+      '<div class="palette-swatch-stripes">' +
+        '<span style="background:' + v['--cream'] + '"></span>' +
+        '<span style="background:' + v['--bark'] + '"></span>' +
+        '<span style="background:' + v['--sage'] + '"></span>' +
+        '<span style="background:' + v['--clay'] + '"></span>' +
+        '<span style="background:' + v['--ink'] + '"></span>' +
+      '</div>' +
+      '<div class="palette-swatch-label">' + p.label + '</div>' +
+      '</button>';
+  }).join('');
+}
+function openSettings() { openModal('m-settings'); renderPaletteSwatches(); }
+
+// ── Init ──────────────────────────────────────────────
+applyPalette(loadPaletteChoice());
+loadAll();
+</script>
+</body>
+</html>
