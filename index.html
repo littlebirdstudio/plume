@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plume by Little Bird Studio</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --cream:        #F7F4EF;
+  --cream-dark:   #EDE8DF;
+  --cream-border: #D8D0C4;
+  --white:        #FDFCFA;
+  --bark:         #7C6A54;
+  --bark-light:   #A08C74;
+  --bark-dark:    #4A3F32;
+  --sage:         #7A8C6E;
+  --sage-light:   #EDF0EA;
+  --sage-dark:    #4E5E44;
+  --clay:         #C27B5A;
+  --clay-light:   #F5EBE4;
+  --clay-dark:    #8A4A2E;
+  --ink:          #2C2520;
+  --ink-light:    #5C5147;
+  --ink-lighter:  #8B7E70;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 300;
+  background: var(--cream);
+  color: var(--ink);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.6;
+}
+
+/* ── Hero ────────────────────────────────────────────── */
+.hero {
+  text-align: center;
+  padding: 3rem 1.5rem 1.5rem;
+}
+
+.hero-logo {
+  display: block;
+  margin: 0 auto;
+  width: clamp(260px, 38vw, 380px);
+  height: auto;
+  user-select: none;
+}
+
+/* ── Module grid ─────────────────────────────────────── */
+.modules {
+  flex: 1;
+  max-width: 1080px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 1rem 1.5rem 4rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.25rem;
+}
+
+.module-card {
+  background: var(--white);
+  border: 1px solid var(--cream-border);
+  border-radius: 8px;
+  padding: 1.75rem 1.5rem;
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  overflow: hidden;
+}
+
+.module-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--clay);
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+
+.module-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(74, 63, 50, 0.08);
+  border-color: var(--clay);
+}
+
+.module-card:hover::before { opacity: 1; }
+
+.card-icon {
+  width: 42px;
+  height: 42px;
+  margin-bottom: 1rem;
+  color: var(--sage);
+  transition: color 0.18s ease;
+}
+
+.module-card:hover .card-icon { color: var(--clay); }
+
+.card-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.6rem;
+  font-weight: 400;
+  color: var(--bark-dark);
+  margin-bottom: 0.4rem;
+  line-height: 1.1;
+}
+
+.card-desc {
+  font-size: 13px;
+  color: var(--ink-lighter);
+  line-height: 1.55;
+  flex: 1;
+}
+
+.card-arrow {
+  margin-top: 1rem;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--bark-light);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: color 0.18s ease, gap 0.18s ease;
+}
+
+.module-card:hover .card-arrow {
+  color: var(--clay);
+  gap: 0.7rem;
+}
+
+/* ── Footer ──────────────────────────────────────────── */
+.app-footer {
+  text-align: center;
+  padding: 2rem 1.5rem 2.5rem;
+  font-size: 12px;
+  color: var(--ink-lighter);
+  letter-spacing: 0.04em;
+  border-top: 1px solid var(--cream-border);
+  background: var(--cream-dark);
+}
+
+.app-footer .heart {
+  color: var(--clay);
+  font-style: normal;
+}
+
+@media (max-width: 600px) {
+  .hero { padding: 2rem 1.5rem 1rem; }
+}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <img src="plume-logo.svg" alt="Plume by Little Bird Studio" class="hero-logo">
+</header>
+
+<main class="modules">
+
+  <a href="plume-ingredients.html" class="module-card">
+    <svg class="card-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <!-- Sprig of leaves -->
+      <path d="M24 42 L24 14"/>
+      <path d="M24 22 C 18 22, 14 18, 14 12 C 20 12, 24 16, 24 22 Z"/>
+      <path d="M24 30 C 30 30, 34 26, 34 20 C 28 20, 24 24, 24 30 Z"/>
+      <path d="M24 36 C 18 36, 14 32, 14 26 C 20 26, 24 30, 24 36 Z"/>
+    </svg>
+    <div class="card-title">Ingredients</div>
+    <div class="card-desc">Your library of oils, butters, actives, and additives — with supplier lots, costs, and saponification data.</div>
+    <div class="card-arrow">Open <span>→</span></div>
+  </a>
+
+  <a href="plume-formulations.html" class="module-card">
+    <svg class="card-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <!-- Mortar &amp; pestle (a little stylized) -->
+      <path d="M10 22 L 38 22 L 34 38 Q 24 42, 14 38 Z"/>
+      <path d="M14 22 Q 24 18, 34 22"/>
+      <path d="M28 22 L 36 8"/>
+      <circle cx="36" cy="8" r="2.5"/>
+    </svg>
+    <div class="card-title">Formulations</div>
+    <div class="card-desc">Build and refine recipes — cold &amp; hot process soap, lotions, balms — with live cost and quality feedback.</div>
+    <div class="card-arrow">Open <span>→</span></div>
+  </a>
+
+  <a href="plume-packaging.html" class="module-card">
+    <svg class="card-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <!-- Apothecary bottle -->
+      <path d="M20 8 L 28 8 L 28 14 L 32 18 L 32 40 Q 24 43, 16 40 L 16 18 L 20 14 Z"/>
+      <path d="M22 8 L 26 8"/>
+      <path d="M19 26 L 29 26"/>
+    </svg>
+    <div class="card-title">Packaging</div>
+    <div class="card-desc">Track bottles, jars, labels, and closures — with photos, pricing, and per-unit costing for finished goods.</div>
+    <div class="card-arrow">Open <span>→</span></div>
+  </a>
+
+  <a href="plume-costing.html" class="module-card">
+    <svg class="card-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <!-- Balance scale -->
+      <path d="M24 10 L 24 38"/>
+      <path d="M16 38 L 32 38"/>
+      <path d="M10 18 L 24 14 L 38 18"/>
+      <path d="M6 26 Q 10 18, 14 26 Q 10 30, 6 26 Z"/>
+      <path d="M34 26 Q 38 18, 42 26 Q 38 30, 34 26 Z"/>
+    </svg>
+    <div class="card-title">Costing</div>
+    <div class="card-desc">Turn a batch into packaged goods — one batch, many runs — with full per-unit costs and margin breakdowns.</div>
+    <div class="card-arrow">Open <span>→</span></div>
+  </a>
+
+</main>
+
+<footer class="app-footer">
+  Plume by Little Bird Studio &nbsp;·&nbsp; v0.4 &nbsp;·&nbsp; Made with <span class="heart">♡</span> for small formulators
+</footer>
+
+</body>
+</html>
