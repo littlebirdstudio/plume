@@ -856,8 +856,25 @@ function openBatchDetail(id) {
 function openModal(id)  { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
+// ── Deep-link: if URL ends in #new=<formulaId>, auto-open new-batch with that formula ──
+function handleDeepLink() {
+  if (!location.hash || location.hash.indexOf('#new=') !== 0) return;
+  var fid;
+  try { fid = decodeURIComponent(location.hash.slice(5)); }
+  catch(e) { fid = location.hash.slice(5); }
+  if (!forms.find(function(f) { return f.id === fid; })) return;
+  openNewBatch();
+  // Pre-select the formula and trigger the change handler
+  document.getElementById('f-formula').value = fid;
+  onFormulaChange();
+  // Clear the hash so refreshing the page doesn't keep re-opening the modal
+  try { history.replaceState(null, '', location.pathname + location.search); }
+  catch(e) {}
+}
+
 // ── Boot ──
 loadData();
+handleDeepLink();
 </script>
 
 </body>

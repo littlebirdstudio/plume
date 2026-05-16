@@ -100,6 +100,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);m
 .btn-ghost:hover{background:rgba(253,252,250,0.1)}
 .btn-danger{color:var(--danger);border-color:var(--danger-border)}
 .btn-danger:hover{background:var(--danger-bg)}
+.btn-sage{background:var(--sage);color:var(--cream);border-color:var(--sage)}
+.btn-sage:hover{background:var(--sage-dark)}
 .btn-sm{font-size:11px;padding:4px 10px}
 .btn:disabled{opacity:0.4;cursor:not-allowed}
 .app-body{max-width:1100px;margin:0 auto;padding:2rem}
@@ -308,6 +310,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);m
             <div style="font-size:12px;color:var(--ink-lighter);margin-top:4px" id="f-ver-lbl"></div>
           </div>
           <div style="display:flex;gap:8px;flex-shrink:0">
+            <button class="btn btn-sage" onclick="makeBatchFromFormula()" title="Open the batch log with this formula pre-selected">Make a batch</button>
             <button class="btn" onclick="printFormula()">Print</button>
             <button class="btn" onclick="saveVersion()">Save version</button>
             <button class="btn btn-primary" onclick="saveFormula()">Save</button>
@@ -1660,6 +1663,20 @@ function showIngDetail(ingId) {
 }
 
 // ── Print ─────────────────────────────────────────────
+// Open the batch log with this formula pre-selected. If there are unsaved
+// edits, prompt to save first -- otherwise batchlog would read a stale copy.
+function makeBatchFromFormula() {
+  var f = forms.find(function(x) { return x.id === curId; });
+  if (!f) { alert('Save the formula before making a batch from it.'); return; }
+  if (dirty) {
+    if (!confirm('You have unsaved changes. Save first so the batch uses the latest version?')) return;
+    saveFormula();
+  }
+  // Open batchlog with the formula id in the hash; batchlog reads it and pre-opens
+  var url = 'plume-batchlog.html#new=' + encodeURIComponent(f.id);
+  window.open(url, '_blank', 'noopener');
+}
+
 function printFormula() {
   var f   = forms.find(function(x) { return x.id === curId; });
   if (!f) return;
