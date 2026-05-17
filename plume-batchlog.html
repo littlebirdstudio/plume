@@ -126,6 +126,31 @@ tbody tr:last-child td{border-bottom:none}
 .stock-warning{background:var(--warning-bg);border:1px solid var(--warning-border);border-radius:3px;padding:8px 12px;margin:8px 0;font-size:12px;color:var(--warning)}
 .stock-warning a{color:var(--warning);text-decoration:underline;font-weight:500}
 
+/* ── Batch detail ── */
+.detail-hdr-meta{display:flex;flex-wrap:wrap;gap:14px;align-items:center;font-size:12px;color:var(--ink-light);margin-top:6px}
+.detail-hdr-meta strong{font-weight:500;color:var(--ink)}
+.snapshot-row{display:grid;grid-template-columns:1fr auto;gap:8px;padding:5px 10px;font-size:13px;border-bottom:1px solid var(--cream-border)}
+.snapshot-row:last-child{border-bottom:none}
+.snapshot-row .snap-amt{font-family:'DM Sans',sans-serif;color:var(--ink-light);font-variant-numeric:tabular-nums}
+.snapshot-wrap{border:1px solid var(--cream-border);border-radius:3px;background:var(--white);padding:4px 0}
+.pkg-run-row{display:grid;grid-template-columns:1fr 100px 1fr 28px;gap:10px;align-items:center;padding:6px 10px;background:var(--white);border:1px solid var(--cream-border);border-radius:3px;margin-bottom:4px;font-size:13px}
+.pkg-run-row .pr-name{color:var(--ink)}
+.pkg-run-row .pr-meta{font-size:11px;color:var(--ink-lighter);display:block;margin-top:2px}
+.pkg-run-row .pr-qty{font-variant-numeric:tabular-nums;color:var(--ink-light)}
+.pkg-run-row .pr-date{font-size:11px;color:var(--ink-lighter)}
+.pkg-run-row .pr-del{background:none;border:none;cursor:pointer;color:var(--ink-lighter);font-size:14px;padding:2px 6px;line-height:1}
+.pkg-run-row .pr-del:hover{color:var(--danger)}
+.pkg-add-row{display:grid;grid-template-columns:1fr 100px 1fr auto;gap:10px;align-items:end;padding:10px;background:var(--cream);border-radius:3px;margin-top:6px}
+.pkg-add-row .field{margin-bottom:0}
+.pkg-empty{padding:10px;text-align:center;color:var(--ink-lighter);font-size:12px;font-style:italic}
+
+/* ── Cost rollup ── */
+.cost-rollup{display:grid;grid-template-columns:1fr auto;gap:6px 18px;padding:10px 12px;background:var(--white);border:1px solid var(--cream-border);border-radius:3px;font-size:13px}
+.cost-rollup .cr-label{color:var(--ink-light)}
+.cost-rollup .cr-val{font-variant-numeric:tabular-nums;color:var(--ink);text-align:right}
+.cost-rollup .cr-total{font-weight:500;color:var(--bark-dark);padding-top:6px;border-top:1px solid var(--cream-border);margin-top:4px}
+.cost-rollup .cr-missing{font-size:11px;color:var(--warning);grid-column:1/-1;margin-top:6px;line-height:1.4}
+
 /* ── Footer ── */
 .app-footer{text-align:center;padding:2rem;margin-top:3rem;font-size:11px;color:var(--ink-lighter);border-top:1px solid var(--cream-border);letter-spacing:0.06em}
 
@@ -134,6 +159,16 @@ tbody tr:last-child td{border-bottom:none}
 .note-clay{font-size:11px;color:var(--clay);margin-top:4px}
 .batch-name-display{font-family:'Cormorant Garamond',serif;font-weight:400;color:var(--ink)}
 .batch-meta{font-size:11px;color:var(--ink-lighter);display:block;margin-top:2px}
+
+/* ── Palette swatch picker ── */
+.palette-swatch-grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; }
+.palette-swatch { display:flex; flex-direction:column; align-items:stretch; gap:6px; padding:6px; border:1px solid var(--cream-border); border-radius:5px; background:var(--white); cursor:pointer; font-family:'DM Sans',sans-serif; transition:border-color 0.12s, transform 0.08s; }
+.palette-swatch:hover { border-color:var(--bark-light); transform:translateY(-1px); }
+.palette-swatch.active { border-color:var(--bark); border-width:2px; padding:5px; box-shadow:0 0 0 2px var(--cream); }
+.palette-swatch-stripes { display:flex; height:32px; border-radius:3px; overflow:hidden; border:1px solid var(--cream-border); }
+.palette-swatch-stripes span { flex:1; height:100%; display:block; }
+.palette-swatch-label { font-size:11px; color:var(--ink-light); text-align:center; letter-spacing:0.02em; }
+.palette-swatch.active .palette-swatch-label { color:var(--ink); font-weight:600; }
 </style>
 </head>
 <body>
@@ -151,6 +186,7 @@ tbody tr:last-child td{border-bottom:none}
     <button class="btn btn-ghost" onclick="exportData()">Export</button>
     <button class="btn btn-ghost" onclick="document.getElementById('import-input').click()">Import</button>
     <input type="file" id="import-input" accept=".json" style="display:none" onchange="importData(event)">
+    <button class="btn btn-ghost" onclick="openSettings()" title="Settings &amp; appearance">&#9881; Settings</button>
     <button class="btn btn-primary" onclick="openNewBatch()">+ Add batch</button>
   </div>
 </header>
@@ -261,7 +297,115 @@ tbody tr:last-child td{border-bottom:none}
 
     <div class="modal-foot">
       <button class="btn" onclick="closeModal('m-new')">Cancel</button>
-      <button class="btn btn-primary" onclick="saveBatch()">Save batch</button>
+      <button class="btn btn-primary" onclick="saveBatch()">Make it!</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Batch detail modal ── -->
+<div class="modal-ov" id="m-detail">
+  <div class="modal">
+    <div class="modal-hdr">
+      <div>
+        <div class="modal-title" id="d-title">Batch</div>
+        <div class="detail-hdr-meta" id="d-meta"></div>
+      </div>
+      <button class="modal-x" onclick="closeModal('m-detail')">&#x2715;</button>
+    </div>
+
+    <div class="form-grid">
+      <div class="field">
+        <label>Date made</label>
+        <input type="date" id="d-date">
+      </div>
+      <div class="field">
+        <label>Yield (grams)</label>
+        <input type="number" id="d-yield" step="1" min="0">
+      </div>
+      <div class="field">
+        <label>Batch type</label>
+        <select id="d-type-sel">
+          <option value="production">Production</option>
+          <option value="test">Test</option>
+        </select>
+      </div>
+      <div class="field" id="d-cure-row" style="display:none">
+        <label>Cure time</label>
+        <select id="d-cure">
+          <option value="4">4 weeks</option>
+          <option value="6">6 weeks</option>
+        </select>
+      </div>
+      <div class="field form-full">
+        <label>Batch name</label>
+        <input type="text" id="d-name">
+      </div>
+      <div class="field form-full">
+        <label>Notes</label>
+        <textarea id="d-notes" rows="2"></textarea>
+      </div>
+    </div>
+
+    <!-- Ingredient snapshot (read-only) -->
+    <div class="modal-section">
+      <span>Ingredients used</span>
+      <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--ink-lighter)">locked at creation</span>
+    </div>
+    <div class="snapshot-wrap" id="d-snapshot"></div>
+
+    <!-- Cost rollup -->
+    <div class="modal-section">
+      <span>Cost rollup</span>
+      <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--ink-lighter)">ingredient cost only</span>
+    </div>
+    <div id="d-cost-rollup"></div>
+
+    <!-- Packaging runs -->
+    <div class="modal-section">
+      <span>Packaging runs</span>
+      <span id="d-pkg-total" style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--ink-lighter)"></span>
+    </div>
+    <div id="d-pkg-list"></div>
+    <div class="pkg-add-row">
+      <div class="field">
+        <label>Packaging item</label>
+        <select id="d-pkg-pick">
+          <option value="">-- Pick packaging --</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Quantity</label>
+        <input type="number" id="d-pkg-qty" min="1" step="1" placeholder="e.g. 12">
+      </div>
+      <div class="field">
+        <label>Notes (optional)</label>
+        <input type="text" id="d-pkg-notes" placeholder="Lot code, batch markings...">
+      </div>
+      <button class="btn btn-primary" onclick="addPackagingRun()">+ Add run</button>
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn btn-danger" onclick="deleteBatch()" style="margin-right:auto">Delete batch</button>
+      <button class="btn" id="d-mark-ready-btn" onclick="markBatchReady()" style="display:none">Mark ready now</button>
+      <button class="btn" onclick="closeModal('m-detail')">Close</button>
+      <button class="btn btn-primary" onclick="saveBatchEdits()">Save changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings & appearance modal -->
+<div class="modal-ov" id="m-settings">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-hdr">
+      <div class="modal-title">Settings &amp; appearance</div>
+      <button class="modal-x" onclick="closeModal('m-settings')">&#x2715;</button>
+    </div>
+    <div style="padding:0">
+      <div style="font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-lighter);margin-bottom:10px">Appearance</div>
+      <div style="padding:8px 0 18px">
+        <div style="font-size:12px;color:var(--ink-lighter);line-height:1.4;margin-bottom:12px">Choose a color palette for this module. Each module remembers its own palette choice.</div>
+        <div id="palette-swatches" class="palette-swatch-grid"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -391,6 +535,33 @@ function calcIngStockG(ing) {
 function findIng(id) {
   for (var i = 0; i < ings.length; i++) if (ings[i].id === id) return ings[i];
   return null;
+}
+// Cost-per-gram resolver, mirrors getActiveLot/activeCost in plume-ingredients.html.
+// Returns null if the ingredient has no usable cost data.
+function ingCostPerG(ing) {
+  if (!ing) return null;
+  var lots = (ing.lots || []).filter(function(l) { return !l.referenceOnly; });
+  if (!lots.length && (ing.supplier || ing.cost)) {
+    // Legacy shape: cost lives on the ingredient
+    var c = parseFloat(ing.cost);
+    return (!isNaN(c) && c > 0) ? c : null;
+  }
+  // Prefer manually-designated active lot
+  if (ing.activeLotId) {
+    var match = lots.filter(function(l) { return l.id === ing.activeLotId; })[0];
+    if (match) {
+      var c2 = parseFloat(match.costPerG);
+      if (!isNaN(c2) && c2 > 0) return c2;
+    }
+  }
+  // Fallback: cheapest purchased lot with a valid cost/g
+  var withCost = lots.filter(function(l) {
+    var c = parseFloat(l.costPerG);
+    return !isNaN(c) && c > 0;
+  });
+  if (!withCost.length) return null;
+  withCost.sort(function(a, b) { return parseFloat(a.costPerG) - parseFloat(b.costPerG); });
+  return parseFloat(withCost[0].costPerG);
 }
 function findFormula(id) {
   for (var i = 0; i < forms.length; i++) if (forms[i].id === id) return forms[i];
@@ -847,9 +1018,319 @@ function saveBatch() {
   renderList();
 }
 
-// ── Batch detail (placeholder for Block 3) ──
+// ── Batch detail ──
+var editingBatchId = null;
+
 function openBatchDetail(id) {
-  alert('Batch detail view will be built in the next block. Batch ID: ' + id);
+  var b = findBatch(id);
+  if (!b) { alert('Batch not found.'); return; }
+  editingBatchId = id;
+
+  // Title + header meta
+  document.getElementById('d-title').textContent = b.batchName || b.formulaName || 'Batch';
+  var metaParts = [];
+  if (b.formulaName) metaParts.push('<span><strong>' + esc(b.formulaName) + '</strong></span>');
+  metaParts.push('<span>' + fmtDate(b.date) + '</span>');
+  var statusLabel = (b.status === 'curing') ? 'Curing' : (b.status === 'depleted') ? 'Depleted' : 'Ready';
+  metaParts.push('<span>' + statusLabel + '</span>');
+  if (b.status === 'curing' && b.readyDate) {
+    metaParts.push('<span style="color:var(--ink-lighter)">ready ' + fmtDate(b.readyDate) + '</span>');
+  }
+  document.getElementById('d-meta').innerHTML = metaParts.join('');
+
+  // Editable fields
+  document.getElementById('d-date').value     = b.date || '';
+  document.getElementById('d-yield').value    = b.actualYield || b.targetYield || '';
+  document.getElementById('d-type-sel').value = b.batchType || 'production';
+  document.getElementById('d-name').value     = b.batchName || '';
+  document.getElementById('d-notes').value    = b.notes || '';
+
+  // Cure row: visible only for soap
+  var soap = isSoapType(b.formulaType);
+  document.getElementById('d-cure-row').style.display = soap ? '' : 'none';
+  if (soap) {
+    document.getElementById('d-cure').value = String(b.cureWeeks || 4);
+  }
+
+  // "Mark ready" button: only for curing soap batches
+  document.getElementById('d-mark-ready-btn').style.display = (b.status === 'curing') ? '' : 'none';
+
+  // Ingredient snapshot (read-only)
+  renderSnapshot(b);
+  renderCostRollup(b);
+
+  // Packaging
+  populatePackagingPicker();
+  document.getElementById('d-pkg-qty').value    = '';
+  document.getElementById('d-pkg-notes').value  = '';
+  document.getElementById('d-pkg-pick').value   = '';
+  renderPackagingRuns(b);
+
+  openModal('m-detail');
+}
+
+function findBatch(id) {
+  for (var i = 0; i < batches.length; i++) if (batches[i].id === id) return batches[i];
+  return null;
+}
+
+function renderSnapshot(b) {
+  var wrap = document.getElementById('d-snapshot');
+  var snap = b.ingredientSnapshot || [];
+  if (!snap.length) {
+    wrap.innerHTML = '<div class="pkg-empty">No ingredient snapshot recorded.</div>';
+    return;
+  }
+  var html = '';
+  snap.forEach(function(s) {
+    var g = parseFloat(s.grams) || 0;
+    html += '<div class="snapshot-row">' +
+      '<span>' + esc(s.ingredientName || '(unknown)') + '</span>' +
+      '<span class="snap-amt">' + g.toFixed(g < 10 ? 2 : 1) + ' g</span>' +
+      '</div>';
+  });
+  wrap.innerHTML = html;
+}
+
+function renderCostRollup(b) {
+  var wrap = document.getElementById('d-cost-rollup');
+  var snap = b.ingredientSnapshot || [];
+  if (!snap.length) {
+    wrap.innerHTML = '<div class="pkg-empty">Nothing to roll up.</div>';
+    return;
+  }
+  var totalCost = 0;
+  var totalGrams = 0;
+  var missing = [];
+  snap.forEach(function(s) {
+    var g = parseFloat(s.grams) || 0;
+    totalGrams += g;
+    var ing = findIng(s.ingredientId);
+    var cpg = ingCostPerG(ing);
+    if (cpg === null) {
+      missing.push(s.ingredientName || '(unknown)');
+    } else {
+      totalCost += g * cpg;
+    }
+  });
+  var yieldG = parseFloat(b.actualYield) || parseFloat(b.targetYield) || totalGrams;
+  var costPerGram   = yieldG > 0 ? totalCost / yieldG : 0;
+  var costPerOunce  = costPerGram * 28.3495;
+
+  var html = '<div class="cost-rollup">' +
+    '<span class="cr-label">Total ingredient cost</span>' +
+    '<span class="cr-val">$' + totalCost.toFixed(2) + '</span>' +
+    '<span class="cr-label">Yield</span>' +
+    '<span class="cr-val">' + yieldG.toFixed(0) + ' g</span>' +
+    '<span class="cr-label cr-total">Cost per gram</span>' +
+    '<span class="cr-val cr-total">$' + costPerGram.toFixed(4) + '</span>' +
+    '<span class="cr-label">Cost per ounce</span>' +
+    '<span class="cr-val">$' + costPerOunce.toFixed(3) + '</span>';
+
+  if (missing.length) {
+    var names = missing.slice(0, 4).map(esc).join(', ');
+    if (missing.length > 4) names += ' and ' + (missing.length - 4) + ' more';
+    html += '<div class="cr-missing">Missing cost data: ' + names +
+      '. Add cost/g in the Ingredients library for an accurate rollup.</div>';
+  }
+  html += '</div>';
+  wrap.innerHTML = html;
+}
+
+function populatePackagingPicker() {
+  var sel = document.getElementById('d-pkg-pick');
+  sel.innerHTML = '<option value="">-- Pick packaging --</option>';
+  // Sort by name
+  var sorted = pkgs.slice().sort(function(a,b) {
+    return (a.name||'').localeCompare(b.name||'');
+  });
+  sorted.forEach(function(p) {
+    var stock = calcPkgStock(p);
+    var stockLbl = ' (' + stock + ' in stock)';
+    var cap = p.capacity ? ' -- ' + esc(p.capacity) : '';
+    sel.innerHTML += '<option value="' + p.id + '">' + esc(p.name || '(unnamed)') + cap + stockLbl + '</option>';
+  });
+}
+
+// Mirror of plume-packaging.html calcStock()
+function calcPkgStock(item) {
+  var total = 0;
+  (item.purchases || []).forEach(function(p) { total += parseInt(p.qty, 10) || 0; });
+  (item.adjustments || []).forEach(function(a) { total += parseInt(a.qty, 10) || 0; });
+  return total;
+}
+
+function renderPackagingRuns(b) {
+  var list = document.getElementById('d-pkg-list');
+  var runs = b.packagingRuns || [];
+  if (!runs.length) {
+    list.innerHTML = '<div class="pkg-empty">No packaging runs logged yet.</div>';
+    document.getElementById('d-pkg-total').textContent = '';
+    return;
+  }
+  // Sort by date desc
+  var sorted = runs.slice().sort(function(a,b) {
+    return (b.date || '').localeCompare(a.date || '');
+  });
+  var total = 0;
+  var html = '';
+  sorted.forEach(function(r) {
+    var qty = parseInt(r.quantity, 10) || 0;
+    total += qty;
+    var nameBlock = '<div><span class="pr-name">' + esc(r.packagingName || '(unknown)') + '</span>' +
+      (r.notes ? '<span class="pr-meta">' + esc(r.notes) + '</span>' : '') + '</div>';
+    html += '<div class="pkg-run-row">' +
+      nameBlock +
+      '<span class="pr-qty">' + qty + ' units</span>' +
+      '<span class="pr-date">' + fmtDate(r.date) + '</span>' +
+      '<button class="pr-del" title="Delete run" onclick="deletePackagingRun(\'' + r.id + '\')">&#x2715;</button>' +
+      '</div>';
+  });
+  list.innerHTML = html;
+  document.getElementById('d-pkg-total').textContent = total + ' units total';
+}
+
+function addPackagingRun() {
+  if (!editingBatchId) return;
+  var b = findBatch(editingBatchId);
+  if (!b) return;
+  var pkgId = document.getElementById('d-pkg-pick').value;
+  var qty   = parseInt(document.getElementById('d-pkg-qty').value, 10);
+  var notes = document.getElementById('d-pkg-notes').value.trim();
+  if (!pkgId) { alert('Pick a packaging item.'); return; }
+  if (!qty || qty <= 0) { alert('Enter a quantity greater than zero.'); return; }
+  var pkg = null;
+  for (var i = 0; i < pkgs.length; i++) if (pkgs[i].id === pkgId) { pkg = pkgs[i]; break; }
+  if (!pkg) { alert('Packaging item not found.'); return; }
+
+  // Soft warning if low stock (decrement comes in Phase 4; this is informational)
+  var stock = calcPkgStock(pkg);
+  if (stock < qty) {
+    if (!confirm('Heads up: only ' + stock + ' of "' + pkg.name + '" in stock, but you\'re logging ' +
+      qty + '. Log it anyway?\n\n(Stock decrement isn\'t enabled yet, so this is informational only.)')) {
+      return;
+    }
+  }
+
+  if (!b.packagingRuns) b.packagingRuns = [];
+  b.packagingRuns.push({
+    id:            String(Date.now()) + '-' + Math.random().toString(36).slice(2,6),
+    date:          todayISO(),
+    packagingId:   pkgId,
+    packagingName: pkg.name,
+    quantity:      qty,
+    notes:         notes
+  });
+  b.updatedAt = new Date().toISOString();
+  saveBatches();
+  renderPackagingRuns(b);
+  renderList();
+  // Clear add row
+  document.getElementById('d-pkg-pick').value  = '';
+  document.getElementById('d-pkg-qty').value   = '';
+  document.getElementById('d-pkg-notes').value = '';
+}
+
+function deletePackagingRun(runId) {
+  if (!editingBatchId) return;
+  var b = findBatch(editingBatchId);
+  if (!b || !b.packagingRuns) return;
+  var run = null;
+  for (var i = 0; i < b.packagingRuns.length; i++) {
+    if (b.packagingRuns[i].id === runId) { run = b.packagingRuns[i]; break; }
+  }
+  if (!run) return;
+  if (!confirm('Delete this packaging run? (' + run.quantity + ' units of ' + run.packagingName + ')')) return;
+  b.packagingRuns = b.packagingRuns.filter(function(r) { return r.id !== runId; });
+  b.updatedAt = new Date().toISOString();
+  saveBatches();
+  renderPackagingRuns(b);
+  renderList();
+}
+
+function saveBatchEdits() {
+  if (!editingBatchId) return;
+  var b = findBatch(editingBatchId);
+  if (!b) return;
+
+  var date    = document.getElementById('d-date').value || b.date;
+  var yieldG  = parseFloat(document.getElementById('d-yield').value);
+  var name    = document.getElementById('d-name').value.trim();
+  var type    = document.getElementById('d-type-sel').value;
+  var notes   = document.getElementById('d-notes').value.trim();
+  var soap    = isSoapType(b.formulaType);
+  var cureWks = soap ? parseInt(document.getElementById('d-cure').value, 10) || 4 : null;
+
+  if (!yieldG || yieldG <= 0) { alert('Yield must be greater than zero.'); return; }
+
+  b.date        = date;
+  b.actualYield = yieldG;
+  b.targetYield = b.targetYield || yieldG;  // preserve original target if present
+  b.batchName   = name || (b.formulaName || 'Batch') + ' -- ' + date;
+  b.batchType   = type;
+  b.notes       = notes;
+  if (soap) {
+    b.cureWeeks = cureWks;
+    // Only recompute readyDate if still curing -- don't shift the date for already-ready batches
+    if (b.status === 'curing') {
+      b.readyDate = addWeeks(date, cureWks);
+    }
+  }
+  b.updatedAt = new Date().toISOString();
+
+  saveBatches();
+  renderStats();
+  renderList();
+  closeModal('m-detail');
+}
+
+function markBatchReady() {
+  if (!editingBatchId) return;
+  var b = findBatch(editingBatchId);
+  if (!b) return;
+  if (b.status !== 'curing') return;
+  if (!confirm('Mark this batch as ready? This will move it out of the curing list.')) return;
+  b.status    = 'ready';
+  b.readyDate = todayISO();
+  b.updatedAt = new Date().toISOString();
+  saveBatches();
+  // Update detail UI in place
+  document.getElementById('d-mark-ready-btn').style.display = 'none';
+  // Refresh header meta
+  var metaParts = [];
+  if (b.formulaName) metaParts.push('<span><strong>' + esc(b.formulaName) + '</strong></span>');
+  metaParts.push('<span>' + fmtDate(b.date) + '</span>');
+  metaParts.push('<span>Ready</span>');
+  document.getElementById('d-meta').innerHTML = metaParts.join('');
+  renderStats();
+  renderList();
+}
+
+function deleteBatch() {
+  if (!editingBatchId) return;
+  var b = findBatch(editingBatchId);
+  if (!b) return;
+
+  var runs = b.packagingRuns || [];
+  var msg = 'Delete this batch?\n\n';
+  msg += '  ' + (b.batchName || b.formulaName || '(unnamed)') + '\n';
+  msg += '  ' + (b.actualYield || b.targetYield || 0) + 'g, ' + fmtDate(b.date) + '\n\n';
+  if (runs.length) {
+    var totalUnits = runs.reduce(function(s,r) { return s + (parseInt(r.quantity,10)||0); }, 0);
+    msg += 'This will also remove ' + runs.length + ' packaging run' + (runs.length === 1 ? '' : 's') +
+      ' (' + totalUnits + ' units total).\n\n';
+  }
+  msg += 'Stock decrement isn\'t enabled yet, so no ingredient or packaging stock will be changed.\n\n';
+  msg += 'This cannot be undone.';
+
+  if (!confirm(msg)) return;
+
+  batches = batches.filter(function(x) { return x.id !== editingBatchId; });
+  saveBatches();
+  editingBatchId = null;
+  closeModal('m-detail');
+  renderStats();
+  renderList();
 }
 
 // ── Modal helpers ──
@@ -872,7 +1353,161 @@ function handleDeepLink() {
   catch(e) {}
 }
 
+// ── Palette system ──
+// Mirrors plume-formulations.html; each module keeps its own copy so the
+// files stay drop-in standalone. Edit PALETTES in one file and copy to the
+// others to keep them in sync.
+var PALETTES = {
+  'coastal': { label:'Coastal', vars: {
+    '--cream':'#F4F6F8','--cream-dark':'#E7ECF1','--cream-border':'#C9D3DC','--white':'#FCFDFE',
+    '--bark':'#506880','--bark-light':'#7A92A8','--bark-dark':'#2E4256',
+    '--sage':'#6E8C8A','--sage-light':'#E2EBEA','--sage-dark':'#3F5856','--sage-border':'#B8CACA',
+    '--clay':'#C9A074','--clay-light':'#F2E8DA','--clay-dark':'#8A6432','--clay-hover':'#EBD9BE',
+    '--ink':'#1F2A36','--ink-light':'#5A6776','--ink-lighter':'#8E99A6',
+    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
+    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#3F5856'
+  }},
+  'indigo': { label:'Indigo', vars: {
+    '--cream':'#F1F1F6','--cream-dark':'#E4E4EC','--cream-border':'#C6C6D4','--white':'#FBFBFD',
+    '--bark':'#3E4768','--bark-light':'#6970A0','--bark-dark':'#1F2546',
+    '--sage':'#7480A0','--sage-light':'#E5E8F0','--sage-dark':'#454E68','--sage-border':'#BFC5D4',
+    '--clay':'#A88BB8','--clay-light':'#EDE2F2','--clay-dark':'#6E527C','--clay-hover':'#E0CFE8',
+    '--ink':'#1A1D2E','--ink-light':'#525870','--ink-lighter':'#8A8FA4',
+    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
+    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#454E68'
+  }},
+  'mist': { label:'Mist', vars: {
+    '--cream':'#F2F4F4','--cream-dark':'#E5E9E9','--cream-border':'#CAD2D2','--white':'#FBFCFC',
+    '--bark':'#5C7274','--bark-light':'#869A9C','--bark-dark':'#34484A',
+    '--sage':'#6E9290','--sage-light':'#E2EDEC','--sage-dark':'#3F5C5A','--sage-border':'#BAD0CE',
+    '--clay':'#C29A8A','--clay-light':'#F0E4DE','--clay-dark':'#82584A','--clay-hover':'#E7D3C9',
+    '--ink':'#222B2E','--ink-light':'#5C696C','--ink-lighter':'#909A9D',
+    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
+    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#3F5C5A'
+  }},
+  'blush': { label:'Blush', vars: {
+    '--cream':'#F9F2F1','--cream-dark':'#F0E4E2','--cream-border':'#DCC8C6','--white':'#FEFBFB',
+    '--bark':'#8A5868','--bark-light':'#AE7E8C','--bark-dark':'#5A3240',
+    '--sage':'#8A8898','--sage-light':'#ECE9EE','--sage-dark':'#52505E','--sage-border':'#CFCCD6',
+    '--clay':'#D08C82','--clay-light':'#F5E2DE','--clay-dark':'#92524A','--clay-hover':'#EDCEC7',
+    '--ink':'#2C2024','--ink-light':'#6D5860','--ink-lighter':'#A08A91',
+    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
+    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#52505E'
+  }},
+  'petal': { label:'Petal', vars: {
+    '--cream':'#FAF3EE','--cream-dark':'#F2E5DC','--cream-border':'#DCC8B9','--white':'#FEFCFA',
+    '--bark':'#A0584C','--bark-light':'#C68074','--bark-dark':'#6E2E22',
+    '--sage':'#8C8478','--sage-light':'#EDE8E1','--sage-dark':'#544D43','--sage-border':'#CCC5BA',
+    '--clay':'#E89A82','--clay-light':'#FAE3D8','--clay-dark':'#A85A40','--clay-hover':'#F4CFBE',
+    '--ink':'#2E2018','--ink-light':'#705A4E','--ink-lighter':'#A28B7E',
+    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
+    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#544D43'
+  }},
+  'mulberry': { label:'Mulberry', vars: {
+    '--cream':'#F4EDEF','--cream-dark':'#E8DCDF','--cream-border':'#CDB8BE','--white':'#FBF8F9',
+    '--bark':'#7A3E5A','--bark-light':'#9E6480','--bark-dark':'#4E1A30',
+    '--sage':'#857482','--sage-light':'#E7E0E4','--sage-dark':'#4E424B','--sage-border':'#C5B8BF',
+    '--clay':'#B07088','--clay-light':'#EBD8DE','--clay-dark':'#783E50','--clay-hover':'#DEBFC8',
+    '--ink':'#26181E','--ink-light':'#5E4E55','--ink-lighter':'#94808A',
+    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
+    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#4E424B'
+  }},
+  'lavender': { label:'Lavender', vars: {
+    '--cream':'#F5F3F7','--cream-dark':'#EAE5EF','--cream-border':'#D0C8DA','--white':'#FCFBFD',
+    '--bark':'#6E5C8A','--bark-light':'#928AAE','--bark-dark':'#3F3258',
+    '--sage':'#8C8AA0','--sage-light':'#EAE8EE','--sage-dark':'#54526A','--sage-border':'#CECCDA',
+    '--clay':'#B89AC4','--clay-light':'#EEE2F1','--clay-dark':'#7C5A8A','--clay-hover':'#E0CDEA',
+    '--ink':'#221E2E','--ink-light':'#5E5670','--ink-lighter':'#928CA4',
+    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
+    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#54526A'
+  }},
+  'slate': { label:'Slate', vars: {
+    '--cream':'#F1F2F5','--cream-dark':'#E4E6EC','--cream-border':'#C6CBD4','--white':'#FBFBFD',
+    '--bark':'#525C72','--bark-light':'#7C8598','--bark-dark':'#2E3648',
+    '--sage':'#76808E','--sage-light':'#E5E8EC','--sage-dark':'#444C58','--sage-border':'#C2C8D0',
+    '--clay':'#A88AA0','--clay-light':'#ECE2E8','--clay-dark':'#6E5468','--clay-hover':'#DCCBD6',
+    '--ink':'#1E222C','--ink-light':'#555C6C','--ink-lighter':'#8C92A0',
+    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
+    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#444C58'
+  }},
+  'wisteria': { label:'Wisteria', vars: {
+    '--cream':'#F4F2F4','--cream-dark':'#E8E5E9','--cream-border':'#CCC4D0','--white':'#FBFAFC',
+    '--bark':'#7A6A8C','--bark-light':'#9E8FAE','--bark-dark':'#4A3A5C',
+    '--sage':'#84927E','--sage-light':'#E5EAE2','--sage-dark':'#4E5A48','--sage-border':'#BDC8B8',
+    '--clay':'#AE8AB8','--clay-light':'#E8DCE8','--clay-dark':'#724E7C','--clay-hover':'#D8C2DC',
+    '--ink':'#24202C','--ink-light':'#5E566C','--ink-lighter':'#928BA0',
+    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
+    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#4E5A48'
+  }},
+  'forest': { label:'Forest', vars: {
+    '--cream':'#F2F4F0','--cream-dark':'#E4E8DE','--cream-border':'#C5CDBE','--white':'#FBFCFA',
+    '--bark':'#4E6A4A','--bark-light':'#789078','--bark-dark':'#2A3E28',
+    '--sage':'#6A8A60','--sage-light':'#E0EAD8','--sage-dark':'#3E5638','--sage-border':'#B5C8AC',
+    '--clay':'#B88858','--clay-light':'#ECDDC8','--clay-dark':'#7A5430','--clay-hover':'#E0CAA8',
+    '--ink':'#1E281C','--ink-light':'#56624E','--ink-lighter':'#8A9282',
+    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
+    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#3E5638'
+  }},
+  'sage-green': { label:'Sage', vars: {
+    '--cream':'#F4F5F1','--cream-dark':'#E7E9E2','--cream-border':'#C9CEC0','--white':'#FBFCFA',
+    '--bark':'#6E7A5E','--bark-light':'#929E84','--bark-dark':'#404834',
+    '--sage':'#869A78','--sage-light':'#E8EDE0','--sage-dark':'#4E5C40','--sage-border':'#C2CCB4',
+    '--clay':'#B89A82','--clay-light':'#EBE2D8','--clay-dark':'#7A604E','--clay-hover':'#DDCEC0',
+    '--ink':'#23271E','--ink-light':'#5C624E','--ink-lighter':'#8E9482',
+    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
+    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#4E5C40'
+  }},
+  'eucalyptus': { label:'Eucalyptus', vars: {
+    '--cream':'#F1F4F2','--cream-dark':'#E4E9E5','--cream-border':'#C5CFC8','--white':'#FBFCFB',
+    '--bark':'#5E7872','--bark-light':'#8AA09A','--bark-dark':'#324842',
+    '--sage':'#7AA098','--sage-light':'#E0EDE7','--sage-dark':'#436258','--sage-border':'#B6CDC4',
+    '--clay':'#A8B8A0','--clay-light':'#E2EAE0','--clay-dark':'#688070','--clay-hover':'#CFD8C8',
+    '--ink':'#1E2A26','--ink-light':'#566A62','--ink-lighter':'#8C9A92',
+    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
+    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#436258'
+  }}
+};
+var PALETTE_KEY     = 'plume-palette-batchlog';
+var DEFAULT_PALETTE = 'coastal';
+function applyPalette(name) {
+  var p = PALETTES[name];
+  if (!p) { p = PALETTES[DEFAULT_PALETTE]; name = DEFAULT_PALETTE; }
+  Object.keys(p.vars).forEach(function(v) {
+    document.documentElement.style.setProperty(v, p.vars[v]);
+  });
+  return name;
+}
+function savePaletteChoice(name) { try { localStorage.setItem(PALETTE_KEY, name); } catch (e) {} }
+function loadPaletteChoice() { try { return localStorage.getItem(PALETTE_KEY) || DEFAULT_PALETTE; } catch (e) { return DEFAULT_PALETTE; } }
+function selectPalette(name) {
+  var applied = applyPalette(name);
+  savePaletteChoice(applied);
+  renderPaletteSwatches();
+}
+function renderPaletteSwatches() {
+  var container = document.getElementById('palette-swatches');
+  if (!container) return;
+  var current = loadPaletteChoice();
+  var names = Object.keys(PALETTES);
+  container.innerHTML = names.map(function(name) {
+    var p = PALETTES[name]; var v = p.vars; var isActive = (name === current);
+    return '<button type="button" class="palette-swatch' + (isActive ? ' active' : '') +
+      '" onclick="selectPalette(\'' + name + '\')" title="' + p.label + '">' +
+      '<div class="palette-swatch-stripes">' +
+        '<span style="background:' + v['--cream'] + '"></span>' +
+        '<span style="background:' + v['--bark'] + '"></span>' +
+        '<span style="background:' + v['--sage'] + '"></span>' +
+        '<span style="background:' + v['--clay'] + '"></span>' +
+        '<span style="background:' + v['--ink'] + '"></span>' +
+      '</div>' +
+      '<div class="palette-swatch-label">' + p.label + '</div>' +
+      '</button>';
+  }).join('');
+}
+function openSettings() { openModal('m-settings'); renderPaletteSwatches(); }
+
 // ── Boot ──
+applyPalette(loadPaletteChoice());
 loadData();
 handleDeepLink();
 </script>
