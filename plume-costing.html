@@ -523,41 +523,44 @@ function ingCostPerG(ing) {
   return parseFloat(withCost[0].costPerG);
 }
 
-function formulationCostPerG(f) {
-  if (!f || !f.lines || !f.lines.length) return null;
-  // Determine totals two ways: percentage-based (lotion/cream/oil blends) and
-  // gram-based (soap formulations, where oils are weighed not percentaged).
-  // Whichever shape the formula uses, we want cost-per-g of the finished
-  // mass. We collect (cost, mass) contributions and divide.
+// Build a diagnostic breakdown of how much each formulation line contributes
+// to the per-gram cost. Returns lines with their resolved cost info so the
+// panel can show *why* a cost was zero -- which ingredients are missing
+// cost/g data in the Ingredients library.
+function formulationCostDetail(f) {
+  if (!f || !f.lines || !f.lines.length) return { perG:null, lines:[] };
+  var lineInfo = [];
   var totalCost = 0;
   var totalMass = 0;
   var anyCost = false;
   f.lines.forEach(function(line) {
-    // Skip soap add-ins (fragrance/EOs/etc) -- they're tracked separately
-    // and not part of the 100% total in soap formulas
-    if (line.soapAddin) return;
+    if (line.soapAddin) return;  // skip add-ins from %-of-finished calc
     var ing = findIng(line.ingId);
     var cpg = ingCostPerG(ing);
-
-    // Two contribution shapes:
-    //   gramsFixed > 0  -> use absolute grams (soap oils, pinned lines)
-    //   pct > 0         -> use percentage of total
     var grams = parseFloat(line.gramsFixed) || 0;
     var pct   = parseFloat(line.pct) || 0;
-
-    if (grams > 0) {
-      totalMass += grams;
-      if (cpg !== null) { totalCost += grams * cpg; anyCost = true; }
-    } else if (pct > 0) {
-      // For pct-based lines, treat 100% as 100g for the ratio. Doesn't matter
-      // what the absolute weight is -- we're computing cost-per-gram, which
-      // is scale-invariant.
-      totalMass += pct;  // pct as "parts per 100"
-      if (cpg !== null) { totalCost += pct * cpg; anyCost = true; }
-    }
+    // Two contribution shapes
+    var contribMass = 0;
+    if (grams > 0) contribMass = grams;
+    else if (pct > 0) contribMass = pct;  // treat 100% as 100 mass units
+    if (contribMass <= 0) return;
+    totalMass += contribMass;
+    var contribCost = (cpg !== null) ? cpg * contribMass : 0;
+    if (cpg !== null) { totalCost += contribCost; anyCost = true; }
+    lineInfo.push({
+      name:    (ing && (ing.name || ing.inci)) || '(unknown)',
+      pct:     pct,
+      grams:   grams,
+      cpg:     cpg,
+      hasCost: (cpg !== null)
+    });
   });
-  if (!anyCost || totalMass <= 0) return null;
-  return totalCost / totalMass;
+  var perG = (anyCost && totalMass > 0) ? (totalCost / totalMass) : null;
+  return { perG:perG, lines:lineInfo, totalMass:totalMass };
+}
+
+function formulationCostPerG(f) {
+  return formulationCostDetail(f).perG;
 }
 
 function pkgUnitCost(pkg) {
@@ -974,6 +977,9 @@ function recalcCost() {
   p.retail      = parseFloat(document.getElementById('p-retail').value) || '';
   p.wholesale   = parseFloat(document.getElementById('p-wholesale').value) || '';
   var c = computeProductCost(p);
+  // Pull in the per-line ingredient detail for diagnostics
+  var f = findForm(p.formulaId);
+  var detail = formulationCostDetail(f);
   var panel = document.getElementById('cost-panel');
 
   var html = '';
@@ -984,6 +990,19 @@ function recalcCost() {
     '<span class="cr-label">Ingredients (' + fcpgTxt + ' &times; ' + netTxt + ')</span>' +
     '<span class="cr-aux"></span>' +
     '<span class="cr-val">$' + c.ingCost.toFixed(2) + '</span></div>';
+
+  // If ingredient cost is missing, surface WHICH ingredients are missing data
+  if (!c.ingCostKnown && detail.lines.length) {
+    var missing = detail.lines.filter(function(l) { return !l.hasCost; });
+    if (missing.length) {
+      var names = missing.map(function(l) { return esc(l.name); }).join(', ');
+      html += '<div style="font-size:11px; color:var(--warning); padding:6px 0 10px; line-height:1.5">' +
+        '<strong>Missing cost data for:</strong> ' + names + '.<br>' +
+        'Open the <a href="plume-ingredients.html" target="plume-ingredients" style="color:var(--clay-dark); text-decoration:underline">Ingredients</a> module and add a purchase lot with cost/g for each.' +
+        '</div>';
+    }
+  }
+
   c.pkgRows.forEach(function(r) {
     var ucTxt = r.unitCost !== null ? '$' + r.unitCost.toFixed(3) : '--';
     html += '<div class="cost-row">' +
@@ -1012,11 +1031,6 @@ function recalcCost() {
       '<span class="cr-label">Wholesale at $' + c.wholesale.toFixed(2) + '</span>' +
       '<span class="cr-aux">$' + (c.wholesaleProfit || 0).toFixed(2) + '</span>' +
       '<span class="cr-val ' + wMargCls + '">' + wMargTxt + '</span></div>';
-  }
-  if (!c.ingCostKnown) {
-    html += '<div style="font-size:11px; color:var(--warning); margin-top:8px; line-height:1.4">' +
-      'Some ingredient cost data is missing. Costs shown only include ingredients with cost/g in the Ingredients library.' +
-      '</div>';
   }
   panel.innerHTML = html;
 }
