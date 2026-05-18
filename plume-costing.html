@@ -525,35 +525,57 @@ function ingCostPerG(ing) {
 
 function formulationCostPerG(f) {
   if (!f || !f.lines || !f.lines.length) return null;
+  // Determine totals two ways: percentage-based (lotion/cream/oil blends) and
+  // gram-based (soap formulations, where oils are weighed not percentaged).
+  // Whichever shape the formula uses, we want cost-per-g of the finished
+  // mass. We collect (cost, mass) contributions and divide.
   var totalCost = 0;
+  var totalMass = 0;
   var anyCost = false;
   f.lines.forEach(function(line) {
-    var pct = parseFloat(line.percent) || 0;
-    if (pct <= 0) return;
-    var ing = findIng(line.ingredientId);
+    // Skip soap add-ins (fragrance/EOs/etc) -- they're tracked separately
+    // and not part of the 100% total in soap formulas
+    if (line.soapAddin) return;
+    var ing = findIng(line.ingId);
     var cpg = ingCostPerG(ing);
-    if (cpg !== null) {
-      totalCost += cpg * (pct / 100);
-      anyCost = true;
+
+    // Two contribution shapes:
+    //   gramsFixed > 0  -> use absolute grams (soap oils, pinned lines)
+    //   pct > 0         -> use percentage of total
+    var grams = parseFloat(line.gramsFixed) || 0;
+    var pct   = parseFloat(line.pct) || 0;
+
+    if (grams > 0) {
+      totalMass += grams;
+      if (cpg !== null) { totalCost += grams * cpg; anyCost = true; }
+    } else if (pct > 0) {
+      // For pct-based lines, treat 100% as 100g for the ratio. Doesn't matter
+      // what the absolute weight is -- we're computing cost-per-gram, which
+      // is scale-invariant.
+      totalMass += pct;  // pct as "parts per 100"
+      if (cpg !== null) { totalCost += pct * cpg; anyCost = true; }
     }
   });
-  if (!anyCost) return null;
-  return totalCost;
+  if (!anyCost || totalMass <= 0) return null;
+  return totalCost / totalMass;
 }
 
 function pkgUnitCost(pkg) {
   if (!pkg) return null;
   var purchases = pkg.purchases || [];
   if (!purchases.length) return null;
+  // Most recent purchase: (totalCost + shipping) / qty -- mirrors the
+  // calculation in plume-packaging.html's latestCostPerUnit().
   var sorted = purchases.slice().sort(function(a, b) {
     return (b.date || '').localeCompare(a.date || '');
   });
   for (var i = 0; i < sorted.length; i++) {
     var p = sorted[i];
-    var price = parseFloat(p.price);
-    var qty   = parseInt(p.qty, 10);
-    if (!isNaN(price) && !isNaN(qty) && qty > 0 && price > 0) {
-      return price / qty;
+    var total = parseFloat(p.totalCost) || 0;
+    var ship  = parseFloat(p.shipping)  || 0;
+    var qty   = parseInt(p.qty, 10) || 0;
+    if (qty > 0 && total > 0) {
+      return (total + ship) / qty;
     }
   }
   return null;
@@ -1012,16 +1034,23 @@ function onOverrideToggle() {
 function buildIngredientList(p, mode) {
   var f = findForm(p.formulaId);
   if (!f || !f.lines || !f.lines.length) return '(no formulation linked)';
-  var lines = f.lines.slice().filter(function(l) {
-    var pct = parseFloat(l.percent) || 0;
-    return pct > 0;
-  });
-  if (!lines.length) return '(no ingredients with percentage > 0)';
-  lines.sort(function(a, b) {
-    return (parseFloat(b.percent) || 0) - (parseFloat(a.percent) || 0);
-  });
-  var names = lines.map(function(l) {
-    var ing = findIng(l.ingredientId);
+  // For sorting purposes we need a "weight" per line. Use the larger of
+  // (pct, gramsFixed) -- soap lines use gramsFixed; everything else uses pct.
+  // Soap add-ins (fragrance, EOs) appear at the end of the label by tradition,
+  // but for descending-weight ordering, we still sort by their gramsFixed.
+  var lines = f.lines.slice().map(function(l) {
+    var pct = parseFloat(l.pct) || 0;
+    var gf  = parseFloat(l.gramsFixed) || 0;
+    // Comparable weight: pct for pct-based, gramsFixed for soap. Since the two
+    // formulation shapes are mutually exclusive per formula, this gives a
+    // consistent ordering within a single formula.
+    var weight = pct > 0 ? pct : gf;
+    return { line:l, weight:weight };
+  }).filter(function(o) { return o.weight > 0; });
+  if (!lines.length) return '(no ingredients with weight > 0)';
+  lines.sort(function(a, b) { return b.weight - a.weight; });
+  var names = lines.map(function(o) {
+    var ing = findIng(o.line.ingId);
     if (!ing) return '(unknown)';
     if (mode === 'inci') return ing.inci || ing.name || '(unnamed)';
     return ing.name || ing.inci || '(unnamed)';
