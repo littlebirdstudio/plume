@@ -143,6 +143,26 @@ tbody tr:last-child td{border-bottom:none}
 .pkg-add-row{display:grid;grid-template-columns:1fr 100px 1fr auto;gap:10px;align-items:end;padding:10px;background:var(--cream);border-radius:3px;margin-top:6px}
 .pkg-add-row .field{margin-bottom:0}
 .pkg-empty{padding:10px;text-align:center;color:var(--ink-lighter);font-size:12px;font-style:italic}
+/* Multi-component run card (display) */
+.pkg-run-card{background:var(--white);border:1px solid var(--cream-border);border-radius:4px;padding:10px 12px;margin-bottom:8px}
+.pkg-run-card-hdr{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid var(--cream-dark)}
+.pkg-run-card-hdr-l{font-size:13px;font-weight:500;color:var(--ink)}
+.pkg-run-card-hdr-meta{font-size:11px;color:var(--ink-lighter);margin-top:2px}
+.pkg-run-card .pr-del{background:none;border:none;cursor:pointer;color:var(--ink-lighter);font-size:14px;padding:2px 6px;line-height:1}
+.pkg-run-card .pr-del:hover{color:var(--danger)}
+.pkg-run-card-comps{list-style:none;padding:0;margin:0}
+.pkg-run-card-comp{display:grid;grid-template-columns:1fr auto;gap:10px;padding:3px 0;font-size:12px;color:var(--ink-light)}
+.pkg-run-card-comp .prc-qty{font-variant-numeric:tabular-nums;color:var(--ink)}
+/* New-run builder (form) */
+.pkg-builder{padding:12px;background:var(--cream);border-radius:4px;margin-top:8px;border:1px solid var(--cream-border)}
+.pkg-builder-hdr{display:grid;grid-template-columns:160px 1fr;gap:10px;margin-bottom:10px;align-items:end}
+.pkg-builder-hdr .field{margin-bottom:0}
+.pkg-builder-comps-label{font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-light);margin-bottom:6px;margin-top:4px}
+.pkg-builder-comp{display:grid;grid-template-columns:1fr 90px 28px;gap:8px;align-items:center;padding:4px 0}
+.pkg-builder-comp select, .pkg-builder-comp input{font-family:'DM Sans',sans-serif;font-size:12px;padding:5px 8px;border-radius:3px;border:1px solid var(--cream-border);background:var(--white);color:var(--ink);width:100%}
+.pkg-builder-comp .pbc-del{background:none;border:none;cursor:pointer;color:var(--ink-lighter);font-size:13px;padding:2px 4px;line-height:1}
+.pkg-builder-comp .pbc-del:hover{color:var(--danger)}
+.pkg-builder-actions{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px;padding-top:8px;border-top:1px solid var(--cream-border)}
 
 /* ── Cost rollup ── */
 .cost-rollup{display:grid;grid-template-columns:1fr auto;gap:6px 18px;padding:10px 12px;background:var(--white);border:1px solid var(--cream-border);border-radius:3px;font-size:13px}
@@ -409,22 +429,26 @@ tbody tr:last-child td{border-bottom:none}
       <span id="d-pkg-total" style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--ink-lighter)"></span>
     </div>
     <div id="d-pkg-list"></div>
-    <div class="pkg-add-row">
-      <div class="field">
-        <label>Packaging item</label>
-        <select id="d-pkg-pick">
-          <option value="">-- Pick packaging --</option>
-        </select>
+    <div class="pkg-builder" id="d-pkg-builder">
+      <div class="pkg-builder-hdr">
+        <div class="field">
+          <label>Run date</label>
+          <input type="date" id="d-pkg-date">
+        </div>
+        <div class="field">
+          <label>Notes (optional)</label>
+          <input type="text" id="d-pkg-notes" placeholder="Purpose, customer, lot code, etc.">
+        </div>
       </div>
-      <div class="field">
-        <label>Quantity</label>
-        <input type="number" id="d-pkg-qty" min="1" step="1" placeholder="e.g. 12">
+      <div class="pkg-builder-comps-label">Components used in this run</div>
+      <div id="d-pkg-builder-comps"></div>
+      <div class="pkg-builder-actions">
+        <button class="btn btn-sm" onclick="pendingRunAddComponent()">+ Add component</button>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-sm" onclick="pendingRunReset()">Reset</button>
+          <button class="btn btn-primary btn-sm" onclick="pendingRunCommit()">+ Add run</button>
+        </div>
       </div>
-      <div class="field">
-        <label>Notes (optional)</label>
-        <input type="text" id="d-pkg-notes" placeholder="Lot code, batch markings...">
-      </div>
-      <button class="btn btn-primary" onclick="addPackagingRun()">+ Add run</button>
     </div>
 
     <div class="modal-foot">
@@ -533,7 +557,15 @@ function esc(s) {
 }
 function fmtDate(iso) {
   if (!iso) return '--';
-  var d = new Date(iso);
+  // For YYYY-MM-DD strings, parse as local-timezone rather than UTC -- otherwise
+  // negative-offset zones (e.g. Alaska, US Pacific) display the previous day.
+  var d;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+    var parts = iso.split('-');
+    d = new Date(parseInt(parts[0],10), parseInt(parts[1],10) - 1, parseInt(parts[2],10));
+  } else {
+    d = new Date(iso);
+  }
   if (isNaN(d.getTime())) return iso;
   var mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()];
   return mo + ' ' + d.getDate() + ', ' + d.getFullYear();
@@ -1171,9 +1203,7 @@ function openBatchDetail(id) {
 
   // Packaging
   populatePackagingPicker();
-  document.getElementById('d-pkg-qty').value    = '';
-  document.getElementById('d-pkg-notes').value  = '';
-  document.getElementById('d-pkg-pick').value   = '';
+  pendingRunReset();
   renderPackagingRuns(b);
 
   // Commit state + receipt
@@ -1322,19 +1352,30 @@ function renderCostRollup(b) {
   wrap.innerHTML = html;
 }
 
+// Cache of packaging items sorted by name, used by the run builder to
+// populate each component row's picker. Refreshed on detail open and after
+// any commit/decommit that changes packaging stock.
+var pkgPickerCache = [];
 function populatePackagingPicker() {
-  var sel = document.getElementById('d-pkg-pick');
-  sel.innerHTML = '<option value="">-- Pick packaging --</option>';
-  // Sort by name
-  var sorted = pkgs.slice().sort(function(a,b) {
-    return (a.name||'').localeCompare(b.name||'');
+  pkgPickerCache = pkgs.slice().sort(function(a, b) {
+    return (a.name || '').localeCompare(b.name || '');
   });
-  sorted.forEach(function(p) {
+  // Re-render the builder so any open pickers refresh their stock counts
+  renderPendingRunBuilder();
+}
+
+// Build the option HTML for one component picker, marking the currently
+// selected item. Stock count is shown as a hint.
+function packagingOptionsHTML(selectedId) {
+  var html = '<option value="">-- Pick packaging --</option>';
+  pkgPickerCache.forEach(function(p) {
     var stock = calcPkgStock(p);
-    var stockLbl = ' (' + stock + ' in stock)';
     var cap = p.capacity ? ' -- ' + esc(p.capacity) : '';
-    sel.innerHTML += '<option value="' + p.id + '">' + esc(p.name || '(unnamed)') + cap + stockLbl + '</option>';
+    var sel = (p.id === selectedId) ? ' selected' : '';
+    html += '<option value="' + p.id + '"' + sel + '>' +
+      esc(p.name || '(unnamed)') + cap + ' (' + stock + ' in stock)</option>';
   });
+  return html;
 }
 
 // Mirror of plume-packaging.html calcStock()
@@ -1345,90 +1386,226 @@ function calcPkgStock(item) {
   return total;
 }
 
+// Normalize a run record so display code can assume a `components` array,
+// regardless of whether it was saved as the legacy single-component shape or
+// the new multi-component shape. Does NOT mutate the run.
+function runComponents(r) {
+  if (r.components && r.components.length) return r.components;
+  // Legacy: single-component runs had packagingId/packagingName/quantity at top level
+  if (r.packagingId) {
+    return [{
+      packagingId:   r.packagingId,
+      packagingName: r.packagingName,
+      quantity:      r.quantity
+    }];
+  }
+  return [];
+}
+
 function renderPackagingRuns(b) {
   var list = document.getElementById('d-pkg-list');
   var runs = b.packagingRuns || [];
-  // Totals intentionally hidden -- summing component-style packaging items
-  // (e.g. tin + top label + bottom label) doesn't produce a meaningful unit
-  // count. The Costing/Products rework will introduce the right semantics.
   document.getElementById('d-pkg-total').textContent = '';
   if (!runs.length) {
     list.innerHTML = '<div class="pkg-empty">No packaging runs logged yet.</div>';
     return;
   }
-  // Sort by date desc
-  var sorted = runs.slice().sort(function(a,b) {
-    return (b.date || '').localeCompare(a.date || '');
+  // Sort by date desc, fall back to creation time so same-date runs preserve
+  // insertion order
+  var sorted = runs.slice().sort(function(a, b) {
+    var dc = (b.date || '').localeCompare(a.date || '');
+    if (dc !== 0) return dc;
+    return (b.committedAt || b.id || '').localeCompare(a.committedAt || a.id || '');
   });
   var html = '';
   sorted.forEach(function(r) {
-    var qty = parseInt(r.quantity, 10) || 0;
-    var nameBlock = '<div>' +
-      '<span class="pr-name">' + esc(r.packagingName || '(unknown)') + '</span>' +
-      (r.notes ? '<span class="pr-meta">' + esc(r.notes) + '</span>' : '') + '</div>';
-    html += '<div class="pkg-run-row">' +
-      nameBlock +
-      '<span class="pr-qty">' + qty + ' units</span>' +
-      '<span class="pr-date">' + fmtDate(r.date) + '</span>' +
-      '<button class="pr-del" title="Delete run" onclick="deletePackagingRun(\'' + r.id + '\')">&#x2715;</button>' +
+    var comps = runComponents(r);
+    // Build the component list HTML
+    var compHTML = '';
+    comps.forEach(function(c) {
+      // Resolve packaging name from id if not stored (or stored stale)
+      var pkg = null;
+      for (var i = 0; i < pkgs.length; i++) if (pkgs[i].id === c.packagingId) { pkg = pkgs[i]; break; }
+      var nm = (pkg && pkg.name) || c.packagingName || '(missing)';
+      var qty = parseInt(c.quantity, 10) || 0;
+      compHTML += '<li class="pkg-run-card-comp">' +
+        '<span class="prc-name">' + esc(nm) + '</span>' +
+        '<span class="prc-qty">' + qty + '</span>' +
+        '</li>';
+    });
+    var headerL = '<div><div class="pkg-run-card-hdr-l">' + fmtDate(r.date) + '</div>' +
+      (r.notes ? '<div class="pkg-run-card-hdr-meta">' + esc(r.notes) + '</div>' : '') +
+      '</div>';
+    html += '<div class="pkg-run-card">' +
+      '<div class="pkg-run-card-hdr">' +
+        headerL +
+        '<button class="pr-del" title="Delete run" onclick="deletePackagingRun(\'' + r.id + '\')">&#x2715;</button>' +
+      '</div>' +
+      '<ul class="pkg-run-card-comps">' + compHTML + '</ul>' +
       '</div>';
   });
   list.innerHTML = html;
 }
 
-function addPackagingRun() {
+// ──────────────────────────────────────────────────────────────────────
+// Pending run builder
+// Holds the in-progress run while the user adds components. On commit, the
+// builder validates stock atomically (across all components), persists, and
+// resets.
+// ──────────────────────────────────────────────────────────────────────
+var pendingRun = null;  // { date, notes, components: [{packagingId, quantity}] }
+
+function pendingRunReset() {
+  pendingRun = {
+    date:       todayISO(),
+    notes:      '',
+    components: [{ packagingId:'', quantity:'' }]
+  };
+  // Update the inputs in the DOM
+  var dateInput  = document.getElementById('d-pkg-date');
+  var notesInput = document.getElementById('d-pkg-notes');
+  if (dateInput)  dateInput.value  = pendingRun.date;
+  if (notesInput) notesInput.value = '';
+  renderPendingRunBuilder();
+}
+
+function pendingRunCaptureHeader() {
+  if (!pendingRun) return;
+  var dateInput  = document.getElementById('d-pkg-date');
+  var notesInput = document.getElementById('d-pkg-notes');
+  if (dateInput)  pendingRun.date  = dateInput.value || todayISO();
+  if (notesInput) pendingRun.notes = notesInput.value.trim();
+}
+
+function pendingRunAddComponent() {
+  pendingRunCaptureHeader();
+  if (!pendingRun) pendingRunReset();
+  pendingRun.components.push({ packagingId:'', quantity:'' });
+  renderPendingRunBuilder();
+}
+
+function pendingRunRemoveComponent(idx) {
+  pendingRunCaptureHeader();
+  if (!pendingRun || !pendingRun.components) return;
+  pendingRun.components.splice(idx, 1);
+  if (!pendingRun.components.length) {
+    pendingRun.components.push({ packagingId:'', quantity:'' });
+  }
+  renderPendingRunBuilder();
+}
+
+function pendingRunOnComponentChange(idx, field, value) {
+  if (!pendingRun || !pendingRun.components[idx]) return;
+  if (field === 'packagingId') pendingRun.components[idx].packagingId = value;
+  if (field === 'quantity')    pendingRun.components[idx].quantity    = value;
+  // No re-render -- avoids losing focus while typing
+}
+
+function renderPendingRunBuilder() {
+  var wrap = document.getElementById('d-pkg-builder-comps');
+  if (!wrap) return;
+  if (!pendingRun) { wrap.innerHTML = ''; return; }
+  var html = '';
+  pendingRun.components.forEach(function(c, idx) {
+    html += '<div class="pkg-builder-comp">' +
+      '<select onchange="pendingRunOnComponentChange(' + idx + ', \'packagingId\', this.value)">' +
+        packagingOptionsHTML(c.packagingId) +
+      '</select>' +
+      '<input type="number" min="1" step="1" placeholder="Qty" value="' + esc(c.quantity || '') +
+        '" oninput="pendingRunOnComponentChange(' + idx + ', \'quantity\', this.value)">' +
+      '<button class="pbc-del" title="Remove component" onclick="pendingRunRemoveComponent(' + idx + ')">&#x2715;</button>' +
+      '</div>';
+  });
+  wrap.innerHTML = html;
+}
+
+// Commit the pending run: validate atomically across all components,
+// reject if any are short, otherwise write to the batch + decrement stock.
+function pendingRunCommit() {
   if (!editingBatchId) return;
   var b = findBatch(editingBatchId);
   if (!b) return;
-  var pkgId = document.getElementById('d-pkg-pick').value;
-  var qty   = parseInt(document.getElementById('d-pkg-qty').value, 10);
-  var notes = document.getElementById('d-pkg-notes').value.trim();
-  if (!pkgId) { alert('Pick a packaging item.'); return; }
-  if (!qty || qty <= 0) { alert('Enter a quantity greater than zero.'); return; }
-  var pkg = null;
-  for (var i = 0; i < pkgs.length; i++) if (pkgs[i].id === pkgId) { pkg = pkgs[i]; break; }
-  if (!pkg) { alert('Packaging item not found.'); return; }
-
-  // Packaging runs always commit immediately. Hard-block if stock is short.
-  // The user should fix packaging inventory in the Packaging library and
-  // come back; we don't allow negative or partial commits.
-  var stock = calcPkgStock(pkg);
-  if (stock < qty) {
-    alert('Cannot add this run: only ' + stock + ' of "' + pkg.name + '" in stock, ' +
-      'but you\'re trying to log ' + qty + '.\n\nUpdate packaging stock in the Packaging library, then try again.');
+  pendingRunCaptureHeader();
+  if (!pendingRun) return;
+  // Filter out empty rows (no packaging selected or zero qty)
+  var rows = pendingRun.components.filter(function(c) {
+    var q = parseInt(c.quantity, 10) || 0;
+    return c.packagingId && q > 0;
+  });
+  if (!rows.length) {
+    alert('Add at least one packaging component with a quantity.');
     return;
   }
-
+  // Aggregate per-packaging across rows (in case user added the same item twice)
+  var aggregated = {};
+  rows.forEach(function(c) {
+    var q = parseInt(c.quantity, 10) || 0;
+    aggregated[c.packagingId] = (aggregated[c.packagingId] || 0) + q;
+  });
+  // Validate stock for every aggregated item before committing anything
+  var shortages = [];
+  Object.keys(aggregated).forEach(function(pid) {
+    var pkg = null;
+    for (var i = 0; i < pkgs.length; i++) if (pkgs[i].id === pid) { pkg = pkgs[i]; break; }
+    if (!pkg) { shortages.push({ name:'(missing item)', need:aggregated[pid], have:0 }); return; }
+    var have = calcPkgStock(pkg);
+    if (have < aggregated[pid]) {
+      shortages.push({ name:pkg.name, need:aggregated[pid], have:have });
+    }
+  });
+  if (shortages.length) {
+    var msg = 'Cannot add this run -- insufficient packaging stock:\n\n';
+    shortages.forEach(function(s) {
+      msg += '  ' + s.name + ': need ' + s.need + ', have ' + s.have + '\n';
+    });
+    msg += '\nUpdate packaging stock in the Packaging library, then try again.';
+    alert(msg);
+    return;
+  }
+  // Build the run record (multi-component shape)
+  var runId = String(Date.now()) + '-' + Math.random().toString(36).slice(2,6);
+  var components = rows.map(function(c) {
+    var pkg = null;
+    for (var i = 0; i < pkgs.length; i++) if (pkgs[i].id === c.packagingId) { pkg = pkgs[i]; break; }
+    return {
+      packagingId:   c.packagingId,
+      packagingName: pkg ? pkg.name : '',
+      quantity:      parseInt(c.quantity, 10) || 0
+    };
+  });
   var newRun = {
-    id:            String(Date.now()) + '-' + Math.random().toString(36).slice(2,6),
-    date:          todayISO(),
-    packagingId:   pkgId,
-    packagingName: pkg.name,
-    quantity:      qty,
-    notes:         notes,
-    committed:     true,
-    committedAt:   new Date().toISOString()
+    id:          runId,
+    date:        pendingRun.date || todayISO(),
+    notes:       pendingRun.notes || '',
+    components:  components,
+    committed:   true,
+    committedAt: new Date().toISOString()
   };
-
   if (!b.packagingRuns) b.packagingRuns = [];
   b.packagingRuns.push(newRun);
 
-  // Record the negative adjustment on packaging and add to receipt
-  if (!pkg.adjustments) pkg.adjustments = [];
-  pkg.adjustments.push({
-    id:      'commit-' + b.id + '-' + newRun.id,
-    qty:     -qty,
-    date:    todayISO(),
-    reason:  'Committed to batch: ' + (b.batchName || b.formulaName || b.id),
-    batchId: b.id,
-    runId:   newRun.id
-  });
+  // Decrement each packaging item's stock via an adjustment record, and
+  // append to the batch's packagingDraws receipt for traceability
   if (!b.packagingDraws) b.packagingDraws = [];
-  b.packagingDraws.push({
-    runId:         newRun.id,
-    packagingId:   pkgId,
-    packagingName: pkg.name,
-    quantity:      qty
+  components.forEach(function(c) {
+    var pkg = null;
+    for (var i = 0; i < pkgs.length; i++) if (pkgs[i].id === c.packagingId) { pkg = pkgs[i]; break; }
+    if (!pkg) return;
+    if (!pkg.adjustments) pkg.adjustments = [];
+    pkg.adjustments.push({
+      id:      'commit-' + b.id + '-' + runId + '-' + c.packagingId,
+      qty:     -c.quantity,
+      date:    newRun.date,
+      reason:  'Committed to batch: ' + (b.batchName || b.formulaName || b.id),
+      batchId: b.id,
+      runId:   runId
+    });
+    b.packagingDraws.push({
+      runId:         runId,
+      packagingId:   c.packagingId,
+      packagingName: c.packagingName,
+      quantity:      c.quantity
+    });
   });
 
   b.updatedAt = new Date().toISOString();
@@ -1436,12 +1613,9 @@ function addPackagingRun() {
   savePackaging();
   renderPackagingRuns(b);
   renderList();
-  // Clear add row
-  document.getElementById('d-pkg-pick').value  = '';
-  document.getElementById('d-pkg-qty').value   = '';
-  document.getElementById('d-pkg-notes').value = '';
-  // Refresh picker so the updated stock counts show
+  // Refresh the picker stock counts and reset the builder
   populatePackagingPicker();
+  pendingRunReset();
 }
 
 function deletePackagingRun(runId) {
@@ -1453,24 +1627,35 @@ function deletePackagingRun(runId) {
     if (b.packagingRuns[i].id === runId) { run = b.packagingRuns[i]; break; }
   }
   if (!run) return;
-  var msg = 'Delete this packaging run? (' + run.quantity + ' units of ' + run.packagingName + ')';
-  if (run.committed) {
-    msg += '\n\nThis run is committed; deleting will also return ' + run.quantity +
-      ' units to packaging stock.';
+  var comps = runComponents(run);
+  // Build a human-readable summary of what's about to be returned
+  var lines = comps.map(function(c) {
+    var pkg = null;
+    for (var j = 0; j < pkgs.length; j++) if (pkgs[j].id === c.packagingId) { pkg = pkgs[j]; break; }
+    var nm = (pkg && pkg.name) || c.packagingName || '(unknown)';
+    return '  ' + c.quantity + ' x ' + nm;
+  });
+  var msg = 'Delete this packaging run from ' + fmtDate(run.date) + '?';
+  if (run.committed && lines.length) {
+    msg += '\n\nThis will return to packaging stock:\n' + lines.join('\n');
   }
   if (!confirm(msg)) return;
 
-  // If the run is committed, reverse just this run's packaging adjustment.
+  // If committed, reverse every component's adjustment on its packaging item
   if (run.committed) {
-    var pkg = null;
-    for (var j = 0; j < pkgs.length; j++) if (pkgs[j].id === run.packagingId) { pkg = pkgs[j]; break; }
-    if (pkg && pkg.adjustments) {
+    var touched = {};  // packagingIds we need to savePackaging() for
+    comps.forEach(function(c) {
+      var pkg = null;
+      for (var j = 0; j < pkgs.length; j++) if (pkgs[j].id === c.packagingId) { pkg = pkgs[j]; break; }
+      if (!pkg) return;
+      if (!pkg.adjustments) return;
       pkg.adjustments = pkg.adjustments.filter(function(a) {
         return !(a.batchId === b.id && a.runId === run.id);
       });
-      savePackaging();
-    }
-    // Remove from packagingDraws receipt
+      touched[c.packagingId] = true;
+    });
+    if (Object.keys(touched).length) savePackaging();
+    // Remove every component from packagingDraws receipt
     if (b.packagingDraws) {
       b.packagingDraws = b.packagingDraws.filter(function(d) { return d.runId !== run.id; });
     }
