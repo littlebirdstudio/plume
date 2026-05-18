@@ -1575,8 +1575,14 @@ function readSavedFormula(id) {
 // Build a snapshot from the *saved* formula (the parachute-able state).
 // Pulls full state -- lines, soap settings, addins flag, notes, instructions,
 // name/type/status -- so restore can do a clean rewind.
+// snapId is unique per snapshot, distinct from `version` which can repeat
+// across multiple archived snapshots (when Option A restore reverts the
+// working version number and a future Save as version archives that same
+// number again, or when a parachute captures a version number that was
+// itself restored from history).
 function buildSnapshot(f, label) {
   return {
+    snapId:        String(Date.now()) + '-' + Math.random().toString(36).slice(2,7),
     version:       f.version || 1,
     savedAt:       new Date().toISOString(),
     label:         label || '',
@@ -1647,6 +1653,19 @@ function renderVersionHistory(f) {
   var body     = document.getElementById('ver-body');
   var versions = f.versions || [];
   if (!versions.length) { panel.style.display = 'none'; return; }
+
+  // One-time migration: snapshots created before snapId existed get IDs
+  // assigned now so delete/restore can operate unambiguously. Persist if
+  // any IDs were added.
+  var migrated = false;
+  versions.forEach(function(v) {
+    if (!v.snapId) {
+      v.snapId = String(Date.now()) + '-' + Math.random().toString(36).slice(2,7);
+      migrated = true;
+    }
+  });
+  if (migrated) saveAll();
+
   panel.style.display = 'block';
   var html = '';
   versions.slice().reverse().forEach(function(v) {
@@ -1656,22 +1675,22 @@ function renderVersionHistory(f) {
     html += '<div class="ver-date">' + d + '</div>';
     if (v.label) html += '<div class="ver-tag">' + esc(v.label) + '</div>';
     html += '</div><div class="ver-actions">';
-    html += '<button class="btn btn-sm" onclick="restoreVer(' + v.version + ')" title="Replace current with this version">Restore</button>';
-    html += '<button class="btn btn-sm btn-danger" onclick="deleteVer(' + v.version + ')" title="Delete this archived version">x</button>';
+    html += '<button class="btn btn-sm" onclick="restoreVer(\'' + v.snapId + '\')" title="Replace current with this version">Restore</button>';
+    html += '<button class="btn btn-sm btn-danger" onclick="deleteVer(\'' + v.snapId + '\')" title="Delete this archived version">x</button>';
     html += '</div></div>';
   });
   body.innerHTML = html;
 }
 
-function restoreVer(vn) {
+function restoreVer(snapId) {
   var idx = forms.findIndex(function(x) { return x.id === curId; });
   if (idx < 0) return;
   var f    = forms[idx];
-  var snap = (f.versions || []).find(function(v) { return v.version === vn; });
+  var snap = (f.versions || []).find(function(v) { return v.snapId === snapId; });
   if (!snap) return;
   var lbl     = snap.label ? ' (' + snap.label + ')' : '';
   var workVer = f.version || 1;
-  if (!confirm('Restore to version ' + vn + lbl + '?\n\nYour current working version (v' + workVer + ') will be auto-archived first so you can get back to it.\n\nAfter restore, you will be editing version ' + vn + '.')) return;
+  if (!confirm('Restore to version ' + snap.version + lbl + '?\n\nYour current working version (v' + workVer + ') will be auto-archived first so you can get back to it.\n\nAfter restore, you will be editing version ' + snap.version + '.')) return;
 
   // Auto-parachute: snapshot the *currently saved* state before clobbering it.
   // First persist any in-memory edits so the parachute captures the latest.
@@ -1686,7 +1705,7 @@ function restoreVer(vn) {
   // Apply the restored snapshot to the working formula. Restore everything
   // (name, type, status, lines, notes, instructions, addins, soap settings,
   // AND the version number) so the rewind is complete. After restore, you
-  // are editing v<vn> -- the label matches the contents.
+  // are editing v<snap.version> -- the label matches the contents.
   forms[idx] = Object.assign({}, forms[idx], {
     name:          snap.name || forms[idx].name,
     type:          snap.type || forms[idx].type,
@@ -1696,7 +1715,7 @@ function restoreVer(vn) {
     instructions:  snap.instructions || '',
     addinsInTotal: !!snap.addinsInTotal,
     soapSettings:  snap.soapSettings ? Object.assign({}, snap.soapSettings) : forms[idx].soapSettings,
-    version:       vn,   // version number reverts to match the restored content
+    version:       snap.version,  // version number matches restored content
     updatedAt:     new Date().toISOString()
   });
   saveAll();
@@ -1705,15 +1724,18 @@ function restoreVer(vn) {
   openFormula(curId);
 }
 
-function deleteVer(vn) {
+function deleteVer(snapId) {
   var idx = forms.findIndex(function(x) { return x.id === curId; });
   if (idx < 0) return;
   var f    = forms[idx];
-  var snap = (f.versions || []).find(function(v) { return v.version === vn; });
+  var snap = (f.versions || []).find(function(v) { return v.snapId === snapId; });
   if (!snap) return;
   var lbl = snap.label ? ' (' + snap.label + ')' : '';
-  if (!confirm('Permanently delete archived version ' + vn + lbl + '? This cannot be undone.')) return;
-  forms[idx].versions = (f.versions || []).filter(function(v) { return v.version !== vn; });
+  if (!confirm('Permanently delete archived version ' + snap.version + lbl + '? This cannot be undone.')) return;
+  // Filter by snapId, NOT by version number -- multiple snapshots can share
+  // a version number (Option A restore behavior); we only want to remove
+  // the one the user clicked on.
+  forms[idx].versions = (f.versions || []).filter(function(v) { return v.snapId !== snapId; });
   saveAll();
   renderVersionHistory(forms[idx]);
 }
