@@ -1669,22 +1669,24 @@ function restoreVer(vn) {
   var f    = forms[idx];
   var snap = (f.versions || []).find(function(v) { return v.version === vn; });
   if (!snap) return;
-  var lbl = snap.label ? ' (' + snap.label + ')' : '';
-  if (!confirm('Restore to version ' + vn + lbl + '?\n\nYour current working version (v' + (f.version||1) + ') will be auto-archived first so you can get back to it.')) return;
+  var lbl     = snap.label ? ' (' + snap.label + ')' : '';
+  var workVer = f.version || 1;
+  if (!confirm('Restore to version ' + vn + lbl + '?\n\nYour current working version (v' + workVer + ') will be auto-archived first so you can get back to it.\n\nAfter restore, you will be editing version ' + vn + '.')) return;
 
-  // Auto-parachute: snapshot the current saved state before clobbering it.
-  // First persist any in-memory edits so the parachute captures them.
+  // Auto-parachute: snapshot the *currently saved* state before clobbering it.
+  // First persist any in-memory edits so the parachute captures the latest.
   saveFormula();
   var savedNow = readSavedFormula(curId);
   if (savedNow) {
-    var parachute = buildSnapshot(savedNow, 'auto-saved before restoring to v' + vn);
+    // Label clearly identifies which version's contents got auto-saved
+    var parachute = buildSnapshot(savedNow, 'auto-archived v' + workVer + ' before restore');
     forms[idx].versions = (forms[idx].versions || []).concat([parachute]);
   }
 
   // Apply the restored snapshot to the working formula. Restore everything
-  // (name, type, status, lines, notes, instructions, addins, soap settings)
-  // so the rewind is complete. Version number stays where it is -- restoring
-  // doesn't bump the version; you're moving the pointer, not branching.
+  // (name, type, status, lines, notes, instructions, addins, soap settings,
+  // AND the version number) so the rewind is complete. After restore, you
+  // are editing v<vn> -- the label matches the contents.
   forms[idx] = Object.assign({}, forms[idx], {
     name:          snap.name || forms[idx].name,
     type:          snap.type || forms[idx].type,
@@ -1694,6 +1696,7 @@ function restoreVer(vn) {
     instructions:  snap.instructions || '',
     addinsInTotal: !!snap.addinsInTotal,
     soapSettings:  snap.soapSettings ? Object.assign({}, snap.soapSettings) : forms[idx].soapSettings,
+    version:       vn,   // version number reverts to match the restored content
     updatedAt:     new Date().toISOString()
   });
   saveAll();
