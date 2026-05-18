@@ -3,933 +3,1328 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Plume - Costing</title>
+<title>Plume - Products &amp; Costing</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 :root {
-  /* ──────────────────────────────────────────────────────────────
-     PALETTE — the warm/natural studio feel.
-     Edit these to retheme the whole module.
-     ────────────────────────────────────────────────────────────── */
-
-  /* Surfaces — page background, cards, dividers */
-  --cream:        #F7F4EF;
-  --cream-dark:   #EDE8DF;
-  --cream-border: #D8D0C4;
-  --white:        #FDFCFA;
-
-  /* Bark — primary brand tones (headers, buttons, accents) */
-  --bark:       #7C6A54;
-  --bark-light: #A08C74;
-  --bark-dark:  #4A3F32;
-
-  /* Sage — "good/in-stock/positive" tones */
-  --sage:        #7A8C6E;
-  --sage-light:  #EDF0EA;
-  --sage-dark:   #4E5E44;
-  --sage-border: #C0CEBA; /* soft outline tint for sage-accented controls */
-
-  /* Clay — warm accent / blush highlight */
-  --clay:       #C27B5A;
-  --clay-light: #F5EBE4; /* also used as the in-stock row tint */
-  --clay-dark:  #8A4A2E;
-  --clay-hover: #EFDFD5; /* slightly deeper blush for hovered in-stock rows */
-
-  /* Ink — text */
-  --ink:         #2C2520;
-  --ink-light:   #6B5E54;
-  --ink-lighter: #9C8E84;
-
-  /* Status — warnings and errors */
-  --warning:        #B07020;
-  --warning-bg:     #FDF3E3;
-  --warning-border: #E8D0A0; /* soft outline tint for warning-accented controls */
-  --danger:         #A03020;
-  --danger-bg:      #FCE8E4;
-  --danger-border:  #E8C0B8; /* soft outline tint for danger-accented controls */
-  --success:        #4E5E44;
-
-  /* ──────────────────────────────────────────────────────────────
-     CATEGORICAL — functional color codes.
-     These signal "what kind of thing" (water phase, oil phase, etc).
-     Usually you want these to stay visually distinct even when the
-     palette above changes — they're for recognition, not for theme.
-     ────────────────────────────────────────────────────────────── */
-
-  /* Phase badges (Ingredients, Formulations) */
-  --ph-water-bg:     #E4EEF8; --ph-water-fg:     #2A5C8A;
-  --ph-oil-bg:       #F5ECD8; --ph-oil-fg:       #7A4E10;
-  --ph-cool-down-bg: #E4F0EA; --ph-cool-down-fg: #2A5C40;
-  --ph-active-bg:    #EDE8F8; --ph-active-fg:    #4A3A8A;
-  --ph-other:        #888780; /* "other" phase dot in formulations */
-
-  /* Phase dots (Formulations editor) — pure swatch tones, no bg */
-  --dot-water:     #378ADD;
-  --dot-oil:       #BA7517;
-  --dot-cool-down: #1D9E75;
-  --dot-active:    #7F77DD;
-
-  /* Soap quality bars (Formulations) — fatty acid profile indicators */
-  --q-hardness:     #7C6A54; /* aligns with --bark */
-  --q-cleansing:    #5A8A9F;
-  --q-conditioning: #7A8C6E; /* aligns with --sage */
-  --q-lather:       #C2955A;
-  --q-ins:          #9C6E8A;
-
-  /* Packaging type badges (Packaging) */
-  --pk-container-bg: #E4EEF8; --pk-container-fg: #2A5C8A;
-  --pk-label-bg:     #EDE8F8; --pk-label-fg:     #4A3A8A;
-  --pk-box-bg:       #F5ECD8; --pk-box-fg:       #7A4E10;
+  --cream:#F4F1EC; --cream-dark:#E8E2D8; --cream-border:#C8BFB1; --white:#FBF9F6;
+  --bark:#7C6A54; --bark-light:#A08C74; --bark-dark:#4A3F32;
+  --sage:#7A8C6E; --sage-light:#E0E8DA; --sage-dark:#4E5E44; --sage-border:#B8C8AC;
+  --clay:#C27B5A; --clay-light:#F2E2D2; --clay-dark:#8A4A2E; --clay-hover:#E8C8B0;
+  --ink:#2C2520; --ink-light:#5C5147; --ink-lighter:#8E827A;
+  --warning:#B07020; --warning-bg:#FDF3E3; --warning-border:#E8D0A0;
+  --danger:#A03020; --danger-bg:#FCE8E4; --danger-border:#E8C0B8; --success:#4E5E44;
 }
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:'DM Sans',sans-serif; font-weight:300; background:var(--cream); color:var(--ink); min-height:100vh; line-height:1.5; }
 
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);min-height:100vh;font-size:14px;line-height:1.6}
-.app-header{background:var(--bark-dark);color:var(--cream);padding:1.25rem 2rem;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid var(--bark)}
-.brand-name{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:300;letter-spacing:0.12em;color:var(--cream);line-height:1}
-.brand-sub{font-size:10px;letter-spacing:0.25em;text-transform:uppercase;color:var(--bark-light);font-weight:300}
-.hdr-actions{display:flex;gap:8px;align-items:center}
-.btn{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;letter-spacing:0.04em;padding:7px 16px;border-radius:3px;border:1px solid var(--cream-border);background:transparent;color:var(--ink);cursor:pointer;transition:all 0.15s;white-space:nowrap}
-.btn:hover{background:var(--cream-dark)}
-.btn-primary{background:var(--bark);color:var(--cream);border-color:var(--bark)}
-.btn-primary:hover{background:var(--bark-dark)}
-.btn-ghost{background:transparent;border-color:rgba(253,252,250,0.3);color:var(--cream)}
-.btn-ghost:hover{background:rgba(253,252,250,0.1)}
-.btn-danger{color:var(--danger);border-color:var(--danger-border)}
-.btn-danger:hover{background:var(--danger-bg)}
-.btn-sage{background:var(--sage);color:var(--cream);border-color:var(--sage)}
-.btn-sage:hover{background:var(--sage-dark)}
-.btn-sm{font-size:11px;padding:4px 10px}
-.app-body{max-width:1200px;margin:0 auto;padding:2rem}
-.field{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
-.field label{font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-light)}
-.field input,.field select{font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 10px;border:1px solid var(--cream-border);border-radius:3px;background:var(--white);color:var(--ink);outline:none}
-.field input:focus,.field select:focus{border-color:var(--bark-light)}
-.modal-ov{display:none;position:fixed;inset:0;background:rgba(44,37,32,0.55);z-index:100;overflow-y:auto;padding:2rem 1rem}
-.modal-ov.open{display:flex;align-items:flex-start;justify-content:center}
-.modal{background:var(--white);border-radius:6px;border:1px solid var(--cream-border);padding:1.75rem;width:100%;max-width:600px;margin:auto}
-.modal-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;padding-bottom:1rem;border-bottom:1px solid var(--cream-border)}
-.modal-title{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:400;color:var(--bark-dark)}
-.modal-x{background:none;border:none;font-size:22px;cursor:pointer;color:var(--ink-lighter);line-height:1;padding:2px 6px}
-.modal-x:hover{color:var(--ink)}
-.modal-foot{display:flex;justify-content:flex-end;gap:10px;margin-top:1.5rem;padding-top:1.25rem;border-top:1px solid var(--cream-border)}
-.sb-panel{background:var(--white);border:1px solid var(--cream-border);border-radius:6px;overflow:hidden;margin-bottom:16px}
-.sb-hdr{background:var(--cream-dark);padding:8px 14px;font-size:10px;font-weight:500;letter-spacing:0.15em;text-transform:uppercase;color:var(--ink-light);display:flex;align-items:center;justify-content:space-between}
-.sb-body{padding:14px}
-.layout{display:grid;grid-template-columns:280px 1fr;gap:24px;align-items:start}
-.sidebar{position:sticky;top:1rem}
-.main-col{min-width:0}
-.formula-pick-item{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:4px;cursor:pointer;border:1px solid transparent;transition:all 0.12s;background:var(--white);margin-bottom:4px}
-.formula-pick-item:hover{border-color:var(--cream-border);background:var(--cream)}
-.formula-pick-item.selected{border-color:var(--bark-light);background:var(--cream-dark)}
-.fp-name{font-size:13px;font-weight:500;color:var(--ink)}
-.fp-sub{font-size:11px;color:var(--ink-lighter)}
-.fp-warn{font-size:10px;color:var(--warning);margin-top:1px}
-.formula-list{max-height:360px;overflow-y:auto}
-.search-inp{font-family:'DM Sans',sans-serif;font-size:13px;padding:7px 10px;border:1px solid var(--cream-border);border-radius:3px;background:var(--white);color:var(--ink);width:100%;outline:none;margin-bottom:10px}
-.search-inp:focus{border-color:var(--bark-light)}
-.no-sel{display:flex;align-items:center;justify-content:center;min-height:260px;font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:300;font-style:italic;color:var(--ink-lighter)}
-.result-card{background:var(--white);border:1px solid var(--cream-border);border-radius:6px;padding:1.5rem;margin-bottom:20px}
-.result-card-title{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:400;color:var(--bark-dark);margin-bottom:1rem;padding-bottom:0.75rem;border-bottom:1px solid var(--cream-border);display:flex;align-items:center;justify-content:space-between}
-.stat-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:1rem}
-.stat-box{background:var(--cream);border-radius:4px;padding:10px 12px}
-.stat-box.hi{background:var(--sage-light);border:1px solid var(--sage-border)}
-.stat-lbl{font-size:10px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-lighter);margin-bottom:3px}
-.stat-val{font-size:20px;font-weight:300;font-variant-numeric:tabular-nums;color:var(--bark-dark);line-height:1}
-.stat-box.hi .stat-val{color:var(--sage-dark)}
-.stat-sub{font-size:11px;color:var(--ink-lighter);margin-top:2px}
-.warn-box{background:var(--warning-bg);border:1px solid var(--warning-border);border-radius:4px;padding:10px 14px;font-size:12px;color:var(--warning);margin-bottom:1rem}
-.run-card{background:var(--white);border:1px solid var(--cream-border);border-radius:6px;margin-bottom:16px;overflow:hidden}
-.run-card-hdr{background:var(--cream-dark);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px}
-.run-name-inp{font-family:'Cormorant Garamond',serif;font-size:17px;font-weight:400;color:var(--bark-dark);border:none;background:transparent;outline:none;flex:1;min-width:0}
-.run-name-inp::placeholder{color:var(--ink-lighter)}
-.run-body{padding:16px}
-.run-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px}
-.run-inp-wrap{display:flex;flex-direction:column;gap:4px}
-.run-lbl{font-size:9px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-lighter)}
-.run-inp{font-family:'DM Sans',sans-serif;font-size:13px;padding:7px 9px;border:1px solid var(--cream-border);border-radius:3px;background:var(--cream);color:var(--ink);width:100%;outline:none}
-.run-inp:focus{border-color:var(--bark-light);background:var(--white)}
-.run-items-hdr{display:grid;grid-template-columns:1fr 80px 80px 24px;gap:8px;padding:0 0 5px;font-size:9px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-lighter);border-bottom:1px solid var(--cream-dark)}
-.run-item-row{display:grid;grid-template-columns:1fr 80px 80px 24px;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--cream-dark)}
-.run-item-row:last-child{border-bottom:none}
-.run-item-name{font-size:13px;color:var(--ink)}
-.run-item-cost{font-size:13px;color:var(--ink-light);text-align:right;font-variant-numeric:tabular-nums}
-.run-item-rm{background:none;border:none;cursor:pointer;color:var(--ink-lighter);font-size:15px;padding:0 2px;line-height:1}
-.run-item-rm:hover{color:var(--danger)}
-.run-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px;padding-top:14px;border-top:1px solid var(--cream-border)}
-.pricing-toggle{display:flex;gap:2px;background:var(--cream-dark);border-radius:4px;padding:2px;margin-bottom:12px}
-.ptog{flex:1;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:500;padding:4px 8px;border:none;border-radius:3px;cursor:pointer;background:transparent;color:var(--ink-lighter);transition:all 0.15s}
-.ptog.active{background:var(--white);color:var(--ink);box-shadow:0 1px 3px rgba(44,37,32,0.1)}
-.price-result{background:var(--sage-light);border:1px solid var(--sage-border);border-radius:4px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.price-lbl{font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:var(--sage-dark)}
-.price-val{font-size:26px;font-weight:300;color:var(--sage-dark);font-variant-numeric:tabular-nums}
-.price-row{display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid var(--cream-dark);color:var(--ink-light)}
-.price-row:last-child{border-bottom:none}
-.breakdown-table{width:100%;border-collapse:collapse;font-size:12px}
-.breakdown-table th{font-size:9px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-lighter);padding:5px 8px;text-align:right;border-bottom:1px solid var(--cream-border)}
-.breakdown-table th:first-child{text-align:left}
-.breakdown-table td{padding:5px 8px;border-bottom:1px solid var(--cream-dark);color:var(--ink-light);text-align:right;font-variant-numeric:tabular-nums}
-.breakdown-table td:first-child{text-align:left;color:var(--ink)}
-.breakdown-table tr:last-child td{border-bottom:none;border-top:1px solid var(--cream-border);font-weight:500;color:var(--ink);background:var(--cream)}
-.batch-alloc{height:8px;background:var(--cream-border);border-radius:4px;overflow:hidden;margin-bottom:6px}
-.batch-alloc-fill{height:100%;background:var(--sage);border-radius:4px;transition:width 0.3s}
-.batch-alloc-fill.over{background:var(--danger)}
-.pkg-dd{font-family:'DM Sans',sans-serif;font-size:13px;padding:7px 9px;border:1px solid var(--cream-border);border-radius:3px;background:var(--white);color:var(--ink);width:100%;outline:none;cursor:pointer}
-.pkg-dd:focus{border-color:var(--bark-light)}
-@media(max-width:900px){.layout{grid-template-columns:1fr}.sidebar{position:static}}
+/* ── Header ── */
+.app-hdr { background:var(--bark-dark); color:var(--cream); padding:14px 22px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
+.brand { font-family:'Cormorant Garamond',serif; font-size:22px; font-weight:400; letter-spacing:0.02em; }
+.brand-sub { font-size:11px; letter-spacing:0.18em; text-transform:uppercase; opacity:0.7; margin-top:2px; }
+.hdr-actions { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
 
-/* ── Pricing inputs ── */
-.price-inp-lg {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 18px;
-  font-weight: 300;
-  color: var(--bark-dark);
-  border: none;
-  border-bottom: 1px solid var(--cream-border);
-  background: transparent;
-  width: 60px;
-  outline: none;
-  text-align: right;
-  padding: 2px 0;
-}
-.price-inp-label {
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--ink-lighter);
-  white-space: nowrap;
-}
-.price-inp-unit {
-  font-size: 13px;
-  color: var(--ink-light);
-}
-.price-inp-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-/* ── Formula title ── */
-.formula-title {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 24px;
-  font-weight: 300;
-  color: var(--bark-dark);
-}
-.formula-meta {
-  font-size: 12px;
-  color: var(--ink-lighter);
-}
+/* ── Buttons ── */
+.btn { font-family:'DM Sans',sans-serif; font-size:12px; font-weight:500; letter-spacing:0.04em; padding:7px 16px; border-radius:3px; border:1px solid var(--cream-border); background:transparent; color:var(--ink); cursor:pointer; transition:all 0.15s; white-space:nowrap; }
+.btn:hover { background:var(--cream-dark); }
+.btn-primary { background:var(--bark); color:var(--cream); border-color:var(--bark); }
+.btn-primary:hover { background:var(--bark-dark); }
+.btn-ghost { background:transparent; border-color:rgba(253,252,250,0.3); color:var(--cream); }
+.btn-ghost:hover { background:rgba(253,252,250,0.1); }
+.btn-sage { background:var(--sage); color:var(--cream); border-color:var(--sage); }
+.btn-sage:hover { background:var(--sage-dark); }
+.btn-danger { color:var(--danger); border-color:var(--danger-border); }
+.btn-danger:hover { background:var(--danger-bg); }
+.btn-sm { padding:4px 10px; font-size:11px; }
 
-/* ── Footer ── */
-.app-footer {
-  text-align: center;
-  padding: 2rem;
-  margin-top: 3rem;
-  font-size: 11px;
-  color: var(--ink-lighter);
-  border-top: 1px solid var(--cream-border);
-  letter-spacing: 0.06em;
-}
+/* ── Layout ── */
+main { max-width:1240px; margin:0 auto; padding:24px 22px 60px; }
+.sec-header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; flex-wrap:wrap; }
+.sec-title { font-family:'Cormorant Garamond',serif; font-size:28px; font-weight:400; color:var(--ink); }
+.search-wrap { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+.search-input { font-family:'DM Sans',sans-serif; font-size:13px; padding:7px 12px; border-radius:3px; border:1px solid var(--cream-border); background:var(--white); color:var(--ink); min-width:200px; }
+.filter-pills { display:flex; gap:5px; flex-wrap:wrap; }
+.filter-pill { font-size:11px; padding:4px 10px; border-radius:12px; border:1px solid var(--cream-border); background:transparent; color:var(--ink-light); cursor:pointer; transition:all 0.12s; }
+.filter-pill:hover { background:var(--cream-dark); }
+.filter-pill.active { background:var(--bark); color:var(--cream); border-color:var(--bark); }
+
+/* ── List view ── */
+.list-section { background:var(--white); border:1px solid var(--cream-border); border-radius:5px; overflow:hidden; }
+.group-hdr { background:var(--cream-dark); padding:8px 14px; font-size:11px; font-weight:500; letter-spacing:0.12em; text-transform:uppercase; color:var(--ink-light); border-bottom:1px solid var(--cream-border); }
+.prod-row { display:grid; grid-template-columns:1fr 1fr 100px 100px 100px 100px 80px; gap:14px; padding:11px 14px; border-bottom:1px solid var(--cream-dark); cursor:pointer; transition:background 0.1s; align-items:center; font-size:13px; }
+.prod-row:hover { background:var(--cream); }
+.prod-row:last-child { border-bottom:none; }
+.prod-name { font-weight:500; color:var(--ink); }
+.prod-sku { color:var(--ink-lighter); font-size:11px; font-family:'DM Sans',sans-serif; }
+.prod-formula { color:var(--ink-light); font-size:12px; }
+.prod-formula-meta { color:var(--ink-lighter); font-size:11px; display:block; margin-top:2px; }
+.prod-num { text-align:right; font-variant-numeric:tabular-nums; color:var(--ink); }
+.status-pill { display:inline-block; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:500; letter-spacing:0.06em; text-transform:uppercase; }
+.status-draft { background:var(--cream-dark); color:var(--ink-light); }
+.status-active { background:var(--sage-light); color:var(--sage-dark); }
+.status-discontinued { background:var(--clay-light); color:var(--clay-dark); }
+.list-hdr-row { display:grid; grid-template-columns:1fr 1fr 100px 100px 100px 100px 80px; gap:14px; padding:9px 14px; background:var(--cream); border-bottom:1px solid var(--cream-border); font-size:10px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-light); align-items:center; }
+.list-hdr-row > .hr { text-align:right; }
+.empty-state { padding:40px 20px; text-align:center; color:var(--ink-lighter); font-size:13px; font-style:italic; }
+.margin-pos { color:var(--sage-dark); }
+.margin-neg { color:var(--danger); }
+.margin-low { color:var(--warning); }
+
+/* ── Editor view ── */
+.editor { background:var(--white); border:1px solid var(--cream-border); border-radius:5px; padding:22px; }
+.ed-hdr { display:flex; gap:14px; align-items:flex-start; margin-bottom:18px; padding-bottom:16px; border-bottom:1px solid var(--cream-dark); }
+.ed-name { font-family:'Cormorant Garamond',serif; font-size:26px; font-weight:400; border:none; background:transparent; color:var(--ink); width:100%; padding:2px 0; }
+.ed-name:focus { outline:none; border-bottom:1px solid var(--clay); }
+.ed-actions { display:flex; gap:6px; flex-shrink:0; flex-wrap:wrap; }
+.form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px 18px; margin-bottom:18px; }
+.form-grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:14px 18px; margin-bottom:18px; }
+.field label { display:block; font-size:10px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-light); margin-bottom:5px; }
+.field input, .field select, .field textarea { font-family:'DM Sans',sans-serif; font-size:13px; padding:8px 10px; border-radius:3px; border:1px solid var(--cream-border); background:var(--white); color:var(--ink); width:100%; }
+.field input:focus, .field select:focus, .field textarea:focus { outline:none; border-color:var(--clay); }
+.field textarea { resize:vertical; min-height:48px; }
+.field-full { grid-column:1/-1; }
+.section-hdr { display:flex; align-items:center; justify-content:space-between; font-size:11px; font-weight:600; letter-spacing:0.12em; text-transform:uppercase; color:var(--ink-light); margin:18px 0 10px; padding-bottom:6px; border-bottom:1px solid var(--cream-dark); }
+
+/* ── Packaging recipe ── */
+.pkg-recipe-row { display:grid; grid-template-columns:1fr 90px 100px 30px; gap:10px; align-items:center; padding:8px 0; border-bottom:1px solid var(--cream-dark); }
+.pkg-recipe-row:last-of-type { border-bottom:none; }
+.pkg-recipe-row select { font-size:13px; padding:6px 8px; border-radius:3px; border:1px solid var(--cream-border); background:var(--white); width:100%; }
+.pkg-recipe-row input { font-size:13px; padding:6px 8px; border-radius:3px; border:1px solid var(--cream-border); background:var(--white); width:100%; }
+.pkg-recipe-row .pkg-unit-cost { text-align:right; font-variant-numeric:tabular-nums; color:var(--ink-light); font-size:12px; }
+.pkg-recipe-row .pkg-del { background:none; border:none; cursor:pointer; color:var(--ink-lighter); font-size:14px; padding:2px 6px; line-height:1; }
+.pkg-recipe-row .pkg-del:hover { color:var(--danger); }
+.pkg-add-btn { margin-top:8px; }
+.pkg-recipe-hdr { display:grid; grid-template-columns:1fr 90px 100px 30px; gap:10px; padding:6px 0; font-size:10px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:var(--ink-lighter); }
+.pkg-recipe-hdr > div:nth-child(2), .pkg-recipe-hdr > div:nth-child(3) { text-align:right; }
+
+/* ── Cost panel ── */
+.cost-panel { background:var(--cream); border:1px solid var(--cream-border); border-radius:5px; padding:14px 18px; margin:18px 0; }
+.cost-row { display:grid; grid-template-columns:1fr auto auto; gap:14px; padding:5px 0; font-size:13px; align-items:baseline; }
+.cost-row .cr-label { color:var(--ink-light); }
+.cost-row .cr-val { font-variant-numeric:tabular-nums; text-align:right; color:var(--ink); min-width:80px; }
+.cost-row .cr-aux { font-variant-numeric:tabular-nums; text-align:right; color:var(--ink-lighter); font-size:11px; min-width:80px; }
+.cost-row.cost-total { font-weight:500; padding-top:8px; border-top:1px solid var(--cream-border); margin-top:6px; }
+.cost-row.cost-section-hdr { font-size:10px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-lighter); padding-top:10px; padding-bottom:3px; }
+
+/* ── Production runs ── */
+.runs-list { background:var(--white); border:1px solid var(--cream-border); border-radius:3px; }
+.run-row { display:grid; grid-template-columns:100px 80px 1fr 1fr 30px; gap:10px; padding:7px 12px; border-bottom:1px solid var(--cream-dark); align-items:center; font-size:12px; }
+.run-row:last-child { border-bottom:none; }
+.run-row .rr-date { color:var(--ink-light); font-variant-numeric:tabular-nums; }
+.run-row .rr-qty { font-variant-numeric:tabular-nums; color:var(--ink); font-weight:500; text-align:right; }
+.run-row .rr-batch { color:var(--ink-light); font-size:11px; }
+.run-row .rr-notes { color:var(--ink-lighter); font-size:11px; font-style:italic; }
+.run-row .rr-del { background:none; border:none; cursor:pointer; color:var(--ink-lighter); font-size:13px; padding:2px 4px; line-height:1; }
+.run-row .rr-del:hover { color:var(--danger); }
+.run-add-row { display:grid; grid-template-columns:120px 80px 1fr 1fr auto; gap:10px; padding:10px 12px; background:var(--cream); border-radius:3px; margin-top:6px; align-items:end; }
+.run-add-row .field { margin-bottom:0; }
+
+/* ── Label preview ── */
+.label-box { background:var(--white); border:1px solid var(--cream-border); border-radius:3px; padding:16px; font-family:'DM Sans',sans-serif; font-size:11px; line-height:1.5; color:var(--ink); }
+.label-box-hdr { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid var(--cream-dark); }
+.label-box-hdr-l { font-size:10px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-lighter); }
+.label-content { white-space:pre-wrap; word-wrap:break-word; font-family:Georgia,serif; font-size:11px; line-height:1.45; }
+.label-section { margin-bottom:10px; }
+.label-section:last-child { margin-bottom:0; }
+.label-section-name { font-size:9px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:var(--ink-lighter); margin-bottom:3px; }
+.toggle-row { display:flex; gap:14px; align-items:center; margin-bottom:10px; flex-wrap:wrap; font-size:12px; }
+.toggle-row label { display:flex; align-items:center; gap:5px; cursor:pointer; color:var(--ink-light); }
+
+/* ── Modals ── */
+.modal-ov { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.35); z-index:100; align-items:flex-start; justify-content:center; padding:40px 14px; overflow-y:auto; }
+.modal-ov.open { display:flex; }
+.modal { background:var(--white); border-radius:5px; padding:22px; max-width:500px; width:100%; box-shadow:0 12px 40px rgba(0,0,0,0.18); }
+.modal-hdr { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px; gap:14px; }
+.modal-title { font-family:'Cormorant Garamond',serif; font-size:20px; font-weight:400; }
+.modal-x { background:none; border:none; cursor:pointer; color:var(--ink-light); font-size:18px; padding:0; line-height:1; }
+.modal-foot { display:flex; gap:8px; justify-content:flex-end; margin-top:18px; padding-top:14px; border-top:1px solid var(--cream-dark); }
 
 /* ── Palette swatch picker ── */
-.palette-swatch-grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; }
-.palette-swatch { display:flex; flex-direction:column; align-items:stretch; gap:6px; padding:6px; border:1px solid var(--cream-border); border-radius:5px; background:var(--white); cursor:pointer; font-family:'DM Sans',sans-serif; transition:border-color 0.12s, transform 0.08s; }
+.palette-swatch-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+.palette-swatch { display:flex; flex-direction:column; gap:6px; padding:6px; border:1px solid var(--cream-border); border-radius:5px; background:var(--white); cursor:pointer; font-family:'DM Sans',sans-serif; transition:border-color 0.12s, transform 0.08s; }
 .palette-swatch:hover { border-color:var(--bark-light); transform:translateY(-1px); }
 .palette-swatch.active { border-color:var(--bark); border-width:2px; padding:5px; box-shadow:0 0 0 2px var(--cream); }
 .palette-swatch-stripes { display:flex; height:32px; border-radius:3px; overflow:hidden; border:1px solid var(--cream-border); }
 .palette-swatch-stripes span { flex:1; height:100%; display:block; }
 .palette-swatch-label { font-size:11px; color:var(--ink-light); text-align:center; letter-spacing:0.02em; }
 .palette-swatch.active .palette-swatch-label { color:var(--ink); font-weight:600; }
+
+/* ── Toast ── */
+.toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:var(--ink); color:var(--cream); padding:10px 18px; border-radius:4px; font-size:13px; opacity:0; transition:opacity 0.2s; pointer-events:none; z-index:200; }
+.toast.show { opacity:1; }
+
+/* ── Footer ── */
+.app-footer { text-align:center; padding:2rem; margin-top:3rem; font-size:11px; color:var(--ink-lighter); border-top:1px solid var(--cream-border); letter-spacing:0.06em; }
+
+@media (max-width:900px) {
+  .prod-row, .list-hdr-row { grid-template-columns:1fr 80px 80px 60px; }
+  .prod-row > :nth-child(3), .prod-row > :nth-child(4), .list-hdr-row > :nth-child(3), .list-hdr-row > :nth-child(4) { display:none; }
+  .form-grid, .form-grid-3 { grid-template-columns:1fr; }
+}
 </style>
 </head>
 <body>
-<header class="app-header">
+
+<header class="app-hdr">
   <div>
-    <div class="brand-name">Plume</div>
-    <div class="brand-sub">by Little Bird Studio &middot; Costing</div>
+    <div class="brand">Plume</div>
+    <div class="brand-sub">by Little Bird Studio &middot; Products &amp; Costing</div>
   </div>
   <div class="hdr-actions">
     <a href="plume-ingredients.html" target="plume-ingredients" class="btn btn-ghost">Ingredients</a>
     <a href="plume-formulations.html" target="plume-formulations" class="btn btn-ghost">Formulations</a>
     <a href="plume-packaging.html" target="plume-packaging" class="btn btn-ghost">Packaging</a>
     <a href="plume-batchlog.html" target="plume-batchlog" class="btn btn-ghost">Batches</a>
-    <button class="btn btn-ghost" onclick="openSettings()" title="Settings &amp; appearance">⚙ Settings</button>
+    <button class="btn btn-ghost" onclick="exportData()">Export</button>
+    <button class="btn btn-ghost" onclick="document.getElementById('import-input').click()">Import</button>
+    <input type="file" id="import-input" accept=".json" style="display:none" onchange="importData(event)">
+    <button class="btn btn-ghost" onclick="openSettings()" title="Settings &amp; appearance">&#9881; Settings</button>
+    <button class="btn btn-primary" onclick="openNewProduct()">+ Add product</button>
   </div>
 </header>
-<div class="app-body">
-  <div class="layout">
-    <div class="sidebar">
-      <div class="sb-panel">
-        <div class="sb-hdr">Select formulation</div>
-        <div class="sb-body">
-          <input class="search-inp" id="formula-search" placeholder="Search formulas..." oninput="filterFormulas(this.value)">
-          <div class="formula-list" id="formula-list"><div style="font-size:12px;color:var(--ink-lighter)">Loading...</div></div>
-        </div>
-      </div>
-      <div class="sb-panel">
-        <div class="sb-hdr">Batch size</div>
-        <div class="sb-body">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-            <input type="number" id="batch-size" value="100" min="1" step="1"
-              style="font-family:'DM Sans',sans-serif;font-size:22px;font-weight:300;color:var(--bark-dark);border:none;border-bottom:1px solid var(--cream-border);background:transparent;width:90px;outline:none;text-align:right;padding:2px 0"
-              oninput="refreshAll()">
-            <span style="font-size:13px;color:var(--ink-light)">g</span>
-          </div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap">
-            <button class="btn btn-sm" onclick="setBatch(100)">100g</button>
-            <button class="btn btn-sm" onclick="setBatch(250)">250g</button>
-            <button class="btn btn-sm" onclick="setBatch(500)">500g</button>
-            <button class="btn btn-sm" onclick="setBatch(1000)">1 kg</button>
-            <button class="btn btn-sm" onclick="setBatch(2000)">2 kg</button>
-          </div>
-          <div style="margin-top:12px" id="alloc-summary"></div>
-        </div>
+
+<main>
+  <!-- List view -->
+  <div id="view-list">
+    <div class="sec-header">
+      <div class="sec-title">Products</div>
+      <div class="search-wrap">
+        <input class="search-input" type="text" id="search" placeholder="Search by name, SKU, or formula..." oninput="renderList()">
+        <div class="filter-pills" id="status-pills"></div>
       </div>
     </div>
+    <div class="list-section">
+      <div class="list-hdr-row">
+        <div>Name &middot; SKU</div>
+        <div>Formula</div>
+        <div class="hr">Unit cost</div>
+        <div class="hr">Retail</div>
+        <div class="hr">Margin</div>
+        <div class="hr">Wholesale</div>
+        <div></div>
+      </div>
+      <div id="list-body"></div>
+    </div>
+  </div>
 
-    <div class="main-col">
-      <div id="no-sel" class="no-sel">Select a formulation to begin</div>
-      <div id="main-content" style="display:none">
-
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.25rem;gap:1rem">
-          <div>
-            <div class="formula-title" id="f-title"></div>
-            <div class="formula-meta" id="f-meta"></div>
-          </div>
+  <!-- Editor view -->
+  <div id="view-editor" style="display:none">
+    <button class="btn btn-sm" onclick="goList()" style="margin-bottom:14px">&larr; Back to list</button>
+    <div class="editor">
+      <div class="ed-hdr">
+        <div style="flex:1">
+          <input class="ed-name" id="p-name" placeholder="Product name..." oninput="markDirty()">
         </div>
-
-        <div id="missing-warn" class="warn-box" style="display:none"></div>
-
-        <!-- Ingredient cost summary -->
-        <div class="result-card">
-          <div class="result-card-title">Ingredient cost</div>
-          <div class="stat-row" id="ing-stats"></div>
-          <div style="font-size:11px;color:var(--ink-lighter);margin-bottom:0.5rem" id="breakdown-note"></div>
-          <table class="breakdown-table">
-            <thead><tr><th style="text-align:left">Ingredient</th><th>%</th><th>Grams</th><th>Cost/g</th><th>Line cost</th></tr></thead>
-            <tbody id="breakdown-body"></tbody>
-          </table>
+        <div class="ed-actions">
+          <button class="btn" onclick="duplicateProduct()" title="Create a copy of this product">Duplicate</button>
+          <button class="btn btn-primary" onclick="saveProduct()">Save</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteProduct()">Delete</button>
         </div>
+      </div>
 
-        <!-- Packaging runs -->
-        <div class="result-card">
-          <div class="result-card-title">
-            Packaging runs
-            <button class="btn btn-sm btn-primary" onclick="addRun()">+ Add run</button>
-          </div>
-          <div id="runs-container">
-            <div style="font-size:13px;color:var(--ink-lighter);padding:1rem 0">No packaging runs yet. Click &ldquo;+ Add run&rdquo; to split this batch into packaging options &mdash; e.g. sample vials, retail bottles.</div>
-          </div>
+      <!-- Identity -->
+      <div class="form-grid-3">
+        <div class="field">
+          <label>SKU</label>
+          <input type="text" id="p-sku" placeholder="e.g. HSL-1OZ" oninput="markDirty()">
         </div>
+        <div class="field">
+          <label>Barcode value (optional)</label>
+          <input type="text" id="p-barcode" placeholder="UPC, EAN, or internal code" oninput="markDirty()">
+        </div>
+        <div class="field">
+          <label>Status</label>
+          <select id="p-status" onchange="markDirty()">
+            <option value="draft">Draft</option>
+            <option value="active">Active</option>
+            <option value="discontinued">Discontinued</option>
+          </select>
+        </div>
+      </div>
 
+      <!-- What it is -->
+      <div class="form-grid-3">
+        <div class="field">
+          <label>Linked formulation *</label>
+          <select id="p-formula" onchange="onFormulaChange()">
+            <option value="">-- Pick a formula --</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Net weight (g) *</label>
+          <input type="number" id="p-netwt-g" step="0.1" min="0" placeholder="30" oninput="markDirty(); recalcCost()">
+        </div>
+        <div class="field">
+          <label>Display weight (label text)</label>
+          <input type="text" id="p-netwt-display" placeholder="e.g. 1 oz / 30 g" oninput="markDirty()">
+        </div>
+      </div>
+
+      <div class="field field-full">
+        <label>Notes</label>
+        <textarea id="p-notes" rows="2" placeholder="Internal notes, formulation details, marketing description..." oninput="markDirty()"></textarea>
+      </div>
+
+      <!-- Packaging recipe -->
+      <div class="section-hdr">
+        <span>Packaging recipe</span>
+        <span style="font-weight:400; text-transform:none; letter-spacing:0; color:var(--ink-lighter)">what goes around each unit</span>
+      </div>
+      <div class="pkg-recipe-hdr">
+        <div>Packaging item</div>
+        <div>Qty / unit</div>
+        <div>Unit cost</div>
+        <div></div>
+      </div>
+      <div id="pkg-recipe-body"></div>
+      <button class="btn btn-sm pkg-add-btn" onclick="addPkgRecipeRow()">+ Add packaging</button>
+
+      <!-- Pricing -->
+      <div class="section-hdr"><span>Pricing</span></div>
+      <div class="form-grid">
+        <div class="field">
+          <label>Retail price</label>
+          <input type="number" id="p-retail" step="0.01" min="0" placeholder="14.00" oninput="markDirty(); recalcCost()">
+        </div>
+        <div class="field">
+          <label>Wholesale price</label>
+          <input type="number" id="p-wholesale" step="0.01" min="0" placeholder="7.00" oninput="markDirty(); recalcCost()">
+        </div>
+      </div>
+
+      <!-- Cost rollup panel -->
+      <div class="cost-panel" id="cost-panel"></div>
+
+      <!-- Label preview -->
+      <div class="section-hdr">
+        <span>Label info</span>
+        <span style="font-weight:400; text-transform:none; letter-spacing:0">
+          <button class="btn btn-sm" onclick="copyLabel()">Copy to clipboard</button>
+        </span>
+      </div>
+      <div class="toggle-row">
+        <label><input type="radio" name="label-mode" value="inci" id="lbl-inci" onchange="markDirty(); renderLabel()" checked> INCI names</label>
+        <label><input type="radio" name="label-mode" value="common" id="lbl-common" onchange="markDirty(); renderLabel()"> Common names</label>
+        <label><input type="checkbox" id="lbl-override-on" onchange="onOverrideToggle()"> Use override text instead</label>
+      </div>
+      <div id="lbl-override-wrap" style="display:none; margin-bottom:10px">
+        <div class="field">
+          <label>Ingredient list override</label>
+          <textarea id="p-label-override" rows="3" placeholder="Type your own ingredient list (used in place of auto-generated)" oninput="markDirty(); renderLabel()"></textarea>
+        </div>
+      </div>
+      <div class="label-box" id="label-preview"></div>
+
+      <!-- Production runs -->
+      <div class="section-hdr">
+        <span>Production runs</span>
+        <span id="runs-summary" style="font-weight:400; text-transform:none; letter-spacing:0; color:var(--ink-lighter)"></span>
+      </div>
+      <div class="runs-list" id="runs-list"></div>
+      <div class="run-add-row">
+        <div class="field">
+          <label>Date</label>
+          <input type="date" id="run-date">
+        </div>
+        <div class="field">
+          <label>Units</label>
+          <input type="number" id="run-units" min="1" step="1" placeholder="17">
+        </div>
+        <div class="field">
+          <label>From batch (optional)</label>
+          <select id="run-batch">
+            <option value="">-- No batch linked --</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Notes</label>
+          <input type="text" id="run-notes" placeholder="Optional">
+        </div>
+        <button class="btn btn-primary" onclick="addRun()">+ Add run</button>
       </div>
     </div>
   </div>
-</div>
+</main>
 
-<!-- Add packaging item to run modal -->
-<div class="modal-ov" id="m-pkg">
+<!-- New product modal -->
+<div class="modal-ov" id="m-new">
   <div class="modal">
-    <div class="modal-hdr">
-      <div class="modal-title">Add packaging item</div>
-      <button class="modal-x" onclick="closeModal('m-pkg')">&#x2715;</button>
+    <div class="modal-hdr"><div class="modal-title">New product</div><button class="modal-x" onclick="closeModal('m-new')">&#x2715;</button></div>
+    <div class="field">
+      <label>Product name</label>
+      <input type="text" id="n-name" placeholder="e.g. Hawaiian Sunset Lotion Bar 1oz">
     </div>
     <div class="field">
-      <label>Choose from packaging library</label>
-      <select id="pkg-select" class="pkg-dd">
-        <option value="">-- select an item --</option>
+      <label>Starting from formulation</label>
+      <select id="n-formula">
+        <option value="">-- Pick a formula --</option>
       </select>
     </div>
-    <div id="pkg-selected-detail" style="display:none;background:var(--cream);border-radius:4px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:var(--ink-light)"></div>
-    <div style="font-size:12px;color:var(--ink-lighter);margin-bottom:1rem">or add a one-off item:</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <div class="field" style="margin-bottom:0">
-        <label>Item name</label>
-        <input type="text" id="pkg-name" placeholder="e.g. kraft label">
-      </div>
-      <div class="field" style="margin-bottom:0">
-        <label>Cost per unit ($)</label>
-        <input type="number" id="pkg-cost" placeholder="0.00" min="0" step="0.01">
-      </div>
-    </div>
     <div class="modal-foot">
-      <button class="btn" onclick="closeModal('m-pkg')">Cancel</button>
-      <button class="btn btn-primary" onclick="confirmAddPkgItem()">Add to run</button>
+      <button class="btn" onclick="closeModal('m-new')">Cancel</button>
+      <button class="btn btn-primary" onclick="createProduct()">Create</button>
     </div>
   </div>
 </div>
 
-<!-- Settings & appearance modal -->
+<!-- Settings modal -->
 <div class="modal-ov" id="m-settings">
   <div class="modal" style="max-width:560px">
-    <div class="modal-hdr">
-      <div class="modal-title">Settings &amp; appearance</div>
-      <button class="modal-x" onclick="closeModal('m-settings')">x</button>
-    </div>
-    <div style="padding:0">
-      <div style="font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-lighter);margin-bottom:10px">Appearance</div>
-      <div style="padding:8px 0 18px">
-        <div style="font-size:12px;color:var(--ink-lighter);line-height:1.4;margin-bottom:12px">Choose a color palette for this module. Each module remembers its own palette choice.</div>
-        <div id="palette-swatches" class="palette-swatch-grid"></div>
-      </div>
-    </div>
+    <div class="modal-hdr"><div class="modal-title">Settings &amp; appearance</div><button class="modal-x" onclick="closeModal('m-settings')">&#x2715;</button></div>
+    <div style="font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-lighter);margin-bottom:10px">Appearance</div>
+    <div style="font-size:12px;color:var(--ink-lighter);line-height:1.4;margin-bottom:12px">Choose a color palette for this module. Each module remembers its own palette choice.</div>
+    <div id="palette-swatches" class="palette-swatch-grid"></div>
   </div>
 </div>
 
+<div class="toast" id="toast"></div>
+
+<footer class="app-footer">Plume by Little Bird Studio &middot; Products &amp; Costing &middot; v0.6</footer>
+
 <script>
-// ── Storage keys ─────────────────────────────────────
-var ING_KEY  = 'aerie-ingredients-v2';
-var FORM_KEY = 'aerie-formulations-v1';
-var PKG_KEY  = 'aerie-packaging-v2';
-var COST_KEY = 'aerie-costing-v1';
+// ──────────────────────────────────────────────────────────────────────
+// Storage keys
+// ──────────────────────────────────────────────────────────────────────
+var ING_KEY     = 'aerie-ingredients-v2';
+var FORM_KEY    = 'aerie-formulations-v1';
+var PKG_KEY     = 'aerie-packaging-v2';
+var BATCH_KEY   = 'aerie-batches-v1';
+var PRODUCT_KEY = 'plume-products-v1';
+var OLD_COST_KEY = 'aerie-costing-v1';
+var PALETTE_KEY = 'plume-palette-products';
 
-// ── App state ─────────────────────────────────────────
-var ings           = [];
-var forms          = [];
-var pkgLib         = [];
-var costData       = {}; // { formId: { runs: [...] } }
-var curFormId      = null;
-var addingToRunIdx = null;
+// In-memory state
+var ings    = [];
+var forms   = [];
+var pkgs    = [];
+var batches = [];
+var products = [];
 
-// ── Helpers ───────────────────────────────────────────
-function esc(s)  { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-function fmt$(n) { return n !== null && !isNaN(n) ? '$' + n.toFixed(2)  : '--'; }
-function fmt4(n) { return n !== null && !isNaN(n) ? '$' + n.toFixed(4)  : '--'; }
+var curId = null;
+var dirty = false;
+var statusFilter = 'all';
 
-function init() {
-  try { var r = localStorage.getItem(ING_KEY);   if (r) ings    = JSON.parse(r); } catch(e) {}
-  try { var r = localStorage.getItem(FORM_KEY);  if (r) forms   = JSON.parse(r); } catch(e) {}
-  try { var r = localStorage.getItem(PKG_KEY);   if (r) pkgLib  = JSON.parse(r); } catch(e) {}
-  try { var r = localStorage.getItem(COST_KEY);  if (r) costData = JSON.parse(r); } catch(e) {}
-  renderFormulaList(forms);
+// ──────────────────────────────────────────────────────────────────────
+// Helpers
+// ──────────────────────────────────────────────────────────────────────
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
-
-function saveCostData() {
-  try { localStorage.setItem(COST_KEY, JSON.stringify(costData)); } catch(e) {}
+function todayISO() { return new Date().toISOString().slice(0,10); }
+function fmtDate(d) {
+  if (!d) return '';
+  try { return new Date(d).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }); }
+  catch(e) { return d; }
 }
-
-function getFormState() {
-  if (!curFormId) return null;
-  if (!costData[curFormId]) costData[curFormId] = { runs: [] };
-  return costData[curFormId];
-}
-
-// ── Helpers ───────────────────────────────────────────
-function bestCpg(ing) {
-  var lots = ing.lots || (ing.cost ? [{costPerG:ing.cost}] : []);
-  var costs = [];
-  lots.forEach(function(l) { var c = parseFloat(l.costPerG); if (!isNaN(c) && c > 0) costs.push(c); });
-  return costs.length ? Math.min.apply(null, costs) : null;
-}
-
-function isSoap(f) { return f && (f.type === 'Cold Process Soap' || f.type === 'Hot Process Soap'); }
-
-function batchSize() { return parseFloat(document.getElementById('batch-size').value) || 100; }
-
-function setBatch(n) { document.getElementById('batch-size').value = n; refreshAll(); }
-
-function computeIngCost(f, bs) {
-  var lines = f.lines || [];
-  var total = 0; var hasCost = false; var missing = 0; var missingNames = [];
-  var soap = isSoap(f);
-  lines.forEach(function(l) {
-    if (l.addin || l.soapAddin) return;
-    var ing = ings.find(function(x) { return x.id === l.ingId; });
-    if (!ing) return;
-    var cpg = bestCpg(ing);
-    var grams = soap ? bs * (parseFloat(l.pct)||0) / 100
-      : l.pinned && l.gramsFixed ? (parseFloat(l.gramsFixed)||0) : bs * (parseFloat(l.pct)||0) / 100;
-    if (cpg !== null) { total += cpg * grams; hasCost = true; }
-    else { missing++; missingNames.push(ing.name); }
-  });
-  return { total: hasCost ? total : null, missing: missing, missingNames: missingNames };
-}
-
-// ── Formula list ──────────────────────────────────────
-function filterFormulas(q) {
-  var lower = (q||'').toLowerCase();
-  var filtered = forms.filter(function(f) {
-    return !q || (f.name||'').toLowerCase().indexOf(lower) >= 0 || (f.type||'').toLowerCase().indexOf(lower) >= 0;
-  });
-  renderFormulaList(filtered);
-}
-
-function renderFormulaList(list) {
-  var el = document.getElementById('formula-list');
-  if (!list.length) { el.innerHTML = '<div style="font-size:12px;color:var(--ink-lighter)">No formulations found.</div>'; return; }
-  var bs = batchSize();
-  el.innerHTML = list.map(function(f) {
-    var mc = countMissing(f);
-    var sel = f.id === curFormId;
-    return '<div class="formula-pick-item' + (sel?' selected':'') + '" onclick="selectFormula(\'' + f.id + '\')">' +
-      '<div style="min-width:0">' +
-        '<div class="fp-name">' + esc(f.name) + '</div>' +
-        '<div class="fp-sub">' + esc(f.type||'No type') + (f.status ? ' \u00b7 ' + f.status : '') + '</div>' +
-        (mc ? '<div class="fp-warn">' + mc + ' ingredient' + (mc!==1?'s':'') + ' missing cost</div>' : '') +
-      '</div>' +
-      (sel ? '<span style="color:var(--bark);font-size:16px">&#x2713;</span>' : '') +
-    '</div>';
-  }).join('');
-}
-
-function countMissing(f) {
-  return (f.lines||[]).filter(function(l) {
-    if (l.addin || l.soapAddin) return false;
-    var ing = ings.find(function(x) { return x.id === l.ingId; });
-    return ing && bestCpg(ing) === null;
-  }).length;
-}
-
-function selectFormula(id) {
-  curFormId = id;
-  renderFormulaList(forms.filter(function(f) {
-    var q = document.getElementById('formula-search').value.toLowerCase();
-    return !q || (f.name||'').toLowerCase().indexOf(q) >= 0;
-  }));
-  document.getElementById('no-sel').style.display = 'none';
-  document.getElementById('main-content').style.display = 'block';
-  refreshAll();
-}
-
-// ── Main refresh ──────────────────────────────────────
-function refreshAll() {
-  var f = forms.find(function(x) { return x.id === curFormId; });
-  if (!f) return;
-  var bs = batchSize();
-  var ic = computeIngCost(f, bs);
-
-  document.getElementById('f-title').textContent = f.name || 'Untitled';
-  document.getElementById('f-meta').textContent = (f.type||'') + (f.version ? ' \u00b7 v'+f.version : '') + (f.status ? ' \u00b7 '+f.status : '');
-
-  renderMissingWarn(ic);
-  renderIngStats(ic, bs);
-  renderBreakdown(f, bs);
-  renderAllocSummary(bs);
-  renderRuns(ic, bs);
-}
-
-function renderMissingWarn(ic) {
-  var el = document.getElementById('missing-warn');
-  if (!ic.missing) { el.style.display = 'none'; return; }
-  el.style.display = 'block';
-  el.innerHTML = '<strong>' + ic.missing + ' ingredient' + (ic.missing!==1?'s':'') + ' missing cost data</strong> \u2014 estimates are partial. Add cost/g in the Ingredients library for: ' + ic.missingNames.map(esc).join(', ') + '.';
-}
-
-function renderIngStats(ic, bs) {
-  var el = document.getElementById('ing-stats');
-  el.innerHTML =
-    statBox('Batch size', bs+'g', '', false) +
-    statBox('Ingredient cost', ic.total!==null ? fmt$(ic.total) : '--', ic.missing ? ic.missing+' missing cost' : 'all costed', false) +
-    statBox('Cost / 100g', ic.total!==null ? fmt$(ic.total/bs*100) : '--', '', false) +
-    statBox('Cost / gram', ic.total!==null ? fmt4(ic.total/bs) : '--', '', false);
-}
-
-function statBox(lbl, val, sub, hi) {
-  return '<div class="stat-box' + (hi?' hi':'') + '"><div class="stat-lbl">'+lbl+'</div><div class="stat-val">'+val+'</div>' + (sub?'<div class="stat-sub">'+sub+'</div>':'') + '</div>';
-}
-
-function renderBreakdown(f, bs) {
-  var lines = (f.lines||[]).filter(function(l) { return !l.addin && !l.soapAddin; });
-  var addins = (f.lines||[]).filter(function(l) { return l.addin || l.soapAddin; });
-  var soap = isSoap(f);
-  lines.sort(function(a,b) { return (parseFloat(b.pct)||0)-(parseFloat(a.pct)||0); });
-  var allLines = lines.concat(addins);
-  var totalCost = 0; var totalG = 0; var hasCost = false;
-  var html = allLines.map(function(l) {
-    var ing = ings.find(function(x){return x.id===l.ingId;});
-    if (!ing) return '';
-    var isAddin = l.addin || l.soapAddin;
-    var pct = parseFloat(l.pct)||0;
-    var grams = soap ? bs*pct/100 : (l.pinned&&l.gramsFixed ? parseFloat(l.gramsFixed)||0 : bs*pct/100);
-    if (!isAddin) totalG += grams;
-    var cpg = bestCpg(ing);
-    var lc = cpg !== null ? cpg*grams : null;
-    if (lc !== null) { totalCost += lc; hasCost = true; }
-    return '<tr' + (isAddin?' style="opacity:0.7;font-style:italic"':'') + '>' +
-      '<td>'+esc(ing.name)+(isAddin?'<span style="font-size:10px;background:var(--clay-light);color:var(--clay);padding:1px 5px;border-radius:10px;margin-left:6px;font-style:normal">add-in</span>':'')+'</td>' +
-      '<td>'+(isAddin?'--':pct.toFixed(2)+'%')+'</td>' +
-      '<td>'+(grams>0?grams.toFixed(2)+'g':'--')+'</td>' +
-      '<td>'+(cpg!==null?fmt4(cpg):'<span style="color:var(--warning);font-size:11px">no cost</span>')+'</td>' +
-      '<td>'+(lc!==null?fmt$(lc):'<span style="color:var(--warning);font-size:11px">--</span>')+'</td>' +
-    '</tr>';
-  }).join('');
-  html += '<tr><td>Total</td><td></td><td>'+totalG.toFixed(2)+'g</td><td></td><td>'+(hasCost?fmt$(totalCost):'--')+'</td></tr>';
-  document.getElementById('breakdown-body').innerHTML = html;
-  document.getElementById('breakdown-note').textContent = 'Based on '+bs+'g batch.';
-}
-
-// ── Allocation summary ────────────────────────────────
-function renderAllocSummary(bs) {
-  var state = getFormState();
-  if (!state || !state.runs.length) { document.getElementById('alloc-summary').innerHTML = ''; return; }
-  var allocated = state.runs.reduce(function(sum,r){ return sum + (parseFloat(r.grams)||0); }, 0);
-  var pct = Math.min(allocated/bs*100, 100);
-  var over = allocated > bs;
-  document.getElementById('alloc-summary').innerHTML =
-    '<div style="font-size:10px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-lighter);margin-bottom:4px">Batch allocated</div>' +
-    '<div class="batch-alloc"><div class="batch-alloc-fill'+(over?' over':'')+'" style="width:'+pct+'%"></div></div>' +
-    '<div style="font-size:12px;color:'+(over?'var(--danger)':'var(--ink-light)')+'">'+allocated.toFixed(0)+'g of '+bs+'g' + (over?' <strong>(\u2191 over by '+(allocated-bs).toFixed(0)+'g)</strong>':'') + '</div>';
-}
-
-// ── Runs ──────────────────────────────────────────────
-function addRun() {
-  var state = getFormState();
-  if (!state) return;
-  state.runs.push({ id: Date.now().toString()+Math.random().toString(36).slice(2,5), name: '', grams: '', fillWeight: '', pricingMode: 'margin', marginPct: 60, markupMult: 3, items: [] });
-  saveCostData();
-  refreshAll();
-}
-
-function removeRun(idx) {
-  if (!confirm('Remove this packaging run?')) return;
-  var state = getFormState();
-  state.runs.splice(idx, 1);
-  saveCostData();
-  refreshAll();
-}
-
-function updateRun(idx, field, val) {
-  var state = getFormState();
-  if (!state || !state.runs[idx]) return;
-  state.runs[idx][field] = val;
-  saveCostData();
-  renderAllocSummary(batchSize());
-  renderRunStats(idx);
-}
-
-function setRunPricingMode(idx, mode) {
-  var state = getFormState();
-  state.runs[idx].pricingMode = mode;
-  saveCostData();
-  document.getElementById('run-ptog-margin-'+idx).className = 'ptog'+(mode==='margin'?' active':'');
-  document.getElementById('run-ptog-markup-'+idx).className = 'ptog'+(mode==='markup'?' active':'');
-  document.getElementById('run-margin-sec-'+idx).style.display = mode==='margin'?'block':'none';
-  document.getElementById('run-markup-sec-'+idx).style.display = mode==='markup'?'block':'none';
-  renderRunStats(idx);
-}
-
-function renderRuns(ic, bs) {
-  var state = getFormState();
-  var container = document.getElementById('runs-container');
-  if (!state || !state.runs.length) {
-    container.innerHTML = '<div style="font-size:13px;color:var(--ink-lighter);padding:1rem 0">No packaging runs yet. Click &ldquo;+ Add run&rdquo; to split this batch into packaging options &mdash; e.g. sample vials, retail bottles.</div>';
-    return;
-  }
-  container.innerHTML = state.runs.map(function(run, idx) {
-    var ingCpg = ic.total !== null ? ic.total / bs : null;
-    return renderRunCard(run, idx, ingCpg, bs);
-  }).join('');
-}
-
-function renderRunCard(run, idx, ingCpg, bs) {
-  var mode = run.pricingMode || 'margin';
-  // packaging items
-  var itemsHtml = '';
-  if (run.items && run.items.length) {
-    itemsHtml = '<div class="run-items-hdr"><span>Item</span><span style="text-align:right">Cost/unit</span><span style="text-align:right">Subtotal</span><span></span></div>' +
-      run.items.map(function(item, ii) {
-        var cost = parseFloat(item.cost)||0;
-        var qty  = parseFloat(run.fillWeight)||0;
-        var units = qty > 0 ? Math.floor((parseFloat(run.grams)||0)/qty) : 0;
-        return '<div class="run-item-row">' +
-          '<div class="run-item-name">'+esc(item.name)+'</div>' +
-          '<div class="run-item-cost">'+fmt$(cost)+'</div>' +
-          '<div class="run-item-cost">'+(units ? fmt$(cost*units) : '--')+'</div>' +
-          '<button class="run-item-rm" onclick="removeRunItem('+idx+','+ii+')">&#x00d7;</button>' +
-        '</div>';
-      }).join('');
-  } else {
-    itemsHtml = '<div style="font-size:12px;color:var(--ink-lighter);padding:4px 0">No packaging items added yet.</div>';
-  }
-
-  return '<div class="run-card" id="run-card-'+idx+'">' +
-    '<div class="run-card-hdr">' +
-      '<input class="run-name-inp" placeholder="Run name (e.g. Sample vials, 1oz retail...)" value="'+esc(run.name||'')+'" oninput="updateRun('+idx+',\'name\',this.value)">' +
-      '<button class="btn btn-danger btn-sm" onclick="removeRun('+idx+')">Remove</button>' +
-    '</div>' +
-    '<div class="run-body">' +
-      '<div class="run-grid">' +
-        '<div class="run-inp-wrap"><div class="run-lbl">Grams from batch</div>' +
-          '<input type="number" class="run-inp" placeholder="e.g. 100" min="0" step="0.1" value="'+(run.grams||'')+'" oninput="updateRun('+idx+',\'grams\',this.value)"></div>' +
-        '<div class="run-inp-wrap"><div class="run-lbl">Fill weight (g)</div>' +
-          '<input type="number" class="run-inp" placeholder="e.g. 5" min="0" step="0.1" value="'+(run.fillWeight||'')+'" oninput="updateRun('+idx+',\'fillWeight\',this.value)"></div>' +
-        '<div class="run-inp-wrap"><div class="run-lbl">Units (auto)</div>' +
-          '<input type="number" class="run-inp" placeholder="auto" min="1" step="1" value="'+(run.unitsOverride||'')+'" oninput="updateRun('+idx+',\'unitsOverride\',this.value)" style="color:var(--ink-lighter)"></div>' +
-      '</div>' +
-      '<div style="margin-bottom:10px">' +
-        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">' +
-          '<div style="font-size:10px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-lighter)">Packaging items</div>' +
-          '<button class="btn btn-sm" onclick="openAddPkgItem('+idx+')">+ Add item</button>' +
-        '</div>' +
-        itemsHtml +
-      '</div>' +
-      '<div id="run-stats-'+idx+'"></div>' +
-      '<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--cream-border)">' +
-        '<div style="font-size:10px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-lighter);margin-bottom:8px">Pricing</div>' +
-        '<div class="pricing-toggle">' +
-          '<button class="ptog'+(mode==='margin'?' active':'')+'" id="run-ptog-margin-'+idx+'" onclick="setRunPricingMode('+idx+',\'margin\')">Target margin %</button>' +
-          '<button class="ptog'+(mode==='markup'?' active':'')+'" id="run-ptog-markup-'+idx+'" onclick="setRunPricingMode('+idx+',\'markup\')">Markup &times;</button>' +
-        '</div>' +
-        '<div id="run-margin-sec-'+idx+'" class="price-inp-row" style="display:'+(mode==='margin'?'flex':'none')+'">' +
-          '<div class="price-inp-label">Target margin</div>' +
-          '<input type="number" class="price-inp-lg" min="1" max="99" step="1" value="'+(run.marginPct||60)+'" oninput="updateRun('+idx+',\'marginPct\',this.value)">' +
-          '<span class="price-inp-unit">%</span>' +
-        '</div>' +
-        '<div id="run-markup-sec-'+idx+'" class="price-inp-row" style="display:'+(mode==='markup'?'flex':'none')+'">' +
-          '<div class="price-inp-label">Markup</div>' +
-          '<input type="number" class="price-inp-lg" min="1.01" step="0.1" value="'+(run.markupMult||3)+'" oninput="updateRun('+idx+',\'markupMult\',this.value)">' +
-          '<span class="price-inp-unit">&times; cost</span>' +
-        '</div>' +
-        '<div id="run-pricing-'+idx+'"></div>' +
-      '</div>' +
-    '</div>' +
-  '</div>';
-}
-
-function renderRunStats(idx) {
-  var f = forms.find(function(x){return x.id===curFormId;});
-  if (!f) return;
-  var state = getFormState();
-  if (!state || !state.runs[idx]) return;
-  var run = state.runs[idx];
-  var bs = batchSize();
-  var ic = computeIngCost(f, bs);
-  var ingCpg = ic.total !== null ? ic.total / bs : null;
-
-  var grams = parseFloat(run.grams) || 0;
-  var fillWeight = parseFloat(run.fillWeight) || 0;
-  var unitsOverride = parseInt(run.unitsOverride, 10);
-  var units = !isNaN(unitsOverride) && unitsOverride > 0 ? unitsOverride : (fillWeight > 0 ? Math.floor(grams / fillWeight) : 0);
-
-  var ingCostRun = ingCpg !== null && grams > 0 ? ingCpg * grams : null;
-  var ingCostPerUnit = units > 0 && ingCostRun !== null ? ingCostRun / units : null;
-  var pkgCostPerUnit = 0;
-  (run.items||[]).forEach(function(item) { pkgCostPerUnit += parseFloat(item.cost)||0; });
-  var totalCostPerUnit = ingCostPerUnit !== null ? ingCostPerUnit + pkgCostPerUnit : null;
-
-  // Stats row
-  var statsEl = document.getElementById('run-stats-'+idx);
-  if (statsEl) {
-    statsEl.innerHTML = '<div class="run-stats">' +
-      statBox('Units', units||'--', fillWeight?fillWeight+'g fill':'set fill weight', false) +
-      statBox('Ingredient/unit', ingCostPerUnit!==null?fmt$(ingCostPerUnit):'--', '', false) +
-      statBox('Packaging/unit', fmt$(pkgCostPerUnit), (run.items||[]).length+' item'+((run.items||[]).length!==1?'s':''), false) +
-      statBox('Total cost/unit', totalCostPerUnit!==null?fmt$(totalCostPerUnit):(fmt$(pkgCostPerUnit)), '', true) +
-    '</div>';
-  }
-
-  // Pricing
-  var pricingEl = document.getElementById('run-pricing-'+idx);
-  if (!pricingEl) return;
-  if (totalCostPerUnit === null) {
-    pricingEl.innerHTML = '<div style="font-size:12px;color:var(--ink-lighter)">Set grams, fill weight, and ingredient costs to see pricing.</div>';
-    return;
-  }
-  var mode = run.pricingMode || 'margin';
-  var suggestedPrice, margin, markup;
-  if (mode === 'margin') {
-    var mp = Math.min(parseFloat(run.marginPct)||60, 99);
-    suggestedPrice = totalCostPerUnit / (1 - mp/100);
-    margin = mp; markup = suggestedPrice / totalCostPerUnit;
-  } else {
-    var mm = parseFloat(run.markupMult)||3;
-    suggestedPrice = totalCostPerUnit * mm;
-    markup = mm; margin = (1 - totalCostPerUnit/suggestedPrice)*100;
-  }
-  var profit = suggestedPrice - totalCostPerUnit;
-
-  // Three-tier pricing tiers:
-  //   Direct       = suggestedPrice (what you sell at on your own channels)
-  //   Wholesale    = price you charge a shop. Default 50% of direct retail.
-  //   Shop retail  = what the shop sells at. Default 2x wholesale.
-  // Both multipliers are tunable per run since indie wholesale terms vary.
-  var wsPct = parseFloat(run.wholesalePct);
-  if (isNaN(wsPct) || wsPct <= 0 || wsPct >= 100) wsPct = 50;
-  var srMult = parseFloat(run.shopRetailMult);
-  if (isNaN(srMult) || srMult < 1) srMult = 2;
-
-  var wholesalePrice = suggestedPrice * (wsPct / 100);
-  var shopRetail     = wholesalePrice * srMult;
-  var wholesaleProfit = wholesalePrice - totalCostPerUnit;
-  var wholesaleMargin = wholesalePrice > 0 ? (wholesaleProfit / wholesalePrice) * 100 : 0;
-  var shopProfit      = shopRetail - wholesalePrice;
-  var shopMargin      = shopRetail > 0 ? (shopProfit / shopRetail) * 100 : 0;
-  // The "is wholesale worth it?" gut check: how much per-unit profit do
-  // you give up by selling wholesale instead of direct?
-  var profitGap       = profit - wholesaleProfit;
-  var profitGapPct    = profit > 0 ? (profitGap / profit) * 100 : 0;
-  // Sanity warnings — if wholesale doesn't cover cost or shop retail is
-  // below your direct price, the deal genuinely doesn't work.
-  var wholesaleUnprofitable = wholesaleProfit < 0;
-  var shopUndercutsYou      = shopRetail < suggestedPrice;
-  pricingEl.innerHTML =
-    '<div class="price-result"><div class="price-lbl">Suggested retail price</div><div class="price-val">'+fmt$(suggestedPrice)+'</div></div>' +
-    '<div class="price-row"><span>Unit cost (ingredients + packaging)</span><span>'+fmt$(totalCostPerUnit)+'</span></div>' +
-    '<div class="price-row"><span>Profit per unit</span><span>'+fmt$(profit)+'</span></div>' +
-    '<div class="price-row"><span>Margin</span><span>'+margin.toFixed(1)+'%</span></div>' +
-    '<div class="price-row"><span>Markup</span><span>'+markup.toFixed(2)+'&times;</span></div>' +
-    // ─── Three-tier wholesale breakdown ──────────────────
-    // Shown as a sub-section beneath the main pricing readout. The two
-    // inputs (wholesale % of retail, shop retail multiplier) are tunable
-    // so the user can model different wholesale deals. Defaults are the
-    // indie-cosmetics standard: 50% of retail to the shop, shop sells at
-    // 2x wholesale (which lands back at your direct retail price).
-    '<div style="margin-top:18px;padding-top:14px;border-top:1px dashed var(--cream-border)">' +
-      '<div style="font-size:10px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-lighter);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between">' +
-        '<span>Wholesale scenario</span>' +
-        '<span style="font-size:10px;text-transform:none;letter-spacing:0;color:var(--ink-lighter);font-weight:400">If a shop wants to carry this</span>' +
-      '</div>' +
-      // Tunable parameters row
-      '<div style="display:flex;gap:14px;margin-bottom:12px;font-size:11px;color:var(--ink-light)">' +
-        '<label style="display:flex;align-items:center;gap:6px">' +
-          'Wholesale at ' +
-          '<input type="number" min="1" max="99" step="1" value="'+wsPct.toFixed(0)+'" ' +
-            'oninput="updateRun('+idx+',\'wholesalePct\',this.value)" ' +
-            'style="width:50px;font-family:&quot;DM Sans&quot;,sans-serif;font-size:12px;padding:3px 6px;border:1px solid var(--cream-border);border-radius:3px;background:var(--white);color:var(--ink);text-align:right;outline:none">' +
-          '% of retail' +
-        '</label>' +
-        '<label style="display:flex;align-items:center;gap:6px">' +
-          'Shop retail multiplier ' +
-          '<input type="number" min="1" step="0.1" value="'+srMult.toFixed(1)+'" ' +
-            'oninput="updateRun('+idx+',\'shopRetailMult\',this.value)" ' +
-            'style="width:50px;font-family:&quot;DM Sans&quot;,sans-serif;font-size:12px;padding:3px 6px;border:1px solid var(--cream-border);border-radius:3px;background:var(--white);color:var(--ink);text-align:right;outline:none">' +
-          '&times;' +
-        '</label>' +
-      '</div>' +
-      // Tier grid: three columns (direct / wholesale / shop)
-      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">' +
-        // Direct (you)
-        '<div style="background:var(--sage-light);border:1px solid var(--sage-border);border-radius:4px;padding:10px">' +
-          '<div style="font-size:9px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--sage-dark);margin-bottom:4px">Direct</div>' +
-          '<div style="font-size:18px;font-weight:300;color:var(--sage-dark);font-variant-numeric:tabular-nums">'+fmt$(suggestedPrice)+'</div>' +
-          '<div style="font-size:10px;color:var(--ink-lighter);margin-top:6px">You keep '+fmt$(profit)+'</div>' +
-          '<div style="font-size:10px;color:var(--ink-lighter)">'+margin.toFixed(0)+'% margin</div>' +
-        '</div>' +
-        // Wholesale (you to shop)
-        '<div style="background:var(--cream);border:1px solid var(--cream-border);border-radius:4px;padding:10px">' +
-          '<div style="font-size:9px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-light);margin-bottom:4px">Wholesale</div>' +
-          '<div style="font-size:18px;font-weight:300;color:var(--ink);font-variant-numeric:tabular-nums">'+fmt$(wholesalePrice)+'</div>' +
-          '<div style="font-size:10px;color:'+(wholesaleUnprofitable?'var(--warning)':'var(--ink-lighter)')+';margin-top:6px">You keep '+fmt$(wholesaleProfit)+'</div>' +
-          '<div style="font-size:10px;color:var(--ink-lighter)">'+wholesaleMargin.toFixed(0)+'% margin</div>' +
-        '</div>' +
-        // Shop retail (shop to customer)
-        '<div style="background:var(--cream);border:1px solid var(--cream-border);border-radius:4px;padding:10px">' +
-          '<div style="font-size:9px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-light);margin-bottom:4px">Shop retail</div>' +
-          '<div style="font-size:18px;font-weight:300;color:var(--ink);font-variant-numeric:tabular-nums">'+fmt$(shopRetail)+'</div>' +
-          '<div style="font-size:10px;color:var(--ink-lighter);margin-top:6px">Shop keeps '+fmt$(shopProfit)+'</div>' +
-          '<div style="font-size:10px;color:var(--ink-lighter)">'+shopMargin.toFixed(0)+'% margin</div>' +
-        '</div>' +
-      '</div>' +
-      // Gut-check line: how much profit you give up per unit by going wholesale
-      (wholesaleUnprofitable
-        ? '<div style="background:var(--warning-bg);border:1px solid var(--warning-border);border-radius:4px;padding:10px 12px;font-size:12px;color:var(--warning);line-height:1.5">' +
-            '<strong>This wholesale price doesn\'t cover your cost</strong> &mdash; you\'d lose '+fmt$(-wholesaleProfit)+' on every unit. Either raise your direct price or negotiate a higher wholesale percentage.' +
-          '</div>'
-        : '<div style="background:var(--cream);border-left:3px solid var(--bark-light);border-radius:0 3px 3px 0;padding:8px 12px;font-size:11px;color:var(--ink-light);line-height:1.6">' +
-            'You keep <strong>'+fmt$(profitGap)+' less per unit</strong> selling wholesale ('+profitGapPct.toFixed(0)+'% less profit than direct). ' +
-            'To match your direct profit through this shop, you\'d need to sell '+
-            (wholesaleProfit > 0 ? Math.ceil(profit / wholesaleProfit) : '\u2014')+' wholesale units for every direct unit you skip.' +
-            (shopUndercutsYou
-              ? '<br><span style="color:var(--warning)"><strong>Note:</strong> the shop\'s retail price ('+fmt$(shopRetail)+') undercuts your direct price ('+fmt$(suggestedPrice)+'). Consider requiring shops to sell at your retail or higher.</span>'
-              : '') +
-          '</div>'
-      ) +
-    '</div>';
-}
-
-// Re-render just stats for all runs without rebuilding DOM
-function renderAllRunStats() {
-  var state = getFormState();
-  if (!state) return;
-  state.runs.forEach(function(r, idx) { renderRunStats(idx); });
-}
-
-// ── Packaging items in runs ───────────────────────────
-function openAddPkgItem(runIdx) {
-  addingToRunIdx = runIdx;
-  // Populate pkg dropdown
-  var sel = document.getElementById('pkg-select');
-  sel.innerHTML = '<option value="">-- select from library --</option>' +
-    pkgLib.map(function(p) {
-      return '<option value="'+p.id+'">'+esc(p.name)+(p.cost?' \u2014 $'+parseFloat(p.cost).toFixed(2):'')+'</option>';
-    }).join('');
-  document.getElementById('pkg-name').value = '';
-  document.getElementById('pkg-cost').value = '';
-  document.getElementById('pkg-selected-detail').style.display = 'none';
-  sel.value = '';
-  openModal('m-pkg');
-}
-
-document.addEventListener('change', function(e) {
-  if (e.target && e.target.id === 'pkg-select') {
-    var id = e.target.value;
-    var detail = document.getElementById('pkg-selected-detail');
-    if (!id) { detail.style.display = 'none'; document.getElementById('pkg-name').value=''; document.getElementById('pkg-cost').value=''; return; }
-    var p = pkgLib.find(function(x){return x.id===id;});
-    if (!p) return;
-    document.getElementById('pkg-name').value = p.name;
-    document.getElementById('pkg-cost').value = p.cost || '';
-    detail.style.display = 'block';
-    detail.innerHTML = (p.capacity?'<strong>'+esc(p.capacity)+'</strong> \u00b7 ':'')+esc(p.notes||'')+(p.supplier?' \u00b7 '+esc(p.supplier):'');
-  }
-});
-
-function confirmAddPkgItem() {
-  var name = document.getElementById('pkg-name').value.trim();
-  var cost = document.getElementById('pkg-cost').value;
-  if (!name) { alert('Item name is required.'); return; }
-  var state = getFormState();
-  if (!state.runs[addingToRunIdx]) return;
-  state.runs[addingToRunIdx].items = state.runs[addingToRunIdx].items || [];
-  state.runs[addingToRunIdx].items.push({ name: name, cost: cost });
-  saveCostData();
-  closeModal('m-pkg');
-  refreshAll();
-}
-
-function removeRunItem(runIdx, itemIdx) {
-  var state = getFormState();
-  state.runs[runIdx].items.splice(itemIdx, 1);
-  saveCostData();
-  refreshAll();
-}
-
+function uid() { return String(Date.now()) + '-' + Math.random().toString(36).slice(2,7); }
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-document.addEventListener('keydown', function(e) {
-  if (e.key==='Escape') document.querySelectorAll('.modal-ov.open').forEach(function(m){m.classList.remove('open');});
-});
+function toast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  if (t._timer) clearTimeout(t._timer);
+  t._timer = setTimeout(function() { t.classList.remove('show'); }, 1800);
+}
+function markDirty() { dirty = true; }
 
-// ── Palettes ──────────────────────────────────────────
-// Each palette redefines the palette-level CSS variables (surfaces, bark,
-// sage, clay, ink, status). Categorical colors are intentionally NOT
-// overridden — they stay consistent across all palettes.
+function findIng(id) {
+  for (var i = 0; i < ings.length; i++) if (ings[i].id === id) return ings[i];
+  return null;
+}
+function findForm(id) {
+  for (var i = 0; i < forms.length; i++) if (forms[i].id === id) return forms[i];
+  return null;
+}
+function findPkg(id) {
+  for (var i = 0; i < pkgs.length; i++) if (pkgs[i].id === id) return pkgs[i];
+  return null;
+}
+function findProduct(id) {
+  for (var i = 0; i < products.length; i++) if (products[i].id === id) return products[i];
+  return null;
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Load / save
+// ──────────────────────────────────────────────────────────────────────
+function loadData() {
+  try { var r = localStorage.getItem(ING_KEY);     if (r) ings     = JSON.parse(r); } catch(e) {}
+  try { var r = localStorage.getItem(FORM_KEY);    if (r) forms    = JSON.parse(r); } catch(e) {}
+  try { var r = localStorage.getItem(PKG_KEY);     if (r) pkgs     = JSON.parse(r); } catch(e) {}
+  try { var r = localStorage.getItem(BATCH_KEY);   if (r) batches  = JSON.parse(r); } catch(e) {}
+  try { var r = localStorage.getItem(PRODUCT_KEY); if (r) products = JSON.parse(r); } catch(e) {}
+  // Phase 6 wipe: old costing data was scoped for replacement, not migration.
+  try { localStorage.removeItem(OLD_COST_KEY); } catch(e) {}
+  renderList();
+  renderStatusPills();
+}
+function saveProducts() {
+  try { localStorage.setItem(PRODUCT_KEY, JSON.stringify(products)); }
+  catch(e) { alert('Could not save -- browser storage may be full.'); }
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Export / import
+// ──────────────────────────────────────────────────────────────────────
+function exportData() {
+  var blob = new Blob([JSON.stringify({ products: products }, null, 2)], { type:'application/json' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'plume-products-' + todayISO() + '.json';
+  a.click();
+}
+function importData(e) {
+  var file = e.target.files[0]; if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      var data = JSON.parse(ev.target.result);
+      var arr  = data.products || (Array.isArray(data) ? data : []);
+      if (!confirm('Import ' + arr.length + ' products? Duplicates by id will be skipped.')) return;
+      var existing = {};
+      products.forEach(function(p) { existing[p.id] = true; });
+      var added = 0;
+      arr.forEach(function(p) { if (!existing[p.id]) { products.push(p); added++; } });
+      saveProducts();
+      renderList();
+      alert('Imported ' + added + ' new product' + (added === 1 ? '' : 's') + '.');
+    } catch(err) { alert('Could not parse file: ' + err.message); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Costing math
+// ──────────────────────────────────────────────────────────────────────
+function ingCostPerG(ing) {
+  if (!ing) return null;
+  var lots = (ing.lots || []).filter(function(l) { return !l.referenceOnly; });
+  if (!lots.length && (ing.supplier || ing.cost)) {
+    var c = parseFloat(ing.cost);
+    return (!isNaN(c) && c > 0) ? c : null;
+  }
+  if (ing.activeLotId) {
+    var match = lots.filter(function(l) { return l.id === ing.activeLotId; })[0];
+    if (match) {
+      var c2 = parseFloat(match.costPerG);
+      if (!isNaN(c2) && c2 > 0) return c2;
+    }
+  }
+  var withCost = lots.filter(function(l) {
+    var c = parseFloat(l.costPerG);
+    return !isNaN(c) && c > 0;
+  });
+  if (!withCost.length) return null;
+  withCost.sort(function(a, b) { return parseFloat(a.costPerG) - parseFloat(b.costPerG); });
+  return parseFloat(withCost[0].costPerG);
+}
+
+function formulationCostPerG(f) {
+  if (!f || !f.lines || !f.lines.length) return null;
+  var totalCost = 0;
+  var anyCost = false;
+  f.lines.forEach(function(line) {
+    var pct = parseFloat(line.percent) || 0;
+    if (pct <= 0) return;
+    var ing = findIng(line.ingredientId);
+    var cpg = ingCostPerG(ing);
+    if (cpg !== null) {
+      totalCost += cpg * (pct / 100);
+      anyCost = true;
+    }
+  });
+  if (!anyCost) return null;
+  return totalCost;
+}
+
+function pkgUnitCost(pkg) {
+  if (!pkg) return null;
+  var purchases = pkg.purchases || [];
+  if (!purchases.length) return null;
+  var sorted = purchases.slice().sort(function(a, b) {
+    return (b.date || '').localeCompare(a.date || '');
+  });
+  for (var i = 0; i < sorted.length; i++) {
+    var p = sorted[i];
+    var price = parseFloat(p.price);
+    var qty   = parseInt(p.qty, 10);
+    if (!isNaN(price) && !isNaN(qty) && qty > 0 && price > 0) {
+      return price / qty;
+    }
+  }
+  return null;
+}
+
+function computeProductCost(p) {
+  var f = findForm(p.formulaId);
+  var fcpg = formulationCostPerG(f);
+  var netWtG = parseFloat(p.netWtG) || 0;
+  var ingCost = (fcpg !== null && netWtG > 0) ? fcpg * netWtG : 0;
+  var ingCostKnown = (fcpg !== null);
+
+  var pkgRows = [];
+  var pkgCost = 0;
+  (p.packagingRecipe || []).forEach(function(r) {
+    var pkg = findPkg(r.packagingId);
+    var qty = parseInt(r.quantity, 10) || 0;
+    if (!pkg || qty <= 0) {
+      pkgRows.push({ name:(pkg && pkg.name) || '(missing)', qty:qty, unitCost:null, subtotal:0, missing:!pkg });
+      return;
+    }
+    var uc = pkgUnitCost(pkg);
+    if (uc === null) {
+      pkgRows.push({ name:pkg.name, qty:qty, unitCost:null, subtotal:0, missing:false });
+    } else {
+      var sub = uc * qty;
+      pkgCost += sub;
+      pkgRows.push({ name:pkg.name, qty:qty, unitCost:uc, subtotal:sub, missing:false });
+    }
+  });
+
+  var totalCost = ingCost + pkgCost;
+  var retail    = parseFloat(p.retail)    || 0;
+  var wholesale = parseFloat(p.wholesale) || 0;
+  var retailMargin    = retail    > 0 ? (retail    - totalCost) / retail    : null;
+  var wholesaleMargin = wholesale > 0 ? (wholesale - totalCost) / wholesale : null;
+  var retailProfit    = retail    > 0 ? retail    - totalCost : null;
+  var wholesaleProfit = wholesale > 0 ? wholesale - totalCost : null;
+
+  return {
+    formulaCostPerG: fcpg,
+    netWtG: netWtG,
+    ingCost: ingCost,
+    ingCostKnown: ingCostKnown,
+    pkgRows: pkgRows,
+    pkgCost: pkgCost,
+    totalCost: totalCost,
+    retail: retail,
+    wholesale: wholesale,
+    retailMargin: retailMargin,
+    wholesaleMargin: wholesaleMargin,
+    retailProfit: retailProfit,
+    wholesaleProfit: wholesaleProfit
+  };
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// List view
+// ──────────────────────────────────────────────────────────────────────
+function renderStatusPills() {
+  var pills = [
+    { v:'all',          label:'All' },
+    { v:'active',       label:'Active' },
+    { v:'draft',        label:'Draft' },
+    { v:'discontinued', label:'Discontinued' }
+  ];
+  document.getElementById('status-pills').innerHTML = pills.map(function(p) {
+    return '<button class="filter-pill' + (statusFilter === p.v ? ' active' : '') +
+      '" onclick="setStatusFilter(\'' + p.v + '\')">' + p.label + '</button>';
+  }).join('');
+}
+function setStatusFilter(v) {
+  statusFilter = v;
+  renderStatusPills();
+  renderList();
+}
+
+function renderList() {
+  var body = document.getElementById('list-body');
+  if (!products.length) {
+    body.innerHTML = '<div class="empty-state">No products yet. Click <strong>+ Add product</strong> to get started.</div>';
+    return;
+  }
+  var q = (document.getElementById('search').value || '').toLowerCase().trim();
+  var filtered = products.filter(function(p) {
+    if (statusFilter !== 'all' && (p.status || 'draft') !== statusFilter) return false;
+    if (q) {
+      var f = findForm(p.formulaId);
+      var fn = (f && f.name) || '';
+      var hay = ((p.name || '') + ' ' + (p.sku || '') + ' ' + fn).toLowerCase();
+      if (hay.indexOf(q) === -1) return false;
+    }
+    return true;
+  });
+  if (!filtered.length) {
+    body.innerHTML = '<div class="empty-state">No products match the current filter.</div>';
+    return;
+  }
+  // Group by formulation name, then sort within group by name
+  var groups = {};
+  var order  = [];
+  filtered.forEach(function(p) {
+    var f = findForm(p.formulaId);
+    var key = (f && f.name) || '(no formulation)';
+    if (!groups[key]) { groups[key] = []; order.push(key); }
+    groups[key].push(p);
+  });
+  order.sort(function(a, b) { return a.localeCompare(b); });
+  Object.keys(groups).forEach(function(k) {
+    groups[k].sort(function(a, b) { return (a.name || '').localeCompare(b.name || ''); });
+  });
+
+  var html = '';
+  order.forEach(function(key) {
+    html += '<div class="group-hdr">' + esc(key) + '</div>';
+    groups[key].forEach(function(p) {
+      var c = computeProductCost(p);
+      var statusCls = 'status-' + (p.status || 'draft');
+      var statusLabel = (p.status || 'draft');
+      statusLabel = statusLabel.charAt(0).toUpperCase() + statusLabel.slice(1);
+      var marginTxt = c.retailMargin === null
+        ? '<span style="color:var(--ink-lighter)">--</span>'
+        : marginCell(c.retailMargin);
+      html += '<div class="prod-row" onclick="openProduct(\'' + p.id + '\')">' +
+        '<div><div class="prod-name">' + esc(p.name || '(unnamed)') + '</div>' +
+          (p.sku ? '<div class="prod-sku">' + esc(p.sku) + '</div>' : '') + '</div>' +
+        '<div class="prod-formula">' + esc(key) +
+          (p.netWtDisplay ? '<span class="prod-formula-meta">' + esc(p.netWtDisplay) + '</span>' : '') +
+        '</div>' +
+        '<div class="prod-num">' + (c.totalCost > 0 ? '$' + c.totalCost.toFixed(2) : '--') + '</div>' +
+        '<div class="prod-num">' + (c.retail > 0 ? '$' + c.retail.toFixed(2) : '--') + '</div>' +
+        '<div class="prod-num">' + marginTxt + '</div>' +
+        '<div class="prod-num">' + (c.wholesale > 0 ? '$' + c.wholesale.toFixed(2) : '--') + '</div>' +
+        '<div><span class="status-pill ' + statusCls + '">' + statusLabel + '</span></div>' +
+        '</div>';
+    });
+  });
+  body.innerHTML = html;
+}
+
+function marginCell(m) {
+  var pct = (m * 100).toFixed(0) + '%';
+  var cls = 'margin-pos';
+  if (m < 0) cls = 'margin-neg';
+  else if (m < 0.30) cls = 'margin-low';
+  return '<span class="' + cls + '">' + pct + '</span>';
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// New product / open / save / delete / duplicate
+// ──────────────────────────────────────────────────────────────────────
+function openNewProduct() {
+  document.getElementById('n-name').value = '';
+  var sel = document.getElementById('n-formula');
+  sel.innerHTML = '<option value="">-- Pick a formula --</option>';
+  forms.slice().sort(function(a, b) { return (a.name || '').localeCompare(b.name || ''); })
+    .forEach(function(f) {
+      sel.innerHTML += '<option value="' + f.id + '">' + esc(f.name || '(unnamed)') + '</option>';
+    });
+  openModal('m-new');
+  setTimeout(function() {
+    var el = document.getElementById('n-name');
+    if (el) el.focus();
+  }, 50);
+}
+
+function createProduct() {
+  var name = document.getElementById('n-name').value.trim();
+  var fid  = document.getElementById('n-formula').value;
+  if (!name) { alert('Please give the product a name.'); return; }
+  var p = {
+    id:                uid(),
+    name:              name,
+    sku:               '',
+    barcode:           '',
+    status:            'draft',
+    formulaId:         fid || '',
+    netWtG:            '',
+    netWtDisplay:      '',
+    notes:             '',
+    packagingRecipe:   [],
+    retail:            '',
+    wholesale:         '',
+    labelMode:         'inci',
+    labelOverrideOn:   false,
+    labelOverrideText: '',
+    productionRuns:    [],
+    createdAt:         new Date().toISOString(),
+    updatedAt:         new Date().toISOString()
+  };
+  products.push(p);
+  saveProducts();
+  closeModal('m-new');
+  openProduct(p.id);
+}
+
+function openProduct(id) {
+  var p = findProduct(id);
+  if (!p) { alert('Product not found.'); return; }
+  curId = id;
+  dirty = false;
+
+  var fsel = document.getElementById('p-formula');
+  fsel.innerHTML = '<option value="">-- Pick a formula --</option>';
+  forms.slice().sort(function(a, b) { return (a.name || '').localeCompare(b.name || ''); })
+    .forEach(function(f) {
+      fsel.innerHTML += '<option value="' + f.id + '">' + esc(f.name || '(unnamed)') + '</option>';
+    });
+
+  document.getElementById('p-name').value         = p.name || '';
+  document.getElementById('p-sku').value          = p.sku || '';
+  document.getElementById('p-barcode').value      = p.barcode || '';
+  document.getElementById('p-status').value       = p.status || 'draft';
+  document.getElementById('p-formula').value      = p.formulaId || '';
+  document.getElementById('p-netwt-g').value      = p.netWtG || '';
+  document.getElementById('p-netwt-display').value = p.netWtDisplay || '';
+  document.getElementById('p-notes').value        = p.notes || '';
+  document.getElementById('p-retail').value       = p.retail || '';
+  document.getElementById('p-wholesale').value    = p.wholesale || '';
+  document.getElementById('lbl-inci').checked     = (p.labelMode !== 'common');
+  document.getElementById('lbl-common').checked   = (p.labelMode === 'common');
+  document.getElementById('lbl-override-on').checked = !!p.labelOverrideOn;
+  document.getElementById('lbl-override-wrap').style.display = p.labelOverrideOn ? '' : 'none';
+  document.getElementById('p-label-override').value = p.labelOverrideText || '';
+  document.getElementById('run-date').value = todayISO();
+  document.getElementById('run-units').value = '';
+  document.getElementById('run-notes').value = '';
+
+  renderPkgRecipe(p);
+  recalcCost();
+  renderLabel();
+  renderRuns(p);
+
+  document.getElementById('view-list').style.display = 'none';
+  document.getElementById('view-editor').style.display = '';
+}
+
+function goList() {
+  if (dirty) {
+    if (!confirm('You have unsaved changes. Leave anyway?')) return;
+  }
+  document.getElementById('view-list').style.display = '';
+  document.getElementById('view-editor').style.display = 'none';
+  curId = null; dirty = false;
+  renderList();
+}
+
+function saveProduct() {
+  if (!curId) return;
+  var idx = -1;
+  for (var i = 0; i < products.length; i++) if (products[i].id === curId) { idx = i; break; }
+  if (idx < 0) return;
+  var p = products[idx];
+  p.name              = document.getElementById('p-name').value.trim();
+  p.sku               = document.getElementById('p-sku').value.trim();
+  p.barcode           = document.getElementById('p-barcode').value.trim();
+  p.status            = document.getElementById('p-status').value;
+  p.formulaId         = document.getElementById('p-formula').value;
+  p.netWtG            = parseFloat(document.getElementById('p-netwt-g').value) || '';
+  p.netWtDisplay      = document.getElementById('p-netwt-display').value.trim();
+  p.notes             = document.getElementById('p-notes').value;
+  p.retail            = parseFloat(document.getElementById('p-retail').value) || '';
+  p.wholesale         = parseFloat(document.getElementById('p-wholesale').value) || '';
+  p.labelMode         = document.getElementById('lbl-common').checked ? 'common' : 'inci';
+  p.labelOverrideOn   = document.getElementById('lbl-override-on').checked;
+  p.labelOverrideText = document.getElementById('p-label-override').value;
+  p.updatedAt = new Date().toISOString();
+  saveProducts();
+  dirty = false;
+  toast('Saved');
+}
+
+function deleteProduct() {
+  if (!curId) return;
+  var p = findProduct(curId); if (!p) return;
+  if (!confirm('Permanently delete "' + (p.name || 'this product') + '"? This cannot be undone.')) return;
+  products = products.filter(function(x) { return x.id !== curId; });
+  saveProducts();
+  curId = null; dirty = false;
+  goList();
+}
+
+function duplicateProduct() {
+  if (!curId) return;
+  if (dirty) {
+    if (!confirm('You have unsaved changes. Save first so the duplicate has your latest edits?')) return;
+    saveProduct();
+  }
+  var src = findProduct(curId); if (!src) return;
+  var copy = {
+    id:                uid(),
+    name:              (src.name || 'Product') + ' (copy)',
+    sku:               '',
+    barcode:           '',
+    status:            'draft',
+    formulaId:         src.formulaId || '',
+    netWtG:            src.netWtG || '',
+    netWtDisplay:      src.netWtDisplay || '',
+    notes:             src.notes || '',
+    packagingRecipe:   (src.packagingRecipe || []).map(function(r) { return { packagingId:r.packagingId, quantity:r.quantity }; }),
+    retail:            src.retail || '',
+    wholesale:         src.wholesale || '',
+    labelMode:         src.labelMode || 'inci',
+    labelOverrideOn:   !!src.labelOverrideOn,
+    labelOverrideText: src.labelOverrideText || '',
+    productionRuns:    [],
+    createdAt:         new Date().toISOString(),
+    updatedAt:         new Date().toISOString()
+  };
+  products.push(copy);
+  saveProducts();
+  if (confirm('Duplicated as "' + copy.name + '".\n\nOpen the copy now?')) {
+    openProduct(copy.id);
+  } else {
+    renderList();
+  }
+}
+
+function onFormulaChange() {
+  markDirty();
+  if (curId) {
+    var p = findProduct(curId);
+    if (p) p.formulaId = document.getElementById('p-formula').value;
+  }
+  recalcCost();
+  renderLabel();
+  renderRuns(findProduct(curId));
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Packaging recipe
+// ──────────────────────────────────────────────────────────────────────
+function renderPkgRecipe(p) {
+  var body = document.getElementById('pkg-recipe-body');
+  var rows = p.packagingRecipe || [];
+  if (!rows.length) {
+    body.innerHTML = '<div style="padding:8px 0; font-size:12px; color:var(--ink-lighter); font-style:italic">No packaging components yet. Add a tin, jar, label, lid, etc.</div>';
+    return;
+  }
+  var html = '';
+  rows.forEach(function(r, idx) {
+    var pkg = findPkg(r.packagingId);
+    var uc = pkg ? pkgUnitCost(pkg) : null;
+    var ucDisplay = uc !== null ? '$' + uc.toFixed(3) : '--';
+    html += '<div class="pkg-recipe-row">' +
+      '<select onchange="onPkgRecipeChange(' + idx + ', this.value, null)">' +
+        '<option value="">-- Pick packaging --</option>' +
+        pkgs.slice().sort(function(a,b) { return (a.name||'').localeCompare(b.name||''); }).map(function(pk) {
+          var sel = pk.id === r.packagingId ? ' selected' : '';
+          return '<option value="' + pk.id + '"' + sel + '>' + esc(pk.name || '(unnamed)') + '</option>';
+        }).join('') +
+      '</select>' +
+      '<input type="number" min="1" step="1" value="' + (r.quantity || 1) + '" onchange="onPkgRecipeChange(' + idx + ', null, this.value)">' +
+      '<div class="pkg-unit-cost">' + ucDisplay + '</div>' +
+      '<button class="pkg-del" title="Remove" onclick="removePkgRecipeRow(' + idx + ')">&#x2715;</button>' +
+      '</div>';
+  });
+  body.innerHTML = html;
+}
+
+function addPkgRecipeRow() {
+  if (!curId) return;
+  var p = findProduct(curId); if (!p) return;
+  if (!p.packagingRecipe) p.packagingRecipe = [];
+  p.packagingRecipe.push({ packagingId:'', quantity:1 });
+  markDirty();
+  renderPkgRecipe(p);
+}
+function removePkgRecipeRow(idx) {
+  if (!curId) return;
+  var p = findProduct(curId); if (!p) return;
+  p.packagingRecipe.splice(idx, 1);
+  markDirty();
+  renderPkgRecipe(p);
+  recalcCost();
+}
+function onPkgRecipeChange(idx, newPkgId, newQty) {
+  if (!curId) return;
+  var p = findProduct(curId); if (!p) return;
+  if (!p.packagingRecipe[idx]) return;
+  if (newPkgId !== null) p.packagingRecipe[idx].packagingId = newPkgId;
+  if (newQty   !== null) p.packagingRecipe[idx].quantity    = parseInt(newQty, 10) || 1;
+  markDirty();
+  renderPkgRecipe(p);
+  recalcCost();
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Cost rollup panel
+// ──────────────────────────────────────────────────────────────────────
+function recalcCost() {
+  if (!curId) return;
+  var p = findProduct(curId); if (!p) return;
+  p.formulaId   = document.getElementById('p-formula').value;
+  p.netWtG      = parseFloat(document.getElementById('p-netwt-g').value) || '';
+  p.retail      = parseFloat(document.getElementById('p-retail').value) || '';
+  p.wholesale   = parseFloat(document.getElementById('p-wholesale').value) || '';
+  var c = computeProductCost(p);
+  var panel = document.getElementById('cost-panel');
+
+  var html = '';
+  html += '<div class="cost-row cost-section-hdr"><span>Per-unit cost breakdown</span><span></span><span></span></div>';
+  var fcpgTxt = c.formulaCostPerG !== null ? '$' + c.formulaCostPerG.toFixed(4) + '/g' : 'no cost data';
+  var netTxt  = c.netWtG > 0 ? c.netWtG + 'g' : 'no weight';
+  html += '<div class="cost-row">' +
+    '<span class="cr-label">Ingredients (' + fcpgTxt + ' &times; ' + netTxt + ')</span>' +
+    '<span class="cr-aux"></span>' +
+    '<span class="cr-val">$' + c.ingCost.toFixed(2) + '</span></div>';
+  c.pkgRows.forEach(function(r) {
+    var ucTxt = r.unitCost !== null ? '$' + r.unitCost.toFixed(3) : '--';
+    html += '<div class="cost-row">' +
+      '<span class="cr-label">' + esc(r.name) + ' &times; ' + r.qty + (r.missing ? ' <span style="color:var(--warning)">(missing)</span>' : '') + '</span>' +
+      '<span class="cr-aux">' + ucTxt + '</span>' +
+      '<span class="cr-val">$' + r.subtotal.toFixed(2) + '</span></div>';
+  });
+  html += '<div class="cost-row cost-total">' +
+    '<span class="cr-label">Total unit cost</span>' +
+    '<span class="cr-aux"></span>' +
+    '<span class="cr-val">$' + c.totalCost.toFixed(2) + '</span></div>';
+
+  html += '<div class="cost-row cost-section-hdr"><span>Pricing</span><span class="cr-aux">profit</span><span>margin</span></div>';
+  if (c.retail > 0) {
+    var rMargTxt = c.retailMargin !== null ? (c.retailMargin * 100).toFixed(0) + '%' : '--';
+    var rMargCls = c.retailMargin === null ? '' : (c.retailMargin < 0 ? 'margin-neg' : (c.retailMargin < 0.30 ? 'margin-low' : 'margin-pos'));
+    html += '<div class="cost-row">' +
+      '<span class="cr-label">Retail at $' + c.retail.toFixed(2) + '</span>' +
+      '<span class="cr-aux">$' + (c.retailProfit || 0).toFixed(2) + '</span>' +
+      '<span class="cr-val ' + rMargCls + '">' + rMargTxt + '</span></div>';
+  }
+  if (c.wholesale > 0) {
+    var wMargTxt = c.wholesaleMargin !== null ? (c.wholesaleMargin * 100).toFixed(0) + '%' : '--';
+    var wMargCls = c.wholesaleMargin === null ? '' : (c.wholesaleMargin < 0 ? 'margin-neg' : (c.wholesaleMargin < 0.30 ? 'margin-low' : 'margin-pos'));
+    html += '<div class="cost-row">' +
+      '<span class="cr-label">Wholesale at $' + c.wholesale.toFixed(2) + '</span>' +
+      '<span class="cr-aux">$' + (c.wholesaleProfit || 0).toFixed(2) + '</span>' +
+      '<span class="cr-val ' + wMargCls + '">' + wMargTxt + '</span></div>';
+  }
+  if (!c.ingCostKnown) {
+    html += '<div style="font-size:11px; color:var(--warning); margin-top:8px; line-height:1.4">' +
+      'Some ingredient cost data is missing. Costs shown only include ingredients with cost/g in the Ingredients library.' +
+      '</div>';
+  }
+  panel.innerHTML = html;
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Label preview
+// ──────────────────────────────────────────────────────────────────────
+function onOverrideToggle() {
+  var on = document.getElementById('lbl-override-on').checked;
+  document.getElementById('lbl-override-wrap').style.display = on ? '' : 'none';
+  markDirty();
+  renderLabel();
+}
+
+function buildIngredientList(p, mode) {
+  var f = findForm(p.formulaId);
+  if (!f || !f.lines || !f.lines.length) return '(no formulation linked)';
+  var lines = f.lines.slice().filter(function(l) {
+    var pct = parseFloat(l.percent) || 0;
+    return pct > 0;
+  });
+  if (!lines.length) return '(no ingredients with percentage > 0)';
+  lines.sort(function(a, b) {
+    return (parseFloat(b.percent) || 0) - (parseFloat(a.percent) || 0);
+  });
+  var names = lines.map(function(l) {
+    var ing = findIng(l.ingredientId);
+    if (!ing) return '(unknown)';
+    if (mode === 'inci') return ing.inci || ing.name || '(unnamed)';
+    return ing.name || ing.inci || '(unnamed)';
+  });
+  return names.join(', ');
+}
+
+function renderLabel() {
+  if (!curId) return;
+  var p = findProduct(curId); if (!p) return;
+  var box = document.getElementById('label-preview');
+  var mode = document.getElementById('lbl-common').checked ? 'common' : 'inci';
+  var useOverride = document.getElementById('lbl-override-on').checked;
+  var overrideText = document.getElementById('p-label-override').value.trim();
+  var ingredientLine = useOverride && overrideText
+    ? overrideText
+    : buildIngredientList(p, mode);
+
+  var name = document.getElementById('p-name').value.trim() || '(unnamed product)';
+  var netWt = document.getElementById('p-netwt-display').value.trim()
+    || (document.getElementById('p-netwt-g').value ? document.getElementById('p-netwt-g').value + ' g' : '');
+  var sku = document.getElementById('p-sku').value.trim();
+  var barcode = document.getElementById('p-barcode').value.trim();
+
+  var html = '<div class="label-box-hdr">' +
+    '<span class="label-box-hdr-l">Label info</span>' +
+    '<span class="label-box-hdr-l">' + (mode === 'inci' ? 'INCI' : 'Common name') + (useOverride ? ' (override)' : '') + '</span>' +
+    '</div>';
+  html += '<div class="label-content">';
+  html += '<div class="label-section"><div class="label-section-name">Product</div>' + esc(name) + '</div>';
+  if (netWt) html += '<div class="label-section"><div class="label-section-name">Net weight</div>' + esc(netWt) + '</div>';
+  html += '<div class="label-section"><div class="label-section-name">Ingredients</div>' + esc(ingredientLine) + '</div>';
+  if (sku || barcode) {
+    html += '<div class="label-section"><div class="label-section-name">Identifiers</div>' +
+      (sku ? 'SKU: ' + esc(sku) : '') +
+      (sku && barcode ? ' &middot; ' : '') +
+      (barcode ? 'Barcode: ' + esc(barcode) : '') +
+      '</div>';
+  }
+  html += '</div>';
+  box.innerHTML = html;
+}
+
+function copyLabel() {
+  if (!curId) return;
+  var p = findProduct(curId); if (!p) return;
+  var mode = document.getElementById('lbl-common').checked ? 'common' : 'inci';
+  var useOverride = document.getElementById('lbl-override-on').checked;
+  var overrideText = document.getElementById('p-label-override').value.trim();
+  var ingredientLine = useOverride && overrideText
+    ? overrideText
+    : buildIngredientList(p, mode);
+  var name = document.getElementById('p-name').value.trim();
+  var netWt = document.getElementById('p-netwt-display').value.trim()
+    || (document.getElementById('p-netwt-g').value ? document.getElementById('p-netwt-g').value + ' g' : '');
+  var sku = document.getElementById('p-sku').value.trim();
+  var barcode = document.getElementById('p-barcode').value.trim();
+  var lines = [];
+  if (name) lines.push(name);
+  if (netWt) lines.push('Net wt: ' + netWt);
+  lines.push('Ingredients: ' + ingredientLine);
+  if (sku) lines.push('SKU: ' + sku);
+  if (barcode) lines.push('Barcode: ' + barcode);
+  var text = lines.join('\n');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function() { toast('Copied to clipboard'); },
+      function() { fallbackCopy(text); });
+  } else {
+    fallbackCopy(text);
+  }
+}
+function fallbackCopy(text) {
+  var ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity  = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); toast('Copied to clipboard'); }
+  catch(e) { alert('Could not copy. Select the label preview and copy manually.'); }
+  document.body.removeChild(ta);
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Production runs
+// ──────────────────────────────────────────────────────────────────────
+function renderRuns(p) {
+  if (!p) return;
+  var runs = p.productionRuns || [];
+
+  var bsel = document.getElementById('run-batch');
+  bsel.innerHTML = '<option value="">-- No batch linked --</option>';
+  if (p.formulaId) {
+    var relevant = batches.filter(function(b) { return b.formulaId === p.formulaId; });
+    relevant.sort(function(a, b) { return (b.date || '').localeCompare(a.date || ''); });
+    relevant.forEach(function(b) {
+      var label = (b.batchName || b.formulaName || 'Batch') + ' -- ' + fmtDate(b.date);
+      if (b.actualYield) label += ' (' + b.actualYield + 'g)';
+      bsel.innerHTML += '<option value="' + b.id + '">' + esc(label) + '</option>';
+    });
+  }
+
+  var list = document.getElementById('runs-list');
+  var summary = document.getElementById('runs-summary');
+  if (!runs.length) {
+    list.innerHTML = '<div style="padding:14px; text-align:center; color:var(--ink-lighter); font-size:12px; font-style:italic">No production runs logged yet.</div>';
+    summary.textContent = '';
+    return;
+  }
+  var totalUnits = 0;
+  var sorted = runs.slice().sort(function(a, b) { return (b.date || '').localeCompare(a.date || ''); });
+  var html = '';
+  sorted.forEach(function(r) {
+    var qty = parseInt(r.units, 10) || 0;
+    totalUnits += qty;
+    var batchTxt = '';
+    if (r.batchId) {
+      var b = null;
+      for (var i = 0; i < batches.length; i++) if (batches[i].id === r.batchId) { b = batches[i]; break; }
+      batchTxt = b ? (b.batchName || b.formulaName || 'Batch') : '(deleted batch)';
+    }
+    html += '<div class="run-row">' +
+      '<span class="rr-date">' + fmtDate(r.date) + '</span>' +
+      '<span class="rr-qty">' + qty + '</span>' +
+      '<span class="rr-batch">' + (batchTxt ? esc(batchTxt) : '<span style="color:var(--ink-lighter)">--</span>') + '</span>' +
+      '<span class="rr-notes">' + esc(r.notes || '') + '</span>' +
+      '<button class="rr-del" title="Delete run" onclick="deleteRun(\'' + r.id + '\')">&#x2715;</button>' +
+      '</div>';
+  });
+  list.innerHTML = html;
+  summary.textContent = totalUnits + ' units across ' + runs.length + ' run' + (runs.length === 1 ? '' : 's');
+}
+
+function addRun() {
+  if (!curId) return;
+  var p = findProduct(curId); if (!p) return;
+  var date  = document.getElementById('run-date').value || todayISO();
+  var units = parseInt(document.getElementById('run-units').value, 10);
+  var batchId = document.getElementById('run-batch').value;
+  var notes = document.getElementById('run-notes').value.trim();
+  if (!units || units <= 0) { alert('Enter a positive number of units.'); return; }
+  if (!p.productionRuns) p.productionRuns = [];
+  p.productionRuns.push({
+    id:      uid(),
+    date:    date,
+    units:   units,
+    batchId: batchId || null,
+    notes:   notes,
+    addedAt: new Date().toISOString()
+  });
+  p.updatedAt = new Date().toISOString();
+  saveProducts();
+  renderRuns(p);
+  document.getElementById('run-units').value = '';
+  document.getElementById('run-notes').value = '';
+  document.getElementById('run-batch').value = '';
+  document.getElementById('run-date').value = todayISO();
+  toast('Run added');
+}
+
+function deleteRun(rid) {
+  if (!curId) return;
+  var p = findProduct(curId); if (!p) return;
+  if (!p.productionRuns) return;
+  var run = null;
+  for (var i = 0; i < p.productionRuns.length; i++) if (p.productionRuns[i].id === rid) { run = p.productionRuns[i]; break; }
+  if (!run) return;
+  if (!confirm('Delete this production run? (' + run.units + ' units on ' + fmtDate(run.date) + ')')) return;
+  p.productionRuns = p.productionRuns.filter(function(r) { return r.id !== rid; });
+  p.updatedAt = new Date().toISOString();
+  saveProducts();
+  renderRuns(p);
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Palette system
+// ──────────────────────────────────────────────────────────────────────
 var PALETTES = {
-  'coastal': { label:'Coastal', family:'blue', vars: { '--cream':'#F4F6F8','--cream-dark':'#E7ECF1','--cream-border':'#C9D3DC','--white':'#FCFDFE','--bark':'#506880','--bark-light':'#7A92A8','--bark-dark':'#2E4256','--sage':'#6E8C8A','--sage-light':'#E2EBEA','--sage-dark':'#3F5856','--sage-border':'#B8CACA','--clay':'#C9A074','--clay-light':'#F2E8DA','--clay-dark':'#8A6432','--clay-hover':'#EBD9BE','--ink':'#1F2A36','--ink-light':'#5A6776','--ink-lighter':'#8E99A6','--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0','--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#3F5856' }},
-  'indigo': { label:'Indigo', family:'blue', vars: { '--cream':'#F1F1F6','--cream-dark':'#E4E4EC','--cream-border':'#C6C6D4','--white':'#FBFBFD','--bark':'#3E4768','--bark-light':'#6970A0','--bark-dark':'#1F2546','--sage':'#7480A0','--sage-light':'#E5E8F0','--sage-dark':'#454E68','--sage-border':'#BFC5D4','--clay':'#A88BB8','--clay-light':'#EDE2F2','--clay-dark':'#6E527C','--clay-hover':'#E0CFE8','--ink':'#1A1D2E','--ink-light':'#525870','--ink-lighter':'#8A8FA4','--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0','--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#454E68' }},
-  'mist': { label:'Mist', family:'blue', vars: { '--cream':'#F2F4F4','--cream-dark':'#E5E9E9','--cream-border':'#CAD2D2','--white':'#FBFCFC','--bark':'#5C7274','--bark-light':'#869A9C','--bark-dark':'#34484A','--sage':'#6E9290','--sage-light':'#E2EDEC','--sage-dark':'#3F5C5A','--sage-border':'#BAD0CE','--clay':'#C29A8A','--clay-light':'#F0E4DE','--clay-dark':'#82584A','--clay-hover':'#E7D3C9','--ink':'#222B2E','--ink-light':'#5C696C','--ink-lighter':'#909A9D','--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0','--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#3F5C5A' }},
-  'blush': { label:'Blush', family:'pink', vars: { '--cream':'#F9F2F1','--cream-dark':'#F0E4E2','--cream-border':'#DCC8C6','--white':'#FEFBFB','--bark':'#8A5868','--bark-light':'#AE7E8C','--bark-dark':'#5A3240','--sage':'#8A8898','--sage-light':'#ECE9EE','--sage-dark':'#52505E','--sage-border':'#CFCCD6','--clay':'#D08C82','--clay-light':'#F5E2DE','--clay-dark':'#92524A','--clay-hover':'#EDCEC7','--ink':'#2C2024','--ink-light':'#6D5860','--ink-lighter':'#A08A91','--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0','--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#52505E' }},
-  'petal': { label:'Petal', family:'pink', vars: { '--cream':'#FAF3EE','--cream-dark':'#F2E5DC','--cream-border':'#DCC8B9','--white':'#FEFCFA','--bark':'#A0584C','--bark-light':'#C68074','--bark-dark':'#6E2E22','--sage':'#8C8478','--sage-light':'#EDE8E1','--sage-dark':'#544D43','--sage-border':'#CCC5BA','--clay':'#E89A82','--clay-light':'#FAE3D8','--clay-dark':'#A85A40','--clay-hover':'#F4CFBE','--ink':'#2E2018','--ink-light':'#705A4E','--ink-lighter':'#A28B7E','--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0','--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#544D43' }},
-  'mulberry': { label:'Mulberry', family:'pink', vars: { '--cream':'#F4EDEF','--cream-dark':'#E8DCDF','--cream-border':'#CDB8BE','--white':'#FBF8F9','--bark':'#7A3E5A','--bark-light':'#9E6480','--bark-dark':'#4E1A30','--sage':'#857482','--sage-light':'#E7E0E4','--sage-dark':'#4E424B','--sage-border':'#C5B8BF','--clay':'#B07088','--clay-light':'#EBD8DE','--clay-dark':'#783E50','--clay-hover':'#DEBFC8','--ink':'#26181E','--ink-light':'#5E4E55','--ink-lighter':'#94808A','--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0','--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#4E424B' }},
-  'lavender': { label:'Lavender', family:'purple', vars: { '--cream':'#F5F3F7','--cream-dark':'#EAE5EF','--cream-border':'#D0C8DA','--white':'#FCFBFD','--bark':'#6E5C8A','--bark-light':'#928AAE','--bark-dark':'#3F3258','--sage':'#8C8AA0','--sage-light':'#EAE8EE','--sage-dark':'#54526A','--sage-border':'#CECCDA','--clay':'#B89AC4','--clay-light':'#EEE2F1','--clay-dark':'#7C5A8A','--clay-hover':'#E0CDEA','--ink':'#221E2E','--ink-light':'#5E5670','--ink-lighter':'#928CA4','--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0','--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#54526A' }},
-  'slate': { label:'Slate', family:'purple', vars: { '--cream':'#F1F2F5','--cream-dark':'#E4E6EC','--cream-border':'#C6CBD4','--white':'#FBFBFD','--bark':'#525C72','--bark-light':'#7C8598','--bark-dark':'#2E3648','--sage':'#76808E','--sage-light':'#E5E8EC','--sage-dark':'#444C58','--sage-border':'#C2C8D0','--clay':'#A88AA0','--clay-light':'#ECE2E8','--clay-dark':'#6E5468','--clay-hover':'#DCCBD6','--ink':'#1E222C','--ink-light':'#555C6C','--ink-lighter':'#8C92A0','--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0','--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#444C58' }},
-  'wisteria': { label:'Wisteria', family:'purple', vars: { '--cream':'#F4F2F4','--cream-dark':'#E8E5E9','--cream-border':'#CCC4D0','--white':'#FBFAFC','--bark':'#7A6A8C','--bark-light':'#9E8FAE','--bark-dark':'#4A3A5C','--sage':'#84927E','--sage-light':'#E5EAE2','--sage-dark':'#4E5A48','--sage-border':'#BDC8B8','--clay':'#AE8AB8','--clay-light':'#E8DCE8','--clay-dark':'#724E7C','--clay-hover':'#D8C2DC','--ink':'#24202C','--ink-light':'#5E566C','--ink-lighter':'#928BA0','--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0','--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#4E5A48' }},
-  'forest': { label:'Forest', family:'green', vars: { '--cream':'#F2F4F0','--cream-dark':'#E4E8DE','--cream-border':'#C5CDBE','--white':'#FBFCFA','--bark':'#4E6A4A','--bark-light':'#789078','--bark-dark':'#2A3E28','--sage':'#6A8A60','--sage-light':'#E0EAD8','--sage-dark':'#3E5638','--sage-border':'#B5C8AC','--clay':'#B88858','--clay-light':'#ECDDC8','--clay-dark':'#7A5430','--clay-hover':'#E0CAA8','--ink':'#1E281C','--ink-light':'#56624E','--ink-lighter':'#8A9282','--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0','--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#3E5638' }},
-  'sage-green': { label:'Sage', family:'green', vars: { '--cream':'#F4F5F1','--cream-dark':'#E7E9E2','--cream-border':'#C9CEC0','--white':'#FBFCFA','--bark':'#6E7A5E','--bark-light':'#929E84','--bark-dark':'#404834','--sage':'#869A78','--sage-light':'#E8EDE0','--sage-dark':'#4E5C40','--sage-border':'#C2CCB4','--clay':'#B89A82','--clay-light':'#EBE2D8','--clay-dark':'#7A604E','--clay-hover':'#DDCEC0','--ink':'#23271E','--ink-light':'#5C624E','--ink-lighter':'#8E9482','--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0','--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#4E5C40' }},
-  'eucalyptus': { label:'Eucalyptus', family:'green', vars: { '--cream':'#F1F4F2','--cream-dark':'#E4E9E5','--cream-border':'#C5CFC8','--white':'#FBFCFB','--bark':'#5E7872','--bark-light':'#8AA09A','--bark-dark':'#324842','--sage':'#7AA098','--sage-light':'#E0EDE7','--sage-dark':'#436258','--sage-border':'#B6CDC4','--clay':'#A8B8A0','--clay-light':'#E2EAE0','--clay-dark':'#688070','--clay-hover':'#CFD8C8','--ink':'#1E2A26','--ink-light':'#566A62','--ink-lighter':'#8C9A92','--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0','--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#436258' }}
+  'coastal': { label:'Coastal', vars: {
+    '--cream':'#F4F6F8','--cream-dark':'#E7ECF1','--cream-border':'#C9D3DC','--white':'#FCFDFE',
+    '--bark':'#506880','--bark-light':'#7A92A8','--bark-dark':'#2E4256',
+    '--sage':'#6E8C8A','--sage-light':'#E2EBEA','--sage-dark':'#3F5856','--sage-border':'#B8CACA',
+    '--clay':'#C9A074','--clay-light':'#F2E8DA','--clay-dark':'#8A6432','--clay-hover':'#EBD9BE',
+    '--ink':'#1F2A36','--ink-light':'#5A6776','--ink-lighter':'#8E99A6',
+    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
+    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#3F5856'
+  }},
+  'indigo': { label:'Indigo', vars: {
+    '--cream':'#F1F1F6','--cream-dark':'#E4E4EC','--cream-border':'#C6C6D4','--white':'#FBFBFD',
+    '--bark':'#3E4768','--bark-light':'#6970A0','--bark-dark':'#1F2546',
+    '--sage':'#7480A0','--sage-light':'#E5E8F0','--sage-dark':'#454E68','--sage-border':'#BFC5D4',
+    '--clay':'#A88BB8','--clay-light':'#EDE2F2','--clay-dark':'#6E527C','--clay-hover':'#E0CFE8',
+    '--ink':'#1A1D2E','--ink-light':'#525870','--ink-lighter':'#8A8FA4',
+    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
+    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#454E68'
+  }},
+  'mist': { label:'Mist', vars: {
+    '--cream':'#F2F4F4','--cream-dark':'#E5E9E9','--cream-border':'#CAD2D2','--white':'#FBFCFC',
+    '--bark':'#5C7274','--bark-light':'#869A9C','--bark-dark':'#34484A',
+    '--sage':'#6E9290','--sage-light':'#E2EDEC','--sage-dark':'#3F5C5A','--sage-border':'#BAD0CE',
+    '--clay':'#C29A8A','--clay-light':'#F0E4DE','--clay-dark':'#82584A','--clay-hover':'#E7D3C9',
+    '--ink':'#222B2E','--ink-light':'#5C696C','--ink-lighter':'#909A9D',
+    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
+    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#3F5C5A'
+  }},
+  'blush': { label:'Blush', vars: {
+    '--cream':'#F9F2F1','--cream-dark':'#F0E4E2','--cream-border':'#DCC8C6','--white':'#FEFBFB',
+    '--bark':'#8A5868','--bark-light':'#AE7E8C','--bark-dark':'#5A3240',
+    '--sage':'#8A8898','--sage-light':'#ECE9EE','--sage-dark':'#52505E','--sage-border':'#CFCCD6',
+    '--clay':'#D08C82','--clay-light':'#F5E2DE','--clay-dark':'#92524A','--clay-hover':'#EDCEC7',
+    '--ink':'#2C2024','--ink-light':'#6D5860','--ink-lighter':'#A08A91',
+    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
+    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#52505E'
+  }},
+  'petal': { label:'Petal', vars: {
+    '--cream':'#FAF3EE','--cream-dark':'#F2E5DC','--cream-border':'#DCC8B9','--white':'#FEFCFA',
+    '--bark':'#A0584C','--bark-light':'#C68074','--bark-dark':'#6E2E22',
+    '--sage':'#8C8478','--sage-light':'#EDE8E1','--sage-dark':'#544D43','--sage-border':'#CCC5BA',
+    '--clay':'#E89A82','--clay-light':'#FAE3D8','--clay-dark':'#A85A40','--clay-hover':'#F4CFBE',
+    '--ink':'#2E2018','--ink-light':'#705A4E','--ink-lighter':'#A28B7E',
+    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
+    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#544D43'
+  }},
+  'mulberry': { label:'Mulberry', vars: {
+    '--cream':'#F4EDEF','--cream-dark':'#E8DCDF','--cream-border':'#CDB8BE','--white':'#FBF8F9',
+    '--bark':'#7A3E5A','--bark-light':'#9E6480','--bark-dark':'#4E1A30',
+    '--sage':'#857482','--sage-light':'#E7E0E4','--sage-dark':'#4E424B','--sage-border':'#C5B8BF',
+    '--clay':'#B07088','--clay-light':'#EBD8DE','--clay-dark':'#783E50','--clay-hover':'#DEBFC8',
+    '--ink':'#26181E','--ink-light':'#5E4E55','--ink-lighter':'#94808A',
+    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
+    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#4E424B'
+  }},
+  'lavender': { label:'Lavender', vars: {
+    '--cream':'#F5F3F7','--cream-dark':'#EAE5EF','--cream-border':'#D0C8DA','--white':'#FCFBFD',
+    '--bark':'#6E5C8A','--bark-light':'#928AAE','--bark-dark':'#3F3258',
+    '--sage':'#8C8AA0','--sage-light':'#EAE8EE','--sage-dark':'#54526A','--sage-border':'#CECCDA',
+    '--clay':'#B89AC4','--clay-light':'#EEE2F1','--clay-dark':'#7C5A8A','--clay-hover':'#E0CDEA',
+    '--ink':'#221E2E','--ink-light':'#5E5670','--ink-lighter':'#928CA4',
+    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
+    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#54526A'
+  }},
+  'slate': { label:'Slate', vars: {
+    '--cream':'#F1F2F5','--cream-dark':'#E4E6EC','--cream-border':'#C6CBD4','--white':'#FBFBFD',
+    '--bark':'#525C72','--bark-light':'#7C8598','--bark-dark':'#2E3648',
+    '--sage':'#76808E','--sage-light':'#E5E8EC','--sage-dark':'#444C58','--sage-border':'#C2C8D0',
+    '--clay':'#A88AA0','--clay-light':'#ECE2E8','--clay-dark':'#6E5468','--clay-hover':'#DCCBD6',
+    '--ink':'#1E222C','--ink-light':'#555C6C','--ink-lighter':'#8C92A0',
+    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
+    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#444C58'
+  }},
+  'wisteria': { label:'Wisteria', vars: {
+    '--cream':'#F4F2F4','--cream-dark':'#E8E5E9','--cream-border':'#CCC4D0','--white':'#FBFAFC',
+    '--bark':'#7A6A8C','--bark-light':'#9E8FAE','--bark-dark':'#4A3A5C',
+    '--sage':'#84927E','--sage-light':'#E5EAE2','--sage-dark':'#4E5A48','--sage-border':'#BDC8B8',
+    '--clay':'#AE8AB8','--clay-light':'#E8DCE8','--clay-dark':'#724E7C','--clay-hover':'#D8C2DC',
+    '--ink':'#24202C','--ink-light':'#5E566C','--ink-lighter':'#928BA0',
+    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
+    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#4E5A48'
+  }},
+  'forest': { label:'Forest', vars: {
+    '--cream':'#F2F4F0','--cream-dark':'#E4E8DE','--cream-border':'#C5CDBE','--white':'#FBFCFA',
+    '--bark':'#4E6A4A','--bark-light':'#789078','--bark-dark':'#2A3E28',
+    '--sage':'#6A8A60','--sage-light':'#E0EAD8','--sage-dark':'#3E5638','--sage-border':'#B5C8AC',
+    '--clay':'#B88858','--clay-light':'#ECDDC8','--clay-dark':'#7A5430','--clay-hover':'#E0CAA8',
+    '--ink':'#1E281C','--ink-light':'#56624E','--ink-lighter':'#8A9282',
+    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
+    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#3E5638'
+  }},
+  'sage-green': { label:'Sage', vars: {
+    '--cream':'#F4F5F1','--cream-dark':'#E7E9E2','--cream-border':'#C9CEC0','--white':'#FBFCFA',
+    '--bark':'#6E7A5E','--bark-light':'#929E84','--bark-dark':'#404834',
+    '--sage':'#869A78','--sage-light':'#E8EDE0','--sage-dark':'#4E5C40','--sage-border':'#C2CCB4',
+    '--clay':'#B89A82','--clay-light':'#EBE2D8','--clay-dark':'#7A604E','--clay-hover':'#DDCEC0',
+    '--ink':'#23271E','--ink-light':'#5C624E','--ink-lighter':'#8E9482',
+    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
+    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#4E5C40'
+  }},
+  'eucalyptus': { label:'Eucalyptus', vars: {
+    '--cream':'#F1F4F2','--cream-dark':'#E4E9E5','--cream-border':'#C5CFC8','--white':'#FBFCFB',
+    '--bark':'#5E7872','--bark-light':'#8AA09A','--bark-dark':'#324842',
+    '--sage':'#7AA098','--sage-light':'#E0EDE7','--sage-dark':'#436258','--sage-border':'#B6CDC4',
+    '--clay':'#A8B8A0','--clay-light':'#E2EAE0','--clay-dark':'#688070','--clay-hover':'#CFD8C8',
+    '--ink':'#1E2A26','--ink-light':'#566A62','--ink-lighter':'#8C9A92',
+    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
+    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#436258'
+  }}
 };
-var PALETTE_KEY = 'plume-palette-costing';
 var DEFAULT_PALETTE = 'coastal';
 function applyPalette(name) {
   var p = PALETTES[name];
   if (!p) { p = PALETTES[DEFAULT_PALETTE]; name = DEFAULT_PALETTE; }
-  Object.keys(p.vars).forEach(function(v) { document.documentElement.style.setProperty(v, p.vars[v]); });
+  Object.keys(p.vars).forEach(function(v) {
+    document.documentElement.style.setProperty(v, p.vars[v]);
+  });
   return name;
 }
 function savePaletteChoice(name) { try { localStorage.setItem(PALETTE_KEY, name); } catch (e) {} }
 function loadPaletteChoice() { try { return localStorage.getItem(PALETTE_KEY) || DEFAULT_PALETTE; } catch (e) { return DEFAULT_PALETTE; } }
-function selectPalette(name) { var applied = applyPalette(name); savePaletteChoice(applied); renderPaletteSwatches(); }
+function selectPalette(name) {
+  var applied = applyPalette(name);
+  savePaletteChoice(applied);
+  renderPaletteSwatches();
+}
 function renderPaletteSwatches() {
   var container = document.getElementById('palette-swatches');
   if (!container) return;
@@ -952,10 +1347,11 @@ function renderPaletteSwatches() {
 }
 function openSettings() { openModal('m-settings'); renderPaletteSwatches(); }
 
+// ──────────────────────────────────────────────────────────────────────
+// Boot
+// ──────────────────────────────────────────────────────────────────────
 applyPalette(loadPaletteChoice());
-init();
+loadData();
 </script>
-
-<footer class="app-footer">Plume by Little Bird Studio &middot; v0.4 &middot; May 2026</footer>
 </body>
 </html>
