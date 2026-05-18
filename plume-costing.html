@@ -99,6 +99,20 @@ main { max-width:1240px; margin:0 auto; padding:24px 22px 60px; }
 
 /* ── Cost panel ── */
 .cost-panel { background:var(--cream); border:1px solid var(--cream-border); border-radius:5px; padding:14px 18px; margin:18px 0; }
+/* Pricing helper -- explore multiplier-based suggestions */
+.pricing-helper { background:var(--white); border:1px solid var(--cream-border); border-radius:5px; padding:14px 18px; margin:0 0 18px; }
+.ph-custom-row { display:grid; grid-template-columns:1fr auto auto; gap:14px; padding:6px 0 12px; border-bottom:1px solid var(--cream-dark); margin-bottom:10px; align-items:center; }
+.ph-custom-row .ph-custom-label { font-size:12px; color:var(--ink-light); }
+.ph-custom-row input { font-family:'DM Sans',sans-serif; font-size:14px; padding:6px 10px; border-radius:3px; border:1px solid var(--cream-border); background:var(--white); width:80px; text-align:right; font-variant-numeric:tabular-nums; }
+.ph-custom-row .ph-custom-result { font-size:16px; font-weight:500; color:var(--ink); font-variant-numeric:tabular-nums; min-width:90px; text-align:right; }
+.ph-grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; }
+.ph-cell { background:var(--cream); border:1px solid var(--cream-border); border-radius:4px; padding:10px 12px; text-align:center; cursor:default; }
+.ph-cell-mult { font-size:11px; color:var(--ink-lighter); letter-spacing:0.06em; text-transform:uppercase; margin-bottom:3px; }
+.ph-cell-price { font-size:17px; font-weight:500; color:var(--ink); font-variant-numeric:tabular-nums; }
+.ph-cell-actions { display:flex; gap:4px; margin-top:6px; justify-content:center; }
+.ph-cell-actions button { font-size:10px; padding:3px 7px; border-radius:3px; border:1px solid var(--cream-border); background:var(--white); color:var(--ink-light); cursor:pointer; }
+.ph-cell-actions button:hover { background:var(--cream-dark); color:var(--ink); }
+.ph-empty { padding:20px; text-align:center; color:var(--ink-lighter); font-size:12px; font-style:italic; }
 .cost-row { display:grid; grid-template-columns:1fr auto auto; gap:14px; padding:5px 0; font-size:13px; align-items:baseline; }
 .cost-row .cr-label { color:var(--ink-light); }
 .cost-row .cr-val { font-variant-numeric:tabular-nums; text-align:right; color:var(--ink); min-width:80px; }
@@ -300,6 +314,13 @@ main { max-width:1240px; margin:0 auto; padding:24px 22px 60px; }
 
       <!-- Cost rollup panel -->
       <div class="cost-panel" id="cost-panel"></div>
+
+      <!-- Pricing helper -->
+      <div class="section-hdr">
+        <span>Pricing helper</span>
+        <span style="font-weight:400; text-transform:none; letter-spacing:0; color:var(--ink-lighter)">work out a price from your cost</span>
+      </div>
+      <div class="pricing-helper" id="pricing-helper"></div>
 
       <!-- Label preview -->
       <div class="section-hdr">
@@ -1063,6 +1084,93 @@ function recalcCost() {
       '<span class="cr-val ' + wMargCls + '">' + wMargTxt + '</span></div>';
   }
   panel.innerHTML = html;
+  // The pricing helper depends on totalCost too, so refresh it alongside
+  renderPricingHelper(c.totalCost);
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Pricing helper
+// Cottage-industry pricing rule: a typical handmade-skincare retail price
+// is 4-5x your unit cost; wholesale is often 2-2.5x cost. The helper shows
+// suggested prices for several common multipliers so you can see the
+// landscape at a glance, plus a custom multiplier you can dial in.
+// ──────────────────────────────────────────────────────────────────────
+var CUSTOM_MULT_KEY = 'plume-pricing-custom-mult';
+
+function getCustomMultiplier() {
+  try {
+    var v = parseFloat(localStorage.getItem(CUSTOM_MULT_KEY));
+    if (!isNaN(v) && v > 0) return v;
+  } catch(e) {}
+  return 4;  // sensible default
+}
+function setCustomMultiplier(v) {
+  try { localStorage.setItem(CUSTOM_MULT_KEY, String(v)); } catch(e) {}
+}
+
+function onCustomMultiplierChange(value) {
+  var v = parseFloat(value);
+  if (isNaN(v) || v <= 0) return;
+  setCustomMultiplier(v);
+  // Just update the custom row's price display in place so focus isn't lost
+  var costEl = document.getElementById('cost-panel');
+  // Compute the latest total cost from the rendered cost panel state by
+  // re-running computeProductCost on the current product
+  if (!curId) return;
+  var p = findProduct(curId); if (!p) return;
+  var c = computeProductCost(p);
+  var resultEl = document.getElementById('ph-custom-result');
+  if (resultEl) resultEl.textContent = c.totalCost > 0 ? '$' + (c.totalCost * v).toFixed(2) : '--';
+}
+
+// "Use this price" actions -- promote a suggested price into the actual
+// retail or wholesale field, then trigger a cost recalc so margin updates.
+function usePriceAs(field, price) {
+  var input = document.getElementById(field === 'retail' ? 'p-retail' : 'p-wholesale');
+  if (!input) return;
+  input.value = price.toFixed(2);
+  markDirty();
+  recalcCost();
+}
+
+function renderPricingHelper(totalCost) {
+  var el = document.getElementById('pricing-helper');
+  if (!el) return;
+  if (!(totalCost > 0)) {
+    el.innerHTML = '<div class="ph-empty">Fill in net weight and packaging to see pricing suggestions.</div>';
+    return;
+  }
+  var custom = getCustomMultiplier();
+  // Standard multipliers shown side-by-side. Includes the common 2x for
+  // wholesale-leaning prices and the 4-6x range for retail.
+  var multipliers = [2, 3, 4, 5];
+  var html = '';
+  // Custom multiplier row (lets you dial in any value)
+  html += '<div class="ph-custom-row">' +
+    '<span class="ph-custom-label">Custom multiplier</span>' +
+    '<input type="number" min="0.5" step="0.1" value="' + custom + '" ' +
+      'oninput="onCustomMultiplierChange(this.value)" title="Multiplier x unit cost">' +
+    '<span class="ph-custom-result" id="ph-custom-result">$' + (totalCost * custom).toFixed(2) + '</span>' +
+    '</div>';
+  // Grid of common multipliers
+  html += '<div class="ph-grid">';
+  multipliers.forEach(function(m) {
+    var price = totalCost * m;
+    html += '<div class="ph-cell">' +
+      '<div class="ph-cell-mult">' + m + '&times; cost</div>' +
+      '<div class="ph-cell-price">$' + price.toFixed(2) + '</div>' +
+      '<div class="ph-cell-actions">' +
+        '<button onclick="usePriceAs(\'wholesale\', ' + price + ')" title="Set as wholesale price">&rarr; Wholesale</button>' +
+        '<button onclick="usePriceAs(\'retail\', '    + price + ')" title="Set as retail price">&rarr; Retail</button>' +
+      '</div>' +
+    '</div>';
+  });
+  html += '</div>';
+  // Quick reference note
+  html += '<div style="font-size:11px; color:var(--ink-lighter); line-height:1.5; margin-top:10px">' +
+    'Cottage-industry rule of thumb: handmade skincare often prices at <strong>2&times; cost for wholesale</strong> and <strong>4-5&times; cost for retail</strong>. Use as a starting point, then adjust for your market.' +
+    '</div>';
+  el.innerHTML = html;
 }
 
 // ──────────────────────────────────────────────────────────────────────
