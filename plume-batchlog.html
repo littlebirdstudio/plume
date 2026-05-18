@@ -169,6 +169,10 @@ tbody tr:last-child td{border-bottom:none}
 .receipt-row .rcpt-native{font-variant-numeric:tabular-nums;color:var(--ink-lighter);font-size:11px}
 .receipt-wrap{border:1px solid var(--cream-border);border-radius:3px;background:var(--white);padding:2px 0}
 .list-uncommitted-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--clay);margin-right:6px;vertical-align:middle}
+.pr-commit{display:inline-block;width:14px;text-align:center;margin-right:6px;font-size:11px;vertical-align:middle}
+.pr-commit-yes{color:var(--sage-dark)}
+.pr-commit-no{color:var(--clay);font-size:18px;line-height:1}
+.pkg-run-row.pr-committed{background:var(--sage-light)}
 
 /* ── Footer ── */
 .app-footer{text-align:center;padding:2rem;margin-top:3rem;font-size:11px;color:var(--ink-lighter);border-top:1px solid var(--cream-border);letter-spacing:0.06em}
@@ -314,6 +318,8 @@ tbody tr:last-child td{border-bottom:none}
     </div>
     <div id="preview-body"></div>
 
+    <div id="new-commit-msg" class="commit-msg" style="display:none"></div>
+
     <div class="modal-foot">
       <button class="btn" onclick="closeModal('m-new')">Cancel</button>
       <button class="btn btn-primary" onclick="saveBatch()">Make it!</button>
@@ -332,8 +338,8 @@ tbody tr:last-child td{border-bottom:none}
       <button class="modal-x" onclick="closeModal('m-detail')">&#x2715;</button>
     </div>
 
-    <!-- Commit bar (Block 4) -->
-    <div class="commit-bar" id="d-commit-bar">
+    <!-- Commit bar (Block 4 -- hidden in auto-commit mode; kept for legacy data path) -->
+    <div class="commit-bar" id="d-commit-bar" style="display:none">
       <div class="commit-status" id="d-commit-status"></div>
       <button class="btn" id="d-commit-btn" onclick="onCommitButton()">Commit to inventory</button>
     </div>
@@ -755,10 +761,9 @@ function rowHtml(b) {
   } else {
     statusBadge = '<span class="status-pill status-ready">Ready</span>';
   }
-  var uncommittedMark = b.committed ? '' : '<span class="list-uncommitted-dot" title="Uncommitted -- stock not yet deducted"></span>';
   var nameDisplay = b.batchName
-    ? uncommittedMark + esc(b.batchName) + '<div class="batch-meta">' + esc(b.formulaName||'') + '</div>'
-    : uncommittedMark + '<span class="batch-name-display">' + esc(b.formulaName||'(no formula)') + '</span>';
+    ? esc(b.batchName) + '<div class="batch-meta">' + esc(b.formulaName||'') + '</div>'
+    : '<span class="batch-name-display">' + esc(b.formulaName||'(no formula)') + '</span>';
   return '<tr onclick="openBatchDetail(\'' + b.id + '\')">' +
     '<td>' + fmtDate(b.date) + '</td>' +
     '<td>' + nameDisplay + '</td>' +
@@ -799,6 +804,8 @@ function openNewBatch() {
   document.getElementById('formula-hint').style.display = 'none';
   document.getElementById('preview-body').innerHTML = '<div style="padding:1rem;text-align:center;color:var(--ink-lighter);font-size:12px">Pick a formula and yield to see ingredients</div>';
   document.getElementById('preview-warning').innerHTML = '';
+  var blockedBox = document.getElementById('new-commit-msg');
+  if (blockedBox) { blockedBox.innerHTML = ''; blockedBox.style.display = 'none'; }
   newPreview = [];
   newFormula = null;
   openModal('m-new');
@@ -1063,6 +1070,8 @@ function saveBatch() {
     };
   });
 
+  // Build the batch as committed=false; applyCommitToBatch will flip it
+  // and populate lotDraws/packagingDraws if validation passes.
   var b = {
     id:                String(Date.now()) + '-' + Math.random().toString(36).slice(2,7),
     date:              date,
@@ -1079,7 +1088,7 @@ function saveBatch() {
     notes:             notes,
     ingredientSnapshot: ingredientSnapshot,
     packagingRuns:     [],
-    committed:         false,   // Block 4: stock decrement happens via explicit Commit action
+    committed:         false,
     committedAt:       null,
     lotDraws:          [],
     packagingDraws:    [],
@@ -1087,7 +1096,28 @@ function saveBatch() {
     updatedAt:         new Date().toISOString()
   };
 
+  // Auto-commit: ingredients are pulled from inventory at the moment of
+  // making the batch. If validation fails (insufficient stock), the batch
+  // is NOT created -- the user needs to fix inventory and try again.
+  var result = applyCommitToBatch(b);
+  if (!result.ok) {
+    // Show blocked message inside the new-batch popup so the user doesn't
+    // lose their filled-out form. They can fix inventory in another tab
+    // and click Make it! again.
+    var box = document.getElementById('new-commit-msg');
+    if (box) {
+      box.innerHTML = buildCommitBlockedHTML(result);
+      box.style.display = 'block';
+      // Scroll to it so the user sees the message
+      box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+    return;
+  }
+
+  // Persist all three sides of the ledger that applyCommitToBatch mutated
   batches.push(b);
+  saveIngredients();
+  savePackaging();
   saveBatches();
   closeModal('m-new');
   renderStats();
@@ -1329,7 +1359,8 @@ function renderPackagingRuns(b) {
   var html = '';
   sorted.forEach(function(r) {
     var qty = parseInt(r.quantity, 10) || 0;
-    var nameBlock = '<div><span class="pr-name">' + esc(r.packagingName || '(unknown)') + '</span>' +
+    var nameBlock = '<div>' +
+      '<span class="pr-name">' + esc(r.packagingName || '(unknown)') + '</span>' +
       (r.notes ? '<span class="pr-meta">' + esc(r.notes) + '</span>' : '') + '</div>';
     html += '<div class="pkg-run-row">' +
       nameBlock +
@@ -1354,32 +1385,59 @@ function addPackagingRun() {
   for (var i = 0; i < pkgs.length; i++) if (pkgs[i].id === pkgId) { pkg = pkgs[i]; break; }
   if (!pkg) { alert('Packaging item not found.'); return; }
 
-  // Soft warning if low stock (decrement comes in Phase 4; this is informational)
+  // Packaging runs always commit immediately. Hard-block if stock is short.
+  // The user should fix packaging inventory in the Packaging library and
+  // come back; we don't allow negative or partial commits.
   var stock = calcPkgStock(pkg);
   if (stock < qty) {
-    if (!confirm('Heads up: only ' + stock + ' of "' + pkg.name + '" in stock, but you\'re logging ' +
-      qty + '. Log it anyway?\n\n(Stock decrement isn\'t enabled yet, so this is informational only.)')) {
-      return;
-    }
+    alert('Cannot add this run: only ' + stock + ' of "' + pkg.name + '" in stock, ' +
+      'but you\'re trying to log ' + qty + '.\n\nUpdate packaging stock in the Packaging library, then try again.');
+    return;
   }
 
-  if (!b.packagingRuns) b.packagingRuns = [];
-  b.packagingRuns.push({
+  var newRun = {
     id:            String(Date.now()) + '-' + Math.random().toString(36).slice(2,6),
     date:          todayISO(),
     packagingId:   pkgId,
     packagingName: pkg.name,
     quantity:      qty,
-    notes:         notes
+    notes:         notes,
+    committed:     true,
+    committedAt:   new Date().toISOString()
+  };
+
+  if (!b.packagingRuns) b.packagingRuns = [];
+  b.packagingRuns.push(newRun);
+
+  // Record the negative adjustment on packaging and add to receipt
+  if (!pkg.adjustments) pkg.adjustments = [];
+  pkg.adjustments.push({
+    id:      'commit-' + b.id + '-' + newRun.id,
+    qty:     -qty,
+    date:    todayISO(),
+    reason:  'Committed to batch: ' + (b.batchName || b.formulaName || b.id),
+    batchId: b.id,
+    runId:   newRun.id
   });
+  if (!b.packagingDraws) b.packagingDraws = [];
+  b.packagingDraws.push({
+    runId:         newRun.id,
+    packagingId:   pkgId,
+    packagingName: pkg.name,
+    quantity:      qty
+  });
+
   b.updatedAt = new Date().toISOString();
   saveBatches();
+  savePackaging();
   renderPackagingRuns(b);
   renderList();
   // Clear add row
   document.getElementById('d-pkg-pick').value  = '';
   document.getElementById('d-pkg-qty').value   = '';
   document.getElementById('d-pkg-notes').value = '';
+  // Refresh picker so the updated stock counts show
+  populatePackagingPicker();
 }
 
 function deletePackagingRun(runId) {
@@ -1391,12 +1449,35 @@ function deletePackagingRun(runId) {
     if (b.packagingRuns[i].id === runId) { run = b.packagingRuns[i]; break; }
   }
   if (!run) return;
-  if (!confirm('Delete this packaging run? (' + run.quantity + ' units of ' + run.packagingName + ')')) return;
+  var msg = 'Delete this packaging run? (' + run.quantity + ' units of ' + run.packagingName + ')';
+  if (run.committed) {
+    msg += '\n\nThis run is committed; deleting will also return ' + run.quantity +
+      ' units to packaging stock.';
+  }
+  if (!confirm(msg)) return;
+
+  // If the run is committed, reverse just this run's packaging adjustment.
+  if (run.committed) {
+    var pkg = null;
+    for (var j = 0; j < pkgs.length; j++) if (pkgs[j].id === run.packagingId) { pkg = pkgs[j]; break; }
+    if (pkg && pkg.adjustments) {
+      pkg.adjustments = pkg.adjustments.filter(function(a) {
+        return !(a.batchId === b.id && a.runId === run.id);
+      });
+      savePackaging();
+    }
+    // Remove from packagingDraws receipt
+    if (b.packagingDraws) {
+      b.packagingDraws = b.packagingDraws.filter(function(d) { return d.runId !== run.id; });
+    }
+  }
+
   b.packagingRuns = b.packagingRuns.filter(function(r) { return r.id !== runId; });
   b.updatedAt = new Date().toISOString();
   saveBatches();
   renderPackagingRuns(b);
   renderList();
+  populatePackagingPicker();
 }
 
 function saveBatchEdits() {
@@ -1591,20 +1672,26 @@ function planPackagingDraws(b) {
   return { ok: true, draws: draws };
 }
 
-// COMMIT: the main entry point. Wires up the dry-run validation, the actual
-// decrement, and the receipt-writing. Atomic: nothing changes unless the
-// full plan validates.
-function commitBatch() {
-  if (!editingBatchId) return;
-  var b = findBatch(editingBatchId);
-  if (!b) return;
-  if (b.committed) { alert('This batch is already committed.'); return; }
+// COMMIT CORE: pure function. Given a batch object, runs the FIFO plan,
+// validates, and either applies the draws (writing to ings, pkgs, and the
+// batch's receipt fields) or returns a blocked result describing exactly
+// what's short.
+//
+// Returns:
+//   { ok: true }   -> batch was committed; caller should saveIngredients(),
+//                     savePackaging(), saveBatches() as needed
+//   { ok: false, missing, shortages, pkgPlan }
+//                  -> nothing was changed; caller can present the blocked
+//                     message to the user
+//
+// Atomic: if anything fails to validate, nothing is written.
+function applyCommitToBatch(b) {
+  if (b.committed) return { ok: true };  // already committed; no-op
 
-  // ── Dry run: build full plan ──
   var snap = b.ingredientSnapshot || [];
-  var plannedLotDraws = [];   // [{ingredientId, ingredientName, lotId, grams, nativeQty, nativeUnit, lotLabel}]
-  var shortages       = [];   // [{ingredientId, ingredientName, neededG, availableG, shortG}]
-  var missingIngs     = [];   // [name] -- ingredient deleted since snapshot
+  var plannedLotDraws = [];
+  var shortages       = [];
+  var missingIngs     = [];
 
   for (var i = 0; i < snap.length; i++) {
     var s = snap[i];
@@ -1639,115 +1726,68 @@ function commitBatch() {
       });
     }
   }
-
-  // Packaging plan
   var pkgPlan = planPackagingDraws(b);
 
-  // ── Validate ──
   if (missingIngs.length || shortages.length || !pkgPlan.ok) {
-    showCommitBlocked(missingIngs, shortages, pkgPlan);
-    return;
+    return { ok: false, missing: missingIngs, shortages: shortages, pkgPlan: pkgPlan };
   }
 
-  // ── Confirm ──
-  var summary = 'Commit "' + (b.batchName || b.formulaName) + '" to inventory?\n\n';
-  summary += 'This will deduct:\n';
-  // Aggregate by ingredient for the confirm message
-  var perIng = {};
-  plannedLotDraws.forEach(function(d) {
-    if (!perIng[d.ingredientId]) perIng[d.ingredientId] = { name: d.ingredientName, g: 0 };
-    perIng[d.ingredientId].g += d.grams;
-  });
-  Object.keys(perIng).forEach(function(k) {
-    summary += '  ' + perIng[k].g.toFixed(1) + 'g ' + perIng[k].name + '\n';
-  });
-  if (pkgPlan.draws.length) {
-    summary += '\nAnd packaging:\n';
-    pkgPlan.draws.forEach(function(d) {
-      summary += '  ' + d.quantity + ' x ' + d.packagingName + '\n';
-    });
-  }
-  summary += '\nYou can Decommit later to put it all back.';
-  if (!confirm(summary)) return;
-
-  // ── Execute: apply draws to lots ──
-  // Group draws by lot for efficient mutation
+  // Execute: apply draws to lots
   plannedLotDraws.forEach(function(d) {
     var ing = findIng(d.ingredientId);
     if (!ing || !ing.lots) return;
     for (var j = 0; j < ing.lots.length; j++) {
       if (ing.lots[j].id === d.lotId) {
         var lot = ing.lots[j];
-        var unit = lot.qtyUnit || lot.stockUnit || 'g';
         var currentQ = parseFloat(lot.qtyPurchased || lot.stock || 0);
         var newQ = currentQ - d.nativeQty;
-        // Floor at zero; floating-point can produce -0.0001 etc.
         if (newQ < 0.0001) newQ = 0;
-        // Write back -- prefer modern field names
         lot.qtyPurchased = String(Math.round(newQ * 100000) / 100000);
         if (lot.qtyUnit === undefined && lot.stockUnit) {
-          // legacy lot was using stock/stockUnit; mirror to modern fields
           lot.qtyUnit = lot.stockUnit;
         }
-        // Clear legacy `stock` field if present to avoid double-counting
         if (typeof lot.stock !== 'undefined') lot.stock = lot.qtyPurchased;
         break;
       }
     }
   });
-
-  // Apply packaging draws (subtract from each packaging item)
   pkgPlan.draws.forEach(function(d) {
     var pkg = null;
     for (var j = 0; j < pkgs.length; j++) if (pkgs[j].id === d.packagingId) { pkg = pkgs[j]; break; }
     if (!pkg) return;
-    // Use the adjustments array to record the negative draw -- this mirrors
-    // how the packaging module already handles non-purchase quantity changes.
     if (!pkg.adjustments) pkg.adjustments = [];
     pkg.adjustments.push({
-      id:     'commit-' + b.id + '-' + d.runId,
-      qty:    -d.quantity,
-      date:   todayISO(),
-      reason: 'Committed to batch: ' + (b.batchName || b.formulaName || b.id),
-      // Link back so decommit can find and remove this specific adjustment
+      id:      'commit-' + b.id + '-' + d.runId,
+      qty:     -d.quantity,
+      date:    todayISO(),
+      reason:  'Committed to batch: ' + (b.batchName || b.formulaName || b.id),
       batchId: b.id,
       runId:   d.runId
     });
   });
-
-  // Mark packaging runs as committed
   if (b.packagingRuns) {
     b.packagingRuns.forEach(function(r) { r.committed = true; r.committedAt = new Date().toISOString(); });
   }
-
-  // Write receipt to batch
   b.lotDraws       = plannedLotDraws;
   b.packagingDraws = pkgPlan.draws;
   b.committed      = true;
   b.committedAt    = new Date().toISOString();
   b.updatedAt      = new Date().toISOString();
-
-  // Persist
-  saveIngredients();
-  savePackaging();
-  saveBatches();
-
-  // Refresh detail view + list
-  openBatchDetail(editingBatchId);
-  renderList();
+  return { ok: true };
 }
 
-// Show the "can't commit yet" message, with deep-links to fix the shortages.
-function showCommitBlocked(missing, shortages, pkgPlan) {
+// Build the blocked-commit message HTML. Used by both saveBatch (when
+// Make it! fails) and any future re-commit flow.
+function buildCommitBlockedHTML(blocked) {
   var html = '<div style="font-size:13px;line-height:1.5"><strong>Cannot commit yet.</strong><br><br>';
-  if (missing.length) {
-    html += 'Missing ingredients (deleted since this batch was saved):<br>';
-    missing.forEach(function(n) { html += '&nbsp;&nbsp;\u2022 ' + esc(n) + '<br>'; });
+  if (blocked.missing && blocked.missing.length) {
+    html += 'Missing ingredients (deleted since this batch was started):<br>';
+    blocked.missing.forEach(function(n) { html += '&nbsp;&nbsp;\u2022 ' + esc(n) + '<br>'; });
     html += '<br>';
   }
-  if (shortages.length) {
+  if (blocked.shortages && blocked.shortages.length) {
     html += 'Insufficient stock:<br>';
-    shortages.forEach(function(s) {
+    blocked.shortages.forEach(function(s) {
       var link = 'plume-ingredients.html#ing=' + encodeURIComponent(s.ingredientId);
       html += '&nbsp;&nbsp;\u2022 <strong>' + esc(s.ingredientName) + '</strong>: need ' +
         s.neededG.toFixed(1) + 'g, have ' + s.availableG.toFixed(1) + 'g (short ' +
@@ -1756,21 +1796,45 @@ function showCommitBlocked(missing, shortages, pkgPlan) {
     });
     html += '<br>';
   }
-  if (pkgPlan && !pkgPlan.ok) {
+  if (blocked.pkgPlan && !blocked.pkgPlan.ok) {
     html += 'Insufficient packaging:<br>';
-    html += '&nbsp;&nbsp;\u2022 <strong>' + esc(pkgPlan.packagingName) + '</strong>: short ' + pkgPlan.shortQty + ' units<br><br>';
+    html += '&nbsp;&nbsp;\u2022 <strong>' + esc(blocked.pkgPlan.packagingName) + '</strong>: short ' + blocked.pkgPlan.shortQty + ' units<br><br>';
   }
-  html += '<span style="color:var(--ink-light)">Update the affected items in the Ingredients or Packaging library, then come back and try Commit again.</span></div>';
-  // Use a styled inline area in the modal rather than an alert -- the links
-  // are clickable. We toss it in a dedicated container in the detail modal.
+  html += '<span style="color:var(--ink-light)">Update the affected items in the Ingredients or Packaging library, then come back and try again.</span></div>';
+  return html;
+}
+
+// LEGACY: kept for any data still showing the detail-modal commit button.
+// In the new auto-commit model, ingredients commit on batch save and
+// packaging runs commit on add, so this should never be called from new
+// UI. Left in place as a safety belt in case a stale event handler fires.
+function commitBatch() {
+  if (!editingBatchId) return;
+  var b = findBatch(editingBatchId);
+  if (!b) return;
+  if (b.committed) { alert('This batch is already committed.'); return; }
+  var result = applyCommitToBatch(b);
+  if (!result.ok) {
+    var box = document.getElementById('d-commit-msg');
+    if (box) { box.innerHTML = buildCommitBlockedHTML(result); box.style.display = 'block'; }
+    return;
+  }
+  saveIngredients();
+  savePackaging();
+  saveBatches();
+  openBatchDetail(editingBatchId);
+  renderList();
+}
+
+// Show the "can't commit yet" message in the detail modal area.
+// LEGACY: kept for the safety-belt commitBatch() path above.
+function showCommitBlocked(missing, shortages, pkgPlan) {
   var box = document.getElementById('d-commit-msg');
-  if (box) {
-    box.innerHTML = html;
-    box.style.display = 'block';
-    // Auto-hide after 30 seconds so it doesn't get stale
-    if (box._hideTimer) clearTimeout(box._hideTimer);
-    box._hideTimer = setTimeout(function() { box.style.display = 'none'; }, 30000);
-  }
+  if (!box) return;
+  box.innerHTML = buildCommitBlockedHTML({ missing: missing, shortages: shortages, pkgPlan: pkgPlan });
+  box.style.display = 'block';
+  if (box._hideTimer) clearTimeout(box._hideTimer);
+  box._hideTimer = setTimeout(function() { box.style.display = 'none'; }, 30000);
 }
 
 // DECOMMIT: reverse a committed batch. Reads b.lotDraws, adds grams back to
@@ -1885,18 +1949,32 @@ function deleteBatch() {
   msg += '  ' + (b.batchName || b.formulaName || '(unnamed)') + '\n';
   msg += '  ' + (b.actualYield || b.targetYield || 0) + 'g, ' + fmtDate(b.date) + '\n\n';
   if (b.committed) {
-    msg += 'This batch is committed to inventory. Deleting will FIRST ' +
-      'decommit (returning all drawn quantities to their lots), then ' +
-      'remove the batch record.\n\n';
-  }
-  if (runs.length) {
+    // Summarize what will be returned to inventory
+    var ingTotals = {};
+    (b.lotDraws || []).forEach(function(d) {
+      ingTotals[d.ingredientName] = (ingTotals[d.ingredientName] || 0) + d.grams;
+    });
+    var ingList = Object.keys(ingTotals);
+    if (ingList.length) {
+      msg += 'This will return to inventory:\n';
+      ingList.forEach(function(n) {
+        msg += '  ' + ingTotals[n].toFixed(1) + 'g ' + n + '\n';
+      });
+    }
+    if (runs.length) {
+      var pkgTotals = {};
+      runs.forEach(function(r) { pkgTotals[r.packagingName] = (pkgTotals[r.packagingName] || 0) + r.quantity; });
+      msg += '  ' + Object.keys(pkgTotals).map(function(n) { return pkgTotals[n] + ' x ' + n; }).join('\n  ') + '\n';
+    }
+    msg += '\n';
+  } else if (runs.length) {
     msg += 'This will also remove ' + runs.length + ' packaging run' + (runs.length === 1 ? '' : 's') + '.\n\n';
   }
   msg += 'This cannot be undone.';
 
   if (!confirm(msg)) return;
 
-  // If committed, decommit first (silently -- we already confirmed deletion)
+  // Silent decommit: returns ingredient + packaging stock to its sources
   if (b.committed) {
     decommitBatch(true);
   }
