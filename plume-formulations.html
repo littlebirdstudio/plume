@@ -310,7 +310,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);m
             <div style="font-size:12px;color:var(--ink-lighter);margin-top:4px" id="f-ver-lbl"></div>
           </div>
           <div style="display:flex;gap:8px;flex-shrink:0">
-            <button class="btn btn-sage" onclick="makeBatchFromFormula()" title="Open the batch log with this formula pre-selected">Make a batch</button>
             <button class="btn" onclick="printFormula()">Print</button>
             <button class="btn" onclick="saveVersion()">Save version</button>
             <button class="btn btn-primary" onclick="saveFormula()">Save</button>
@@ -446,6 +445,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);m
               <button class="btn btn-sm" onclick="setBatch(2000)">2kg</button>
               <button class="btn btn-sm" onclick="setBatch(3000)">3kg</button>
             </div>
+            <button class="btn btn-primary" onclick="makeBatchFromFormula()" title="Open the batch log with this formula and batch size pre-filled" style="width:100%;margin-top:12px;padding:10px;font-size:13px">Make it!</button>
           </div>
         </div>
         <div class="sb-panel">
@@ -1672,8 +1672,12 @@ function makeBatchFromFormula() {
     if (!confirm('You have unsaved changes. Save first so the batch uses the latest version?')) return;
     saveFormula();
   }
-  // Open batchlog with the formula id in the hash; batchlog reads it and pre-opens
-  var url = 'plume-batchlog.html#new=' + encodeURIComponent(f.id);
+  // Read current batch size to seed the batchlog yield field
+  var bs = parseFloat(document.getElementById('batch-sz').value);
+  var hash = '#new=' + encodeURIComponent(f.id);
+  if (!isNaN(bs) && bs > 0) hash += '&y=' + bs;
+  // Open batchlog with the formula id (and optional batch size) in the hash
+  var url = 'plume-batchlog.html' + hash;
   window.open(url, '_blank', 'noopener');
 }
 

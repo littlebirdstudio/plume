@@ -388,7 +388,7 @@ tbody tr:last-child td{border-bottom:none}
       <button class="btn btn-danger" onclick="deleteBatch()" style="margin-right:auto">Delete batch</button>
       <button class="btn" id="d-mark-ready-btn" onclick="markBatchReady()" style="display:none">Mark ready now</button>
       <button class="btn" onclick="closeModal('m-detail')">Close</button>
-      <button class="btn btn-primary" onclick="saveBatchEdits()">Save changes</button>
+      <button class="btn btn-primary" id="d-save-btn" onclick="saveBatchEdits()">Save changes</button>
     </div>
   </div>
 </div>
@@ -670,7 +670,10 @@ function renderList() {
 }
 
 function rowHtml(b) {
-  var pkgCount = (b.packagingRuns || []).reduce(function(s,r) { return s + (parseFloat(r.quantity)||0); }, 0);
+  var runs = b.packagingRuns || [];
+  var pkgLabel = runs.length === 0
+    ? '<span style="color:var(--ink-lighter)">--</span>'
+    : runs.length + (runs.length === 1 ? ' run' : ' runs');
   var typeBadge = b.batchType === 'test'
     ? '<span class="type-pill type-test">Test</span>'
     : '<span class="type-pill type-prod">Production</span>';
@@ -693,7 +696,7 @@ function rowHtml(b) {
     '<td>' + (b.actualYield || b.targetYield || '--') + 'g</td>' +
     '<td>' + typeBadge + '</td>' +
     '<td>' + statusBadge + '</td>' +
-    '<td>' + (pkgCount > 0 ? pkgCount + ' units' : '<span style="color:var(--ink-lighter)">--</span>') + '</td>' +
+    '<td>' + pkgLabel + '</td>' +
     '</tr>';
 }
 
@@ -1099,9 +1102,9 @@ function renderCostRollup(b) {
     wrap.innerHTML = '<div class="pkg-empty">Nothing to roll up.</div>';
     return;
   }
-  var totalCost = 0;
+  var totalCost  = 0;
   var totalGrams = 0;
-  var missing = [];
+  var missing    = [];
   snap.forEach(function(s) {
     var g = parseFloat(s.grams) || 0;
     totalGrams += g;
@@ -1114,24 +1117,18 @@ function renderCostRollup(b) {
     }
   });
   var yieldG = parseFloat(b.actualYield) || parseFloat(b.targetYield) || totalGrams;
-  var costPerGram   = yieldG > 0 ? totalCost / yieldG : 0;
-  var costPerOunce  = costPerGram * 28.3495;
 
   var html = '<div class="cost-rollup">' +
     '<span class="cr-label">Total ingredient cost</span>' +
     '<span class="cr-val">$' + totalCost.toFixed(2) + '</span>' +
     '<span class="cr-label">Yield</span>' +
-    '<span class="cr-val">' + yieldG.toFixed(0) + ' g</span>' +
-    '<span class="cr-label cr-total">Cost per gram</span>' +
-    '<span class="cr-val cr-total">$' + costPerGram.toFixed(4) + '</span>' +
-    '<span class="cr-label">Cost per ounce</span>' +
-    '<span class="cr-val">$' + costPerOunce.toFixed(3) + '</span>';
+    '<span class="cr-val">' + yieldG.toFixed(0) + ' g</span>';
 
   if (missing.length) {
     var names = missing.slice(0, 4).map(esc).join(', ');
     if (missing.length > 4) names += ' and ' + (missing.length - 4) + ' more';
     html += '<div class="cr-missing">Missing cost data: ' + names +
-      '. Add cost/g in the Ingredients library for an accurate rollup.</div>';
+      '. Add cost/g in the Ingredients library for a complete rollup.</div>';
   }
   html += '</div>';
   wrap.innerHTML = html;
@@ -1163,20 +1160,21 @@ function calcPkgStock(item) {
 function renderPackagingRuns(b) {
   var list = document.getElementById('d-pkg-list');
   var runs = b.packagingRuns || [];
+  // Totals intentionally hidden -- summing component-style packaging items
+  // (e.g. tin + top label + bottom label) doesn't produce a meaningful unit
+  // count. The Costing/Products rework will introduce the right semantics.
+  document.getElementById('d-pkg-total').textContent = '';
   if (!runs.length) {
     list.innerHTML = '<div class="pkg-empty">No packaging runs logged yet.</div>';
-    document.getElementById('d-pkg-total').textContent = '';
     return;
   }
   // Sort by date desc
   var sorted = runs.slice().sort(function(a,b) {
     return (b.date || '').localeCompare(a.date || '');
   });
-  var total = 0;
   var html = '';
   sorted.forEach(function(r) {
     var qty = parseInt(r.quantity, 10) || 0;
-    total += qty;
     var nameBlock = '<div><span class="pr-name">' + esc(r.packagingName || '(unknown)') + '</span>' +
       (r.notes ? '<span class="pr-meta">' + esc(r.notes) + '</span>' : '') + '</div>';
     html += '<div class="pkg-run-row">' +
@@ -1187,7 +1185,6 @@ function renderPackagingRuns(b) {
       '</div>';
   });
   list.innerHTML = html;
-  document.getElementById('d-pkg-total').textContent = total + ' units total';
 }
 
 function addPackagingRun() {
@@ -1281,7 +1278,24 @@ function saveBatchEdits() {
   saveBatches();
   renderStats();
   renderList();
-  closeModal('m-detail');
+
+  // Refresh the cost rollup so yield/cost changes reflect immediately
+  renderCostRollup(b);
+
+  // Update the title in case the name changed
+  document.getElementById('d-title').textContent = b.batchName || b.formulaName || 'Batch';
+
+  // Flash a "Saved" indicator on the save button briefly
+  var btn = document.getElementById('d-save-btn');
+  if (btn) {
+    var prev = btn.textContent;
+    btn.textContent = 'Saved \u2713';
+    btn.disabled = true;
+    setTimeout(function() {
+      btn.textContent = prev;
+      btn.disabled = false;
+    }, 1100);
+  }
 }
 
 function markBatchReady() {
@@ -1337,17 +1351,34 @@ function deleteBatch() {
 function openModal(id)  { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
-// ── Deep-link: if URL ends in #new=<formulaId>, auto-open new-batch with that formula ──
+// ── Deep-link: if URL ends in #new=<formulaId> (optionally &y=<yieldG>),
+// auto-open new-batch with that formula pre-selected and yield prefilled.
 function handleDeepLink() {
   if (!location.hash || location.hash.indexOf('#new=') !== 0) return;
-  var fid;
-  try { fid = decodeURIComponent(location.hash.slice(5)); }
-  catch(e) { fid = location.hash.slice(5); }
+  var raw = location.hash.slice(5);
+  var fid, suggestedYield = null;
+  // Support optional &y=<grams> suffix
+  var ampIdx = raw.indexOf('&y=');
+  if (ampIdx !== -1) {
+    try { fid = decodeURIComponent(raw.slice(0, ampIdx)); }
+    catch(e) { fid = raw.slice(0, ampIdx); }
+    var y = parseFloat(raw.slice(ampIdx + 3));
+    if (!isNaN(y) && y > 0) suggestedYield = y;
+  } else {
+    try { fid = decodeURIComponent(raw); }
+    catch(e) { fid = raw; }
+  }
   if (!forms.find(function(f) { return f.id === fid; })) return;
   openNewBatch();
   // Pre-select the formula and trigger the change handler
   document.getElementById('f-formula').value = fid;
   onFormulaChange();
+  // Override the default yield with the suggested batch size, if provided
+  if (suggestedYield !== null) {
+    document.getElementById('f-yield').value = suggestedYield;
+    // Refresh the ingredient preview now that yield is set
+    if (typeof recalcPreview === 'function') recalcPreview();
+  }
   // Clear the hash so refreshing the page doesn't keep re-opening the modal
   try { history.replaceState(null, '', location.pathname + location.search); }
   catch(e) {}
