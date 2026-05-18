@@ -2400,6 +2400,19 @@ function viewIngredient(id) {
       var qualifier = hasExplicitActive ? '' : ' (default)';
       headerBanner = '<div style="font-size:9px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--sage-dark);margin-bottom:8px;grid-column:1/-1;border-bottom:1px dashed var(--sage-border);padding-bottom:6px;display:flex;justify-content:space-between;align-items:center"><span>Active for costing' + qualifier + rcv + '</span></div>';
     }
+    // Resurrection / reversal indicator: appears on lots that were depleted
+    // and then had stock returned via batch decommit, or were auto-created
+    // by decommit because the original lot was deleted. Purely informational
+    // -- doesn't affect costing or stock math.
+    var resurrectionBanner = '';
+    if (l.wasReversal) {
+      resurrectionBanner = '<div style="font-size:10px;color:var(--clay-dark);margin-bottom:6px;grid-column:1/-1;font-style:italic;display:flex;align-items:center;gap:6px"><span style="font-size:13px">\u21BA</span> Auto-created from batch decommit. ' +
+        (l.notes ? '<span style="color:var(--ink-lighter);font-style:normal">' + l.notes + '</span>' : '') +
+        '</div>';
+    } else if (l.wasResurrected) {
+      var resDate = l.resurrectedAt ? new Date(l.resurrectedAt).toLocaleDateString() : '';
+      resurrectionBanner = '<div style="font-size:10px;color:var(--sage-dark);margin-bottom:6px;grid-column:1/-1;font-style:italic;display:flex;align-items:center;gap:6px"><span style="font-size:13px">\u21BA</span> Resurrected from depleted' + (resDate ? ' on ' + resDate : '') + ' (batch decommit returned stock to this lot).</div>';
+    }
     // "Set as active" action — appears only on non-active purchased lots
     // with a valid cost/g. (No point setting an active lot you can't cost from.)
     var canSetActive = !l.referenceOnly && !isActive && l.costPerG && parseFloat(l.costPerG) > 0;
@@ -2408,6 +2421,7 @@ function viewIngredient(id) {
       : '';
     return '<div class="lot-detail-card' + (l.referenceOnly ? ' lot-detail-card-reference' : '') + (isActive ? ' lot-detail-card-active' : '') + '" style="grid-template-columns:repeat(4,1fr)">' +
       headerBanner +
+      resurrectionBanner +
       '<div class="lf"><label>Supplier</label><p>' + (l.supplier || '\u2014') +
         (suppObj && suppObj.webLink ? ' <a class="detail-link" href="' + suppObj.webLink + '" target="_blank" rel="noopener" style="font-size:11px">site &#8599;</a>' : '') + '</p></div>' +
       '<div class="lf"><label>Brand</label><p>' + (l.brand || '\u2014') +
