@@ -201,7 +201,6 @@ tbody tr:last-child td{border-bottom:none}
     <button class="btn btn-ghost" onclick="document.getElementById('import-input').click()">Import</button>
     <input type="file" id="import-input" accept=".json" style="display:none" onchange="importData(event)">
     <button class="btn btn-ghost" onclick="openSettings()" title="Settings &amp; appearance">⚙ Settings</button>
-    <button class="btn btn-primary" onclick="openAdd()">+ New item</button>
   </div>
 </header>
 <div class="app-body">
@@ -211,7 +210,12 @@ tbody tr:last-child td{border-bottom:none}
     <div class="stat-card"><div class="stat-label">Labels</div><div class="stat-value" id="s-labels">0</div></div>
     <div class="stat-card"><div class="stat-label">Inventory value</div><div class="stat-value" id="s-value" style="font-size:22px;padding-top:6px">$0.00</div></div>
   </div>
-  <div class="sec-header"><div class="sec-title">Packaging items</div></div>
+  <div class="sec-header">
+    <div style="display:flex; align-items:center; gap:14px">
+      <div class="sec-title">Packaging items</div>
+      <button class="btn btn-primary btn-sm" onclick="openAdd()">+ New item</button>
+    </div>
+  </div>
   <div class="toolbar">
     <input class="search-inp" type="text" id="search" placeholder="Search by name or supplier..." oninput="renderTable()">
     <select class="filter-sel" id="f-type" onchange="renderTable()">

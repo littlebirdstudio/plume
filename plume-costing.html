@@ -51,7 +51,7 @@ main { max-width:1240px; margin:0 auto; padding:24px 22px 60px; }
 /* ── List view ── */
 .list-section { background:var(--white); border:1px solid var(--cream-border); border-radius:5px; overflow:hidden; }
 .group-hdr { background:var(--cream-dark); padding:8px 14px; font-size:11px; font-weight:500; letter-spacing:0.12em; text-transform:uppercase; color:var(--ink-light); border-bottom:1px solid var(--cream-border); }
-.prod-row { display:grid; grid-template-columns:1fr 1fr 100px 100px 100px 100px 80px; gap:14px; padding:11px 14px; border-bottom:1px solid var(--cream-dark); cursor:pointer; transition:background 0.1s; align-items:center; font-size:13px; }
+.prod-row { display:grid; grid-template-columns:1fr 1fr 80px 90px 90px 80px 90px 80px; gap:12px; padding:11px 14px; border-bottom:1px solid var(--cream-dark); cursor:pointer; transition:background 0.1s; align-items:center; font-size:13px; }
 .prod-row:hover { background:var(--cream); }
 .prod-row:last-child { border-bottom:none; }
 .prod-name { font-weight:500; color:var(--ink); }
@@ -63,7 +63,7 @@ main { max-width:1240px; margin:0 auto; padding:24px 22px 60px; }
 .status-draft { background:var(--cream-dark); color:var(--ink-light); }
 .status-active { background:var(--sage-light); color:var(--sage-dark); }
 .status-discontinued { background:var(--clay-light); color:var(--clay-dark); }
-.list-hdr-row { display:grid; grid-template-columns:1fr 1fr 100px 100px 100px 100px 80px; gap:14px; padding:9px 14px; background:var(--cream); border-bottom:1px solid var(--cream-border); font-size:10px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-light); align-items:center; }
+.list-hdr-row { display:grid; grid-template-columns:1fr 1fr 80px 90px 90px 80px 90px 80px; gap:12px; padding:9px 14px; background:var(--cream); border-bottom:1px solid var(--cream-border); font-size:10px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-light); align-items:center; }
 .list-hdr-row > .hr { text-align:right; }
 .empty-state { padding:40px 20px; text-align:center; color:var(--ink-lighter); font-size:13px; font-style:italic; }
 .margin-pos { color:var(--sage-dark); }
@@ -157,8 +157,10 @@ main { max-width:1240px; margin:0 auto; padding:24px 22px 60px; }
 .app-footer { text-align:center; padding:2rem; margin-top:3rem; font-size:11px; color:var(--ink-lighter); border-top:1px solid var(--cream-border); letter-spacing:0.06em; }
 
 @media (max-width:900px) {
-  .prod-row, .list-hdr-row { grid-template-columns:1fr 80px 80px 60px; }
-  .prod-row > :nth-child(3), .prod-row > :nth-child(4), .list-hdr-row > :nth-child(3), .list-hdr-row > :nth-child(4) { display:none; }
+  .prod-row, .list-hdr-row { grid-template-columns:1fr 70px 70px 60px; gap:8px; }
+  /* Hide Formula (2), Units made (3), Retail (5), Wholesale (7); keep Name+SKU (1), Unit cost (4), Margin (6), Status (8) */
+  .prod-row > :nth-child(2), .prod-row > :nth-child(3), .prod-row > :nth-child(5), .prod-row > :nth-child(7),
+  .list-hdr-row > :nth-child(2), .list-hdr-row > :nth-child(3), .list-hdr-row > :nth-child(5), .list-hdr-row > :nth-child(7) { display:none; }
   .form-grid, .form-grid-3 { grid-template-columns:1fr; }
 }
 </style>
@@ -179,7 +181,6 @@ main { max-width:1240px; margin:0 auto; padding:24px 22px 60px; }
     <button class="btn btn-ghost" onclick="document.getElementById('import-input').click()">Import</button>
     <input type="file" id="import-input" accept=".json" style="display:none" onchange="importData(event)">
     <button class="btn btn-ghost" onclick="openSettings()" title="Settings &amp; appearance">&#9881; Settings</button>
-    <button class="btn btn-primary" onclick="openNewProduct()">+ Add product</button>
   </div>
 </header>
 
@@ -187,7 +188,10 @@ main { max-width:1240px; margin:0 auto; padding:24px 22px 60px; }
   <!-- List view -->
   <div id="view-list">
     <div class="sec-header">
-      <div class="sec-title">Products</div>
+      <div style="display:flex; align-items:center; gap:14px">
+        <div class="sec-title">Products</div>
+        <button class="btn btn-primary btn-sm" onclick="openNewProduct()">+ Add product</button>
+      </div>
       <div class="search-wrap">
         <input class="search-input" type="text" id="search" placeholder="Search by name, SKU, or formula..." oninput="renderList()">
         <div class="filter-pills" id="status-pills"></div>
@@ -197,6 +201,7 @@ main { max-width:1240px; margin:0 auto; padding:24px 22px 60px; }
       <div class="list-hdr-row">
         <div>Name &middot; SKU</div>
         <div>Formula</div>
+        <div class="hr">Units made</div>
         <div class="hr">Unit cost</div>
         <div class="hr">Retail</div>
         <div class="hr">Margin</div>
@@ -217,7 +222,8 @@ main { max-width:1240px; margin:0 auto; padding:24px 22px 60px; }
         </div>
         <div class="ed-actions">
           <button class="btn" onclick="duplicateProduct()" title="Create a copy of this product">Duplicate</button>
-          <button class="btn btn-primary" onclick="saveProduct()">Save</button>
+          <button class="btn" onclick="saveProduct()">Save</button>
+          <button class="btn btn-primary" onclick="saveAndClose()">Save &amp; close</button>
           <button class="btn btn-danger btn-sm" onclick="deleteProduct()">Delete</button>
         </div>
       </div>
@@ -252,7 +258,7 @@ main { max-width:1240px; margin:0 auto; padding:24px 22px 60px; }
         </div>
         <div class="field">
           <label>Net weight (g) *</label>
-          <input type="number" id="p-netwt-g" step="0.1" min="0" placeholder="30" oninput="markDirty(); recalcCost()">
+          <input type="number" id="p-netwt-g" step="0.1" min="0" placeholder="e.g. 30" oninput="markDirty(); recalcCost()">
         </div>
         <div class="field">
           <label>Display weight (label text)</label>
@@ -284,11 +290,11 @@ main { max-width:1240px; margin:0 auto; padding:24px 22px 60px; }
       <div class="form-grid">
         <div class="field">
           <label>Retail price</label>
-          <input type="number" id="p-retail" step="0.01" min="0" placeholder="14.00" oninput="markDirty(); recalcCost()">
+          <input type="number" id="p-retail" step="0.01" min="0" placeholder="e.g. 14.00" oninput="markDirty(); recalcCost()">
         </div>
         <div class="field">
           <label>Wholesale price</label>
-          <input type="number" id="p-wholesale" step="0.01" min="0" placeholder="7.00" oninput="markDirty(); recalcCost()">
+          <input type="number" id="p-wholesale" step="0.01" min="0" placeholder="e.g. 7.00" oninput="markDirty(); recalcCost()">
         </div>
       </div>
 
@@ -328,7 +334,7 @@ main { max-width:1240px; margin:0 auto; padding:24px 22px 60px; }
         </div>
         <div class="field">
           <label>Units</label>
-          <input type="number" id="run-units" min="1" step="1" placeholder="17">
+          <input type="number" id="run-units" min="1" step="1" placeholder="e.g. 12">
         </div>
         <div class="field">
           <label>From batch (optional)</label>
@@ -702,12 +708,25 @@ function renderList() {
       var marginTxt = c.retailMargin === null
         ? '<span style="color:var(--ink-lighter)">--</span>'
         : marginCell(c.retailMargin);
+      // Total units across all production runs, with most recent date for context
+      var runs = p.productionRuns || [];
+      var totalUnits = 0;
+      var mostRecent = '';
+      runs.forEach(function(r) {
+        totalUnits += parseInt(r.units, 10) || 0;
+        if (!mostRecent || (r.date && r.date > mostRecent)) mostRecent = r.date || '';
+      });
+      var unitsCell = totalUnits > 0
+        ? '<span title="' + runs.length + ' run' + (runs.length === 1 ? '' : 's') +
+            (mostRecent ? '; last: ' + fmtDate(mostRecent) : '') + '">' + totalUnits + '</span>'
+        : '<span style="color:var(--ink-lighter)">--</span>';
       html += '<div class="prod-row" onclick="openProduct(\'' + p.id + '\')">' +
         '<div><div class="prod-name">' + esc(p.name || '(unnamed)') + '</div>' +
           (p.sku ? '<div class="prod-sku">' + esc(p.sku) + '</div>' : '') + '</div>' +
         '<div class="prod-formula">' + esc(key) +
           (p.netWtDisplay ? '<span class="prod-formula-meta">' + esc(p.netWtDisplay) + '</span>' : '') +
         '</div>' +
+        '<div class="prod-num">' + unitsCell + '</div>' +
         '<div class="prod-num">' + (c.totalCost > 0 ? '$' + c.totalCost.toFixed(2) : '--') + '</div>' +
         '<div class="prod-num">' + (c.retail > 0 ? '$' + c.retail.toFixed(2) : '--') + '</div>' +
         '<div class="prod-num">' + marginTxt + '</div>' +
@@ -754,7 +773,7 @@ function createProduct() {
     name:              name,
     sku:               '',
     barcode:           '',
-    status:            'draft',
+    status:            'active',
     formulaId:         fid || '',
     netWtG:            '',
     netWtDisplay:      '',
@@ -827,10 +846,10 @@ function goList() {
 }
 
 function saveProduct() {
-  if (!curId) return;
+  if (!curId) return false;
   var idx = -1;
   for (var i = 0; i < products.length; i++) if (products[i].id === curId) { idx = i; break; }
-  if (idx < 0) return;
+  if (idx < 0) return false;
   var p = products[idx];
   p.name              = document.getElementById('p-name').value.trim();
   p.sku               = document.getElementById('p-sku').value.trim();
@@ -849,6 +868,17 @@ function saveProduct() {
   saveProducts();
   dirty = false;
   toast('Saved');
+  return true;
+}
+
+// Save the product and return to the list. Most common exit path.
+function saveAndClose() {
+  if (saveProduct()) {
+    document.getElementById('view-list').style.display = '';
+    document.getElementById('view-editor').style.display = 'none';
+    curId = null;
+    renderList();
+  }
 }
 
 function deleteProduct() {
@@ -873,7 +903,7 @@ function duplicateProduct() {
     name:              (src.name || 'Product') + ' (copy)',
     sku:               '',
     barcode:           '',
-    status:            'draft',
+    status:            'active',
     formulaId:         src.formulaId || '',
     netWtG:            src.netWtG || '',
     netWtDisplay:      src.netWtDisplay || '',

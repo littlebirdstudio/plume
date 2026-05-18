@@ -210,7 +210,6 @@ tbody tr:last-child td{border-bottom:none}
     <button class="btn btn-ghost" onclick="document.getElementById('import-input').click()">Import</button>
     <input type="file" id="import-input" accept=".json" style="display:none" onchange="importData(event)">
     <button class="btn btn-ghost" onclick="openSettings()" title="Settings &amp; appearance">&#9881; Settings</button>
-    <button class="btn btn-primary" onclick="openNewBatch()">+ Add batch</button>
   </div>
 </header>
 
@@ -224,7 +223,12 @@ tbody tr:last-child td{border-bottom:none}
     <div class="stat-card"><div class="stat-label">This month</div><div class="stat-value" id="s-month">0</div></div>
   </div>
 
-  <div class="sec-header"><div class="sec-title">Batches</div></div>
+  <div class="sec-header">
+    <div style="display:flex; align-items:center; gap:14px">
+      <div class="sec-title">Batches</div>
+      <button class="btn btn-primary btn-sm" onclick="openNewBatch()">+ Add batch</button>
+    </div>
+  </div>
 
   <!-- Toolbar -->
   <div class="toolbar">
