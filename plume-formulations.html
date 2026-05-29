@@ -238,6 +238,24 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);m
 .soap-row{display:grid;grid-template-columns:1fr 84px 84px 90px 80px auto;gap:6px;align-items:center;padding:7px 10px;border-radius:4px;margin-bottom:4px;background:var(--white);border:1px solid var(--cream-border)}
 .soap-row:hover{border-color:var(--bark-light)}
 .soap-row.no-sap{border-color:var(--warning);background:var(--warning-bg)}
+
+/* ── Stock-on-hand indicator ── */
+/* Clay tint mirrors plume-ingredients.html so the visual vocabulary stays
+   consistent across modules. Warning states (.warn / .no-sap) win over
+   stock states because formulation errors are more urgent than inventory. */
+.ing-row.has-stock:not(.warn):not(.addin),
+.soap-row.has-stock:not(.no-sap){background:var(--clay-light)}
+.ing-row.has-stock:not(.warn):not(.addin):hover,
+.soap-row.has-stock:not(.no-sap):hover{background:var(--clay-hover,#EFDFD5)}
+/* Partial stock: left border in warning colour + small readout, no fill */
+.ing-row.partial-stock:not(.warn),
+.soap-row.partial-stock:not(.no-sap){border-left:3px solid var(--warning);padding-left:8px}
+.stock-note{font-size:10px;color:var(--warning);margin-top:2px}
+/* Dropdown variants */
+.dd-item.in-stock{background:var(--clay-light)}
+.dd-item.in-stock:hover{background:var(--clay-hover,#EFDFD5)}
+.dd-stock{font-size:10px;color:var(--ink-light);margin-right:8px;font-variant-numeric:tabular-nums;white-space:nowrap}
+
 .soap-inp{font-family:'DM Sans',sans-serif;font-size:13px;padding:5px 6px;border:1px solid var(--cream-border);border-radius:3px;background:var(--cream);color:var(--ink);width:100%;text-align:right;outline:none}
 .soap-inp:focus{border-color:var(--bark-light);background:var(--white)}
 .soap-ctrl{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
@@ -693,6 +711,51 @@ function bestCpg(ing) {
   return costs.length ? Math.min.apply(null, costs) : null;
 }
 
+// ── Stock-on-hand helpers (mirrors plume-ingredients.html) ──
+// Convert a lot quantity to grams given its unit and the ingredient's density.
+// Density defaults to 1.0 g/mL if not specified.
+function lotQtyToG(qty, unit, density) {
+  var q = parseFloat(qty);
+  if (isNaN(q) || q <= 0) return 0;
+  var d = parseFloat(density) || 1.0;
+  if (unit === 'g')     return q;
+  if (unit === 'mL')    return q * d;
+  if (unit === 'fl oz') return q * 29.5735 * d;
+  if (unit === 'oz')    return q * 28.3495;
+  if (unit === 'lb')    return q * 453.592;
+  return q;
+}
+
+// Total stock in grams for an ingredient. Returns 0 (not null) when no usable
+// lots exist, so callers can treat it as a plain number. Reference-only
+// ("watchlist") lots do not contribute to stock.
+function stockG(ing) {
+  if (!ing || !ing.lots || !ing.lots.length) return 0;
+  var total = 0;
+  ing.lots.forEach(function(l) {
+    if (l.referenceOnly) return;
+    var qty  = l.qtyPurchased || l.stock || '';
+    var unit = l.qtyUnit      || l.stockUnit || 'g';
+    if (qty) total += lotQtyToG(qty, unit, ing.density);
+  });
+  return total;
+}
+
+// Three-state stock verdict.
+//   needG = 0  -> any positive stock counts as "enough" (used at dropdown time
+//                 and for line rows before a gram amount is entered)
+//   needG > 0  -> compare against the required grams for this line
+// Returns one of 'enough' | 'partial' | 'none'.
+function stockState(ing, needG) {
+  var have = stockG(ing);
+  if (have <= 0) return 'none';
+  if (!needG || needG <= 0) return 'enough';
+  // Tiny tolerance so a line that needs exactly the stock-on-hand reads as
+  // "enough" rather than "partial" due to float fuzz.
+  if (have + 0.001 >= needG) return 'enough';
+  return 'partial';
+}
+
 function calcBatchCost(lines, bs) {
   var total = 0, hasAny = false;
   lines.forEach(function(l) {
@@ -896,8 +959,11 @@ function renderSoapLines() {
     var lCost    = cpg !== null && gFromPct > 0 ? '$' + (cpg * gFromPct).toFixed(2) : '--';
     var dispPct  = pct > 0 ? pct.toFixed(2) : (l.pct || '');
     var dispG    = gFromPct > 0 ? gFromPct.toFixed(2) : '';
+    var sst      = stockState(ing, gFromPct);
+    var sg       = stockG(ing);
+    var stockCls = sst === 'enough' ? ' has-stock' : (sst === 'partial' ? ' partial-stock' : '');
 
-    oilHtml += '<div class="soap-row' + (!sap && pct > 0 ? ' no-sap' : '') + '">';
+    oilHtml += '<div class="soap-row' + (!sap && pct > 0 ? ' no-sap' : '') + stockCls + '">';
     oilHtml += '<div>';
     oilHtml += '<button class="ing-name-btn" onclick="showIngDetail(\'' + ing.id + '\')">' + esc(ing.name) + '</button>';
     if (sap) {
@@ -908,6 +974,7 @@ function renderSoapLines() {
       oilHtml += '<div style="font-size:10px;color:var(--ink-lighter);margin-top:1px">No ' + lyeLabel + ' SAP &mdash; add in Ingredients library</div>';
     }
     oilHtml += '<div class="ing-inci">' + esc(ing.inci) + '</div>';
+    if (sst === 'partial') oilHtml += '<div class="stock-note">' + Math.round(sg) + 'g on hand &middot; need ' + gFromPct.toFixed(1) + 'g</div>';
     oilHtml += '</div>';
     oilHtml += '<input class="soap-inp" type="text" inputmode="decimal" value="' + dispPct + '" placeholder="0.00"' +
       ' onclick="this.select()" oninput="onSoapPct(' + idx + ',this.value)" onblur="onSoapPctB(' + idx + ',this.value)"' +
@@ -937,10 +1004,15 @@ function renderSoapLines() {
       var pctPPO = totalOilG > 0 && g > 0 ? (g / totalOilG * 100).toFixed(2) + '% PPO' : '--';
       var cpg    = bestCpg(ing);
       var lCost  = cpg !== null && g > 0 ? '$' + (cpg * g).toFixed(2) : '--';
-      addinHtml += '<div class="soap-row addin">';
+      var sstA   = stockState(ing, g);
+      var sgA    = stockG(ing);
+      var stockClsA = sstA === 'enough' ? ' has-stock' : (sstA === 'partial' ? ' partial-stock' : '');
+      addinHtml += '<div class="soap-row addin' + stockClsA + '">';
       addinHtml += '<div><button class="ing-name-btn" onclick="showIngDetail(\'' + ing.id + '\')">' + esc(ing.name) + '</button>' +
         '<span class="addin-badge" style="margin-left:6px">add-in</span>';
-      addinHtml += '<div class="ing-inci">' + esc(ing.inci) + '</div></div>';
+      addinHtml += '<div class="ing-inci">' + esc(ing.inci) + '</div>';
+      if (sstA === 'partial') addinHtml += '<div class="stock-note">' + Math.round(sgA) + 'g on hand &middot; need ' + g.toFixed(1) + 'g</div>';
+      addinHtml += '</div>';
       addinHtml += '<div style="font-size:12px;color:var(--ink-lighter);text-align:right;padding-right:4px">--</div>';
       addinHtml += '<input class="soap-inp" type="text" inputmode="decimal" value="' + (g || '') + '" placeholder="0"' +
         ' onclick="this.select()" oninput="onSoapG(' + idx + ',this.value)" onblur="onSoapGB(' + idx + ',this.value)">';
@@ -1242,7 +1314,10 @@ function buildRow(l, idx, ing, bs, isAddin) {
   var warn   = over || under;
   var dpg    = l.dropsPerG || 20;
   var dropsDisp = l.drops || (gNum > 0 ? Math.round(gNum*dpg) : '') || '';
-  var row = '<div class="ing-row' + (warn?' warn':'') + (isAddin?' addin':'') + '">';
+  var sst    = stockState(ing, gNum);
+  var sg     = stockG(ing);
+  var stockCls = sst === 'enough' ? ' has-stock' : (sst === 'partial' ? ' partial-stock' : '');
+  var row = '<div class="ing-row' + (warn?' warn':'') + (isAddin?' addin':'') + stockCls + '">';
   row += '<div>';
   row += '<div><button class="ing-name-btn" onclick="showIngDetail(\'' + ing.id + '\')">' + esc(ing.name) + '</button>';
   if (ing.flag === 'yes') row += '<span style="font-size:10px;color:var(--warning);margin-left:4px">&#9679;</span>';
@@ -1250,6 +1325,7 @@ function buildRow(l, idx, ing, bs, isAddin) {
   if (isAddin) row += '<span class="addin-badge">add-in</span>';
   row += '</div>';
   row += '<div class="ing-inci">' + esc(ing.inci) + '</div>';
+  if (sst === 'partial') row += '<div class="stock-note">' + Math.round(sg) + 'g on hand &middot; need ' + gNum.toFixed(1) + 'g</div>';
   if (warn) row += '<div class="warn-txt">' + (over ? 'Over max (' + ing.max + '%) ' : '') + (under ? 'Under min (' + ing.min + '%)' : '') + '</div>';
   if (isAddin) {
     row += '<div class="drops-row"><span style="color:var(--ink-lighter)">approx</span>';
@@ -1378,9 +1454,14 @@ function searchIngs(q) {
   if (!res.length) { dd.style.display = 'none'; return; }
   var html = '';
   res.forEach(function(i) {
-    html += '<div class="dd-item" onclick="addIng(\'' + i.id + '\')">';
+    var sg = stockG(i);
+    var inStock = sg > 0;
+    var stockTxt = inStock ? (sg >= 1000 ? (sg / 1000).toFixed(1) + 'kg' : Math.round(sg) + 'g') : '';
+    html += '<div class="dd-item' + (inStock ? ' in-stock' : '') + '" onclick="addIng(\'' + i.id + '\')">';
     html += '<div><div class="dd-name">' + esc(i.name) + '</div><div class="dd-inci">' + esc(i.inci) + '</div></div>';
-    html += '<span class="dd-phase">' + i.phase + '</span></div>';
+    html += '<div style="display:flex;align-items:center">';
+    if (inStock) html += '<span class="dd-stock">' + stockTxt + '</span>';
+    html += '<span class="dd-phase">' + i.phase + '</span></div></div>';
   });
   dd.innerHTML = html; dd.style.display = 'block'; posDD();
 }
