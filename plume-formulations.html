@@ -1977,6 +1977,13 @@ function showIngDetail(ingId) {
   html += '<div class="id-field"><label>Usage rate</label><p>' + (ing.min||ing.max ? (ing.min||'0') + '% -- ' + (ing.max||'100') + '%' : '--') + '</p></div>';
   html += '<div class="id-field"><label>Best cost/g</label><p>' + (bc !== null ? '$' + bc.toFixed(4) : '--') + '</p></div>';
   html += '</div>';
+  // Stock on hand -- sits between the static-facts grid and the longer fields
+  // because it changes with use and is the most actionable piece of info.
+  var sgD = stockG(ing);
+  var stockTxt, stockColor;
+  if (sgD <= 0) { stockTxt = 'None on hand'; stockColor = 'var(--ink-lighter)'; }
+  else          { stockTxt = (sgD >= 1000 ? (sgD/1000).toFixed(2) + 'kg' : Math.round(sgD) + 'g'); stockColor = 'var(--clay-dark)'; }
+  html += '<div class="id-field"><label>Stock on hand</label><p style="color:' + stockColor + ';font-weight:500">' + stockTxt + '</p></div>';
   if (ing.function)     html += '<div class="id-field"><label>Function</label><p>' + esc(ing.function) + '</p></div>';
   if (ing.dermalLimits) html += '<div class="id-field"><label>Dermal limits</label><p style="white-space:pre-wrap;line-height:1.6">' + esc(ing.dermalLimits) + '</p></div>';
   if (ing.notes)        html += '<div class="id-field"><label>Notes</label><p style="white-space:pre-wrap;line-height:1.6">' + esc(ing.notes) + '</p></div>';
