@@ -705,8 +705,33 @@ function updateAddinTotalRow() {
   }
 }
 
+// Resolve an ingredient's cost-per-gram. Mirrors ingCostPerG() in
+// plume-costing.html so both modules price the same way. Cascade:
+//   1. legacy: no real lots but a top-level ing.cost present -> use it
+//   2. activeLotId is set AND that lot has costPerG > 0       -> use it
+//   3. otherwise pick the cheapest *non-reference-only* lot
+//   4. nothing usable -> null
+// Reference-only ("watchlist") lots are excluded so unpurchased
+// placeholder prices can never beat real lots in the min().
+//
+// Note: the name "bestCpg" predates activeLotId; kept for diff minimization.
 function bestCpg(ing) {
-  var lots = ing.lots || (ing.cost ? [{ costPerG: ing.cost }] : []);
+  if (!ing) return null;
+  var lots = (ing.lots || []).filter(function(l) { return !l.referenceOnly; });
+  // Legacy fallback when no real lots exist but ing.cost is set
+  if (!lots.length && ing.cost) {
+    var lc = parseFloat(ing.cost);
+    return (!isNaN(lc) && lc > 0) ? lc : null;
+  }
+  // Honor the user's choice of active lot
+  if (ing.activeLotId) {
+    var match = lots.filter(function(l) { return l.id === ing.activeLotId; })[0];
+    if (match) {
+      var ac = parseFloat(match.costPerG);
+      if (!isNaN(ac) && ac > 0) return ac;
+    }
+  }
+  // Fallback: cheapest purchased lot with a usable cost
   var costs = lots.map(function(l) { return parseFloat(l.costPerG); }).filter(function(c) { return !isNaN(c) && c > 0; });
   return costs.length ? Math.min.apply(null, costs) : null;
 }
