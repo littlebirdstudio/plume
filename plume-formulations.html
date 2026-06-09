@@ -160,6 +160,28 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);m
 .drops-row{grid-column:1/-1;display:flex;align-items:center;gap:8px;padding:3px 0 4px;font-size:12px;color:var(--ink-light)}
 .drops-inp{font-family:'DM Sans',sans-serif;font-size:12px;padding:3px 6px;border:1px solid var(--cream-border);border-radius:3px;background:var(--cream);color:var(--ink);width:54px;text-align:right;outline:none}
 .drops-inp:focus{border-color:var(--bark-light);background:var(--white)}
+
+/* ── Drag-to-reorder ── */
+.drag-handle{display:inline-block;color:var(--ink-lighter);cursor:grab;user-select:none;padding:0 6px 0 0;font-size:14px;line-height:1;letter-spacing:-2px;vertical-align:middle}
+.drag-handle:hover{color:var(--ink-light)}
+.drag-handle:active{cursor:grabbing}
+.ing-row.dragging{opacity:0.4}
+.ing-row.drag-over-top{box-shadow:inset 0 2px 0 0 var(--clay)}
+.ing-row.drag-over-bottom{box-shadow:inset 0 -2px 0 0 var(--clay)}
+
+/* ── Per-line phase override ── */
+.phase-pill{display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:2px 8px;border-radius:10px;background:var(--cream-dark);color:var(--ink-light);cursor:pointer;margin-left:6px;border:1px solid transparent;font-family:inherit;line-height:1.5;white-space:nowrap}
+.phase-pill:hover{background:var(--cream);border-color:var(--cream-border)}
+.phase-pill.overridden{background:var(--clay-light);color:var(--clay-dark);font-weight:500}
+.phase-pill .pdot{display:inline-block;width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.phase-pill .override-mark{font-size:9px;opacity:0.7;margin-left:2px}
+.phase-menu{position:fixed;background:var(--white);border:1px solid var(--cream-border);border-radius:4px;box-shadow:0 4px 16px rgba(44,37,32,0.12);z-index:1000;padding:4px 0;min-width:170px;font-size:12px}
+.ph-menu-item{padding:7px 12px;cursor:pointer;display:flex;align-items:center;gap:8px;color:var(--ink)}
+.ph-menu-item:hover{background:var(--cream)}
+.ph-menu-item.ph-current{background:var(--cream-dark);font-weight:500}
+.ph-menu-item .pdot{width:8px;height:8px;border-radius:50%}
+.ph-default-mark{font-size:9px;color:var(--ink-lighter);margin-left:auto;text-transform:uppercase;letter-spacing:0.08em}
+.ph-reset{border-top:1px solid var(--cream-dark);color:var(--clay-dark);margin-top:2px;font-style:italic}
 .add-bar{display:flex;gap:8px;margin-top:0.75rem;align-items:center}
 .ing-search{font-family:'DM Sans',sans-serif;font-size:13px;padding:7px 12px;border:1px solid var(--cream-border);border-radius:3px;background:var(--white);color:var(--ink);flex:1;outline:none}
 .ing-search:focus{border-color:var(--bark-light)}
@@ -715,6 +737,173 @@ function updateAddinTotalRow() {
 // placeholder prices can never beat real lots in the min().
 //
 // Note: the name "bestCpg" predates activeLotId; kept for diff minimization.
+// Resolve a line's effective phase. A line may override its ingredient's
+// default phase (e.g. rosehip is normally "oil" but a cold-process formula
+// needs it in "cool-down"). Add-ins live in their own pseudo-phase so
+// drag-reorder won't accidentally mix them with regular lines.
+function effPhase(line, ing) {
+  if (!line) return 'other';
+  if (line.addin) return 'addin';
+  if (line.phase) return line.phase;
+  return (ing && ing.phase) ? ing.phase : 'other';
+}
+
+// ── Drag-to-reorder ──
+// Rows are only reorderable within the same effective phase. Cross-phase
+// movement is handled by the phase pill (explicit) rather than implicit drag
+// gestures. The drag drop indicator (top/bottom border) makes the landing
+// position clear before the user releases.
+var dragSrcIdx = null;
+var dragSrcPhase = null;
+
+function onLineDragStart(e, idx) {
+  dragSrcIdx = idx;
+  var line = fLines[idx];
+  var ing  = ings.find(function(i) { return i.id === line.ingId; });
+  dragSrcPhase = effPhase(line, ing);
+  e.dataTransfer.effectAllowed = 'move';
+  // Some browsers (Firefox) require dataTransfer to have data set
+  try { e.dataTransfer.setData('text/plain', String(idx)); } catch (err) {}
+  // Defer the class add so the browser snapshots the row for the drag image first
+  var node = e.currentTarget;
+  setTimeout(function() { node.classList.add('dragging'); }, 0);
+}
+
+function onLineDragEnd(e) {
+  if (e.currentTarget) e.currentTarget.classList.remove('dragging');
+  clearDragOver();
+  dragSrcIdx = null;
+  dragSrcPhase = null;
+}
+
+function clearDragOver() {
+  var els = document.querySelectorAll('.drag-over-top, .drag-over-bottom');
+  for (var i = 0; i < els.length; i++) {
+    els[i].classList.remove('drag-over-top');
+    els[i].classList.remove('drag-over-bottom');
+  }
+}
+
+function onLineDragOver(e, targetIdx) {
+  if (dragSrcIdx === null || dragSrcIdx === targetIdx) return;
+  var targetLine = fLines[targetIdx];
+  var tIng = ings.find(function(i) { return i.id === targetLine.ingId; });
+  if (effPhase(targetLine, tIng) !== dragSrcPhase) return; // same-phase only
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  // Decide top vs bottom based on cursor position within the row
+  var rect = e.currentTarget.getBoundingClientRect();
+  var above = (e.clientY - rect.top) < rect.height / 2;
+  clearDragOver();
+  e.currentTarget.classList.add(above ? 'drag-over-top' : 'drag-over-bottom');
+}
+
+function onLineDragLeave(e) {
+  // Only clear if we're truly leaving the row, not just hovering a child
+  if (e.currentTarget.contains(e.relatedTarget)) return;
+  e.currentTarget.classList.remove('drag-over-top');
+  e.currentTarget.classList.remove('drag-over-bottom');
+}
+
+function onLineDrop(e, targetIdx) {
+  e.preventDefault();
+  var srcIdx = dragSrcIdx;
+  var srcPhase = dragSrcPhase;
+  // Cleanup happens regardless
+  clearDragOver();
+  if (srcIdx === null || srcIdx === targetIdx) return;
+  var dragged = fLines[srcIdx];
+  var target  = fLines[targetIdx];
+  var dIng = ings.find(function(i) { return i.id === dragged.ingId; });
+  var tIng = ings.find(function(i) { return i.id === target.ingId; });
+  if (effPhase(dragged, dIng) !== srcPhase) return;
+  if (effPhase(target,  tIng) !== srcPhase) return;
+  var rect = e.currentTarget.getBoundingClientRect();
+  var insertBefore = (e.clientY - rect.top) < rect.height / 2;
+  // Remove dragged
+  var item = fLines.splice(srcIdx, 1)[0];
+  // Adjust target index for the removal
+  var adjTarget = (srcIdx < targetIdx) ? targetIdx - 1 : targetIdx;
+  var insertAt = insertBefore ? adjTarget : adjTarget + 1;
+  fLines.splice(insertAt, 0, item);
+  markDirty();
+  renderLines();
+  recalc();
+}
+
+// ── Per-line phase override ──
+function openPhaseMenu(idx, anchorEl) {
+  closePhaseMenu();
+  var line = fLines[idx];
+  var ing = ings.find(function(i) { return i.id === line.ingId; });
+  var current   = effPhase(line, ing);
+  var defaultPh = ing ? (ing.phase || 'other') : 'other';
+  var phases = ['water','oil','cool-down','active','other'];
+  var phNames = { water:'Water phase', oil:'Oil phase', 'cool-down':'Cool-down phase', active:'Active phase', other:'Other' };
+  var menu = document.createElement('div');
+  menu.className = 'phase-menu';
+  menu.id = 'phase-menu';
+  var html = '';
+  phases.forEach(function(p) {
+    var isCurrent = p === current;
+    var isDefault = p === defaultPh;
+    html += '<div class="ph-menu-item' + (isCurrent ? ' ph-current' : '') + '"' +
+      ' onclick="setLinePhase(' + idx + ',\'' + p + '\')">' +
+      '<span class="pdot dot-' + p + '"></span>' + phNames[p] +
+      (isDefault ? '<span class="ph-default-mark">default</span>' : '') +
+      '</div>';
+  });
+  if (line.phase) {
+    html += '<div class="ph-menu-item ph-reset" onclick="resetLinePhase(' + idx + ')">&#8629; Reset to ingredient default</div>';
+  }
+  menu.innerHTML = html;
+  document.body.appendChild(menu);
+  var rect = anchorEl.getBoundingClientRect();
+  // Position below the pill; flip up if too close to the bottom of viewport
+  var menuTop = rect.bottom + 4;
+  if (menuTop + 220 > window.innerHeight) menuTop = rect.top - 220;
+  menu.style.left = rect.left + 'px';
+  menu.style.top  = menuTop + 'px';
+  setTimeout(function() {
+    document.addEventListener('mousedown', closePhaseMenuOnOutside, true);
+  }, 0);
+}
+
+function closePhaseMenu() {
+  var existing = document.getElementById('phase-menu');
+  if (existing) existing.parentNode.removeChild(existing);
+  document.removeEventListener('mousedown', closePhaseMenuOnOutside, true);
+}
+
+function closePhaseMenuOnOutside(e) {
+  if (e.target.closest('#phase-menu')) return;
+  if (e.target.closest('.phase-pill')) return;
+  closePhaseMenu();
+}
+
+function setLinePhase(idx, phase) {
+  var line = fLines[idx];
+  var ing = ings.find(function(i) { return i.id === line.ingId; });
+  var defaultPh = ing ? (ing.phase || 'other') : 'other';
+  if (phase === defaultPh) {
+    delete line.phase;
+  } else {
+    line.phase = phase;
+  }
+  closePhaseMenu();
+  markDirty();
+  renderLines();
+  recalc();
+}
+
+function resetLinePhase(idx) {
+  delete fLines[idx].phase;
+  closePhaseMenu();
+  markDirty();
+  renderLines();
+  recalc();
+}
+
 function bestCpg(ing) {
   if (!ing) return null;
   var lots = (ing.lots || []).filter(function(l) { return !l.referenceOnly; });
@@ -1286,7 +1475,7 @@ function renderLines() {
   fLines.forEach(function(l, idx) {
     if (l.addin) { addins.push({ l:l, idx:idx }); return; }
     var ing = ings.find(function(i) { return i.id === l.ingId; });
-    var ph  = ing ? ing.phase : 'other';
+    var ph  = effPhase(l, ing);
     if (!grouped[ph]) grouped[ph] = [];
     grouped[ph].push({ l:l, idx:idx, ing:ing });
   });
@@ -1342,12 +1531,29 @@ function buildRow(l, idx, ing, bs, isAddin) {
   var sst    = stockState(ing, gNum);
   var sg     = stockG(ing);
   var stockCls = sst === 'enough' ? ' has-stock' : (sst === 'partial' ? ' partial-stock' : '');
-  var row = '<div class="ing-row' + (warn?' warn':'') + (isAddin?' addin':'') + stockCls + '">';
+  var ePh    = effPhase(l, ing);
+  var defPh  = ing ? (ing.phase || 'other') : 'other';
+  var phOvr  = !isAddin && !!l.phase && l.phase !== defPh;
+  var row = '<div class="ing-row' + (warn?' warn':'') + (isAddin?' addin':'') + stockCls + '"' +
+    ' draggable="true"' +
+    ' ondragstart="onLineDragStart(event,' + idx + ')"' +
+    ' ondragend="onLineDragEnd(event)"' +
+    ' ondragover="onLineDragOver(event,' + idx + ')"' +
+    ' ondragleave="onLineDragLeave(event)"' +
+    ' ondrop="onLineDrop(event,' + idx + ')">';
   row += '<div>';
-  row += '<div><button class="ing-name-btn" onclick="showIngDetail(\'' + ing.id + '\')">' + esc(ing.name) + '</button>';
+  row += '<div><span class="drag-handle" title="Drag to reorder within phase">&#8942;&#8942;</span>';
+  row += '<button class="ing-name-btn" onclick="showIngDetail(\'' + ing.id + '\')">' + esc(ing.name) + '</button>';
   if (ing.flag === 'yes') row += '<span style="font-size:10px;color:var(--warning);margin-left:4px">&#9679;</span>';
   if (pinned && !isAddin) row += '<span class="pinned-badge">pinned</span>';
   if (isAddin) row += '<span class="addin-badge">add-in</span>';
+  if (!isAddin) {
+    row += '<button class="phase-pill' + (phOvr ? ' overridden' : '') +
+      '" onclick="event.stopPropagation();openPhaseMenu(' + idx + ',this)" title="' +
+      (phOvr ? 'Overridden from ' + esc(defPh) + ' phase. Click to change.' : 'Click to change phase for this formula') +
+      '"><span class="pdot dot-' + ePh + '"></span>' + ePh +
+      (phOvr ? '<span class="override-mark">*</span>' : '') + '</button>';
+  }
   row += '</div>';
   row += '<div class="ing-inci">' + esc(ing.inci) + '</div>';
   if (sst === 'partial') row += '<div class="stock-note">' + Math.round(sg) + 'g on hand &middot; need ' + gNum.toFixed(1) + 'g</div>';
@@ -2185,7 +2391,11 @@ function printFormula() {
   fLines.forEach(function(l) {
     if (l.addin) { addins.push(l); return; }
     var ing = ings.find(function(i) { return i.id === l.ingId; });
-    if (ing) { if (!grouped[ing.phase]) grouped[ing.phase] = []; grouped[ing.phase].push({ l:l, ing:ing }); }
+    if (ing) {
+      var ph = effPhase(l, ing);
+      if (!grouped[ph]) grouped[ph] = [];
+      grouped[ph].push({ l:l, ing:ing });
+    }
   });
   var rows = '';
   phases.forEach(function(p) {
