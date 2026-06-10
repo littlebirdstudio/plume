@@ -54,6 +54,13 @@ main { max-width:1240px; margin:0 auto; padding:24px 22px 60px; }
 .prod-row { display:grid; grid-template-columns:1fr 1fr 80px 90px 90px 80px 90px 80px; gap:12px; padding:11px 14px; border-bottom:1px solid var(--cream-dark); cursor:pointer; transition:background 0.1s; align-items:center; font-size:13px; }
 .prod-row:hover { background:var(--cream); }
 .prod-row:last-child { border-bottom:none; }
+.prod-row.dragging { opacity:0.4; }
+.prod-row.drag-over-top { box-shadow:inset 0 2px 0 0 var(--clay); }
+.prod-row.drag-over-bottom { box-shadow:inset 0 -2px 0 0 var(--clay); }
+.prod-name-cell { display:flex; align-items:flex-start; gap:7px; }
+.prod-drag { color:var(--ink-lighter); cursor:grab; user-select:none; font-size:14px; line-height:1.3; letter-spacing:-2px; flex-shrink:0; padding-top:1px; }
+.prod-drag:hover { color:var(--ink-light); }
+.prod-drag:active { cursor:grabbing; }
 .prod-name { font-weight:500; color:var(--ink); }
 .prod-sku { color:var(--ink-lighter); font-size:11px; font-family:'DM Sans',sans-serif; }
 .prod-formula { color:var(--ink-light); font-size:12px; }
@@ -485,12 +492,122 @@ function loadData() {
   try { var r = localStorage.getItem(PRODUCT_KEY); if (r) products = JSON.parse(r); } catch(e) {}
   // Phase 6 wipe: old costing data was scoped for replacement, not migration.
   try { localStorage.removeItem(OLD_COST_KEY); } catch(e) {}
+  migrateListOrder();
   renderList();
   renderStatusPills();
 }
 function saveProducts() {
   try { localStorage.setItem(PRODUCT_KEY, JSON.stringify(products)); }
   catch(e) { alert('Could not save -- browser storage may be full.'); }
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// List ordering: manual drag-to-reorder within each formulation group
+// ──────────────────────────────────────────────────────────────────────
+// The product list groups by formulation, then shows products in array
+// order within each group. Previously the within-group order was forced
+// alphabetical, which sorts sizes wrong ("100ml" before "15ml"). This
+// one-time migration freezes the current alphabetical display into array
+// order so nothing visibly jumps; after that, array order is authoritative
+// and drag-to-reorder edits it directly.
+function migrateListOrder() {
+  var FLAG = 'plume_costing_listorder_v1';
+  try { if (localStorage.getItem(FLAG)) return; } catch(e) { return; }
+  if (!products.length) {
+    try { localStorage.setItem(FLAG, '1'); } catch(e) {}
+    return;
+  }
+  var groups = {};
+  var keys = [];
+  products.forEach(function(p) {
+    var f = findForm(p.formulaId);
+    var key = (f && f.name) || '(no formulation)';
+    if (!groups[key]) { groups[key] = []; keys.push(key); }
+    groups[key].push(p);
+  });
+  keys.sort(function(a, b) { return a.localeCompare(b); });
+  keys.forEach(function(k) {
+    groups[k].sort(function(a, b) { return (a.name || '').localeCompare(b.name || ''); });
+  });
+  var reordered = [];
+  keys.forEach(function(k) { groups[k].forEach(function(p) { reordered.push(p); }); });
+  products = reordered;
+  saveProducts();
+  try { localStorage.setItem(FLAG, '1'); } catch(e) {}
+}
+
+var prodDragId = null;
+var prodDragGroup = null;
+
+function prodGroupKey(p) {
+  var f = findForm(p.formulaId);
+  return (f && f.name) || '(no formulation)';
+}
+
+function onProdDragStart(e, id) {
+  prodDragId = id;
+  var p = findProduct(id);
+  prodDragGroup = p ? prodGroupKey(p) : null;
+  e.dataTransfer.effectAllowed = 'move';
+  try { e.dataTransfer.setData('text/plain', id); } catch(err) {}
+  var rowEl = e.currentTarget.closest ? e.currentTarget.closest('.prod-row') : null;
+  if (rowEl) setTimeout(function() { rowEl.classList.add('dragging'); }, 0);
+}
+
+function onProdDragEnd(e) {
+  clearProdDragOver();
+  var rows = document.querySelectorAll('.prod-row.dragging');
+  for (var i = 0; i < rows.length; i++) rows[i].classList.remove('dragging');
+  prodDragId = null;
+  prodDragGroup = null;
+}
+
+function clearProdDragOver() {
+  var els = document.querySelectorAll('.prod-row.drag-over-top, .prod-row.drag-over-bottom');
+  for (var i = 0; i < els.length; i++) {
+    els[i].classList.remove('drag-over-top');
+    els[i].classList.remove('drag-over-bottom');
+  }
+}
+
+function onProdDragOver(e, targetId) {
+  if (!prodDragId || prodDragId === targetId) return;
+  var target = findProduct(targetId);
+  if (!target || prodGroupKey(target) !== prodDragGroup) return; // same group only
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  var rect = e.currentTarget.getBoundingClientRect();
+  var above = (e.clientY - rect.top) < rect.height / 2;
+  clearProdDragOver();
+  e.currentTarget.classList.add(above ? 'drag-over-top' : 'drag-over-bottom');
+}
+
+function onProdDragLeave(e) {
+  if (e.currentTarget.contains(e.relatedTarget)) return;
+  e.currentTarget.classList.remove('drag-over-top');
+  e.currentTarget.classList.remove('drag-over-bottom');
+}
+
+function onProdDrop(e, targetId) {
+  e.preventDefault();
+  var srcId = prodDragId;
+  clearProdDragOver();
+  if (!srcId || srcId === targetId) return;
+  var src = findProduct(srcId);
+  var target = findProduct(targetId);
+  if (!src || !target) return;
+  if (prodGroupKey(src) !== prodGroupKey(target)) return; // same group only
+  var rect = e.currentTarget.getBoundingClientRect();
+  var insertBefore = (e.clientY - rect.top) < rect.height / 2;
+  var srcIdx = products.indexOf(src);
+  if (srcIdx === -1) return;
+  products.splice(srcIdx, 1);
+  var tgtIdx = products.indexOf(target);
+  if (tgtIdx === -1) { products.splice(srcIdx, 0, src); return; }
+  var insertAt = insertBefore ? tgtIdx : tgtIdx + 1;
+  products.splice(insertAt, 0, src);
+  saveProducts();
+  renderList();
 }
 
 // ──────────────────────────────────────────────────────────────────────
@@ -714,9 +831,8 @@ function renderList() {
     groups[key].push(p);
   });
   order.sort(function(a, b) { return a.localeCompare(b); });
-  Object.keys(groups).forEach(function(k) {
-    groups[k].sort(function(a, b) { return (a.name || '').localeCompare(b.name || ''); });
-  });
+  // Within-group order follows array order (manual drag-to-reorder), not
+  // alphabetical -- alphabetical sorts sizes wrong ("100ml" before "15ml").
 
   var html = '';
   order.forEach(function(key) {
@@ -741,9 +857,19 @@ function renderList() {
         ? '<span title="' + runs.length + ' run' + (runs.length === 1 ? '' : 's') +
             (mostRecent ? '; last: ' + fmtDate(mostRecent) : '') + '">' + totalUnits + '</span>'
         : '<span style="color:var(--ink-lighter)">--</span>';
-      html += '<div class="prod-row" onclick="openProduct(\'' + p.id + '\')">' +
-        '<div><div class="prod-name">' + esc(p.name || '(unnamed)') + '</div>' +
-          (p.sku ? '<div class="prod-sku">' + esc(p.sku) + '</div>' : '') + '</div>' +
+      html += '<div class="prod-row"' +
+        ' ondragover="onProdDragOver(event,\'' + p.id + '\')"' +
+        ' ondragleave="onProdDragLeave(event)"' +
+        ' ondrop="onProdDrop(event,\'' + p.id + '\')"' +
+        ' onclick="openProduct(\'' + p.id + '\')">' +
+        '<div class="prod-name-cell">' +
+          '<span class="prod-drag" draggable="true" title="Drag to reorder within ' + esc(key) + '"' +
+            ' ondragstart="onProdDragStart(event,\'' + p.id + '\')"' +
+            ' ondragend="onProdDragEnd(event)"' +
+            ' onclick="event.stopPropagation()">&#8942;&#8942;</span>' +
+          '<div><div class="prod-name">' + esc(p.name || '(unnamed)') + '</div>' +
+            (p.sku ? '<div class="prod-sku">' + esc(p.sku) + '</div>' : '') + '</div>' +
+        '</div>' +
         '<div class="prod-formula">' + esc(key) +
           (p.netWtDisplay ? '<span class="prod-formula-meta">' + esc(p.netWtDisplay) + '</span>' : '') +
         '</div>' +
