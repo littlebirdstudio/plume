@@ -104,6 +104,16 @@ main { max-width:1240px; margin:0 auto; padding:24px 22px 60px; }
 .pkg-recipe-hdr { display:grid; grid-template-columns:1fr 90px 100px 30px; gap:10px; padding:6px 0; font-size:10px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:var(--ink-lighter); }
 .pkg-recipe-hdr > div:nth-child(2), .pkg-recipe-hdr > div:nth-child(3) { text-align:right; }
 
+/* Multi-component (sample pack / kit) editor -- mirrors packaging recipe */
+.comp-recipe-row { display:grid; grid-template-columns:1fr 90px 1fr 90px 30px; gap:10px; align-items:center; padding:8px 0; border-bottom:1px solid var(--cream-dark); }
+.comp-recipe-row:last-of-type { border-bottom:none; }
+.comp-recipe-row select, .comp-recipe-row input { font-size:13px; padding:6px 8px; border-radius:3px; border:1px solid var(--cream-border); background:var(--white); width:100%; }
+.comp-recipe-row .comp-cost { text-align:right; font-variant-numeric:tabular-nums; color:var(--ink-light); font-size:12px; }
+.comp-recipe-row .comp-del { background:none; border:none; cursor:pointer; color:var(--ink-lighter); font-size:14px; padding:2px 6px; line-height:1; }
+.comp-recipe-row .comp-del:hover { color:var(--danger); }
+.comp-recipe-hdr { display:grid; grid-template-columns:1fr 90px 1fr 90px 30px; gap:10px; padding:6px 0; font-size:10px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:var(--ink-lighter); }
+.comp-recipe-hdr > div:nth-child(2), .comp-recipe-hdr > div:nth-child(4) { text-align:right; }
+
 /* ── Cost panel ── */
 .cost-panel { background:var(--cream); border:1px solid var(--cream-border); border-radius:5px; padding:14px 18px; margin:18px 0; }
 /* Pricing helper -- explore multiplier-based suggestions */
@@ -270,7 +280,16 @@ main { max-width:1240px; margin:0 auto; padding:24px 22px 60px; }
       </div>
 
       <!-- What it is -->
-      <div class="form-grid-3">
+      <div class="field field-full" style="margin-bottom:12px">
+        <label>Product type</label>
+        <div class="toggle-row" style="margin-bottom:0">
+          <label><input type="radio" name="prod-kind" value="single" id="kind-single" onchange="onKindChange()" checked> Single formulation</label>
+          <label><input type="radio" name="prod-kind" value="multi" id="kind-multi" onchange="onKindChange()"> Multi-component (sample pack / kit / set)</label>
+        </div>
+      </div>
+
+      <!-- Single-formulation mode -->
+      <div id="single-mode-fields" class="form-grid">
         <div class="field">
           <label>Linked formulation *</label>
           <select id="p-formula" onchange="onFormulaChange()">
@@ -281,10 +300,29 @@ main { max-width:1240px; margin:0 auto; padding:24px 22px 60px; }
           <label>Net weight per unit (g) *</label>
           <input type="number" id="p-netwt-g" step="0.1" min="0" placeholder="e.g. 30" oninput="markDirty(); recalcCost()">
         </div>
-        <div class="field">
-          <label>Display weight (label text)</label>
-          <input type="text" id="p-netwt-display" placeholder="e.g. 1 oz / 30 g" oninput="markDirty()">
+      </div>
+
+      <!-- Multi-component mode -->
+      <div id="multi-mode-fields" style="display:none">
+        <div class="section-hdr">
+          <span>Components</span>
+          <span style="font-weight:400; text-transform:none; letter-spacing:0; color:var(--ink-lighter)">each formulation portion in the pack</span>
         </div>
+        <div class="comp-recipe-hdr">
+          <div>Formulation</div>
+          <div>Net wt (g)</div>
+          <div>Label (optional)</div>
+          <div>Ingred. cost</div>
+          <div></div>
+        </div>
+        <div id="comp-recipe-body"></div>
+        <button class="btn btn-sm pkg-add-btn" onclick="addComponentRow()">+ Add component</button>
+      </div>
+
+      <!-- Display weight / description (shared by both modes) -->
+      <div class="field field-full" style="margin-top:14px">
+        <label>Display weight / description (label text)</label>
+        <input type="text" id="p-netwt-display" placeholder="e.g. 1 oz / 30 g  --or--  3 mL + 5 mL sample duo" oninput="markDirty()">
       </div>
 
       <div class="field field-full">
@@ -540,6 +578,7 @@ var prodDragId = null;
 var prodDragGroup = null;
 
 function prodGroupKey(p) {
+  if (p.productKind === 'multi') return 'Sample packs & kits';
   var f = findForm(p.formulaId);
   return (f && f.name) || '(no formulation)';
 }
@@ -729,11 +768,39 @@ function pkgUnitCost(pkg) {
 }
 
 function computeProductCost(p) {
-  var f = findForm(p.formulaId);
-  var fcpg = formulationCostPerG(f);
-  var netWtG = parseFloat(p.netWtG) || 0;
-  var ingCost = (fcpg !== null && netWtG > 0) ? fcpg * netWtG : 0;
-  var ingCostKnown = (fcpg !== null);
+  var isMulti = (p.productKind === 'multi');
+  var ingCost = 0;
+  var ingCostKnown = true;
+  var compRows = [];
+  var fcpg = null;       // single-mode only
+  var netWtG = 0;        // single-mode only
+
+  if (isMulti) {
+    // Sum each component's (formulation cost/g * its net weight). A component
+    // with no formula or no cost data marks the whole ingredient cost as
+    // "not fully known" so the rollup can flag it.
+    (p.components || []).forEach(function(c) {
+      var cf  = findForm(c.formulaId);
+      var cpg = formulationCostPerG(cf);
+      var wt  = parseFloat(c.netWtG) || 0;
+      var known = (cpg !== null && wt > 0);
+      var sub = known ? cpg * wt : 0;
+      if (!known) ingCostKnown = false;
+      ingCost += sub;
+      compRows.push({
+        label: c.label || (cf && cf.name) || '(no formula)',
+        formulaName: (cf && cf.name) || '(no formula)',
+        cpg: cpg, netWtG: wt, subtotal: sub, known: known
+      });
+    });
+    if (!(p.components || []).length) ingCostKnown = false;
+  } else {
+    var f = findForm(p.formulaId);
+    fcpg = formulationCostPerG(f);
+    netWtG = parseFloat(p.netWtG) || 0;
+    ingCost = (fcpg !== null && netWtG > 0) ? fcpg * netWtG : 0;
+    ingCostKnown = (fcpg !== null);
+  }
 
   var pkgRows = [];
   var pkgCost = 0;
@@ -763,10 +830,12 @@ function computeProductCost(p) {
   var wholesaleProfit = wholesale > 0 ? wholesale - totalCost : null;
 
   return {
+    isMulti: isMulti,
     formulaCostPerG: fcpg,
     netWtG: netWtG,
     ingCost: ingCost,
     ingCostKnown: ingCostKnown,
+    compRows: compRows,
     pkgRows: pkgRows,
     pkgCost: pkgCost,
     totalCost: totalCost,
@@ -821,12 +890,11 @@ function renderList() {
     body.innerHTML = '<div class="empty-state">No products match the current filter.</div>';
     return;
   }
-  // Group by formulation name, then sort within group by name
+  // Group by formulation name (multi-component products group separately)
   var groups = {};
   var order  = [];
   filtered.forEach(function(p) {
-    var f = findForm(p.formulaId);
-    var key = (f && f.name) || '(no formulation)';
+    var key = prodGroupKey(p);
     if (!groups[key]) { groups[key] = []; order.push(key); }
     groups[key].push(p);
   });
@@ -921,8 +989,10 @@ function createProduct() {
     sku:               '',
     barcode:           '',
     status:            'active',
+    productKind:       'single',
     formulaId:         fid || '',
     netWtG:            '',
+    components:        [],
     netWtDisplay:      '',
     notes:             '',
     packagingRecipe:   [],
@@ -958,6 +1028,9 @@ function openProduct(id) {
   document.getElementById('p-sku').value          = p.sku || '';
   document.getElementById('p-barcode').value      = p.barcode || '';
   document.getElementById('p-status').value       = p.status || 'draft';
+  var kind = (p.productKind === 'multi') ? 'multi' : 'single';
+  document.getElementById('kind-single').checked  = (kind === 'single');
+  document.getElementById('kind-multi').checked   = (kind === 'multi');
   document.getElementById('p-formula').value      = p.formulaId || '';
   document.getElementById('p-netwt-g').value      = p.netWtG || '';
   document.getElementById('p-netwt-display').value = p.netWtDisplay || '';
@@ -973,6 +1046,8 @@ function openProduct(id) {
   document.getElementById('run-units').value = '';
   document.getElementById('run-notes').value = '';
 
+  applyKindVisibility(kind);
+  renderComponents(p);
   renderPkgRecipe(p);
   recalcCost();
   renderLabel();
@@ -1002,8 +1077,14 @@ function saveProduct() {
   p.sku               = document.getElementById('p-sku').value.trim();
   p.barcode           = document.getElementById('p-barcode').value.trim();
   p.status            = document.getElementById('p-status').value;
-  p.formulaId         = document.getElementById('p-formula').value;
-  p.netWtG            = parseFloat(document.getElementById('p-netwt-g').value) || '';
+  p.productKind       = document.getElementById('kind-multi').checked ? 'multi' : 'single';
+  if (p.productKind === 'multi') {
+    // Components are maintained live on p by the component editor; ensure array
+    p.components = p.components || [];
+  } else {
+    p.formulaId       = document.getElementById('p-formula').value;
+    p.netWtG          = parseFloat(document.getElementById('p-netwt-g').value) || '';
+  }
   p.netWtDisplay      = document.getElementById('p-netwt-display').value.trim();
   p.notes             = document.getElementById('p-notes').value;
   p.retail            = parseFloat(document.getElementById('p-retail').value) || '';
@@ -1051,8 +1132,10 @@ function duplicateProduct() {
     sku:               '',
     barcode:           '',
     status:            'active',
+    productKind:       src.productKind || 'single',
     formulaId:         src.formulaId || '',
     netWtG:            src.netWtG || '',
+    components:        (src.components || []).map(function(c) { return { id:uid(), formulaId:c.formulaId, netWtG:c.netWtG, label:c.label || '' }; }),
     netWtDisplay:      src.netWtDisplay || '',
     notes:             src.notes || '',
     packagingRecipe:   (src.packagingRecipe || []).map(function(r) { return { packagingId:r.packagingId, quantity:r.quantity }; }),
@@ -1144,39 +1227,159 @@ function onPkgRecipeChange(idx, newPkgId, newQty) {
 }
 
 // ──────────────────────────────────────────────────────────────────────
+// Multi-component (sample pack / kit) editor
+// ──────────────────────────────────────────────────────────────────────
+function applyKindVisibility(kind) {
+  document.getElementById('single-mode-fields').style.display = (kind === 'multi') ? 'none' : '';
+  document.getElementById('multi-mode-fields').style.display  = (kind === 'multi') ? '' : 'none';
+}
+
+function onKindChange() {
+  if (!curId) return;
+  var p = findProduct(curId); if (!p) return;
+  var kind = document.getElementById('kind-multi').checked ? 'multi' : 'single';
+  p.productKind = kind;
+  if (kind === 'multi' && !p.components) p.components = [];
+  // Seed a first empty component row so the editor isn't blank on first switch
+  if (kind === 'multi' && p.components.length === 0) {
+    p.components.push({ id: uid(), formulaId: '', netWtG: '', label: '' });
+  }
+  applyKindVisibility(kind);
+  renderComponents(p);
+  markDirty();
+  recalcCost();
+}
+
+function renderComponents(p) {
+  var body = document.getElementById('comp-recipe-body');
+  if (!body) return;
+  var rows = p.components || [];
+  if (!rows.length) {
+    body.innerHTML = '<div style="padding:8px 0; font-size:12px; color:var(--ink-lighter); font-style:italic">No components yet. Add each formulation portion that goes in the pack.</div>';
+    return;
+  }
+  var formOpts = forms.slice().sort(function(a, b) { return (a.name||'').localeCompare(b.name||''); });
+  var html = '';
+  rows.forEach(function(c, idx) {
+    var cf  = findForm(c.formulaId);
+    var cpg = formulationCostPerG(cf);
+    var wt  = parseFloat(c.netWtG) || 0;
+    var sub = (cpg !== null && wt > 0) ? cpg * wt : null;
+    var subTxt = sub !== null ? '$' + sub.toFixed(3) : '--';
+    html += '<div class="comp-recipe-row">' +
+      '<select onchange="onComponentChange(' + idx + ', \'formulaId\', this.value)">' +
+        '<option value="">-- Pick formula --</option>' +
+        formOpts.map(function(f) {
+          var sel = f.id === c.formulaId ? ' selected' : '';
+          return '<option value="' + f.id + '"' + sel + '>' + esc(f.name || '(unnamed)') + '</option>';
+        }).join('') +
+      '</select>' +
+      '<input type="number" min="0" step="0.1" value="' + (c.netWtG !== '' && c.netWtG != null ? c.netWtG : '') + '" placeholder="g" onchange="onComponentChange(' + idx + ', \'netWtG\', this.value)">' +
+      '<input type="text" value="' + esc(c.label || '') + '" placeholder="e.g. Face Oil 3 mL" onchange="onComponentChange(' + idx + ', \'label\', this.value)">' +
+      '<div class="comp-cost">' + subTxt + '</div>' +
+      '<button class="comp-del" title="Remove" onclick="removeComponentRow(' + idx + ')">&#x2715;</button>' +
+      '</div>';
+  });
+  body.innerHTML = html;
+}
+
+function addComponentRow() {
+  if (!curId) return;
+  var p = findProduct(curId); if (!p) return;
+  if (!p.components) p.components = [];
+  p.components.push({ id: uid(), formulaId: '', netWtG: '', label: '' });
+  markDirty();
+  renderComponents(p);
+}
+
+function removeComponentRow(idx) {
+  if (!curId) return;
+  var p = findProduct(curId); if (!p) return;
+  if (!p.components) return;
+  p.components.splice(idx, 1);
+  markDirty();
+  renderComponents(p);
+  recalcCost();
+}
+
+function onComponentChange(idx, field, value) {
+  if (!curId) return;
+  var p = findProduct(curId); if (!p) return;
+  if (!p.components || !p.components[idx]) return;
+  if (field === 'netWtG') {
+    p.components[idx].netWtG = value === '' ? '' : (parseFloat(value) || 0);
+  } else {
+    p.components[idx][field] = value;
+  }
+  markDirty();
+  renderComponents(p);
+  recalcCost();
+  renderLabel();
+}
+
+// ──────────────────────────────────────────────────────────────────────
 // Cost rollup panel
 // ──────────────────────────────────────────────────────────────────────
 function recalcCost() {
   if (!curId) return;
   var p = findProduct(curId); if (!p) return;
-  p.formulaId   = document.getElementById('p-formula').value;
-  p.netWtG      = parseFloat(document.getElementById('p-netwt-g').value) || '';
+  var isMulti = (p.productKind === 'multi');
+  // In single mode the formula/netwt come from the visible fields. In multi
+  // mode those fields are hidden and components are maintained directly on p
+  // by the component editor, so we don't read them here.
+  if (!isMulti) {
+    p.formulaId = document.getElementById('p-formula').value;
+    p.netWtG    = parseFloat(document.getElementById('p-netwt-g').value) || '';
+  }
   p.retail      = parseFloat(document.getElementById('p-retail').value) || '';
   p.wholesale   = parseFloat(document.getElementById('p-wholesale').value) || '';
   var c = computeProductCost(p);
-  // Pull in the per-line ingredient detail for diagnostics
-  var f = findForm(p.formulaId);
-  var detail = formulationCostDetail(f);
   var panel = document.getElementById('cost-panel');
 
   var html = '';
   html += '<div class="cost-row cost-section-hdr"><span>Per-unit cost breakdown</span><span></span><span></span></div>';
-  var fcpgTxt = c.formulaCostPerG !== null ? '$' + c.formulaCostPerG.toFixed(4) + '/g' : 'no cost data';
-  var netTxt  = c.netWtG > 0 ? c.netWtG + 'g' : 'no weight';
-  html += '<div class="cost-row">' +
-    '<span class="cr-label">Ingredients (' + fcpgTxt + ' &times; ' + netTxt + ')</span>' +
-    '<span class="cr-aux"></span>' +
-    '<span class="cr-val">$' + c.ingCost.toFixed(2) + '</span></div>';
 
-  // If ingredient cost is missing, surface WHICH ingredients are missing data
-  if (!c.ingCostKnown && detail.lines.length) {
-    var missing = detail.lines.filter(function(l) { return !l.hasCost; });
-    if (missing.length) {
-      var names = missing.map(function(l) { return esc(l.name); }).join(', ');
+  if (isMulti) {
+    // One line per component
+    c.compRows.forEach(function(r) {
+      var cpgTxt = r.cpg !== null ? '$' + r.cpg.toFixed(4) + '/g' : 'no cost';
+      var wtTxt  = r.netWtG > 0 ? r.netWtG + 'g' : 'no wt';
+      html += '<div class="cost-row">' +
+        '<span class="cr-label">' + esc(r.label) + ' (' + cpgTxt + ' &times; ' + wtTxt + ')</span>' +
+        '<span class="cr-aux"></span>' +
+        '<span class="cr-val">$' + r.subtotal.toFixed(2) + '</span></div>';
+    });
+    if (!c.compRows.length) {
+      html += '<div style="font-size:11px; color:var(--ink-lighter); font-style:italic; padding:6px 0 10px">No components added yet.</div>';
+    }
+    // Flag components missing cost data
+    var missingComp = c.compRows.filter(function(r) { return !r.known; });
+    if (missingComp.length) {
+      var compNames = missingComp.map(function(r) { return esc(r.label); }).join(', ');
       html += '<div style="font-size:11px; color:var(--warning); padding:6px 0 10px; line-height:1.5">' +
-        '<strong>Missing cost data for:</strong> ' + names + '.<br>' +
-        'Open the <a href="plume-ingredients.html" target="plume-ingredients" style="color:var(--clay-dark); text-decoration:underline">Ingredients</a> module and add a purchase lot with cost/g for each.' +
+        '<strong>Incomplete cost data for:</strong> ' + compNames + '.<br>' +
+        'Each component needs a formulation and a net weight, and that formulation\'s ingredients need cost/g.' +
         '</div>';
+    }
+  } else {
+    var f = findForm(p.formulaId);
+    var detail = formulationCostDetail(f);
+    var fcpgTxt = c.formulaCostPerG !== null ? '$' + c.formulaCostPerG.toFixed(4) + '/g' : 'no cost data';
+    var netTxt  = c.netWtG > 0 ? c.netWtG + 'g' : 'no weight';
+    html += '<div class="cost-row">' +
+      '<span class="cr-label">Ingredients (' + fcpgTxt + ' &times; ' + netTxt + ')</span>' +
+      '<span class="cr-aux"></span>' +
+      '<span class="cr-val">$' + c.ingCost.toFixed(2) + '</span></div>';
+    // If ingredient cost is missing, surface WHICH ingredients are missing data
+    if (!c.ingCostKnown && detail.lines.length) {
+      var missing = detail.lines.filter(function(l) { return !l.hasCost; });
+      if (missing.length) {
+        var names = missing.map(function(l) { return esc(l.name); }).join(', ');
+        html += '<div style="font-size:11px; color:var(--warning); padding:6px 0 10px; line-height:1.5">' +
+          '<strong>Missing cost data for:</strong> ' + names + '.<br>' +
+          'Open the <a href="plume-ingredients.html" target="plume-ingredients" style="color:var(--clay-dark); text-decoration:underline">Ingredients</a> module and add a purchase lot with cost/g for each.' +
+          '</div>';
+      }
     }
   }
 
@@ -1309,19 +1512,13 @@ function onOverrideToggle() {
   renderLabel();
 }
 
-function buildIngredientList(p, mode) {
-  var f = findForm(p.formulaId);
+function singleFormulaIngredients(f, mode) {
   if (!f || !f.lines || !f.lines.length) return '(no formulation linked)';
   // For sorting purposes we need a "weight" per line. Use the larger of
   // (pct, gramsFixed) -- soap lines use gramsFixed; everything else uses pct.
-  // Soap add-ins (fragrance, EOs) appear at the end of the label by tradition,
-  // but for descending-weight ordering, we still sort by their gramsFixed.
   var lines = f.lines.slice().map(function(l) {
     var pct = parseFloat(l.pct) || 0;
     var gf  = parseFloat(l.gramsFixed) || 0;
-    // Comparable weight: pct for pct-based, gramsFixed for soap. Since the two
-    // formulation shapes are mutually exclusive per formula, this gives a
-    // consistent ordering within a single formula.
     var weight = pct > 0 ? pct : gf;
     return { line:l, weight:weight };
   }).filter(function(o) { return o.weight > 0; });
@@ -1334,6 +1531,20 @@ function buildIngredientList(p, mode) {
     return ing.name || ing.inci || '(unnamed)';
   });
   return names.join(', ');
+}
+
+function buildIngredientList(p, mode) {
+  if (p.productKind === 'multi') {
+    var comps = p.components || [];
+    if (!comps.length) return '(no components)';
+    // Each component is labeled separately -- one ingredient list per piece.
+    return comps.map(function(c) {
+      var cf = findForm(c.formulaId);
+      var label = c.label || (cf && cf.name) || 'Component';
+      return label + ': ' + singleFormulaIngredients(cf, mode);
+    }).join('\n');
+  }
+  return singleFormulaIngredients(findForm(p.formulaId), mode);
 }
 
 function renderLabel() {
@@ -1360,7 +1571,7 @@ function renderLabel() {
   html += '<div class="label-content">';
   html += '<div class="label-section"><div class="label-section-name">Product</div>' + esc(name) + '</div>';
   if (netWt) html += '<div class="label-section"><div class="label-section-name">Net weight</div>' + esc(netWt) + '</div>';
-  html += '<div class="label-section"><div class="label-section-name">Ingredients</div>' + esc(ingredientLine) + '</div>';
+  html += '<div class="label-section"><div class="label-section-name">Ingredients</div>' + esc(ingredientLine).replace(/\n/g, '<br>') + '</div>';
   if (sku || barcode) {
     html += '<div class="label-section"><div class="label-section-name">Identifiers</div>' +
       (sku ? 'SKU: ' + esc(sku) : '') +
