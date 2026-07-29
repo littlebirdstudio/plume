@@ -170,6 +170,26 @@ main { max-width:1240px; margin:0 auto; padding:24px 22px 60px; }
 .modal-x { background:none; border:none; cursor:pointer; color:var(--ink-light); font-size:18px; padding:0; line-height:1; }
 .modal-foot { display:flex; gap:8px; justify-content:flex-end; margin-top:18px; padding-top:14px; border-top:1px solid var(--cream-dark); }
 
+/* ── Barcode / label generator ── */
+.bc-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px 14px; margin-bottom:14px; }
+.bc-grid .field { margin-bottom:0; }
+.bc-preview { border:1px solid var(--cream-border); border-radius:4px; background:#fff; padding:14px; display:flex; align-items:center; justify-content:center; min-height:110px; margin-bottom:6px; overflow-x:auto; }
+.bc-preview svg { max-width:100%; height:auto; }
+.bc-meta { font-size:11px; color:var(--ink-light); line-height:1.6; margin-bottom:14px; }
+.bc-warn { color:var(--warning); font-weight:500; }
+.bc-bad { color:var(--danger); font-weight:500; }
+.bc-note { font-size:11px; color:var(--ink-lighter); line-height:1.6; margin-top:10px; padding-top:10px; border-top:1px solid var(--cream-dark); }
+
+/* Scan card: grid of labelled barcodes on one page */
+.bc-mode-row { display:flex; gap:16px; align-items:center; margin-bottom:14px; padding-bottom:12px; border-bottom:1px solid var(--cream-dark); font-size:12px; }
+.bc-mode-row label { display:flex; align-items:center; gap:5px; cursor:pointer; color:var(--ink-light); }
+.bc-card-sheet { background:#fff; }
+.bc-card-grid { display:grid; }
+.bc-card-cell { display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; }
+.bc-card-cell svg { display:block; }
+.bc-card-cap { font-family:'DM Sans',sans-serif; font-weight:500; color:#000; }
+.bc-card-bad { font-family:'DM Sans',sans-serif; font-size:10px; color:#B4523C; }
+
 /* ── Palette swatch picker ── */
 .palette-swatch-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
 .palette-swatch { display:flex; flex-direction:column; gap:6px; padding:6px; border:1px solid var(--cream-border); border-radius:5px; background:var(--white); cursor:pointer; font-family:'DM Sans',sans-serif; transition:border-color 0.12s, transform 0.08s; }
@@ -208,6 +228,7 @@ main { max-width:1240px; margin:0 auto; padding:24px 22px 60px; }
     <a href="plume-formulations.html" target="plume-formulations" class="btn btn-ghost">Formulations</a>
     <a href="plume-packaging.html" target="plume-packaging" class="btn btn-ghost">Packaging</a>
     <a href="plume-batchlog.html" target="plume-batchlog" class="btn btn-ghost">Batches</a>
+    <button class="btn btn-ghost" onclick="openBarcode('')" title="Generate printable barcode labels">Barcodes</button>
     <button class="btn btn-ghost" onclick="exportData()">Export</button>
     <button class="btn btn-ghost" onclick="document.getElementById('import-input').click()">Import</button>
     <input type="file" id="import-input" accept=".json" style="display:none" onchange="importData(event)">
@@ -267,7 +288,10 @@ main { max-width:1240px; margin:0 auto; padding:24px 22px 60px; }
         </div>
         <div class="field">
           <label>Barcode value (optional)</label>
-          <input type="text" id="p-barcode" placeholder="UPC, EAN, or internal code" oninput="markDirty()">
+          <div style="display:flex; gap:6px; align-items:center">
+            <input type="text" id="p-barcode" placeholder="e.g. HSL-1OZ" oninput="markDirty()">
+            <button class="btn btn-sm" style="white-space:nowrap" onclick="openBarcodeForProduct()" title="Generate a printable barcode label">Label</button>
+          </div>
         </div>
         <div class="field">
           <label>Status</label>
@@ -440,6 +464,114 @@ main { max-width:1240px; margin:0 auto; padding:24px 22px 60px; }
 </div>
 
 <!-- Settings modal -->
+<!-- Barcode / label generator -->
+<div class="modal-ov" id="m-barcode">
+  <div class="modal" style="max-width:620px">
+    <div class="modal-hdr">
+      <div>
+        <div class="modal-title">Barcode labels</div>
+        <div style="font-size:11px; color:var(--ink-lighter); margin-top:2px">Code 39 &mdash; scannable by Square Handheld</div>
+      </div>
+      <button class="modal-x" onclick="closeModal('m-barcode')">&#x2715;</button>
+    </div>
+
+    <div class="bc-mode-row">
+      <label><input type="radio" name="bc-mode" value="roll" id="bc-mode-roll" checked onchange="bcModeChange()"> Sticker roll &mdash; one code, many copies</label>
+      <label><input type="radio" name="bc-mode" value="card" id="bc-mode-card" onchange="bcModeChange()"> Scan card &mdash; several codes, one page</label>
+    </div>
+
+    <!-- Sticker roll mode -->
+    <div id="bc-roll-fields">
+      <div class="field" style="margin-bottom:14px">
+        <label>Code to encode</label>
+        <input type="text" id="bc-value" placeholder="e.g. HSL-1OZ" oninput="bcRefresh()" autocomplete="off">
+      </div>
+
+      <div class="bc-grid">
+        <div class="field">
+          <label>Sticker width (in)</label>
+          <input type="number" id="bc-lw" step="0.05" min="0.5" value="1.5" oninput="bcRefresh()">
+        </div>
+        <div class="field">
+          <label>Sticker height (in)</label>
+          <input type="number" id="bc-lh" step="0.05" min="0.3" value="0.5" oninput="bcRefresh()">
+        </div>
+        <div class="field">
+          <label>Bar height (in)</label>
+          <input type="number" id="bc-bh" step="0.05" min="0.15" value="0.3" oninput="bcRefresh()">
+        </div>
+      </div>
+
+      <div class="toggle-row" style="margin-bottom:12px">
+        <label><input type="checkbox" id="bc-showtext" checked onchange="bcRefresh()"> Print code text under bars</label>
+        <label style="margin-left:auto">Copies <input type="number" id="bc-copies" min="1" max="500" value="30" style="width:64px; margin-left:6px; font-size:13px; padding:4px 6px; border:1px solid var(--cream-border); border-radius:3px"></label>
+      </div>
+    </div>
+
+    <!-- Scan card mode -->
+    <div id="bc-card-fields" style="display:none">
+      <div class="field" style="margin-bottom:14px">
+        <label>Codes &mdash; one per line, <code>CODE = caption</code></label>
+        <textarea id="bc-card-list" rows="6" style="font-family:monospace; font-size:12px" placeholder="MUG32 = Mug $32&#10;MUG38 = Large mug $38&#10;BOWL45 = Bowl $45&#10;VASE60 = Vase $60" oninput="bcRefresh()"></textarea>
+      </div>
+
+      <div class="bc-grid">
+        <div class="field">
+          <label>Page width (in)</label>
+          <input type="number" id="bc-cw" step="0.25" min="2" value="8.5" oninput="bcRefresh()">
+        </div>
+        <div class="field">
+          <label>Page height (in)</label>
+          <input type="number" id="bc-ch" step="0.25" min="2" value="11" oninput="bcRefresh()">
+        </div>
+        <div class="field">
+          <label>Columns</label>
+          <select id="bc-cols" onchange="bcRefresh()">
+            <option value="1">1</option>
+            <option value="2" selected>2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="bc-grid">
+        <div class="field">
+          <label>Bar height (in)</label>
+          <input type="number" id="bc-cbh" step="0.05" min="0.2" value="0.45" oninput="bcRefresh()">
+        </div>
+        <div class="field">
+          <label>Page margin (in)</label>
+          <input type="number" id="bc-cmargin" step="0.05" min="0" value="0.4" oninput="bcRefresh()">
+        </div>
+        <div class="field" style="display:flex; align-items:flex-end">
+          <label style="display:flex; align-items:center; gap:5px; cursor:pointer; font-size:12px; color:var(--ink-light); text-transform:none; letter-spacing:0; font-weight:400">
+            <input type="checkbox" id="bc-cshowtext" checked onchange="bcRefresh()"> Code text under bars
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="bc-preview" id="bc-preview"></div>
+    <div class="bc-meta" id="bc-meta"></div>
+
+    <div class="modal-foot">
+      <button class="btn" id="bc-btn-svg" onclick="bcDownloadSvg()">Download SVG</button>
+      <button class="btn" id="bc-btn-png" onclick="bcDownloadPng()">Download PNG</button>
+      <button class="btn btn-primary" id="bc-btn-print" onclick="bcPrint()">Print stickers</button>
+    </div>
+
+    <div class="bc-note" id="bc-note-roll">
+      <strong>To make Square recognize it:</strong> set the item's SKU in your Square item library to exactly this code. Test with More &rarr; Settings &rarr; Hardware &rarr; Barcode scanner before the market.<br>
+      Code 39 accepts A&ndash;Z, 0&ndash;9, space, and <code>- . $ / + %</code>. Lowercase is converted automatically. For Canva labels, use Download SVG or PNG; for your thermal printer, use Print stickers.
+    </div>
+    <div class="bc-note" id="bc-note-card" style="display:none">
+      <strong>Scan card:</strong> prints one page with every code laid out in a grid, each with its caption. Good for pottery price tiers &mdash; print once, keep it by the register, scan the card instead of the piece.<br>
+      Captions are print-only and aren't encoded, so they can contain any characters. Each code still needs a matching item SKU in Square.
+    </div>
+  </div>
+</div>
+
 <div class="modal-ov" id="m-settings">
   <div class="modal" style="max-width:560px">
     <div class="modal-hdr"><div class="modal-title">Settings &amp; appearance</div><button class="modal-x" onclick="closeModal('m-settings')">&#x2715;</button></div>
@@ -493,6 +625,390 @@ function fmtDate(d) {
 function uid() { return String(Date.now()) + '-' + Math.random().toString(36).slice(2,7); }
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// ══════════════════════════════════════════════════════════════════════
+// Code 39 barcode generation
+// ══════════════════════════════════════════════════════════════════════
+// Written inline rather than pulling in JsBarcode: the encoding table is
+// 43 entries, it keeps the project dependency-free, and SVG output prints
+// crisply on thermal label printers.
+//
+// Each character is 9 elements alternating bar/space, starting and ending
+// with a bar. Even indices are bars, odd indices are spaces. Exactly 3 of
+// the 9 elements are wide. '*' is the start/stop character and must wrap
+// the data. No mod-43 check digit -- it's optional in the spec and adding
+// it would change the scanned value, breaking SKU matching in Square.
+
+var CODE39 = {
+  '0':'nnnwwnwnn','1':'wnnwnnnnw','2':'nnwwnnnnw','3':'wnwwnnnnn',
+  '4':'nnnwwnnnw','5':'wnnwwnnnn','6':'nnwwwnnnn','7':'nnnwnnwnw',
+  '8':'wnnwnnwnn','9':'nnwwnnwnn','A':'wnnnnwnnw','B':'nnwnnwnnw',
+  'C':'wnwnnwnnn','D':'nnnnwwnnw','E':'wnnnwwnnn','F':'nnwnwwnnn',
+  'G':'nnnnnwwnw','H':'wnnnnwwnn','I':'nnwnnwwnn','J':'nnnnwwwnn',
+  'K':'wnnnnnnww','L':'nnwnnnnww','M':'wnwnnnnwn','N':'nnnnwnnww',
+  'O':'wnnnwnnwn','P':'nnwnwnnwn','Q':'nnnnnnwww','R':'wnnnnnwwn',
+  'S':'nnwnnnwwn','T':'nnnnwnwwn','U':'wwnnnnnnw','V':'nwwnnnnnw',
+  'W':'wwwnnnnnn','X':'nwnnwnnnw','Y':'wwnnwnnnn','Z':'nwwnwnnnn',
+  '-':'nwnnnnwnw','.':'wwnnnnwnn',' ':'nwwnnnwnn','$':'nwnwnwnnn',
+  '/':'nwnwnnnwn','+':'nwnnnwnwn','%':'nnnwnwnwn','*':'nwnnwnwnn'
+};
+
+var C39_WIDE  = 3;   // wide-to-narrow ratio (3:1 is the safest for scanners)
+var C39_QUIET = 10;  // quiet zone, in narrow-bar units, on each side
+var C39_MIN_MIL = 7.5; // practical minimum narrow-bar width for reliable scans
+
+// Uppercase and strip anything Code 39 can't represent.
+function c39Clean(raw) {
+  var up = String(raw || '').toUpperCase();
+  var out = '', bad = '';
+  for (var i = 0; i < up.length; i++) {
+    var ch = up.charAt(i);
+    if (ch === '*') { bad += ch; continue; }  // reserved as start/stop
+    if (CODE39[ch] !== undefined) out += ch;
+    else if (bad.indexOf(ch) === -1) bad += ch;
+  }
+  return { clean: out, bad: bad };
+}
+
+// Total width in narrow-bar units, including quiet zones and start/stop.
+// Per character: 6 narrow + 3 wide = 15 units, plus a 1-unit gap between
+// characters (no trailing gap).
+function c39Units(clean) {
+  var n = clean.length + 2;               // + start and stop
+  return (n * 15) + (n - 1) + (C39_QUIET * 2);
+}
+
+// Build the SVG. Coordinates are in mils (1/1000 inch) so the viewBox
+// scales uniformly and prints at exact physical size.
+function c39Svg(clean, widthIn, barHeightIn, showText) {
+  if (!clean) return null;
+  var data      = '*' + clean + '*';
+  var units     = c39Units(clean);
+  var wMils     = widthIn * 1000;
+  var unitMils  = wMils / units;
+  var barMils   = barHeightIn * 1000;
+  var textMils  = showText ? 150 : 0;
+  var totalH    = barMils + textMils;
+
+  var rects = '';
+  var x = C39_QUIET * unitMils;
+  for (var i = 0; i < data.length; i++) {
+    var pat = CODE39[data.charAt(i)];
+    for (var e = 0; e < 9; e++) {
+      var w = (pat.charAt(e) === 'w' ? C39_WIDE : 1) * unitMils;
+      if (e % 2 === 0) {  // even index = bar
+        rects += '<rect x="' + x.toFixed(3) + '" y="0" width="' + w.toFixed(3) +
+                 '" height="' + barMils.toFixed(1) + '" fill="#000"/>';
+      }
+      x += w;
+    }
+    if (i < data.length - 1) x += unitMils;  // inter-character gap
+  }
+
+  var txt = '';
+  if (showText) {
+    txt = '<text x="' + (wMils / 2).toFixed(1) + '" y="' + (barMils + 118).toFixed(1) +
+          '" font-family="monospace" font-size="120" text-anchor="middle" fill="#000" ' +
+          'letter-spacing="8">' + esc(clean) + '</text>';
+  }
+
+  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + wMils.toFixed(1) + ' ' +
+    totalH.toFixed(1) + '" width="' + widthIn + 'in" height="' + (totalH / 1000).toFixed(4) +
+    'in" shape-rendering="crispEdges">' + rects + txt + '</svg>';
+}
+
+// ── Modal wiring ──
+function bcMode() {
+  return document.getElementById('bc-mode-card').checked ? 'card' : 'roll';
+}
+
+function bcModeChange() {
+  var card = (bcMode() === 'card');
+  document.getElementById('bc-roll-fields').style.display  = card ? 'none' : '';
+  document.getElementById('bc-card-fields').style.display  = card ? '' : 'none';
+  document.getElementById('bc-note-roll').style.display    = card ? 'none' : '';
+  document.getElementById('bc-note-card').style.display    = card ? '' : 'none';
+  // SVG/PNG download are single-code operations; they don't apply to a sheet
+  document.getElementById('bc-btn-svg').style.display = card ? 'none' : '';
+  document.getElementById('bc-btn-png').style.display = card ? 'none' : '';
+  document.getElementById('bc-btn-print').textContent = card ? 'Print card' : 'Print stickers';
+  bcRefresh();
+}
+
+function openBarcode(prefill) {
+  document.getElementById('bc-mode-roll').checked = true;
+  document.getElementById('bc-mode-card').checked = false;
+  document.getElementById('bc-value').value = prefill || '';
+  openModal('m-barcode');
+  bcModeChange();
+}
+
+// Opens prefilled from the current product: barcode field if set, else SKU.
+function openBarcodeForProduct() {
+  var bc  = document.getElementById('p-barcode').value.trim();
+  var sku = document.getElementById('p-sku').value.trim();
+  openBarcode(bc || sku);
+}
+
+// Current sticker settings, with the barcode inset inside the sticker margins.
+function bcSettings() {
+  var labelW = parseFloat(document.getElementById('bc-lw').value) || 1.5;
+  var labelH = parseFloat(document.getElementById('bc-lh').value) || 0.5;
+  var barH   = parseFloat(document.getElementById('bc-bh').value) || 0.3;
+  var show   = document.getElementById('bc-showtext').checked;
+  // Leave a 10% side margin so the quiet zone isn't clipped by print drift
+  var drawW  = Math.max(0.4, labelW * 0.9);
+  return { labelW: labelW, labelH: labelH, barH: barH, show: show, drawW: drawW };
+}
+
+// ── Scan card ──
+function bcCardSettings() {
+  var pw   = parseFloat(document.getElementById('bc-cw').value) || 8.5;
+  var ph   = parseFloat(document.getElementById('bc-ch').value) || 11;
+  var cols = parseInt(document.getElementById('bc-cols').value, 10) || 2;
+  var barH = parseFloat(document.getElementById('bc-cbh').value) || 0.45;
+  var marg = parseFloat(document.getElementById('bc-cmargin').value);
+  if (isNaN(marg) || marg < 0) marg = 0.4;
+  var cellW = Math.max(0.6, (pw - marg * 2) / cols);
+  // Barcode occupies 86% of the cell so adjacent codes keep clear separation
+  var drawW = Math.max(0.5, cellW * 0.86);
+  var show  = document.getElementById('bc-cshowtext').checked;
+  return { pw: pw, ph: ph, cols: cols, barH: barH, marg: marg, cellW: cellW, drawW: drawW, show: show };
+}
+
+// Parse "CODE = caption" lines. Caption is print-only and unrestricted;
+// only the code goes through Code 39 cleaning.
+function bcParseCardList() {
+  var raw = document.getElementById('bc-card-list').value || '';
+  var out = [];
+  raw.split(/\r?\n/).forEach(function(line) {
+    if (!line.trim()) return;
+    var eq = line.indexOf('=');
+    var codeRaw = eq >= 0 ? line.slice(0, eq) : line;
+    var cap     = eq >= 0 ? line.slice(eq + 1).trim() : '';
+    var res = c39Clean(codeRaw.trim());
+    if (!res.clean) return;
+    out.push({ code: res.clean, caption: cap || res.clean, bad: res.bad });
+  });
+  return out;
+}
+
+function bcCardCellHtml(entry, s) {
+  var svg = c39Svg(entry.code, s.drawW, s.barH, s.show);
+  var h = '<div class="bc-card-cell" style="width:' + s.cellW.toFixed(3) + 'in; padding:0.1in 0">';
+  h += '<div class="bc-card-cap" style="font-size:11pt; margin-bottom:0.06in">' + esc(entry.caption) + '</div>';
+  h += svg;
+  if (entry.bad) h += '<div class="bc-card-bad">dropped: ' + esc(entry.bad) + '</div>';
+  h += '</div>';
+  return h;
+}
+
+function bcCardHtml(entries, s) {
+  var cells = entries.map(function(e) { return bcCardCellHtml(e, s); }).join('');
+  return '<div class="bc-card-sheet" style="width:' + s.pw + 'in; min-height:' + s.ph +
+    'in; padding:' + s.marg + 'in; box-sizing:border-box">' +
+    '<div class="bc-card-grid" style="grid-template-columns:repeat(' + s.cols +
+    ',1fr); gap:0.12in">' + cells + '</div></div>';
+}
+
+function bcRefresh() {
+  return (bcMode() === 'card') ? bcRefreshCard() : bcRefreshRoll();
+}
+
+function bcRefreshCard() {
+  var entries = bcParseCardList();
+  var s       = bcCardSettings();
+  var prev    = document.getElementById('bc-preview');
+  var meta    = document.getElementById('bc-meta');
+
+  if (!entries.length) {
+    prev.innerHTML = '<span style="font-size:12px; color:var(--ink-lighter); font-style:italic">Add one code per line to preview the card</span>';
+    meta.innerHTML = '';
+    return;
+  }
+
+  // Scale the page down to fit the modal preview area (96 px per CSS inch)
+  var targetPx = 520;
+  var k = Math.min(1, targetPx / (s.pw * 96));
+  prev.innerHTML = '<div style="width:' + targetPx + 'px; height:' +
+    Math.ceil(s.ph * 96 * k) + 'px; overflow:hidden">' +
+    '<div style="transform:scale(' + k.toFixed(4) + '); transform-origin:top left">' +
+    bcCardHtml(entries, s) + '</div></div>';
+
+  // The longest code produces the narrowest bars, so it sets the density floor
+  var longest = '';
+  entries.forEach(function(e) { if (e.code.length > longest.length) longest = e.code; });
+  var units   = c39Units(longest);
+  var unitMil = (s.drawW * 1000) / units;
+  var rows    = Math.ceil(entries.length / s.cols);
+  var m = entries.length + ' code' + (entries.length > 1 ? 's' : '') + ' &middot; ' +
+    s.cols + ' column' + (s.cols > 1 ? 's' : '') + ' &times; ' + rows + ' row' +
+    (rows > 1 ? 's' : '') + ' &middot; narrowest bar ' + unitMil.toFixed(1) + ' mil';
+  if (unitMil < C39_MIN_MIL) {
+    m += '<br><span class="bc-warn">&#9650; Bars on the longest code are under ' + C39_MIN_MIL +
+         ' mil and may not scan reliably. Use fewer columns, a wider page, or shorter codes.</span>';
+  }
+  var estH = s.marg * 2 + rows * (s.barH + (s.show ? 0.15 : 0) + 0.42);
+  if (estH > s.ph) {
+    m += '<br><span class="bc-warn">&#9650; Content needs about ' + estH.toFixed(1) +
+         'in but the page is ' + s.ph + 'in &mdash; it will spill onto a second page.</span>';
+  }
+  var badAny = entries.filter(function(e) { return e.bad; });
+  if (badAny.length) {
+    m += '<br><span class="bc-bad">Unsupported characters dropped in ' + badAny.length +
+         ' code' + (badAny.length > 1 ? 's' : '') + '.</span>';
+  }
+  meta.innerHTML = m;
+}
+
+function bcRefreshRoll() {
+  var raw  = document.getElementById('bc-value').value;
+  var res  = c39Clean(raw);
+  var s    = bcSettings();
+  var prev = document.getElementById('bc-preview');
+  var meta = document.getElementById('bc-meta');
+
+  if (!res.clean) {
+    prev.innerHTML = '<span style="font-size:12px; color:var(--ink-lighter); font-style:italic">Enter a code to preview</span>';
+    meta.innerHTML = res.bad ? '<span class="bc-bad">Unsupported character' +
+      (res.bad.length > 1 ? 's' : '') + ': ' + esc(res.bad) + '</span>' : '';
+    return;
+  }
+
+  prev.innerHTML = c39Svg(res.clean, s.drawW, s.barH, s.show);
+
+  var units    = c39Units(res.clean);
+  var unitMil  = (s.drawW * 1000) / units;
+  var totalH   = s.barH + (s.show ? 0.15 : 0);
+  var m = 'Encodes <strong>' + esc(res.clean) + '</strong> &middot; ' +
+    (res.clean.length + 2) + ' characters incl. start/stop &middot; narrow bar ' +
+    unitMil.toFixed(1) + ' mil';
+  if (unitMil < C39_MIN_MIL) {
+    m += '<br><span class="bc-warn">&#9650; Bars are narrower than ' + C39_MIN_MIL +
+         ' mil and may not scan reliably. Use a shorter code or a wider sticker.</span>';
+  }
+  if (totalH > s.labelH) {
+    m += '<br><span class="bc-warn">&#9650; Barcode is ' + totalH.toFixed(2) +
+         'in tall but the sticker is only ' + s.labelH.toFixed(2) + 'in. Reduce bar height.</span>';
+  }
+  if (res.bad) {
+    m += '<br><span class="bc-bad">Dropped unsupported character' +
+         (res.bad.length > 1 ? 's' : '') + ': ' + esc(res.bad) + '</span>';
+  }
+  meta.innerHTML = m;
+}
+
+function bcOpenPrintWindow(title, css, body) {
+  var win = window.open('', '_blank');
+  if (!win) { alert('Your browser blocked the print window. Allow pop-ups for this site and try again.'); return; }
+  win.document.write('<!DOCTYPE html><html><head><title>' + esc(title) +
+    '</title><style>' + css + '</style></head><body>' + body +
+    '<scr' + 'ipt>window.onload=function(){window.print();};<\/scr' + 'ipt></body></html>');
+  win.document.close();
+}
+
+function bcPrint() {
+  return (bcMode() === 'card') ? bcPrintCard() : bcPrintRoll();
+}
+
+// One label per page at exact sticker dimensions. Thermal printers treat
+// each page as one label, so page-break-after per label is what makes a
+// roll feed correctly.
+function bcPrintRoll() {
+  var res = c39Clean(document.getElementById('bc-value').value);
+  if (!res.clean) { alert('Enter a code first.'); return; }
+  var s      = bcSettings();
+  var copies = Math.max(1, Math.min(500, parseInt(document.getElementById('bc-copies').value, 10) || 1));
+  var svg    = c39Svg(res.clean, s.drawW, s.barH, s.show);
+
+  var labels = '';
+  for (var i = 0; i < copies; i++) labels += '<div class="lbl">' + svg + '</div>';
+
+  var css = '@page { size: ' + s.labelW + 'in ' + s.labelH + 'in; margin: 0; }' +
+    'html, body { margin:0; padding:0; }' +
+    '.lbl { width:' + s.labelW + 'in; height:' + s.labelH + 'in; display:flex; ' +
+      'align-items:center; justify-content:center; overflow:hidden; ' +
+      'page-break-after:always; break-after:page; box-sizing:border-box; }' +
+    '.lbl:last-child { page-break-after:auto; break-after:auto; }' +
+    '.lbl svg { display:block; }';
+  bcOpenPrintWindow(res.clean + ' stickers', css, labels);
+}
+
+// One page holding every code in a grid, each with its caption.
+function bcPrintCard() {
+  var entries = bcParseCardList();
+  if (!entries.length) { alert('Add at least one code.'); return; }
+  var s = bcCardSettings();
+  var css = '@page { size: ' + s.pw + 'in ' + s.ph + 'in; margin: 0; }' +
+    'html, body { margin:0; padding:0; background:#fff; }' +
+    '.bc-card-sheet { background:#fff; }' +
+    '.bc-card-grid { display:grid; }' +
+    '.bc-card-cell { display:flex; flex-direction:column; align-items:center; ' +
+      'justify-content:center; text-align:center; page-break-inside:avoid; break-inside:avoid; }' +
+    '.bc-card-cell svg { display:block; }' +
+    '.bc-card-cap { font-family:Helvetica,Arial,sans-serif; font-weight:600; color:#000; }' +
+    '.bc-card-bad { font-family:Helvetica,Arial,sans-serif; font-size:8pt; color:#B4523C; }';
+  bcOpenPrintWindow('Scan card', css, bcCardHtml(entries, s));
+}
+
+function bcFilename(clean, ext) {
+  return 'barcode-' + clean.replace(/[^A-Z0-9]+/gi, '-').replace(/^-|-$/g, '') + '.' + ext;
+}
+
+function bcTriggerDownload(href, filename) {
+  var a = document.createElement('a');
+  a.href = href;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+function bcDownloadSvg() {
+  var res = c39Clean(document.getElementById('bc-value').value);
+  if (!res.clean) { alert('Enter a code first.'); return; }
+  var s = bcSettings();
+  var svg = c39Svg(res.clean, s.drawW, s.barH, s.show);
+  var blob = new Blob([svg], { type: 'image/svg+xml' });
+  var url = URL.createObjectURL(blob);
+  bcTriggerDownload(url, bcFilename(res.clean, 'svg'));
+  setTimeout(function() { URL.revokeObjectURL(url); }, 2000);
+}
+
+// Rasterize at 300 DPI so the PNG is sharp enough for label printing
+// and for placing into Canva.
+function bcDownloadPng() {
+  var res = c39Clean(document.getElementById('bc-value').value);
+  if (!res.clean) { alert('Enter a code first.'); return; }
+  var s = bcSettings();
+  var show = s.show;
+  var svg = c39Svg(res.clean, s.drawW, s.barH, show);
+  var hIn = s.barH + (show ? 0.15 : 0);
+  var DPI = 300;
+  var img = new Image();
+  var blob = new Blob([svg], { type: 'image/svg+xml' });
+  var url = URL.createObjectURL(blob);
+  img.onload = function() {
+    var cv = document.createElement('canvas');
+    cv.width  = Math.round(s.drawW * DPI);
+    cv.height = Math.round(hIn * DPI);
+    var ctx = cv.getContext('2d');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.drawImage(img, 0, 0, cv.width, cv.height);
+    URL.revokeObjectURL(url);
+    try {
+      bcTriggerDownload(cv.toDataURL('image/png'), bcFilename(res.clean, 'png'));
+    } catch (e) {
+      alert('PNG export failed in this browser. Use Download SVG instead.');
+    }
+  };
+  img.onerror = function() {
+    URL.revokeObjectURL(url);
+    alert('PNG export failed in this browser. Use Download SVG instead.');
+  };
+  img.src = url;
+}
 function toast(msg) {
   var t = document.getElementById('toast');
   t.textContent = msg;
