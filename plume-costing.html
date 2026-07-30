@@ -180,7 +180,7 @@ main { max-width:1240px; margin:0 auto; padding:24px 22px 60px; }
 .bc-bad { color:var(--danger); font-weight:500; }
 .bc-note { font-size:11px; color:var(--ink-lighter); line-height:1.6; margin-top:10px; padding-top:10px; border-top:1px solid var(--cream-dark); }
 
-/* Scan card: grid of labelled barcodes on one page */
+/* Multiple item scan card: grid of labelled barcodes on one page */
 .bc-mode-row { display:flex; gap:16px; align-items:center; margin-bottom:14px; padding-bottom:12px; border-bottom:1px solid var(--cream-dark); font-size:12px; }
 .bc-mode-row label { display:flex; align-items:center; gap:5px; cursor:pointer; color:var(--ink-light); }
 .bc-card-sheet { background:#fff; }
@@ -478,7 +478,7 @@ main { max-width:1240px; margin:0 auto; padding:24px 22px 60px; }
     <div class="bc-mode-row">
       <label><input type="radio" name="bc-mode" value="roll" id="bc-mode-roll" checked onchange="bcModeChange()"> Sticker roll</label>
       <label><input type="radio" name="bc-mode" value="sheet" id="bc-mode-sheet" onchange="bcModeChange()"> Sticker sheet</label>
-      <label><input type="radio" name="bc-mode" value="card" id="bc-mode-card" onchange="bcModeChange()"> Scan card</label>
+      <label><input type="radio" name="bc-mode" value="card" id="bc-mode-card" onchange="bcModeChange()"> Multiple item scan card</label>
     </div>
 
     <!-- Single-code block: shared by roll and sheet -->
@@ -580,7 +580,7 @@ main { max-width:1240px; margin:0 auto; padding:24px 22px 60px; }
       </div>
     </div>
 
-    <!-- Scan card mode -->
+    <!-- Multiple item scan card mode -->
     <div id="bc-card-fields" style="display:none">
       <div class="field" style="margin-bottom:10px">
         <label>Add from a product</label>
@@ -648,7 +648,7 @@ main { max-width:1240px; margin:0 auto; padding:24px 22px 60px; }
       For plain sticker paper you cut yourself, leave Cut guides on and any layout will do.
     </div>
     <div class="bc-note" id="bc-note-card" style="display:none">
-      <strong>Scan card:</strong> prints one page with every code laid out in a grid, each with its caption. Good for pottery price tiers &mdash; print once, keep it by the register, scan the card instead of the piece.<br>
+      <strong>Multiple item scan card:</strong> prints one page with every code laid out in a grid, each with its caption. Good for pottery price tiers &mdash; print once, keep it by the register, scan the card instead of the piece.<br>
       Captions are print-only and aren't encoded, so they can contain any characters. Each code still needs a matching item SKU in Square.
     </div>
   </div>
@@ -857,7 +857,7 @@ function bcModeChange() {
   document.getElementById('bc-btn-svg').style.display = single ? '' : 'none';
   document.getElementById('bc-btn-png').style.display = single ? '' : 'none';
   document.getElementById('bc-btn-print').textContent =
-    (m === 'card') ? 'Print card' : (m === 'sheet' ? 'Print sheet' : 'Print stickers');
+    (m === 'card') ? 'Print scan card' : (m === 'sheet' ? 'Print sheet' : 'Print stickers');
   bcRefresh();
 }
 
@@ -1029,7 +1029,7 @@ function bcSheetSettings() {
            drawW: Math.max(0.4, lw * 0.88) };
 }
 
-// ── Scan card ──
+// ── Multiple item scan card ──
 function bcCardSettings() {
   var pw   = parseFloat(document.getElementById('bc-cw').value) || 8.5;
   var ph   = parseFloat(document.getElementById('bc-ch').value) || 11;
@@ -1305,7 +1305,7 @@ function bcPrintCard() {
   if (!entries.length) { alert('Add at least one code.'); return; }
   var s = bcCardSettings();
   var css = '@page { size: ' + s.pw + 'in ' + s.ph + 'in; margin: 0; }' + bcGridCss();
-  bcOpenPrintWindow('Scan card', css, bcCardHtml(entries, s));
+  bcOpenPrintWindow('Multiple item scan card', css, bcCardHtml(entries, s));
 }
 
 function bcFilename(clean, ext) {
