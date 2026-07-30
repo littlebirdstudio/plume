@@ -476,17 +476,33 @@ main { max-width:1240px; margin:0 auto; padding:24px 22px 60px; }
     </div>
 
     <div class="bc-mode-row">
-      <label><input type="radio" name="bc-mode" value="roll" id="bc-mode-roll" checked onchange="bcModeChange()"> Sticker roll &mdash; one code, many copies</label>
-      <label><input type="radio" name="bc-mode" value="card" id="bc-mode-card" onchange="bcModeChange()"> Scan card &mdash; several codes, one page</label>
+      <label><input type="radio" name="bc-mode" value="roll" id="bc-mode-roll" checked onchange="bcModeChange()"> Sticker roll</label>
+      <label><input type="radio" name="bc-mode" value="sheet" id="bc-mode-sheet" onchange="bcModeChange()"> Sticker sheet</label>
+      <label><input type="radio" name="bc-mode" value="card" id="bc-mode-card" onchange="bcModeChange()"> Scan card</label>
+    </div>
+
+    <!-- Single-code block: shared by roll and sheet -->
+    <div id="bc-single-fields">
+      <div class="field" style="margin-bottom:12px">
+        <label>From a product</label>
+        <select id="bc-product" onchange="bcPickProduct()">
+          <option value="">-- Type my own code --</option>
+        </select>
+      </div>
+      <div class="bc-grid" style="grid-template-columns:1fr 1fr">
+        <div class="field">
+          <label>Code to encode</label>
+          <input type="text" id="bc-value" placeholder="e.g. HSL-1OZ" oninput="bcRefresh()" autocomplete="off">
+        </div>
+        <div class="field">
+          <label>Caption above bars (optional)</label>
+          <input type="text" id="bc-caption" placeholder="e.g. Hawaiian Sunset 1oz" oninput="bcRefresh()" autocomplete="off">
+        </div>
+      </div>
     </div>
 
     <!-- Sticker roll mode -->
     <div id="bc-roll-fields">
-      <div class="field" style="margin-bottom:14px">
-        <label>Code to encode</label>
-        <input type="text" id="bc-value" placeholder="e.g. HSL-1OZ" oninput="bcRefresh()" autocomplete="off">
-      </div>
-
       <div class="bc-grid">
         <div class="field">
           <label>Sticker width (in)</label>
@@ -501,15 +517,77 @@ main { max-width:1240px; margin:0 auto; padding:24px 22px 60px; }
           <input type="number" id="bc-bh" step="0.05" min="0.15" value="0.3" oninput="bcRefresh()">
         </div>
       </div>
-
       <div class="toggle-row" style="margin-bottom:12px">
-        <label><input type="checkbox" id="bc-showtext" checked onchange="bcRefresh()"> Print code text under bars</label>
+        <label><input type="checkbox" id="bc-showtext" checked onchange="bcRefresh()"> Code text under bars</label>
         <label style="margin-left:auto">Copies <input type="number" id="bc-copies" min="1" max="500" value="30" style="width:64px; margin-left:6px; font-size:13px; padding:4px 6px; border:1px solid var(--cream-border); border-radius:3px"></label>
+      </div>
+    </div>
+
+    <!-- Sticker sheet mode -->
+    <div id="bc-sheet-fields" style="display:none">
+      <div class="field" style="margin-bottom:12px">
+        <label>Sheet layout</label>
+        <select id="bc-preset" onchange="bcApplyPreset()"></select>
+      </div>
+      <div class="bc-grid">
+        <div class="field">
+          <label>Label width (in)</label>
+          <input type="number" id="bc-slw" step="0.0625" min="0.5" value="2" oninput="bcSheetEdited()">
+        </div>
+        <div class="field">
+          <label>Label height (in)</label>
+          <input type="number" id="bc-slh" step="0.0625" min="0.25" value="1" oninput="bcSheetEdited()">
+        </div>
+        <div class="field">
+          <label>Bar height (in)</label>
+          <input type="number" id="bc-sbh" step="0.05" min="0.15" value="0.35" oninput="bcRefresh()">
+        </div>
+      </div>
+      <div class="bc-grid">
+        <div class="field">
+          <label>Top margin (in)</label>
+          <input type="number" id="bc-stop" step="0.0625" min="0" value="0.5" oninput="bcSheetEdited()">
+        </div>
+        <div class="field">
+          <label>Left margin (in)</label>
+          <input type="number" id="bc-sleft" step="0.0625" min="0" value="0.5" oninput="bcSheetEdited()">
+        </div>
+        <div class="field">
+          <label>Gap H / V (in)</label>
+          <div style="display:flex; gap:6px">
+            <input type="number" id="bc-shg" step="0.0625" min="0" value="0.125" oninput="bcSheetEdited()">
+            <input type="number" id="bc-svg" step="0.0625" min="0" value="0.125" oninput="bcSheetEdited()">
+          </div>
+        </div>
+      </div>
+      <div class="bc-grid">
+        <div class="field">
+          <label>Columns</label>
+          <input type="number" id="bc-scols" min="1" max="20" value="3" oninput="bcRefresh()">
+        </div>
+        <div class="field">
+          <label>Rows</label>
+          <input type="number" id="bc-srows" min="1" max="40" value="8" oninput="bcRefresh()">
+        </div>
+        <div class="field" style="display:flex; align-items:flex-end">
+          <label style="display:flex; align-items:center; gap:5px; cursor:pointer; font-size:12px; color:var(--ink-light); text-transform:none; letter-spacing:0; font-weight:400">
+            <input type="checkbox" id="bc-scut" checked onchange="bcRefresh()"> Cut guides
+          </label>
+        </div>
+      </div>
+      <div class="toggle-row" style="margin-bottom:12px">
+        <label><input type="checkbox" id="bc-sshowtext" checked onchange="bcRefresh()"> Code text under bars</label>
       </div>
     </div>
 
     <!-- Scan card mode -->
     <div id="bc-card-fields" style="display:none">
+      <div class="field" style="margin-bottom:10px">
+        <label>Add from a product</label>
+        <select id="bc-card-product" onchange="bcAddProductToCard()">
+          <option value="">-- Pick a product to append --</option>
+        </select>
+      </div>
       <div class="field" style="margin-bottom:14px">
         <label>Codes &mdash; one per line, <code>CODE = caption</code></label>
         <textarea id="bc-card-list" rows="6" style="font-family:monospace; font-size:12px" placeholder="MUG32 = Mug $32&#10;MUG38 = Large mug $38&#10;BOWL45 = Bowl $45&#10;VASE60 = Vase $60" oninput="bcRefresh()"></textarea>
@@ -563,7 +641,11 @@ main { max-width:1240px; margin:0 auto; padding:24px 22px 60px; }
 
     <div class="bc-note" id="bc-note-roll">
       <strong>To make Square recognize it:</strong> set the item's SKU in your Square item library to exactly this code. Test with More &rarr; Settings &rarr; Hardware &rarr; Barcode scanner before the market.<br>
-      Code 39 accepts A&ndash;Z, 0&ndash;9, space, and <code>- . $ / + %</code>. Lowercase is converted automatically. For Canva labels, use Download SVG or PNG; for your thermal printer, use Print stickers.
+      Code 39 accepts A&ndash;Z, 0&ndash;9, space, and <code>- . $ / + %</code>. Lowercase is converted automatically. Captions are print-only and aren't encoded.
+    </div>
+    <div class="bc-note" id="bc-note-sheet" style="display:none">
+      <strong>Before using real label stock:</strong> print one test page on plain paper, hold it behind the label sheet against a light, and check every corner. In Chrome's print dialog set Scale to 100% (not "Fit to page"), Margins to None, and turn off headers and footers &mdash; those are the usual cause of misalignment.<br>
+      For plain sticker paper you cut yourself, leave Cut guides on and any layout will do.
     </div>
     <div class="bc-note" id="bc-note-card" style="display:none">
       <strong>Scan card:</strong> prints one page with every code laid out in a grid, each with its caption. Good for pottery price tiers &mdash; print once, keep it by the register, scan the card instead of the piece.<br>
@@ -679,16 +761,20 @@ function c39Units(clean) {
 }
 
 // Build the SVG. Coordinates are in mils (1/1000 inch) so the viewBox
-// scales uniformly and prints at exact physical size.
-function c39Svg(clean, widthIn, barHeightIn, showText) {
+// scales uniformly and prints at exact physical size. An optional caption
+// is rendered inside the SVG (not as sibling HTML) so it survives the
+// SVG/PNG downloads as well as printing.
+function c39Svg(clean, widthIn, barHeightIn, showText, caption) {
   if (!clean) return null;
   var data      = '*' + clean + '*';
   var units     = c39Units(clean);
   var wMils     = widthIn * 1000;
   var unitMils  = wMils / units;
   var barMils   = barHeightIn * 1000;
+  var cap       = caption ? String(caption) : '';
+  var capMils   = cap ? 170 : 0;
   var textMils  = showText ? 150 : 0;
-  var totalH    = barMils + textMils;
+  var totalH    = capMils + barMils + textMils;
 
   var rects = '';
   var x = C39_QUIET * unitMils;
@@ -697,60 +783,165 @@ function c39Svg(clean, widthIn, barHeightIn, showText) {
     for (var e = 0; e < 9; e++) {
       var w = (pat.charAt(e) === 'w' ? C39_WIDE : 1) * unitMils;
       if (e % 2 === 0) {  // even index = bar
-        rects += '<rect x="' + x.toFixed(3) + '" y="0" width="' + w.toFixed(3) +
-                 '" height="' + barMils.toFixed(1) + '" fill="#000"/>';
+        rects += '<rect x="' + x.toFixed(3) + '" y="' + capMils.toFixed(1) +
+                 '" width="' + w.toFixed(3) + '" height="' + barMils.toFixed(1) +
+                 '" fill="#000"/>';
       }
       x += w;
     }
     if (i < data.length - 1) x += unitMils;  // inter-character gap
   }
 
+  var capTxt = '';
+  if (cap) {
+    // Shrink the caption if it would overrun the barcode width
+    var fit = (wMils * 0.95) / (cap.length * 0.58);
+    var capSize = Math.max(60, Math.min(125, fit));
+    capTxt = '<text x="' + (wMils / 2).toFixed(1) + '" y="' + (capMils - 42).toFixed(1) +
+      '" font-family="Helvetica,Arial,sans-serif" font-size="' + capSize.toFixed(1) +
+      '" font-weight="600" text-anchor="middle" fill="#000">' + esc(cap) + '</text>';
+  }
+
   var txt = '';
   if (showText) {
-    txt = '<text x="' + (wMils / 2).toFixed(1) + '" y="' + (barMils + 118).toFixed(1) +
+    txt = '<text x="' + (wMils / 2).toFixed(1) + '" y="' + (capMils + barMils + 118).toFixed(1) +
           '" font-family="monospace" font-size="120" text-anchor="middle" fill="#000" ' +
           'letter-spacing="8">' + esc(clean) + '</text>';
   }
 
   return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + wMils.toFixed(1) + ' ' +
     totalH.toFixed(1) + '" width="' + widthIn + 'in" height="' + (totalH / 1000).toFixed(4) +
-    'in" shape-rendering="crispEdges">' + rects + txt + '</svg>';
+    'in" shape-rendering="crispEdges">' + rects + capTxt + txt + '</svg>';
+}
+
+// Total rendered height in inches for a given configuration.
+function c39HeightIn(barHeightIn, showText, caption) {
+  return barHeightIn + (showText ? 0.15 : 0) + (caption ? 0.17 : 0);
 }
 
 // ── Modal wiring ──
+// Sheet layouts. Avery geometry is the widely-published die-cut spec, but
+// browser print scaling varies, so every preset needs a plain-paper test
+// print before committing real label stock. All margins are editable so a
+// misalignment can be nudged out without leaving the app.
+var BC_SHEET_PAGE_W = 8.5;
+var BC_SHEET_PAGE_H = 11;
+var BC_PRESETS = [
+  { id:'custom', name:'Custom grid \u2014 cut it yourself',
+    lw:2, lh:1, top:0.5, left:0.5, hg:0.125, vg:0.125, cols:0, rows:0 },
+  { id:'a5160',  name:'Avery 5160 / 8160 \u2014 2\u215d \u00d7 1 in, 30 per sheet',
+    lw:2.625, lh:1, top:0.5, left:0.1875, hg:0.125, vg:0, cols:3, rows:10 },
+  { id:'a5163',  name:'Avery 5163 / 8163 \u2014 4 \u00d7 2 in, 10 per sheet',
+    lw:4, lh:2, top:0.5, left:0.15625, hg:0.1875, vg:0, cols:2, rows:5 },
+  { id:'a5167',  name:'Avery 5167 / 8167 \u2014 1\u00be \u00d7 \u00bd in, 80 per sheet',
+    lw:1.75, lh:0.5, top:0.5, left:0.28125, hg:0.3125, vg:0, cols:4, rows:20 }
+];
+
 function bcMode() {
-  return document.getElementById('bc-mode-card').checked ? 'card' : 'roll';
+  if (document.getElementById('bc-mode-card').checked)  return 'card';
+  if (document.getElementById('bc-mode-sheet').checked) return 'sheet';
+  return 'roll';
 }
 
 function bcModeChange() {
-  var card = (bcMode() === 'card');
-  document.getElementById('bc-roll-fields').style.display  = card ? 'none' : '';
-  document.getElementById('bc-card-fields').style.display  = card ? '' : 'none';
-  document.getElementById('bc-note-roll').style.display    = card ? 'none' : '';
-  document.getElementById('bc-note-card').style.display    = card ? '' : 'none';
-  // SVG/PNG download are single-code operations; they don't apply to a sheet
-  document.getElementById('bc-btn-svg').style.display = card ? 'none' : '';
-  document.getElementById('bc-btn-png').style.display = card ? 'none' : '';
-  document.getElementById('bc-btn-print').textContent = card ? 'Print card' : 'Print stickers';
+  var m = bcMode();
+  document.getElementById('bc-single-fields').style.display = (m === 'card') ? 'none' : '';
+  document.getElementById('bc-roll-fields').style.display   = (m === 'roll')  ? '' : 'none';
+  document.getElementById('bc-sheet-fields').style.display  = (m === 'sheet') ? '' : 'none';
+  document.getElementById('bc-card-fields').style.display   = (m === 'card')  ? '' : 'none';
+  document.getElementById('bc-note-roll').style.display     = (m === 'roll')  ? '' : 'none';
+  document.getElementById('bc-note-sheet').style.display    = (m === 'sheet') ? '' : 'none';
+  document.getElementById('bc-note-card').style.display     = (m === 'card')  ? '' : 'none';
+  // SVG/PNG download are single-barcode operations; they don't apply to a sheet
+  var single = (m !== 'card');
+  document.getElementById('bc-btn-svg').style.display = single ? '' : 'none';
+  document.getElementById('bc-btn-png').style.display = single ? '' : 'none';
+  document.getElementById('bc-btn-print').textContent =
+    (m === 'card') ? 'Print card' : (m === 'sheet' ? 'Print sheet' : 'Print stickers');
   bcRefresh();
 }
 
-function openBarcode(prefill) {
-  document.getElementById('bc-mode-roll').checked = true;
-  document.getElementById('bc-mode-card').checked = false;
-  document.getElementById('bc-value').value = prefill || '';
+// ── Product pickers ──
+// Only products that actually carry a code are offered; a product with
+// neither a barcode value nor a SKU has nothing to encode.
+function bcProductOptions() {
+  var out = [];
+  (products || []).forEach(function(p) {
+    var code = (p.barcode || '').trim() || (p.sku || '').trim();
+    if (!code) return;
+    out.push({ id: p.id, code: code, name: p.name || '(unnamed)' });
+  });
+  out.sort(function(a, b) { return a.name.localeCompare(b.name); });
+  return out;
+}
+
+function bcFillProductPickers() {
+  var opts = bcProductOptions();
+  var body = opts.map(function(o) {
+    return '<option value="' + o.id + '">' + esc(o.name) + ' \u2014 ' + esc(o.code) + '</option>';
+  }).join('');
+  var none = opts.length ? '' : '<option value="" disabled>No products have a SKU or barcode yet</option>';
+
+  var sel = document.getElementById('bc-product');
+  sel.innerHTML = '<option value="">-- Type my own code --</option>' + body + none;
+
+  var cs = document.getElementById('bc-card-product');
+  cs.innerHTML = '<option value="">-- Pick a product to append --</option>' + body + none;
+}
+
+function bcPickProduct() {
+  var id = document.getElementById('bc-product').value;
+  if (!id) { bcRefresh(); return; }
+  var p = findProduct(id);
+  if (!p) { bcRefresh(); return; }
+  document.getElementById('bc-value').value   = (p.barcode || '').trim() || (p.sku || '').trim();
+  document.getElementById('bc-caption').value = p.name || '';
+  bcRefresh();
+}
+
+function bcAddProductToCard() {
+  var sel = document.getElementById('bc-card-product');
+  var id  = sel.value;
+  if (!id) return;
+  var p = findProduct(id);
+  sel.value = '';
+  if (!p) return;
+  var code = (p.barcode || '').trim() || (p.sku || '').trim();
+  if (!code) return;
+  var ta = document.getElementById('bc-card-list');
+  var cur = ta.value.replace(/\s+$/, '');
+  ta.value = (cur ? cur + '\n' : '') + code + ' = ' + (p.name || code);
+  bcRefresh();
+}
+
+function openBarcode(prefill, caption) {
+  document.getElementById('bc-mode-roll').checked  = true;
+  document.getElementById('bc-mode-sheet').checked = false;
+  document.getElementById('bc-mode-card').checked  = false;
+  bcFillProductPickers();
+  document.getElementById('bc-product').value = '';
+  document.getElementById('bc-value').value   = prefill || '';
+  document.getElementById('bc-caption').value = caption || '';
+  bcInitPresets();
   openModal('m-barcode');
   bcModeChange();
 }
 
 // Opens prefilled from the current product: barcode field if set, else SKU.
 function openBarcodeForProduct() {
-  var bc  = document.getElementById('p-barcode').value.trim();
-  var sku = document.getElementById('p-sku').value.trim();
-  openBarcode(bc || sku);
+  var bc   = document.getElementById('p-barcode').value.trim();
+  var sku  = document.getElementById('p-sku').value.trim();
+  var name = document.getElementById('p-name').value.trim();
+  openBarcode(bc || sku, name);
 }
 
-// Current sticker settings, with the barcode inset inside the sticker margins.
+// The code and caption shared by roll and sheet modes.
+function bcSingle() {
+  var res = c39Clean(document.getElementById('bc-value').value);
+  return { code: res.clean, bad: res.bad, caption: document.getElementById('bc-caption').value.trim() };
+}
+
+// ── Sticker roll ──
 function bcSettings() {
   var labelW = parseFloat(document.getElementById('bc-lw').value) || 1.5;
   var labelH = parseFloat(document.getElementById('bc-lh').value) || 0.5;
@@ -759,6 +950,83 @@ function bcSettings() {
   // Leave a 10% side margin so the quiet zone isn't clipped by print drift
   var drawW  = Math.max(0.4, labelW * 0.9);
   return { labelW: labelW, labelH: labelH, barH: barH, show: show, drawW: drawW };
+}
+
+// ── Sticker sheet ──
+function bcInitPresets() {
+  var sel = document.getElementById('bc-preset');
+  if (sel.options.length) return;  // already built
+  sel.innerHTML = BC_PRESETS.map(function(p) {
+    return '<option value="' + p.id + '">' + p.name + '</option>';
+  }).join('');
+  bcApplyPreset();
+}
+
+function bcApplyPreset() {
+  var id = document.getElementById('bc-preset').value;
+  var p  = null;
+  BC_PRESETS.forEach(function(x) { if (x.id === id) p = x; });
+  if (!p) return;
+  document.getElementById('bc-slw').value  = p.lw;
+  document.getElementById('bc-slh').value  = p.lh;
+  document.getElementById('bc-stop').value = p.top;
+  document.getElementById('bc-sleft').value = p.left;
+  document.getElementById('bc-shg').value  = p.hg;
+  document.getElementById('bc-svg').value  = p.vg;
+  if (p.cols && p.rows) {
+    document.getElementById('bc-scols').value = p.cols;
+    document.getElementById('bc-srows').value = p.rows;
+  } else {
+    bcAutoFit();
+  }
+  bcRefresh();
+}
+
+// Fill the page with as many labels as fit, given the current geometry.
+function bcAutoFit() {
+  var lw   = parseFloat(document.getElementById('bc-slw').value)  || 2;
+  var lh   = parseFloat(document.getElementById('bc-slh').value)  || 1;
+  var top  = parseFloat(document.getElementById('bc-stop').value);
+  var left = parseFloat(document.getElementById('bc-sleft').value);
+  var hg   = parseFloat(document.getElementById('bc-shg').value);
+  var vg   = parseFloat(document.getElementById('bc-svg').value);
+  if (isNaN(top))  top  = 0.5;
+  if (isNaN(left)) left = 0.5;
+  if (isNaN(hg))   hg   = 0.125;
+  if (isNaN(vg))   vg   = 0.125;
+  var cols = Math.floor((BC_SHEET_PAGE_W - left * 2 + hg) / (lw + hg));
+  var rows = Math.floor((BC_SHEET_PAGE_H - top * 2 + vg) / (lh + vg));
+  document.getElementById('bc-scols').value = Math.max(1, Math.min(20, cols));
+  document.getElementById('bc-srows').value = Math.max(1, Math.min(40, rows));
+}
+
+// Editing dimensions re-fits the grid only on the custom layout. On an Avery
+// preset the column and row counts are fixed by the die-cut, so nudging a
+// margin to correct alignment must not change them.
+function bcSheetEdited() {
+  if (document.getElementById('bc-preset').value === 'custom') bcAutoFit();
+  bcRefresh();
+}
+
+function bcSheetSettings() {
+  var lw   = parseFloat(document.getElementById('bc-slw').value)  || 2;
+  var lh   = parseFloat(document.getElementById('bc-slh').value)  || 1;
+  var barH = parseFloat(document.getElementById('bc-sbh').value)  || 0.35;
+  var top  = parseFloat(document.getElementById('bc-stop').value);
+  var left = parseFloat(document.getElementById('bc-sleft').value);
+  var hg   = parseFloat(document.getElementById('bc-shg').value);
+  var vg   = parseFloat(document.getElementById('bc-svg').value);
+  if (isNaN(top))  top  = 0.5;
+  if (isNaN(left)) left = 0.5;
+  if (isNaN(hg))   hg   = 0;
+  if (isNaN(vg))   vg   = 0;
+  var cols = parseInt(document.getElementById('bc-scols').value, 10) || 1;
+  var rows = parseInt(document.getElementById('bc-srows').value, 10) || 1;
+  var show = document.getElementById('bc-sshowtext').checked;
+  var cut  = document.getElementById('bc-scut').checked;
+  return { lw:lw, lh:lh, barH:barH, top:top, left:left, hg:hg, vg:vg,
+           cols:cols, rows:rows, show:show, cut:cut,
+           drawW: Math.max(0.4, lw * 0.88) };
 }
 
 // ── Scan card ──
@@ -773,7 +1041,7 @@ function bcCardSettings() {
   // Barcode occupies 86% of the cell so adjacent codes keep clear separation
   var drawW = Math.max(0.5, cellW * 0.86);
   var show  = document.getElementById('bc-cshowtext').checked;
-  return { pw: pw, ph: ph, cols: cols, barH: barH, marg: marg, cellW: cellW, drawW: drawW, show: show };
+  return { pw:pw, ph:ph, cols:cols, barH:barH, marg:marg, cellW:cellW, drawW:drawW, show:show };
 }
 
 // Parse "CODE = caption" lines. Caption is print-only and unrestricted;
@@ -793,53 +1061,162 @@ function bcParseCardList() {
   return out;
 }
 
-function bcCardCellHtml(entry, s) {
-  var svg = c39Svg(entry.code, s.drawW, s.barH, s.show);
-  var h = '<div class="bc-card-cell" style="width:' + s.cellW.toFixed(3) + 'in; padding:0.1in 0">';
-  h += '<div class="bc-card-cap" style="font-size:11pt; margin-bottom:0.06in">' + esc(entry.caption) + '</div>';
-  h += svg;
+// ── Shared cell + grid rendering ──
+function bcCellHtml(entry, cellW, cellH, drawW, barH, show, cut) {
+  var svg = c39Svg(entry.code, drawW, barH, show, entry.caption);
+  var style = 'width:' + cellW.toFixed(4) + 'in;';
+  if (cellH) style += ' height:' + cellH.toFixed(4) + 'in;';
+  if (cut) style += ' border:1px dashed #bbb;';
+  style += ' box-sizing:border-box; overflow:hidden;';
+  var h = '<div class="bc-card-cell" style="' + style + '">' + svg;
   if (entry.bad) h += '<div class="bc-card-bad">dropped: ' + esc(entry.bad) + '</div>';
   h += '</div>';
   return h;
 }
 
+function bcSheetHtml(entry, s) {
+  var cells = '';
+  var total = s.cols * s.rows;
+  for (var i = 0; i < total; i++) {
+    cells += bcCellHtml(entry, s.lw, s.lh, s.drawW, s.barH, s.show, s.cut);
+  }
+  return '<div class="bc-card-sheet" style="width:' + BC_SHEET_PAGE_W + 'in; height:' +
+    BC_SHEET_PAGE_H + 'in; padding:' + s.top + 'in ' + s.left + 'in; box-sizing:border-box">' +
+    '<div class="bc-card-grid" style="grid-template-columns:repeat(' + s.cols +
+    ',' + s.lw + 'in); column-gap:' + s.hg + 'in; row-gap:' + s.vg + 'in">' +
+    cells + '</div></div>';
+}
+
 function bcCardHtml(entries, s) {
-  var cells = entries.map(function(e) { return bcCardCellHtml(e, s); }).join('');
+  var cells = entries.map(function(e) {
+    return bcCellHtml(e, s.cellW, 0, s.drawW, s.barH, s.show, false);
+  }).join('');
   return '<div class="bc-card-sheet" style="width:' + s.pw + 'in; min-height:' + s.ph +
     'in; padding:' + s.marg + 'in; box-sizing:border-box">' +
     '<div class="bc-card-grid" style="grid-template-columns:repeat(' + s.cols +
     ',1fr); gap:0.12in">' + cells + '</div></div>';
 }
 
+// Scale a full page down to fit the modal preview area (96 px per CSS inch).
+function bcScaledPreview(html, pageW, pageH) {
+  var targetPx = 520;
+  var k = Math.min(1, targetPx / (pageW * 96));
+  return '<div style="width:' + targetPx + 'px; height:' + Math.ceil(pageH * 96 * k) +
+    'px; overflow:hidden"><div style="transform:scale(' + k.toFixed(4) +
+    '); transform-origin:top left">' + html + '</div></div>';
+}
+
+// ── Refresh dispatch ──
 function bcRefresh() {
-  return (bcMode() === 'card') ? bcRefreshCard() : bcRefreshRoll();
+  var m = bcMode();
+  if (m === 'card')  return bcRefreshCard();
+  if (m === 'sheet') return bcRefreshSheet();
+  return bcRefreshRoll();
+}
+
+function bcEmptyState(msg) {
+  document.getElementById('bc-preview').innerHTML =
+    '<span style="font-size:12px; color:var(--ink-lighter); font-style:italic">' + msg + '</span>';
+}
+
+function bcRefreshRoll() {
+  var e = bcSingle();
+  var s = bcSettings();
+  var meta = document.getElementById('bc-meta');
+
+  if (!e.code) {
+    bcEmptyState('Enter a code to preview');
+    meta.innerHTML = e.bad ? '<span class="bc-bad">Unsupported character' +
+      (e.bad.length > 1 ? 's' : '') + ': ' + esc(e.bad) + '</span>' : '';
+    return;
+  }
+
+  document.getElementById('bc-preview').innerHTML =
+    c39Svg(e.code, s.drawW, s.barH, s.show, e.caption);
+
+  var unitMil = (s.drawW * 1000) / c39Units(e.code);
+  var totalH  = c39HeightIn(s.barH, s.show, e.caption);
+  var m = 'Encodes <strong>' + esc(e.code) + '</strong> &middot; narrow bar ' +
+    unitMil.toFixed(1) + ' mil &middot; ' + totalH.toFixed(2) + 'in tall';
+  if (unitMil < C39_MIN_MIL) {
+    m += '<br><span class="bc-warn">&#9650; Bars are narrower than ' + C39_MIN_MIL +
+         ' mil and may not scan reliably. Use a shorter code or a wider sticker.</span>';
+  }
+  if (totalH > s.labelH) {
+    m += '<br><span class="bc-warn">&#9650; Content is ' + totalH.toFixed(2) +
+         'in tall but the sticker is only ' + s.labelH.toFixed(2) +
+         'in. Reduce bar height' + (e.caption ? ' or drop the caption' : '') + '.</span>';
+  }
+  if (e.bad) {
+    m += '<br><span class="bc-bad">Dropped unsupported character' +
+         (e.bad.length > 1 ? 's' : '') + ': ' + esc(e.bad) + '</span>';
+  }
+  meta.innerHTML = m;
+}
+
+function bcRefreshSheet() {
+  var e = bcSingle();
+  var s = bcSheetSettings();
+  var meta = document.getElementById('bc-meta');
+
+  if (!e.code) {
+    bcEmptyState('Enter a code to preview the sheet');
+    meta.innerHTML = '';
+    return;
+  }
+
+  document.getElementById('bc-preview').innerHTML =
+    bcScaledPreview(bcSheetHtml(e, s), BC_SHEET_PAGE_W, BC_SHEET_PAGE_H);
+
+  var unitMil = (s.drawW * 1000) / c39Units(e.code);
+  var totalH  = c39HeightIn(s.barH, s.show, e.caption);
+  var per     = s.cols * s.rows;
+  var m = per + ' stickers per sheet (' + s.cols + ' &times; ' + s.rows + ') &middot; narrow bar ' +
+    unitMil.toFixed(1) + ' mil';
+  if (unitMil < C39_MIN_MIL) {
+    m += '<br><span class="bc-warn">&#9650; Bars are narrower than ' + C39_MIN_MIL +
+         ' mil and may not scan reliably. Use a shorter code or a wider label.</span>';
+  }
+  if (totalH > s.lh) {
+    m += '<br><span class="bc-warn">&#9650; Content is ' + totalH.toFixed(2) +
+         'in tall but each label is only ' + s.lh.toFixed(2) + 'in. Reduce bar height' +
+         (e.caption ? ' or drop the caption' : '') + '.</span>';
+  }
+  var usedW = s.left * 2 + s.cols * s.lw + (s.cols - 1) * s.hg;
+  var usedH = s.top * 2 + s.rows * s.lh + (s.rows - 1) * s.vg;
+  if (usedW > BC_SHEET_PAGE_W + 0.01) {
+    m += '<br><span class="bc-warn">&#9650; ' + s.cols + ' columns need ' + usedW.toFixed(2) +
+         'in but the page is ' + BC_SHEET_PAGE_W + 'in wide.</span>';
+  }
+  if (usedH > BC_SHEET_PAGE_H + 0.01) {
+    m += '<br><span class="bc-warn">&#9650; ' + s.rows + ' rows need ' + usedH.toFixed(2) +
+         'in but the page is ' + BC_SHEET_PAGE_H + 'in tall.</span>';
+  }
+  if (e.bad) {
+    m += '<br><span class="bc-bad">Dropped unsupported character' +
+         (e.bad.length > 1 ? 's' : '') + ': ' + esc(e.bad) + '</span>';
+  }
+  meta.innerHTML = m;
 }
 
 function bcRefreshCard() {
   var entries = bcParseCardList();
   var s       = bcCardSettings();
-  var prev    = document.getElementById('bc-preview');
   var meta    = document.getElementById('bc-meta');
 
   if (!entries.length) {
-    prev.innerHTML = '<span style="font-size:12px; color:var(--ink-lighter); font-style:italic">Add one code per line to preview the card</span>';
+    bcEmptyState('Add one code per line to preview the card');
     meta.innerHTML = '';
     return;
   }
 
-  // Scale the page down to fit the modal preview area (96 px per CSS inch)
-  var targetPx = 520;
-  var k = Math.min(1, targetPx / (s.pw * 96));
-  prev.innerHTML = '<div style="width:' + targetPx + 'px; height:' +
-    Math.ceil(s.ph * 96 * k) + 'px; overflow:hidden">' +
-    '<div style="transform:scale(' + k.toFixed(4) + '); transform-origin:top left">' +
-    bcCardHtml(entries, s) + '</div></div>';
+  document.getElementById('bc-preview').innerHTML =
+    bcScaledPreview(bcCardHtml(entries, s), s.pw, s.ph);
 
   // The longest code produces the narrowest bars, so it sets the density floor
   var longest = '';
   entries.forEach(function(e) { if (e.code.length > longest.length) longest = e.code; });
-  var units   = c39Units(longest);
-  var unitMil = (s.drawW * 1000) / units;
+  var unitMil = (s.drawW * 1000) / c39Units(longest);
   var rows    = Math.ceil(entries.length / s.cols);
   var m = entries.length + ' code' + (entries.length > 1 ? 's' : '') + ' &middot; ' +
     s.cols + ' column' + (s.cols > 1 ? 's' : '') + ' &times; ' + rows + ' row' +
@@ -848,7 +1225,7 @@ function bcRefreshCard() {
     m += '<br><span class="bc-warn">&#9650; Bars on the longest code are under ' + C39_MIN_MIL +
          ' mil and may not scan reliably. Use fewer columns, a wider page, or shorter codes.</span>';
   }
-  var estH = s.marg * 2 + rows * (s.barH + (s.show ? 0.15 : 0) + 0.42);
+  var estH = s.marg * 2 + rows * (c39HeightIn(s.barH, s.show, 'x') + 0.25);
   if (estH > s.ph) {
     m += '<br><span class="bc-warn">&#9650; Content needs about ' + estH.toFixed(1) +
          'in but the page is ' + s.ph + 'in &mdash; it will spill onto a second page.</span>';
@@ -861,43 +1238,7 @@ function bcRefreshCard() {
   meta.innerHTML = m;
 }
 
-function bcRefreshRoll() {
-  var raw  = document.getElementById('bc-value').value;
-  var res  = c39Clean(raw);
-  var s    = bcSettings();
-  var prev = document.getElementById('bc-preview');
-  var meta = document.getElementById('bc-meta');
-
-  if (!res.clean) {
-    prev.innerHTML = '<span style="font-size:12px; color:var(--ink-lighter); font-style:italic">Enter a code to preview</span>';
-    meta.innerHTML = res.bad ? '<span class="bc-bad">Unsupported character' +
-      (res.bad.length > 1 ? 's' : '') + ': ' + esc(res.bad) + '</span>' : '';
-    return;
-  }
-
-  prev.innerHTML = c39Svg(res.clean, s.drawW, s.barH, s.show);
-
-  var units    = c39Units(res.clean);
-  var unitMil  = (s.drawW * 1000) / units;
-  var totalH   = s.barH + (s.show ? 0.15 : 0);
-  var m = 'Encodes <strong>' + esc(res.clean) + '</strong> &middot; ' +
-    (res.clean.length + 2) + ' characters incl. start/stop &middot; narrow bar ' +
-    unitMil.toFixed(1) + ' mil';
-  if (unitMil < C39_MIN_MIL) {
-    m += '<br><span class="bc-warn">&#9650; Bars are narrower than ' + C39_MIN_MIL +
-         ' mil and may not scan reliably. Use a shorter code or a wider sticker.</span>';
-  }
-  if (totalH > s.labelH) {
-    m += '<br><span class="bc-warn">&#9650; Barcode is ' + totalH.toFixed(2) +
-         'in tall but the sticker is only ' + s.labelH.toFixed(2) + 'in. Reduce bar height.</span>';
-  }
-  if (res.bad) {
-    m += '<br><span class="bc-bad">Dropped unsupported character' +
-         (res.bad.length > 1 ? 's' : '') + ': ' + esc(res.bad) + '</span>';
-  }
-  meta.innerHTML = m;
-}
-
+// ── Printing ──
 function bcOpenPrintWindow(title, css, body) {
   var win = window.open('', '_blank');
   if (!win) { alert('Your browser blocked the print window. Allow pop-ups for this site and try again.'); return; }
@@ -907,19 +1248,32 @@ function bcOpenPrintWindow(title, css, body) {
   win.document.close();
 }
 
+function bcGridCss() {
+  return 'html, body { margin:0; padding:0; background:#fff; }' +
+    '.bc-card-sheet { background:#fff; }' +
+    '.bc-card-grid { display:grid; }' +
+    '.bc-card-cell { display:flex; flex-direction:column; align-items:center; ' +
+      'justify-content:center; text-align:center; page-break-inside:avoid; break-inside:avoid; }' +
+    '.bc-card-cell svg { display:block; }' +
+    '.bc-card-bad { font-family:Helvetica,Arial,sans-serif; font-size:8pt; color:#B4523C; }';
+}
+
 function bcPrint() {
-  return (bcMode() === 'card') ? bcPrintCard() : bcPrintRoll();
+  var m = bcMode();
+  if (m === 'card')  return bcPrintCard();
+  if (m === 'sheet') return bcPrintSheet();
+  return bcPrintRoll();
 }
 
 // One label per page at exact sticker dimensions. Thermal printers treat
 // each page as one label, so page-break-after per label is what makes a
 // roll feed correctly.
 function bcPrintRoll() {
-  var res = c39Clean(document.getElementById('bc-value').value);
-  if (!res.clean) { alert('Enter a code first.'); return; }
+  var e = bcSingle();
+  if (!e.code) { alert('Enter a code first.'); return; }
   var s      = bcSettings();
   var copies = Math.max(1, Math.min(500, parseInt(document.getElementById('bc-copies').value, 10) || 1));
-  var svg    = c39Svg(res.clean, s.drawW, s.barH, s.show);
+  var svg    = c39Svg(e.code, s.drawW, s.barH, s.show, e.caption);
 
   var labels = '';
   for (var i = 0; i < copies; i++) labels += '<div class="lbl">' + svg + '</div>';
@@ -931,7 +1285,18 @@ function bcPrintRoll() {
       'page-break-after:always; break-after:page; box-sizing:border-box; }' +
     '.lbl:last-child { page-break-after:auto; break-after:auto; }' +
     '.lbl svg { display:block; }';
-  bcOpenPrintWindow(res.clean + ' stickers', css, labels);
+  bcOpenPrintWindow(e.code + ' stickers', css, labels);
+}
+
+// A full page of the same sticker, laid out on a label sheet or on plain
+// stock with cut guides.
+function bcPrintSheet() {
+  var e = bcSingle();
+  if (!e.code) { alert('Enter a code first.'); return; }
+  var s = bcSheetSettings();
+  var css = '@page { size: ' + BC_SHEET_PAGE_W + 'in ' + BC_SHEET_PAGE_H + 'in; margin: 0; }' +
+    bcGridCss();
+  bcOpenPrintWindow(e.code + ' sheet', css, bcSheetHtml(e, s));
 }
 
 // One page holding every code in a grid, each with its caption.
@@ -939,15 +1304,7 @@ function bcPrintCard() {
   var entries = bcParseCardList();
   if (!entries.length) { alert('Add at least one code.'); return; }
   var s = bcCardSettings();
-  var css = '@page { size: ' + s.pw + 'in ' + s.ph + 'in; margin: 0; }' +
-    'html, body { margin:0; padding:0; background:#fff; }' +
-    '.bc-card-sheet { background:#fff; }' +
-    '.bc-card-grid { display:grid; }' +
-    '.bc-card-cell { display:flex; flex-direction:column; align-items:center; ' +
-      'justify-content:center; text-align:center; page-break-inside:avoid; break-inside:avoid; }' +
-    '.bc-card-cell svg { display:block; }' +
-    '.bc-card-cap { font-family:Helvetica,Arial,sans-serif; font-weight:600; color:#000; }' +
-    '.bc-card-bad { font-family:Helvetica,Arial,sans-serif; font-size:8pt; color:#B4523C; }';
+  var css = '@page { size: ' + s.pw + 'in ' + s.ph + 'in; margin: 0; }' + bcGridCss();
   bcOpenPrintWindow('Scan card', css, bcCardHtml(entries, s));
 }
 
@@ -964,33 +1321,43 @@ function bcTriggerDownload(href, filename) {
   document.body.removeChild(a);
 }
 
-function bcDownloadSvg() {
-  var res = c39Clean(document.getElementById('bc-value').value);
-  if (!res.clean) { alert('Enter a code first.'); return; }
+// Downloads use whichever single-code mode is active, so the file matches
+// what's on screen.
+function bcDownloadDims() {
+  if (bcMode() === 'sheet') {
+    var ss = bcSheetSettings();
+    return { drawW: ss.drawW, barH: ss.barH, show: ss.show };
+  }
   var s = bcSettings();
-  var svg = c39Svg(res.clean, s.drawW, s.barH, s.show);
+  return { drawW: s.drawW, barH: s.barH, show: s.show };
+}
+
+function bcDownloadSvg() {
+  var e = bcSingle();
+  if (!e.code) { alert('Enter a code first.'); return; }
+  var d = bcDownloadDims();
+  var svg = c39Svg(e.code, d.drawW, d.barH, d.show, e.caption);
   var blob = new Blob([svg], { type: 'image/svg+xml' });
   var url = URL.createObjectURL(blob);
-  bcTriggerDownload(url, bcFilename(res.clean, 'svg'));
+  bcTriggerDownload(url, bcFilename(e.code, 'svg'));
   setTimeout(function() { URL.revokeObjectURL(url); }, 2000);
 }
 
 // Rasterize at 300 DPI so the PNG is sharp enough for label printing
 // and for placing into Canva.
 function bcDownloadPng() {
-  var res = c39Clean(document.getElementById('bc-value').value);
-  if (!res.clean) { alert('Enter a code first.'); return; }
-  var s = bcSettings();
-  var show = s.show;
-  var svg = c39Svg(res.clean, s.drawW, s.barH, show);
-  var hIn = s.barH + (show ? 0.15 : 0);
+  var e = bcSingle();
+  if (!e.code) { alert('Enter a code first.'); return; }
+  var d = bcDownloadDims();
+  var svg = c39Svg(e.code, d.drawW, d.barH, d.show, e.caption);
+  var hIn = c39HeightIn(d.barH, d.show, e.caption);
   var DPI = 300;
   var img = new Image();
   var blob = new Blob([svg], { type: 'image/svg+xml' });
   var url = URL.createObjectURL(blob);
   img.onload = function() {
     var cv = document.createElement('canvas');
-    cv.width  = Math.round(s.drawW * DPI);
+    cv.width  = Math.round(d.drawW * DPI);
     cv.height = Math.round(hIn * DPI);
     var ctx = cv.getContext('2d');
     ctx.fillStyle = '#fff';
@@ -998,8 +1365,8 @@ function bcDownloadPng() {
     ctx.drawImage(img, 0, 0, cv.width, cv.height);
     URL.revokeObjectURL(url);
     try {
-      bcTriggerDownload(cv.toDataURL('image/png'), bcFilename(res.clean, 'png'));
-    } catch (e) {
+      bcTriggerDownload(cv.toDataURL('image/png'), bcFilename(e.code, 'png'));
+    } catch (err) {
       alert('PNG export failed in this browser. Use Download SVG instead.');
     }
   };
