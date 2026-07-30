@@ -481,6 +481,14 @@ main { max-width:1240px; margin:0 auto; padding:24px 22px 60px; }
       <label><input type="radio" name="bc-mode" value="card" id="bc-mode-card" onchange="bcModeChange()"> Multiple item scan card</label>
     </div>
 
+    <div class="field" style="margin-bottom:14px">
+      <label>Barcode format</label>
+      <select id="bc-format" onchange="bcRefresh()">
+        <option value="c39" selected>Code 39 &mdash; classic, wider bars</option>
+        <option value="c128">Code 128 &mdash; ~25% narrower, more characters</option>
+      </select>
+    </div>
+
     <!-- Single-code block: shared by roll and sheet -->
     <div id="bc-single-fields">
       <div class="field" style="margin-bottom:12px">
@@ -641,7 +649,7 @@ main { max-width:1240px; margin:0 auto; padding:24px 22px 60px; }
 
     <div class="bc-note" id="bc-note-roll">
       <strong>To make Square recognize it:</strong> set the item's SKU in your Square item library to exactly this code. Test with More &rarr; Settings &rarr; Hardware &rarr; Barcode scanner before the market.<br>
-      Code 39 accepts A&ndash;Z, 0&ndash;9, space, and <code>- . $ / + %</code>. Lowercase is converted automatically. Captions are print-only and aren't encoded.
+      Code 39 accepts A&ndash;Z, 0&ndash;9, space, and <code>- . $ / + %</code>. Code 128 accepts any printable character and prints about 25% narrower. Both uppercase automatically, so switching format never changes the value Square receives. Captions are print-only and aren't encoded.
     </div>
     <div class="bc-note" id="bc-note-sheet" style="display:none">
       <strong>Before using real label stock:</strong> print one test page on plain paper, hold it behind the label sheet against a light, and check every corner. In Chrome's print dialog set Scale to 100% (not "Fit to page"), Margins to None, and turn off headers and footers &mdash; those are the usual cause of misalignment.<br>
@@ -707,20 +715,30 @@ function fmtDate(d) {
 function uid() { return String(Date.now()) + '-' + Math.random().toString(36).slice(2,7); }
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-
 // ══════════════════════════════════════════════════════════════════════
-// Code 39 barcode generation
+// Barcode symbologies: Code 39 and Code 128
 // ══════════════════════════════════════════════════════════════════════
-// Written inline rather than pulling in JsBarcode: the encoding table is
-// 43 entries, it keeps the project dependency-free, and SVG output prints
+// Both are written inline rather than pulling in a library: the tables are
+// small, it keeps the project dependency-free, and SVG output prints
 // crisply on thermal label printers.
 //
-// Each character is 9 elements alternating bar/space, starting and ending
-// with a bar. Even indices are bars, odd indices are spaces. Exactly 3 of
-// the 9 elements are wide. '*' is the start/stop character and must wrap
-// the data. No mod-43 check digit -- it's optional in the spec and adding
-// it would change the scanned value, breaking SKU matching in Square.
+// Square Handheld reads UPC-A, UPC-E, EAN-8, EAN-13, Code 39 and Code 128
+// (1D), plus QR and PDF417 (2D) per its hardware spec sheet. The UPC/EAN
+// family needs a purchased GS1 prefix and is digits-only, so the two
+// self-issued alphanumeric options are Code 39 and Code 128.
+//
+// Both formats uppercase their input, so switching format never changes
+// the value Square receives for a code that works in both.
 
+var BC_QUIET = 10;      // quiet zone each side, in narrow-module units
+var BC_MIN_MIL = 7.5;   // practical minimum module width for reliable scans
+
+// ── Code 39 ──
+// Each character is 9 elements alternating bar/space, starting and ending
+// with a bar. Even indices are bars, odd are spaces. Exactly 3 of the 9 are
+// wide. '*' is the start/stop character and must wrap the data. No mod-43
+// check digit: it's optional in the spec and would change the scanned
+// value, breaking SKU matching in Square.
 var CODE39 = {
   '0':'nnnwwnwnn','1':'wnnwnnnnw','2':'nnwwnnnnw','3':'wnwwnnnnn',
   '4':'nnnwwnnnw','5':'wnnwwnnnn','6':'nnwwwnnnn','7':'nnnwnnwnw',
@@ -734,63 +752,148 @@ var CODE39 = {
   '-':'nwnnnnwnw','.':'wwnnnnwnn',' ':'nwwnnnwnn','$':'nwnwnwnnn',
   '/':'nwnwnnnwn','+':'nwnnnwnwn','%':'nnnwnwnwn','*':'nwnnwnwnn'
 };
+var C39_WIDE = 3;   // wide-to-narrow ratio (3:1 is safest for scanners)
 
-var C39_WIDE  = 3;   // wide-to-narrow ratio (3:1 is the safest for scanners)
-var C39_QUIET = 10;  // quiet zone, in narrow-bar units, on each side
-var C39_MIN_MIL = 7.5; // practical minimum narrow-bar width for reliable scans
-
-// Uppercase and strip anything Code 39 can't represent.
 function c39Clean(raw) {
   var up = String(raw || '').toUpperCase();
   var out = '', bad = '';
   for (var i = 0; i < up.length; i++) {
     var ch = up.charAt(i);
-    if (ch === '*') { bad += ch; continue; }  // reserved as start/stop
+    if (ch === '*') { if (bad.indexOf(ch) === -1) bad += ch; continue; }  // reserved
     if (CODE39[ch] !== undefined) out += ch;
     else if (bad.indexOf(ch) === -1) bad += ch;
   }
   return { clean: out, bad: bad };
 }
 
-// Total width in narrow-bar units, including quiet zones and start/stop.
-// Per character: 6 narrow + 3 wide = 15 units, plus a 1-unit gap between
-// characters (no trailing gap).
-function c39Units(clean) {
-  var n = clean.length + 2;               // + start and stop
-  return (n * 15) + (n - 1) + (C39_QUIET * 2);
-}
-
-// Build the SVG. Coordinates are in mils (1/1000 inch) so the viewBox
-// scales uniformly and prints at exact physical size. An optional caption
-// is rendered inside the SVG (not as sibling HTML) so it survives the
-// SVG/PNG downloads as well as printing.
-function c39Svg(clean, widthIn, barHeightIn, showText, caption) {
-  if (!clean) return null;
-  var data      = '*' + clean + '*';
-  var units     = c39Units(clean);
-  var wMils     = widthIn * 1000;
-  var unitMils  = wMils / units;
-  var barMils   = barHeightIn * 1000;
-  var cap       = caption ? String(caption) : '';
-  var capMils   = cap ? 170 : 0;
-  var textMils  = showText ? 150 : 0;
-  var totalH    = capMils + barMils + textMils;
-
-  var rects = '';
-  var x = C39_QUIET * unitMils;
+// Module sequence: [{bar:bool, w:modules}, ...], excluding quiet zones.
+function c39Modules(clean) {
+  var data = '*' + clean + '*';
+  var mods = [];
   for (var i = 0; i < data.length; i++) {
     var pat = CODE39[data.charAt(i)];
     for (var e = 0; e < 9; e++) {
-      var w = (pat.charAt(e) === 'w' ? C39_WIDE : 1) * unitMils;
-      if (e % 2 === 0) {  // even index = bar
-        rects += '<rect x="' + x.toFixed(3) + '" y="' + capMils.toFixed(1) +
-                 '" width="' + w.toFixed(3) + '" height="' + barMils.toFixed(1) +
-                 '" fill="#000"/>';
-      }
-      x += w;
+      mods.push({ bar: (e % 2 === 0), w: (pat.charAt(e) === 'w' ? C39_WIDE : 1) });
     }
-    if (i < data.length - 1) x += unitMils;  // inter-character gap
+    if (i < data.length - 1) mods.push({ bar: false, w: 1 });  // inter-character gap
   }
+  return mods;
+}
+
+// ── Code 128 (Set B) ──
+// 107 symbols, each 11 modules across 6 elements (bar,space,bar,space,
+// bar,space); the stop symbol is 13 modules across 7 elements. Set B
+// covers printable ASCII 32-126, which is a superset of Code 39's 43
+// characters. A mod-103 check symbol is mandatory.
+//
+// Set C (digit-pair packing) is deliberately not implemented: it only pays
+// off on runs of 4+ digits, which SKUs like HSL-1OZ and MUG32 don't have,
+// and it would add mode-switching complexity for no practical gain here.
+var CODE128 = [
+  '212222','222122','222221','121223','121322','131222','122213','122312',
+  '132212','221213','221312','231212','112232','122132','122231','113222',
+  '123122','123221','223211','221132','221231','213212','223112','312131',
+  '311222','321122','321221','312212','322112','322211','212123','212321',
+  '232121','111323','131123','131321','112313','132113','132311','211313',
+  '231113','231311','112133','112331','132131','113123','113321','133121',
+  '313121','211331','231131','213113','213311','213131','311123','311321',
+  '331121','312113','312311','332111','314111','221411','431111','111224',
+  '111422','121124','121421','141122','141221','112214','112412','122114',
+  '122411','142112','142211','241211','221114','413111','241112','134111',
+  '111242','121142','121241','114212','124112','124211','411212','421112',
+  '421211','212141','214121','412121','111143','111341','131141','114113',
+  '114311','411113','411311','113141','114131','311141','411131','211412',
+  '211214','211232','2331112'
+];
+var C128_START_B = 104;
+var C128_STOP    = 106;
+
+function c128Clean(raw) {
+  // Uppercased for parity with Code 39, so switching format never changes
+  // the value Square receives.
+  var up = String(raw || '').toUpperCase();
+  var out = '', bad = '';
+  for (var i = 0; i < up.length; i++) {
+    var ch = up.charAt(i);
+    var c = up.charCodeAt(i);
+    if (c >= 32 && c <= 126) out += ch;
+    else if (bad.indexOf(ch) === -1) bad += ch;
+  }
+  return { clean: out, bad: bad };
+}
+
+// Symbol values: Start B, data, mod-103 check, Stop.
+function c128Values(clean) {
+  var vals = [C128_START_B];
+  for (var i = 0; i < clean.length; i++) vals.push(clean.charCodeAt(i) - 32);
+  var sum = C128_START_B;
+  for (var j = 0; j < clean.length; j++) sum += (j + 1) * (clean.charCodeAt(j) - 32);
+  vals.push(sum % 103);
+  vals.push(C128_STOP);
+  return vals;
+}
+
+function c128Modules(clean) {
+  var vals = c128Values(clean);
+  var mods = [];
+  vals.forEach(function(v) {
+    var pat = CODE128[v];
+    for (var e = 0; e < pat.length; e++) {
+      mods.push({ bar: (e % 2 === 0), w: parseInt(pat.charAt(e), 10) });
+    }
+  });
+  return mods;
+}
+
+// ── Format dispatch ──
+function bcClean(raw, fmt) {
+  return (fmt === 'c128') ? c128Clean(raw) : c39Clean(raw);
+}
+
+function bcModules(clean, fmt) {
+  return (fmt === 'c128') ? c128Modules(clean) : c39Modules(clean);
+}
+
+// Total width in narrow-module units, including quiet zones.
+function bcUnits(clean, fmt) {
+  var total = BC_QUIET * 2;
+  bcModules(clean, fmt).forEach(function(m) { total += m.w; });
+  return total;
+}
+
+function bcFormatName(fmt) {
+  return (fmt === 'c128') ? 'Code 128' : 'Code 39';
+}
+
+// ── Shared renderer ──
+// Coordinates are in mils (1/1000 inch) so the viewBox scales uniformly
+// and prints at exact physical size. The caption is rendered inside the
+// SVG rather than as sibling HTML so it survives the SVG/PNG downloads.
+function bcSvg(clean, fmt, widthIn, barHeightIn, showText, caption) {
+  if (!clean) return null;
+  var mods  = bcModules(clean, fmt);
+  var units = BC_QUIET * 2;
+  mods.forEach(function(m) { units += m.w; });
+
+  var wMils    = widthIn * 1000;
+  var unitMils = wMils / units;
+  var barMils  = barHeightIn * 1000;
+  var cap      = caption ? String(caption) : '';
+  var capMils  = cap ? 170 : 0;
+  var textMils = showText ? 150 : 0;
+  var totalH   = capMils + barMils + textMils;
+
+  var rects = '';
+  var x = BC_QUIET * unitMils;
+  mods.forEach(function(m) {
+    var w = m.w * unitMils;
+    if (m.bar) {
+      rects += '<rect x="' + x.toFixed(3) + '" y="' + capMils.toFixed(1) +
+               '" width="' + w.toFixed(3) + '" height="' + barMils.toFixed(1) +
+               '" fill="#000"/>';
+    }
+    x += w;
+  });
 
   var capTxt = '';
   if (cap) {
@@ -815,7 +918,7 @@ function c39Svg(clean, widthIn, barHeightIn, showText, caption) {
 }
 
 // Total rendered height in inches for a given configuration.
-function c39HeightIn(barHeightIn, showText, caption) {
+function bcHeightIn(barHeightIn, showText, caption) {
   return barHeightIn + (showText ? 0.15 : 0) + (caption ? 0.17 : 0);
 }
 
@@ -836,6 +939,11 @@ var BC_PRESETS = [
   { id:'a5167',  name:'Avery 5167 / 8167 \u2014 1\u00be \u00d7 \u00bd in, 80 per sheet',
     lw:1.75, lh:0.5, top:0.5, left:0.28125, hg:0.3125, vg:0, cols:4, rows:20 }
 ];
+
+function bcFormat() {
+  var el = document.getElementById('bc-format');
+  return el ? el.value : 'c39';
+}
 
 function bcMode() {
   if (document.getElementById('bc-mode-card').checked)  return 'card';
@@ -937,8 +1045,10 @@ function openBarcodeForProduct() {
 
 // The code and caption shared by roll and sheet modes.
 function bcSingle() {
-  var res = c39Clean(document.getElementById('bc-value').value);
-  return { code: res.clean, bad: res.bad, caption: document.getElementById('bc-caption').value.trim() };
+  var fmt = bcFormat();
+  var res = bcClean(document.getElementById('bc-value').value, fmt);
+  return { code: res.clean, bad: res.bad, fmt: fmt,
+           caption: document.getElementById('bc-caption').value.trim() };
 }
 
 // ── Sticker roll ──
@@ -1048,22 +1158,23 @@ function bcCardSettings() {
 // only the code goes through Code 39 cleaning.
 function bcParseCardList() {
   var raw = document.getElementById('bc-card-list').value || '';
+  var fmt = bcFormat();
   var out = [];
   raw.split(/\r?\n/).forEach(function(line) {
     if (!line.trim()) return;
     var eq = line.indexOf('=');
     var codeRaw = eq >= 0 ? line.slice(0, eq) : line;
     var cap     = eq >= 0 ? line.slice(eq + 1).trim() : '';
-    var res = c39Clean(codeRaw.trim());
+    var res = bcClean(codeRaw.trim(), fmt);
     if (!res.clean) return;
-    out.push({ code: res.clean, caption: cap || res.clean, bad: res.bad });
+    out.push({ code: res.clean, caption: cap || res.clean, bad: res.bad, fmt: fmt });
   });
   return out;
 }
 
 // ── Shared cell + grid rendering ──
 function bcCellHtml(entry, cellW, cellH, drawW, barH, show, cut) {
-  var svg = c39Svg(entry.code, drawW, barH, show, entry.caption);
+  var svg = bcSvg(entry.code, entry.fmt, drawW, barH, show, entry.caption);
   var style = 'width:' + cellW.toFixed(4) + 'in;';
   if (cellH) style += ' height:' + cellH.toFixed(4) + 'in;';
   if (cut) style += ' border:1px dashed #bbb;';
@@ -1132,14 +1243,15 @@ function bcRefreshRoll() {
   }
 
   document.getElementById('bc-preview').innerHTML =
-    c39Svg(e.code, s.drawW, s.barH, s.show, e.caption);
+    bcSvg(e.code, e.fmt, s.drawW, s.barH, s.show, e.caption);
 
-  var unitMil = (s.drawW * 1000) / c39Units(e.code);
-  var totalH  = c39HeightIn(s.barH, s.show, e.caption);
-  var m = 'Encodes <strong>' + esc(e.code) + '</strong> &middot; narrow bar ' +
-    unitMil.toFixed(1) + ' mil &middot; ' + totalH.toFixed(2) + 'in tall';
-  if (unitMil < C39_MIN_MIL) {
-    m += '<br><span class="bc-warn">&#9650; Bars are narrower than ' + C39_MIN_MIL +
+  var unitMil = (s.drawW * 1000) / bcUnits(e.code, e.fmt);
+  var totalH  = bcHeightIn(s.barH, s.show, e.caption);
+  var m = bcFormatName(e.fmt) + ' &middot; encodes <strong>' + esc(e.code) +
+    '</strong> &middot; narrow bar ' + unitMil.toFixed(1) + ' mil &middot; ' +
+    totalH.toFixed(2) + 'in tall';
+  if (unitMil < BC_MIN_MIL) {
+    m += '<br><span class="bc-warn">&#9650; Bars are narrower than ' + BC_MIN_MIL +
          ' mil and may not scan reliably. Use a shorter code or a wider sticker.</span>';
   }
   if (totalH > s.labelH) {
@@ -1168,13 +1280,13 @@ function bcRefreshSheet() {
   document.getElementById('bc-preview').innerHTML =
     bcScaledPreview(bcSheetHtml(e, s), BC_SHEET_PAGE_W, BC_SHEET_PAGE_H);
 
-  var unitMil = (s.drawW * 1000) / c39Units(e.code);
-  var totalH  = c39HeightIn(s.barH, s.show, e.caption);
+  var unitMil = (s.drawW * 1000) / bcUnits(e.code, e.fmt);
+  var totalH  = bcHeightIn(s.barH, s.show, e.caption);
   var per     = s.cols * s.rows;
-  var m = per + ' stickers per sheet (' + s.cols + ' &times; ' + s.rows + ') &middot; narrow bar ' +
-    unitMil.toFixed(1) + ' mil';
-  if (unitMil < C39_MIN_MIL) {
-    m += '<br><span class="bc-warn">&#9650; Bars are narrower than ' + C39_MIN_MIL +
+  var m = per + ' stickers per sheet (' + s.cols + ' &times; ' + s.rows + ') &middot; ' +
+    bcFormatName(e.fmt) + ' &middot; narrow bar ' + unitMil.toFixed(1) + ' mil';
+  if (unitMil < BC_MIN_MIL) {
+    m += '<br><span class="bc-warn">&#9650; Bars are narrower than ' + BC_MIN_MIL +
          ' mil and may not scan reliably. Use a shorter code or a wider label.</span>';
   }
   if (totalH > s.lh) {
@@ -1216,16 +1328,16 @@ function bcRefreshCard() {
   // The longest code produces the narrowest bars, so it sets the density floor
   var longest = '';
   entries.forEach(function(e) { if (e.code.length > longest.length) longest = e.code; });
-  var unitMil = (s.drawW * 1000) / c39Units(longest);
+  var unitMil = (s.drawW * 1000) / bcUnits(longest, bcFormat());
   var rows    = Math.ceil(entries.length / s.cols);
   var m = entries.length + ' code' + (entries.length > 1 ? 's' : '') + ' &middot; ' +
     s.cols + ' column' + (s.cols > 1 ? 's' : '') + ' &times; ' + rows + ' row' +
     (rows > 1 ? 's' : '') + ' &middot; narrowest bar ' + unitMil.toFixed(1) + ' mil';
-  if (unitMil < C39_MIN_MIL) {
-    m += '<br><span class="bc-warn">&#9650; Bars on the longest code are under ' + C39_MIN_MIL +
+  if (unitMil < BC_MIN_MIL) {
+    m += '<br><span class="bc-warn">&#9650; Bars on the longest code are under ' + BC_MIN_MIL +
          ' mil and may not scan reliably. Use fewer columns, a wider page, or shorter codes.</span>';
   }
-  var estH = s.marg * 2 + rows * (c39HeightIn(s.barH, s.show, 'x') + 0.25);
+  var estH = s.marg * 2 + rows * (bcHeightIn(s.barH, s.show, 'x') + 0.25);
   if (estH > s.ph) {
     m += '<br><span class="bc-warn">&#9650; Content needs about ' + estH.toFixed(1) +
          'in but the page is ' + s.ph + 'in &mdash; it will spill onto a second page.</span>';
@@ -1273,7 +1385,7 @@ function bcPrintRoll() {
   if (!e.code) { alert('Enter a code first.'); return; }
   var s      = bcSettings();
   var copies = Math.max(1, Math.min(500, parseInt(document.getElementById('bc-copies').value, 10) || 1));
-  var svg    = c39Svg(e.code, s.drawW, s.barH, s.show, e.caption);
+  var svg    = bcSvg(e.code, e.fmt, s.drawW, s.barH, s.show, e.caption);
 
   var labels = '';
   for (var i = 0; i < copies; i++) labels += '<div class="lbl">' + svg + '</div>';
@@ -1336,7 +1448,7 @@ function bcDownloadSvg() {
   var e = bcSingle();
   if (!e.code) { alert('Enter a code first.'); return; }
   var d = bcDownloadDims();
-  var svg = c39Svg(e.code, d.drawW, d.barH, d.show, e.caption);
+  var svg = bcSvg(e.code, e.fmt, d.drawW, d.barH, d.show, e.caption);
   var blob = new Blob([svg], { type: 'image/svg+xml' });
   var url = URL.createObjectURL(blob);
   bcTriggerDownload(url, bcFilename(e.code, 'svg'));
@@ -1349,8 +1461,8 @@ function bcDownloadPng() {
   var e = bcSingle();
   if (!e.code) { alert('Enter a code first.'); return; }
   var d = bcDownloadDims();
-  var svg = c39Svg(e.code, d.drawW, d.barH, d.show, e.caption);
-  var hIn = c39HeightIn(d.barH, d.show, e.caption);
+  var svg = bcSvg(e.code, e.fmt, d.drawW, d.barH, d.show, e.caption);
+  var hIn = bcHeightIn(d.barH, d.show, e.caption);
   var DPI = 300;
   var img = new Image();
   var blob = new Blob([svg], { type: 'image/svg+xml' });
