@@ -377,6 +377,15 @@ tbody tr:last-child td{border-bottom:none}
         <div style="font-size:12px;color:var(--ink-lighter);line-height:1.4;margin-bottom:12px">Choose a color palette for this module. Each module remembers its own palette choice.</div>
         <div id="palette-swatches" class="palette-swatch-grid"></div>
       </div>
+      <div style="font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-lighter);margin-bottom:10px;border-top:1px solid var(--cream-border);padding-top:16px">Photo storage</div>
+      <div style="padding:4px 0 8px">
+        <div id="photo-stats" style="font-size:12px;color:var(--ink-light);line-height:1.5;margin-bottom:10px"></div>
+        <button class="btn" id="opt-photos-btn" onclick="optimisePhotos()">Shrink stored photos</button>
+        <div style="font-size:11px;color:var(--ink-lighter);line-height:1.5;margin-top:8px">
+          Re-saves every photo at the size actually used on screen. The pictures stay &mdash; they just stop carrying pixels nothing displays. Export a backup first if you would like a safety net.
+        </div>
+        <div id="opt-photos-result" style="font-size:12px;color:var(--sage-dark);line-height:1.5;margin-top:8px"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -438,6 +447,70 @@ function saveData() {
       alert('Storage full \u2014 try removing photos from some items or exporting a backup.');
     } else { alert('Could not save.'); }
   }
+}
+
+// ── Photo optimisation ────────────────────────────────
+function photoBytes() {
+  var n = 0, total = 0;
+  items.forEach(function(i) {
+    if (i.image) { n++; total += i.image.length; }
+  });
+  return { count: n, bytes: total };
+}
+
+function fmtSize(b) {
+  return b >= 1048576 ? (b / 1048576).toFixed(2) + ' MB' : Math.round(b / 1024) + ' KB';
+}
+
+function renderPhotoStats() {
+  var el = document.getElementById('photo-stats');
+  if (!el) return;
+  var p = photoBytes();
+  if (!p.count) { el.textContent = 'No photos stored.'; return; }
+  el.innerHTML = '<strong>' + p.count + '</strong> photo' + (p.count === 1 ? '' : 's') +
+                 ' using <strong>' + fmtSize(p.bytes) + '</strong>.';
+}
+
+// Walks every stored photo and re-encodes it at display size. Images are
+// processed one at a time (canvas decoding is async) and only written back
+// if the result is actually smaller, so re-running this is harmless.
+function optimisePhotos() {
+  var withPhotos = items.filter(function(i) { return !!i.image; });
+  if (!withPhotos.length) { alert('There are no photos to shrink.'); return; }
+  var before = photoBytes().bytes;
+  if (!confirm('Re-save ' + withPhotos.length + ' photo' + (withPhotos.length === 1 ? '' : 's') +
+               ' at display size?\n\nEvery picture is kept. This cannot be undone, so export a backup first if you want one.')) return;
+
+  var btn = document.getElementById('opt-photos-btn');
+  var res = document.getElementById('opt-photos-result');
+  if (btn) { btn.disabled = true; btn.textContent = 'Working...'; }
+
+  var idx = 0, shrunk = 0;
+  function step() {
+    if (idx >= withPhotos.length) {
+      saveData();
+      renderTable();
+      renderPhotoStats();
+      var after = photoBytes().bytes;
+      if (btn) { btn.disabled = false; btn.textContent = 'Shrink stored photos'; }
+      if (res) {
+        res.innerHTML = shrunk
+          ? ('Shrank ' + shrunk + ' photo' + (shrunk === 1 ? '' : 's') + ': ' +
+             fmtSize(before) + ' \u2192 ' + fmtSize(after) +
+             ' (saved ' + fmtSize(Math.max(0, before - after)) + ').')
+          : 'Already at display size \u2014 nothing to reclaim.';
+      }
+      return;
+    }
+    var item = withPhotos[idx++];
+    if (btn) btn.textContent = 'Working... ' + idx + '/' + withPhotos.length;
+    compressImage(item.image, PHOTO_MAX_W, PHOTO_QUALITY, function(out) {
+      // Only keep the new one if it genuinely helps
+      if (out && out.length < item.image.length) { item.image = out; shrunk++; }
+      step();
+    });
+  }
+  step();
 }
 
 function exportData() {
@@ -545,12 +618,20 @@ function renderTable() {
 }
 
 // ── Image handling ────────────────────────────────────
+// Photos are shown as a 48px list thumbnail and a 180px modal preview, and
+// nowhere else. Storing 800px was about four times the pixels that can ever
+// be seen -- and since these are base64 in localStorage, which the whole app
+// shares, those pixels were the single largest thing in storage. 480px is
+// still comfortably sharp on a high-density screen at 180px display size.
+var PHOTO_MAX_W  = 480;
+var PHOTO_QUALITY = 0.72;
+
 function handleImageUpload(e) {
   var file = e.target.files[0]; if (!file) return;
   if (file.size > 10 * 1024 * 1024) { alert('File too large (max 10MB).'); return; }
   var reader = new FileReader();
   reader.onload = function(ev) {
-    compressImage(ev.target.result, 800, 0.75, function(compressed) {
+    compressImage(ev.target.result, PHOTO_MAX_W, PHOTO_QUALITY, function(compressed) {
       pendingImage = compressed;
       showImagePreview(compressed);
     });
@@ -927,7 +1008,7 @@ function renderPaletteSwatches() {
       '</button>';
   }).join('');
 }
-function openSettings() { openModal('m-settings'); renderPaletteSwatches(); }
+function openSettings() { openModal('m-settings'); renderPaletteSwatches(); renderPhotoStats(); }
 
 applyPalette(loadPaletteChoice());
 loadData();
