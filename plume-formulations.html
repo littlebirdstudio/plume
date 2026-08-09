@@ -847,11 +847,34 @@ function updateAddinTotalRow() {
 // default phase (e.g. rosehip is normally "oil" but a cold-process formula
 // needs it in "cool-down"). Add-ins live in their own pseudo-phase so
 // drag-reorder won't accidentally mix them with regular lines.
+// The five phases the editor, the phase menu and the print sheet know how
+// to render. Anything outside this list used to be grouped under a key that
+// nothing ever read, so the row silently disappeared -- see normPhase.
+var KNOWN_PHASES = ['water', 'oil', 'cool-down', 'active', 'other'];
+
+// The Ingredients library and this module disagreed about the phase
+// vocabulary. Ingredients offers water / oil / cool-down / ADD-IN; this
+// module renders water / oil / cool-down / ACTIVE / OTHER. An ingredient
+// saved as 'add-in' -- which is every clay and exfoliant in the Formula
+// Botanica import -- therefore grouped under a key the renderer never
+// iterated, and vanished from the recipe area while still being counted
+// in the ingredient tally and listed in the INCI panel.
+//
+// normPhase maps anything unrecognised to 'other' so a line can never be
+// dropped. Note 'add-in' here is the INGREDIENT's phase and is unrelated
+// to `line.addin`, the per-line flag that excludes something from the
+// formula percentage. Two different meanings, one unfortunate word.
+function normPhase(p) {
+  if (!p) return 'other';
+  if (p === 'add-in' || p === 'addin') return 'other';
+  return KNOWN_PHASES.indexOf(p) === -1 ? 'other' : p;
+}
+
 function effPhase(line, ing) {
   if (!line) return 'other';
   if (line.addin) return 'addin';
-  if (line.phase) return line.phase;
-  return (ing && ing.phase) ? ing.phase : 'other';
+  if (line.phase) return normPhase(line.phase);
+  return normPhase(ing && ing.phase);
 }
 
 // ── Drag-to-reorder ──
@@ -943,7 +966,7 @@ function openPhaseMenu(idx, anchorEl) {
   var line = fLines[idx];
   var ing = ings.find(function(i) { return i.id === line.ingId; });
   var current   = effPhase(line, ing);
-  var defaultPh = ing ? (ing.phase || 'other') : 'other';
+  var defaultPh = normPhase(ing && ing.phase);
   var phases = ['water','oil','cool-down','active','other'];
   var phNames = { water:'Water phase', oil:'Oil phase', 'cool-down':'Cool-down phase', active:'Active phase', other:'Other' };
   var menu = document.createElement('div');
@@ -990,7 +1013,7 @@ function closePhaseMenuOnOutside(e) {
 function setLinePhase(idx, phase) {
   var line = fLines[idx];
   var ing = ings.find(function(i) { return i.id === line.ingId; });
-  var defaultPh = ing ? (ing.phase || 'other') : 'other';
+  var defaultPh = normPhase(ing && ing.phase);
   if (phase === defaultPh) {
     delete line.phase;
   } else {
@@ -1539,6 +1562,15 @@ function renderLines() {
     if (!grouped[ph]) grouped[ph] = [];
     grouped[ph].push({ l:l, idx:idx, ing:ing });
   });
+  // Safety net. normPhase should guarantee every key is one of `phases`,
+  // but the original failure here was silent -- a line grouped under an
+  // unread key just disappeared. Fold any stray key into 'other' so a row
+  // is always visible, even if wrongly placed.
+  Object.keys(grouped).forEach(function(k) {
+    if (phases.indexOf(k) !== -1) return;
+    grouped.other = grouped.other.concat(grouped[k]);
+    delete grouped[k];
+  });
   var hasAny = phases.some(function(p) { return grouped[p].length > 0; }) || addins.length > 0;
   var colHdr = hasAny ? '<div class="col-hdr"><span></span><span style="text-align:right">%</span>' +
     '<span style="text-align:center">pin</span><span style="text-align:right">grams</span>' +
@@ -1592,7 +1624,7 @@ function buildRow(l, idx, ing, bs, isAddin) {
   var sg     = stockG(ing);
   var stockCls = sst === 'enough' ? ' has-stock' : (sst === 'partial' ? ' partial-stock' : '');
   var ePh    = effPhase(l, ing);
-  var defPh  = ing ? (ing.phase || 'other') : 'other';
+  var defPh  = normPhase(ing && ing.phase);
   var phOvr  = !isAddin && !!l.phase && l.phase !== defPh;
   var row = '<div class="ing-row' + (warn?' warn':'') + (isAddin?' addin':'') + stockCls + '"' +
     ' draggable="true"' +
@@ -2970,7 +3002,7 @@ function printFormula() {
     var ing = ings.find(function(i) { return i.id === l.ingId; });
     if (ing) {
       var ph = effPhase(l, ing);
-      if (!grouped[ph]) grouped[ph] = [];
+      if (phases.indexOf(ph) === -1) ph = 'other';
       grouped[ph].push({ l:l, ing:ing });
     }
   });
