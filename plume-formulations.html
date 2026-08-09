@@ -3025,13 +3025,27 @@ function printFormula() {
 function openSettings() { openModal('m-settings'); Plume.renderPaletteSwatches(); Plume.renderStorage(); }
 
 // ── Init ──────────────────────────────────────────────
-// Plume.boot hydrates storage, applies this module's saved palette, then
-// hands control back. The palette CHOICE stays per-module -- this page
-// still remembers its own colour scheme independently of the others.
-Plume.setModule('formulations');
-Plume.boot(function () {
-  loadAll();
-});
+// Without plume-core.js there is no storage layer, no palettes and no cost
+// function — nothing above would work. Say so plainly rather than leaving
+// a half-dead page that looks like lost data.
+if (typeof Plume === 'undefined') {
+  document.body.insertAdjacentHTML('afterbegin',
+    '<div style="background:#F9E9E4;border-bottom:2px solid #D9A695;color:#7A3F2C;' +
+    'padding:16px 20px;font-family:sans-serif;font-size:14px;line-height:1.6">' +
+    '<strong>plume-core.js did not load.</strong><br>' +
+    'This page needs <code>plume-core.js</code> in the same folder as ' +
+    '<code>plume-formulations.html</code>. Upload it to GitHub, wait for the site to rebuild, ' +
+    'then reload with Ctrl+Shift+R (Cmd+Shift+R on a Mac).<br>' +
+    '<em>Your data is safe &mdash; it lives in the browser, not in these files.</em></div>');
+} else {
+  // Plume.boot hydrates storage, applies this module's saved palette, then
+  // hands control back. The palette CHOICE stays per-module -- this page
+  // still remembers its own colour scheme independently of the others.
+  Plume.setModule('formulations');
+  Plume.boot(function () {
+    loadAll();
+  });
+}
 </script>
 </body>
 </html>

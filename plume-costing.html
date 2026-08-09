@@ -237,6 +237,8 @@ main { max-width:1240px; margin:0 auto; padding:24px 22px 60px; }
 </header>
 
 <main>
+  <div id="stor-banner-slot"></div>
+
   <!-- List view -->
   <div id="view-list">
     <div class="sec-header">
@@ -668,6 +670,8 @@ main { max-width:1240px; margin:0 auto; padding:24px 22px 60px; }
     <div style="font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-lighter);margin-bottom:10px">Appearance</div>
     <div style="font-size:12px;color:var(--ink-lighter);line-height:1.4;margin-bottom:12px">Choose a color palette for this module. Each module remembers its own palette choice.</div>
     <div id="palette-swatches" class="palette-swatch-grid"></div>
+    <div style="font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-lighter);margin:20px 0 10px;border-top:1px solid var(--cream-border);padding-top:16px">Storage</div>
+    <div style="padding:4px 0 6px" id="storage-body"></div>
   </div>
 </div>
 
@@ -675,6 +679,7 @@ main { max-width:1240px; margin:0 auto; padding:24px 22px 60px; }
 
 <footer class="app-footer">Plume by Little Bird Studio &middot; Products &amp; Costing &middot; v0.6</footer>
 
+<script src="plume-core.js"></script>
 <script>
 // ──────────────────────────────────────────────────────────────────────
 // Storage keys
@@ -685,7 +690,9 @@ var PKG_KEY     = 'aerie-packaging-v2';
 var BATCH_KEY   = 'aerie-batches-v1';
 var PRODUCT_KEY = 'plume-products-v1';
 var OLD_COST_KEY = 'aerie-costing-v1';
-var PALETTE_KEY = 'plume-palette-products';
+// The palette key is derived by core from Plume.setModule('products'),
+// which resolves to the same 'plume-palette-products' this module has
+// always used -- so the saved colour choice carries over untouched.
 
 // In-memory state
 var ings    = [];
@@ -701,20 +708,15 @@ var statusFilter = 'all';
 // ──────────────────────────────────────────────────────────────────────
 // Helpers
 // ──────────────────────────────────────────────────────────────────────
-function esc(s) {
-  return String(s == null ? '' : s)
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-}
-function todayISO() { return new Date().toISOString().slice(0,10); }
-function fmtDate(d) {
-  if (!d) return '';
-  try { return new Date(d).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }); }
-  catch(e) { return d; }
-}
+// esc, todayISO, fmtDate, openModal and closeModal now come from
+// plume-core.js. Two of them change behaviour for the better:
+//   todayISO was built from toISOString(), which is UTC -- so a run logged
+//     after 3pm Alaska time was stamped tomorrow. Core builds it from local
+//     date parts.
+//   fmtDate parsed 'YYYY-MM-DD' with new Date(), also UTC, which displayed
+//     the day before in any negative-offset zone. Core parses the parts.
+// uid stays local: core has no opinion about id generation.
 function uid() { return String(Date.now()) + '-' + Math.random().toString(36).slice(2,7); }
-function openModal(id) { document.getElementById(id).classList.add('open'); }
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 // ══════════════════════════════════════════════════════════════════════
 // Barcode symbologies: Code 39 and Code 128
 // ══════════════════════════════════════════════════════════════════════
@@ -1518,20 +1520,27 @@ function findProduct(id) {
 // Load / save
 // ──────────────────────────────────────────────────────────────────────
 function loadData() {
-  try { var r = localStorage.getItem(ING_KEY);     if (r) ings     = JSON.parse(r); } catch(e) {}
-  try { var r = localStorage.getItem(FORM_KEY);    if (r) forms    = JSON.parse(r); } catch(e) {}
-  try { var r = localStorage.getItem(PKG_KEY);     if (r) pkgs     = JSON.parse(r); } catch(e) {}
-  try { var r = localStorage.getItem(BATCH_KEY);   if (r) batches  = JSON.parse(r); } catch(e) {}
-  try { var r = localStorage.getItem(PRODUCT_KEY); if (r) products = JSON.parse(r); } catch(e) {}
+  ings     = Store.getJSON(ING_KEY,     []) || [];
+  forms    = Store.getJSON(FORM_KEY,    []) || [];
+  pkgs     = Store.getJSON(PKG_KEY,     []) || [];
+  batches  = Store.getJSON(BATCH_KEY,   []) || [];
+  products = Store.getJSON(PRODUCT_KEY, []) || [];
   // Phase 6 wipe: old costing data was scoped for replacement, not migration.
-  try { localStorage.removeItem(OLD_COST_KEY); } catch(e) {}
+  Store.remove(OLD_COST_KEY);
   migrateListOrder();
   renderList();
   renderStatusPills();
+  Plume.renderStorBanner();
 }
+
+// Returns true on success. Store.setJSON returns false rather than throwing
+// when the browser storage is full, so the failure has to be checked, not
+// caught. Plume.noteSaveFailed shows a red banner offering an immediate
+// backup and alerts once -- not once per save.
 function saveProducts() {
-  try { localStorage.setItem(PRODUCT_KEY, JSON.stringify(products)); }
-  catch(e) { alert('Could not save -- browser storage may be full.'); }
+  if (Store.setJSON(PRODUCT_KEY, products)) { Plume.noteSaveOk(); return true; }
+  Plume.noteSaveFailed();
+  return false;
 }
 
 // ──────────────────────────────────────────────────────────────────────
@@ -1545,9 +1554,9 @@ function saveProducts() {
 // and drag-to-reorder edits it directly.
 function migrateListOrder() {
   var FLAG = 'plume_costing_listorder_v1';
-  try { if (localStorage.getItem(FLAG)) return; } catch(e) { return; }
+  if (Store.get(FLAG)) return;
   if (!products.length) {
-    try { localStorage.setItem(FLAG, '1'); } catch(e) {}
+    Store.set(FLAG, '1');
     return;
   }
   var groups = {};
@@ -1566,7 +1575,7 @@ function migrateListOrder() {
   keys.forEach(function(k) { groups[k].forEach(function(p) { reordered.push(p); }); });
   products = reordered;
   saveProducts();
-  try { localStorage.setItem(FLAG, '1'); } catch(e) {}
+  Store.set(FLAG, '1');
 }
 
 var prodDragId = null;
@@ -1678,28 +1687,18 @@ function importData(e) {
 // ──────────────────────────────────────────────────────────────────────
 // Costing math
 // ──────────────────────────────────────────────────────────────────────
-function ingCostPerG(ing) {
-  if (!ing) return null;
-  var lots = (ing.lots || []).filter(function(l) { return !l.referenceOnly; });
-  if (!lots.length && (ing.supplier || ing.cost)) {
-    var c = parseFloat(ing.cost);
-    return (!isNaN(c) && c > 0) ? c : null;
-  }
-  if (ing.activeLotId) {
-    var match = lots.filter(function(l) { return l.id === ing.activeLotId; })[0];
-    if (match) {
-      var c2 = parseFloat(match.costPerG);
-      if (!isNaN(c2) && c2 > 0) return c2;
-    }
-  }
-  var withCost = lots.filter(function(l) {
-    var c = parseFloat(l.costPerG);
-    return !isNaN(c) && c > 0;
-  });
-  if (!withCost.length) return null;
-  withCost.sort(function(a, b) { return parseFloat(a.costPerG) - parseFloat(b.costPerG); });
-  return parseFloat(withCost[0].costPerG);
-}
+// ingCostPerG now comes from plume-core.js, where it is one function
+// shared with Formulations' bestCpg. Two screens can no longer disagree
+// about what an ingredient costs -- which is the bug that started all of
+// this ($0.06/g here, $0.091/g there, for the same oil).
+//
+// ONE BEHAVIOUR CHANGE. This copy fell through to the cheapest lot when
+// the designated active lot had no cost/g filled in. Core returns null
+// instead, because falling through prices a product at a number nobody
+// chose. Effect: an ingredient whose active lot has a blank cost/g now
+// reads as a missing cost here rather than quietly showing some other
+// lot's price. That is missing data becoming visible; filling in the
+// lot's cost/g in the Ingredients library resolves it.
 
 // Build a diagnostic breakdown of how much each formulation line contributes
 // to the per-gram cost. Returns lines with their resolved cost info so the
@@ -2422,14 +2421,12 @@ function recalcCost() {
 var CUSTOM_MULT_KEY = 'plume-pricing-custom-mult';
 
 function getCustomMultiplier() {
-  try {
-    var v = parseFloat(localStorage.getItem(CUSTOM_MULT_KEY));
-    if (!isNaN(v) && v > 0) return v;
-  } catch(e) {}
+  var v = parseFloat(Store.get(CUSTOM_MULT_KEY));
+  if (!isNaN(v) && v > 0) return v;
   return 4;  // sensible default
 }
 function setCustomMultiplier(v) {
-  try { localStorage.setItem(CUSTOM_MULT_KEY, String(v)); } catch(e) {}
+  Store.set(CUSTOM_MULT_KEY, String(v));
 }
 
 function onCustomMultiplierChange(value) {
@@ -2710,161 +2707,39 @@ function deleteRun(rid) {
 }
 
 // ──────────────────────────────────────────────────────────────────────
-// Palette system
+// Settings
 // ──────────────────────────────────────────────────────────────────────
-var PALETTES = {
-  'coastal': { label:'Coastal', vars: {
-    '--cream':'#F4F6F8','--cream-dark':'#E7ECF1','--cream-border':'#C9D3DC','--white':'#FCFDFE',
-    '--bark':'#506880','--bark-light':'#7A92A8','--bark-dark':'#2E4256',
-    '--sage':'#6E8C8A','--sage-light':'#E2EBEA','--sage-dark':'#3F5856','--sage-border':'#B8CACA',
-    '--clay':'#C9A074','--clay-light':'#F2E8DA','--clay-dark':'#8A6432','--clay-hover':'#EBD9BE',
-    '--ink':'#1F2A36','--ink-light':'#5A6776','--ink-lighter':'#8E99A6',
-    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
-    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#3F5856'
-  }},
-  'indigo': { label:'Indigo', vars: {
-    '--cream':'#F1F1F6','--cream-dark':'#E4E4EC','--cream-border':'#C6C6D4','--white':'#FBFBFD',
-    '--bark':'#3E4768','--bark-light':'#6970A0','--bark-dark':'#1F2546',
-    '--sage':'#7480A0','--sage-light':'#E5E8F0','--sage-dark':'#454E68','--sage-border':'#BFC5D4',
-    '--clay':'#A88BB8','--clay-light':'#EDE2F2','--clay-dark':'#6E527C','--clay-hover':'#E0CFE8',
-    '--ink':'#1A1D2E','--ink-light':'#525870','--ink-lighter':'#8A8FA4',
-    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
-    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#454E68'
-  }},
-  'mist': { label:'Mist', vars: {
-    '--cream':'#F2F4F4','--cream-dark':'#E5E9E9','--cream-border':'#CAD2D2','--white':'#FBFCFC',
-    '--bark':'#5C7274','--bark-light':'#869A9C','--bark-dark':'#34484A',
-    '--sage':'#6E9290','--sage-light':'#E2EDEC','--sage-dark':'#3F5C5A','--sage-border':'#BAD0CE',
-    '--clay':'#C29A8A','--clay-light':'#F0E4DE','--clay-dark':'#82584A','--clay-hover':'#E7D3C9',
-    '--ink':'#222B2E','--ink-light':'#5C696C','--ink-lighter':'#909A9D',
-    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
-    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#3F5C5A'
-  }},
-  'blush': { label:'Blush', vars: {
-    '--cream':'#F9F2F1','--cream-dark':'#F0E4E2','--cream-border':'#DCC8C6','--white':'#FEFBFB',
-    '--bark':'#8A5868','--bark-light':'#AE7E8C','--bark-dark':'#5A3240',
-    '--sage':'#8A8898','--sage-light':'#ECE9EE','--sage-dark':'#52505E','--sage-border':'#CFCCD6',
-    '--clay':'#D08C82','--clay-light':'#F5E2DE','--clay-dark':'#92524A','--clay-hover':'#EDCEC7',
-    '--ink':'#2C2024','--ink-light':'#6D5860','--ink-lighter':'#A08A91',
-    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
-    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#52505E'
-  }},
-  'petal': { label:'Petal', vars: {
-    '--cream':'#FAF3EE','--cream-dark':'#F2E5DC','--cream-border':'#DCC8B9','--white':'#FEFCFA',
-    '--bark':'#A0584C','--bark-light':'#C68074','--bark-dark':'#6E2E22',
-    '--sage':'#8C8478','--sage-light':'#EDE8E1','--sage-dark':'#544D43','--sage-border':'#CCC5BA',
-    '--clay':'#E89A82','--clay-light':'#FAE3D8','--clay-dark':'#A85A40','--clay-hover':'#F4CFBE',
-    '--ink':'#2E2018','--ink-light':'#705A4E','--ink-lighter':'#A28B7E',
-    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
-    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#544D43'
-  }},
-  'mulberry': { label:'Mulberry', vars: {
-    '--cream':'#F4EDEF','--cream-dark':'#E8DCDF','--cream-border':'#CDB8BE','--white':'#FBF8F9',
-    '--bark':'#7A3E5A','--bark-light':'#9E6480','--bark-dark':'#4E1A30',
-    '--sage':'#857482','--sage-light':'#E7E0E4','--sage-dark':'#4E424B','--sage-border':'#C5B8BF',
-    '--clay':'#B07088','--clay-light':'#EBD8DE','--clay-dark':'#783E50','--clay-hover':'#DEBFC8',
-    '--ink':'#26181E','--ink-light':'#5E4E55','--ink-lighter':'#94808A',
-    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
-    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#4E424B'
-  }},
-  'lavender': { label:'Lavender', vars: {
-    '--cream':'#F5F3F7','--cream-dark':'#EAE5EF','--cream-border':'#D0C8DA','--white':'#FCFBFD',
-    '--bark':'#6E5C8A','--bark-light':'#928AAE','--bark-dark':'#3F3258',
-    '--sage':'#8C8AA0','--sage-light':'#EAE8EE','--sage-dark':'#54526A','--sage-border':'#CECCDA',
-    '--clay':'#B89AC4','--clay-light':'#EEE2F1','--clay-dark':'#7C5A8A','--clay-hover':'#E0CDEA',
-    '--ink':'#221E2E','--ink-light':'#5E5670','--ink-lighter':'#928CA4',
-    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
-    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#54526A'
-  }},
-  'slate': { label:'Slate', vars: {
-    '--cream':'#F1F2F5','--cream-dark':'#E4E6EC','--cream-border':'#C6CBD4','--white':'#FBFBFD',
-    '--bark':'#525C72','--bark-light':'#7C8598','--bark-dark':'#2E3648',
-    '--sage':'#76808E','--sage-light':'#E5E8EC','--sage-dark':'#444C58','--sage-border':'#C2C8D0',
-    '--clay':'#A88AA0','--clay-light':'#ECE2E8','--clay-dark':'#6E5468','--clay-hover':'#DCCBD6',
-    '--ink':'#1E222C','--ink-light':'#555C6C','--ink-lighter':'#8C92A0',
-    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
-    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#444C58'
-  }},
-  'wisteria': { label:'Wisteria', vars: {
-    '--cream':'#F4F2F4','--cream-dark':'#E8E5E9','--cream-border':'#CCC4D0','--white':'#FBFAFC',
-    '--bark':'#7A6A8C','--bark-light':'#9E8FAE','--bark-dark':'#4A3A5C',
-    '--sage':'#84927E','--sage-light':'#E5EAE2','--sage-dark':'#4E5A48','--sage-border':'#BDC8B8',
-    '--clay':'#AE8AB8','--clay-light':'#E8DCE8','--clay-dark':'#724E7C','--clay-hover':'#D8C2DC',
-    '--ink':'#24202C','--ink-light':'#5E566C','--ink-lighter':'#928BA0',
-    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
-    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#4E5A48'
-  }},
-  'forest': { label:'Forest', vars: {
-    '--cream':'#F2F4F0','--cream-dark':'#E4E8DE','--cream-border':'#C5CDBE','--white':'#FBFCFA',
-    '--bark':'#4E6A4A','--bark-light':'#789078','--bark-dark':'#2A3E28',
-    '--sage':'#6A8A60','--sage-light':'#E0EAD8','--sage-dark':'#3E5638','--sage-border':'#B5C8AC',
-    '--clay':'#B88858','--clay-light':'#ECDDC8','--clay-dark':'#7A5430','--clay-hover':'#E0CAA8',
-    '--ink':'#1E281C','--ink-light':'#56624E','--ink-lighter':'#8A9282',
-    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
-    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#3E5638'
-  }},
-  'sage-green': { label:'Sage', vars: {
-    '--cream':'#F4F5F1','--cream-dark':'#E7E9E2','--cream-border':'#C9CEC0','--white':'#FBFCFA',
-    '--bark':'#6E7A5E','--bark-light':'#929E84','--bark-dark':'#404834',
-    '--sage':'#869A78','--sage-light':'#E8EDE0','--sage-dark':'#4E5C40','--sage-border':'#C2CCB4',
-    '--clay':'#B89A82','--clay-light':'#EBE2D8','--clay-dark':'#7A604E','--clay-hover':'#DDCEC0',
-    '--ink':'#23271E','--ink-light':'#5C624E','--ink-lighter':'#8E9482',
-    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
-    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#4E5C40'
-  }},
-  'eucalyptus': { label:'Eucalyptus', vars: {
-    '--cream':'#F1F4F2','--cream-dark':'#E4E9E5','--cream-border':'#C5CFC8','--white':'#FBFCFB',
-    '--bark':'#5E7872','--bark-light':'#8AA09A','--bark-dark':'#324842',
-    '--sage':'#7AA098','--sage-light':'#E0EDE7','--sage-dark':'#436258','--sage-border':'#B6CDC4',
-    '--clay':'#A8B8A0','--clay-light':'#E2EAE0','--clay-dark':'#688070','--clay-hover':'#CFD8C8',
-    '--ink':'#1E2A26','--ink-light':'#566A62','--ink-lighter':'#8C9A92',
-    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
-    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#436258'
-  }}
-};
-var DEFAULT_PALETTE = 'coastal';
-function applyPalette(name) {
-  var p = PALETTES[name];
-  if (!p) { p = PALETTES[DEFAULT_PALETTE]; name = DEFAULT_PALETTE; }
-  Object.keys(p.vars).forEach(function(v) {
-    document.documentElement.style.setProperty(v, p.vars[v]);
-  });
-  return name;
+// The palettes and their swatch renderer live in plume-core.js now. Only
+// the *choice* is still per-module, stored under 'plume-palette-products'.
+function openSettings() {
+  openModal('m-settings');
+  Plume.renderPaletteSwatches();
+  Plume.renderStorage();
 }
-function savePaletteChoice(name) { try { localStorage.setItem(PALETTE_KEY, name); } catch (e) {} }
-function loadPaletteChoice() { try { return localStorage.getItem(PALETTE_KEY) || DEFAULT_PALETTE; } catch (e) { return DEFAULT_PALETTE; } }
-function selectPalette(name) {
-  var applied = applyPalette(name);
-  savePaletteChoice(applied);
-  renderPaletteSwatches();
-}
-function renderPaletteSwatches() {
-  var container = document.getElementById('palette-swatches');
-  if (!container) return;
-  var current = loadPaletteChoice();
-  var names = Object.keys(PALETTES);
-  container.innerHTML = names.map(function(name) {
-    var p = PALETTES[name]; var v = p.vars; var isActive = (name === current);
-    return '<button type="button" class="palette-swatch' + (isActive ? ' active' : '') +
-      '" onclick="selectPalette(\'' + name + '\')" title="' + p.label + '">' +
-      '<div class="palette-swatch-stripes">' +
-        '<span style="background:' + v['--cream'] + '"></span>' +
-        '<span style="background:' + v['--bark'] + '"></span>' +
-        '<span style="background:' + v['--sage'] + '"></span>' +
-        '<span style="background:' + v['--clay'] + '"></span>' +
-        '<span style="background:' + v['--ink'] + '"></span>' +
-      '</div>' +
-      '<div class="palette-swatch-label">' + p.label + '</div>' +
-      '</button>';
-  }).join('');
-}
-function openSettings() { openModal('m-settings'); renderPaletteSwatches(); }
 
 // ──────────────────────────────────────────────────────────────────────
 // Boot
 // ──────────────────────────────────────────────────────────────────────
-applyPalette(loadPaletteChoice());
-loadData();
+// Without plume-core.js there is no storage layer, no palettes and no cost
+// function -- nothing below would work. Say so plainly rather than leaving
+// a half-dead page that looks like lost data.
+if (typeof Plume === 'undefined') {
+  document.body.insertAdjacentHTML('afterbegin',
+    '<div style="background:#F9E9E4;border-bottom:2px solid #D9A695;color:#7A3F2C;' +
+    'padding:16px 20px;font-family:sans-serif;font-size:14px;line-height:1.6">' +
+    '<strong>plume-core.js did not load.</strong><br>' +
+    'This page needs <code>plume-core.js</code> in the same folder as ' +
+    '<code>plume-costing.html</code>. Upload it to GitHub, wait for the site to rebuild, ' +
+    'then reload with Ctrl+Shift+R (Cmd+Shift+R on a Mac).<br>' +
+    '<em>Your data is safe &mdash; it lives in the browser, not in these files.</em></div>');
+} else {
+  // Plume.boot hydrates storage, applies this module's saved palette, then
+  // hands control back.
+  Plume.setModule('products');
+  Plume.boot(function () {
+    loadData();
+  });
+}
 </script>
 </body>
 </html>
