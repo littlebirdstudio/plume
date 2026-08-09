@@ -2312,32 +2312,44 @@ function trimHistory(v) {
   v.history = hist;
 }
 
-// ── Storage usage ─────────────────────────────────────
-// Surfaced in Settings so the ceiling is something you can see coming
-// rather than discover when a save fails.
+// ── Storage usage ─────────────────────────────────
+// Enumerate whatever is actually in storage rather than checking a list of
+// expected keys. A hardcoded list silently misreports the moment a key name
+// drifts -- and it already did: packaging is 'aerie-packaging-v2' and
+// products is 'plume-products-v1', so both were landing in an unlabelled
+// "Other" bucket and the largest consumer was invisible.
+var STOR_NAMES = {
+  'aerie-ingredients-v2':  'Ingredients',
+  'aerie-suppliers-v1':    'Suppliers',
+  'aerie-brands-v1':       'Brands',
+  'aerie-formulations-v1': 'Formulations (incl. history)',
+  'aerie-packaging-v2':    'Packaging (incl. photos)',
+  'aerie-batches-v1':      'Batches',
+  'plume-products-v1':     'Products & costing',
+  'aerie-costing-v1':      'Costing (old, unused)'
+};
+
+function storLabel(k) {
+  if (STOR_NAMES[k]) return STOR_NAMES[k];
+  // Palette and pricing preferences are a few bytes each -- grouped, not listed
+  if (k.indexOf('plume-palette-') === 0 || k.indexOf('plume-pricing-') === 0) return null;
+  return k;
+}
+
 function storageReport() {
-  var keys = ['aerie-ingredients-v2','aerie-formulations-v1','aerie-packaging-v1',
-              'aerie-batches-v1','aerie-products-v1'];
-  var rows = [], total = 0;
-  keys.forEach(function(k) {
-    var raw = '';
-    try { raw = localStorage.getItem(k) || ''; } catch (e) {}
-    if (!raw) return;
-    var b = raw.length;
-    total += b;
-    rows.push({ key: k, bytes: b });
-  });
-  // Anything else this app stored, so the total is honest
-  var other = 0;
+  var rows = [], settings = 0, total = 0;
   try {
     for (var i = 0; i < localStorage.length; i++) {
-      var kk = localStorage.key(i);
-      if (keys.indexOf(kk) > -1) continue;
-      other += (localStorage.getItem(kk) || '').length;
+      var k   = localStorage.key(i);
+      var raw = localStorage.getItem(k) || '';
+      total += raw.length;
+      var label = storLabel(k);
+      if (label === null) { settings += raw.length; continue; }
+      rows.push({ key: k, label: label, bytes: raw.length });
     }
   } catch (e) {}
-  total += other;
-  return { rows: rows, other: other, total: total };
+  rows.sort(function(a, b) { return b.bytes - a.bytes; });
+  return { rows: rows, settings: settings, total: total };
 }
 
 function fmtKB(b) {
@@ -2347,30 +2359,25 @@ function fmtKB(b) {
 function renderStorage() {
   var el = document.getElementById('storage-body');
   if (!el) return;
-  var r = storageReport();
+  var r     = storageReport();
   var LIMIT = 5 * 1024 * 1024;
   var pct   = Math.min(100, (r.total / LIMIT) * 100);
-  var names = {
-    'aerie-ingredients-v2':'Ingredients',
-    'aerie-formulations-v1':'Formulations (incl. history)',
-    'aerie-packaging-v1':'Packaging (incl. photos)',
-    'aerie-batches-v1':'Batches',
-    'aerie-products-v1':'Products & costing'
-  };
-  var bar = pct > 80 ? 'var(--clay)' : 'var(--sage)';
+  var bar   = pct > 80 ? 'var(--clay)' : 'var(--sage)';
+
   var html = '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px">';
   html += '<span style="color:var(--ink-light)">' + fmtKB(r.total) + ' of about 5 MB</span>';
   html += '<span style="color:var(--ink-lighter)">' + pct.toFixed(0) + '%</span></div>';
   html += '<div style="height:6px;background:var(--cream-dark);border-radius:3px;overflow:hidden;margin-bottom:12px">';
   html += '<div style="height:100%;width:' + pct.toFixed(1) + '%;background:' + bar + '"></div></div>';
-  r.rows.sort(function(a, b) { return b.bytes - a.bytes; });
+
   r.rows.forEach(function(row) {
+    if (row.bytes < 512) return;
     html += '<div style="display:flex;justify-content:space-between;font-size:11.5px;padding:3px 0;color:var(--ink-light)">';
-    html += '<span>' + (names[row.key] || row.key) + '</span><span>' + fmtKB(row.bytes) + '</span></div>';
+    html += '<span>' + esc(row.label) + '</span><span>' + fmtKB(row.bytes) + '</span></div>';
   });
-  if (r.other) {
+  if (r.settings) {
     html += '<div style="display:flex;justify-content:space-between;font-size:11.5px;padding:3px 0;color:var(--ink-lighter)">';
-    html += '<span>Other</span><span>' + fmtKB(r.other) + '</span></div>';
+    html += '<span>Settings</span><span>' + fmtKB(r.settings) + '</span></div>';
   }
   html += '<div style="font-size:11px;color:var(--ink-lighter);line-height:1.5;margin-top:10px">';
   html += 'All Plume modules share one browser storage budget of about 5MB, which browsers do not allow to be raised.</div>';
@@ -2383,9 +2390,9 @@ function renderStorage() {
 }
 
 // ── What's actually taking up the space ───────────────
-// Knowing that "Ingredients" is the biggest module doesn't tell you what to
-// do about it. This walks the records and sums bytes per field, so the
-// answer is a specific field you can decide about rather than a mystery.
+// Knowing which module is biggest doesn't tell you what to do about it.
+// This walks the records and sums bytes per field, so the answer is a
+// specific field you can decide about rather than a mystery.
 var storDrillOpen = false;
 function toggleStorDrill() { storDrillOpen = !storDrillOpen; renderStorage(); }
 
@@ -2394,17 +2401,16 @@ function fieldBreakdown(raw) {
   try { data = JSON.parse(raw); } catch (e) { return null; }
   var recs = Array.isArray(data) ? data : null;
   if (!recs) {
-    // Some keys hold an object wrapping the array
     for (var k in data) { if (Array.isArray(data[k])) { recs = data[k]; break; } }
   }
   if (!recs || !recs.length) return null;
   var tot = {}, sum = 0;
   recs.forEach(function(rec) {
     if (!rec || typeof rec !== 'object') return;
-    for (var f in rec) {
+    for (var fl in rec) {
       var b = 0;
-      try { b = JSON.stringify(rec[f]).length; } catch (e) { b = 0; }
-      tot[f] = (tot[f] || 0) + b;
+      try { b = JSON.stringify(rec[fl]).length; } catch (e) { b = 0; }
+      tot[fl] = (tot[fl] || 0) + b;
       sum += b;
     }
   });
@@ -2415,42 +2421,34 @@ function fieldBreakdown(raw) {
 }
 
 function renderStorDrill() {
-  var el = document.getElementById('stor-drill');
+  var el  = document.getElementById('stor-drill');
   var btn = document.getElementById('stor-drill-btn');
   if (!el) return;
   if (btn) btn.textContent = 'Hide breakdown';
 
-  var keys = ['aerie-ingredients-v2','aerie-formulations-v1','aerie-packaging-v1',
-              'aerie-batches-v1','aerie-products-v1'];
-  var names = {
-    'aerie-ingredients-v2':'Ingredients',
-    'aerie-formulations-v1':'Formulations',
-    'aerie-packaging-v1':'Packaging',
-    'aerie-batches-v1':'Batches',
-    'aerie-products-v1':'Products & costing'
-  };
-  var best = null;
-  keys.forEach(function(k) {
+  var r = storageReport();
+  // Drill into the largest keys actually present -- not the largest key
+  // whose name we happened to guess correctly.
+  var html = '', shown = 0;
+  for (var i = 0; i < r.rows.length && shown < 2; i++) {
+    var row = r.rows[i];
+    if (row.bytes < 2048) break;
     var raw = '';
-    try { raw = localStorage.getItem(k) || ''; } catch (e) {}
-    if (raw && (!best || raw.length > best.len)) best = { key: k, len: raw.length, raw: raw };
-  });
-  if (!best) { el.innerHTML = ''; return; }
-
-  var bd = fieldBreakdown(best.raw);
-  if (!bd) {
-    el.innerHTML = '<div style="font-size:11px;color:var(--ink-lighter);margin-top:8px">Could not read that data.</div>';
-    return;
+    try { raw = localStorage.getItem(row.key) || ''; } catch (e) {}
+    var bd = fieldBreakdown(raw);
+    if (!bd) continue;
+    shown++;
+    html += '<div style="font-size:11px;color:var(--ink-lighter);margin:' + (shown === 1 ? '8px' : '14px') + ' 0 6px;line-height:1.5"><strong>'
+         + esc(row.label) + '</strong> \u2014 ' + bd.count + ' records, ' + fmtKB(row.bytes) + '. Biggest fields:</div>';
+    bd.fields.slice(0, 5).forEach(function(fd) {
+      var p = bd.sum ? (100 * fd.bytes / bd.sum) : 0;
+      html += '<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0;color:var(--ink-light)">';
+      html += '<span>' + esc(fd.field) + '</span><span>' + fmtKB(fd.bytes) + ' \u00b7 ' + p.toFixed(0) + '%</span></div>';
+    });
   }
-  var html = '<div style="font-size:11px;color:var(--ink-lighter);margin:8px 0 6px;line-height:1.5">Largest module: <strong>'
-    + (names[best.key] || best.key) + '</strong> \u2014 ' + bd.count + ' records. Biggest fields:</div>';
-  bd.fields.slice(0, 6).forEach(function(f) {
-    var pct = bd.sum ? (100 * f.bytes / bd.sum) : 0;
-    html += '<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0;color:var(--ink-light)">';
-    html += '<span>' + esc(f.field) + '</span><span>' + fmtKB(f.bytes) + ' \u00b7 ' + pct.toFixed(0) + '%</span></div>';
-  });
+  if (!shown) { el.innerHTML = ''; return; }
   html += '<div style="font-size:11px;color:var(--ink-lighter);line-height:1.5;margin-top:8px">'
-    + 'A single field taking most of the space is usually reference text or an image, and is the cheapest thing to trim.</div>';
+       + 'A single field taking most of the space is usually reference text or an image, and is the cheapest thing to trim.</div>';
   el.innerHTML = html;
 }
 
