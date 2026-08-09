@@ -586,9 +586,9 @@ function addWeeks(isoDate, weeks) {
 }
 
 // ── Soap detection (matches isSoap() in plume-formulations.html) ──
-function isSoapType(type) {
-  return type === 'Cold Process Soap' || type === 'Hot Process Soap';
-}
+// The soap type strings live in plume-core.js -- Formulations branches on
+// the same two values and used to carry its own copy.
+function isSoapType(type) { return Plume.isSoapType(type); }
 
 // ── Stock helpers ──
 // lotQtyToGrams is now Plume.qtyToGrams, aliased under the old name.

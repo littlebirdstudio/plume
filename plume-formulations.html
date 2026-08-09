@@ -437,15 +437,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);m
             <div class="mf">
               <label>Product type <span class="mf-scope">all versions</span></label>
               <select id="f-type" onchange="onTypeChange()">
-                <option value="">-- select --</option>
-                <option>Facial serum</option><option>Face cream</option><option>Face oil</option>
-                <option>Eye cream</option><option>Toner / mist</option><option>Cleanser</option>
-                <option>Exfoliant / scrub</option><option>Mask</option><option>Body lotion</option>
-                <option>Body butter</option><option>Body oil</option><option>Lip balm</option>
-                <option>Hair serum</option><option>Hair mask</option><option>Shampoo bar</option>
-                <option>Deodorant</option><option>Other</option>
-                <option disabled>──────────</option>
-                <option>Cold Process Soap</option><option>Hot Process Soap</option>
               </select>
             </div>
             <div class="mf">
@@ -616,13 +607,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);m
     <div class="field">
       <label>Product type</label>
       <select id="new-type">
-        <option value="">-- select --</option>
-        <option>Facial serum</option><option>Face cream</option><option>Face oil</option>
-        <option>Eye cream</option><option>Toner / mist</option><option>Cleanser</option>
-        <option>Exfoliant / scrub</option><option>Mask</option><option>Body lotion</option>
-        <option>Body butter</option><option>Body oil</option><option>Lip balm</option>
-        <option>Hair serum</option><option>Hair mask</option><option>Shampoo bar</option>
-        <option>Deodorant</option><option>Other</option>
         <option disabled>──────────</option>
         <option>Cold Process Soap</option><option>Hot Process Soap</option>
       </select>
@@ -798,8 +782,9 @@ function importData(e) {
 function markDirty() { dirty = true; }
 
 function isSoap() {
-  var t = document.getElementById('f-type').value;
-  return t === 'Cold Process Soap' || t === 'Hot Process Soap';
+  // The two soap strings live in plume-core.js now -- Batchlog tests the
+  // same type and had its own copy of this comparison.
+  return Plume.isSoapType(document.getElementById('f-type').value);
 }
 
 // ── Per-formula: should add-ins count toward total %? ──
@@ -1185,7 +1170,9 @@ function renderCards() {
 // ── Formula create / open ─────────────────────────────
 function newFormula() {
   document.getElementById('new-name').value = '';
-  document.getElementById('new-type').value = '';
+  // Both type dropdowns are filled from Plume.PRODUCT_TYPES at the moment
+  // they are shown, so there is exactly one list to edit.
+  Plume.fillTypeSelect(document.getElementById('new-type'), '');
   openModal('m-new');
   setTimeout(function() { document.getElementById('new-name').focus(); }, 100);
 }
@@ -1194,7 +1181,7 @@ function createFormula() {
   var name = document.getElementById('new-name').value.trim();
   if (!name) { alert('Please enter a formula name.'); return; }
   var t = document.getElementById('new-type').value;
-  var isSoapType = t === 'Cold Process Soap' || t === 'Hot Process Soap';
+  var isSoapType = Plume.isSoapType(t);
 
   var v = blankVariant(1, '');
   // Default: skincare counts add-ins toward 100% (standard practice).
@@ -1226,7 +1213,10 @@ function openFormula(id) {
 
   // Formulation-level: shared by every version
   document.getElementById('f-name').value  = f.name;
-  document.getElementById('f-type').value  = f.type || '';
+  // fillTypeSelect keeps an unrecognised stored type as an extra option
+  // rather than snapping the field to blank, so opening an old formulation
+  // can never quietly drop its type.
+  Plume.fillTypeSelect(document.getElementById('f-type'), f.type || '');
   document.getElementById('f-notes').value = f.notes || '';
   document.getElementById('f-formnotes').value = f.formNotes || '';
 
