@@ -33,7 +33,7 @@ var Plume = (function () {
 // Bump when core changes. Shown in every module's Settings panel, so
 // "is core loaded, and is it the one I just uploaded?" is answerable by
 // looking rather than guessing -- browsers cache .js files stubbornly.
-var VERSION = '1.1';
+var VERSION = '1.2';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -183,12 +183,21 @@ var KEY_LABELS = {
 };
 
 // ══ Small helpers ═════════════════════════════════════
+// Escapes single quotes as well as double. Four modules omitted the
+// single-quote rule and Costing included it; the stricter version is
+// correct, because a name like "Ben's oil" dropped into a single-quoted
+// HTML attribute breaks the attribute without it.
 function esc(s) {
   return String(s == null ? '' : s)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
+// A module may define its own openModal to add behaviour -- Ingredients
+// snapshots form state here so it can detect unsaved edits when the modal
+// is dismissed. A local definition overrides this alias, which is the
+// intended escape hatch: share the common case, keep the exception local.
 function openModal(id)  { var e = document.getElementById(id); if (e) e.classList.add('open'); }
 function closeModal(id) { var e = document.getElementById(id); if (e) e.classList.remove('open'); }
 
