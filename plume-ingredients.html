@@ -1049,6 +1049,7 @@
 </header>
 
 <div class="app-body">
+  <div id="stor-banner-slot"></div>
 
   <!-- Main list view -->
   <div id="list-view">
@@ -1429,6 +1430,9 @@
         <div style="font-size:12px;color:var(--ink-lighter);line-height:1.4;margin-bottom:12px">Choose a color palette for this module. Phase badges and quality bars stay consistent across all palettes.</div>
         <div id="palette-swatches" class="palette-swatch-grid"></div>
       </div>
+      <div style="font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-lighter);margin-bottom:10px;border-top:1px solid var(--cream-border);padding-top:16px">Storage</div>
+      <div style="padding:4px 0 6px" id="storage-body">
+      </div>
 
       <div style="font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-lighter);margin-top:20px;margin-bottom:10px">Data import</div>
 
@@ -1465,6 +1469,7 @@
   </div>
 </div>
 
+<script src="plume-core.js"></script>
 <script>
 // ── Data & state ──────────────────────────────────────
 // ── Storage keys ─────────────────────────────────────
@@ -1485,10 +1490,6 @@ var propsSectionOpen  = false;
 var FA_FIELDS = ['lauric','myristic','palmitic','stearic','ricinoleic','oleic','linoleic','linolenic'];
 
 // ── Helpers ───────────────────────────────────────────
-function esc(s) {
-  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
 function lotInp(attrs) {
   // Build a styled lot-row input element string.
   // attrs: object with type, field, id, placeholder, value, step, min, extra
@@ -1522,9 +1523,9 @@ function lotSel(field, options, extraStyle) {
 
 // ── Persistence ───────────────────────────────────────
 function loadData() {
-  try { var ri = localStorage.getItem(STORE_KEY);     if (ri) ingredients = JSON.parse(ri); } catch(e) { ingredients = []; }
-  try { var rs = localStorage.getItem(SUPPLIERS_KEY); if (rs) suppliers   = JSON.parse(rs); } catch(e) { suppliers = []; }
-  try { var rb = localStorage.getItem(BRANDS_KEY);    if (rb) brands      = JSON.parse(rb); } catch(e) { brands = []; }
+  ingredients = Store.getJSON(STORE_KEY,     []) || [];
+  suppliers   = Store.getJSON(SUPPLIERS_KEY, []) || [];
+  brands      = Store.getJSON(BRANDS_KEY,    []) || [];
   // Seed brands from existing ingredient data if brands list is empty
   if (!brands.length) {
     var seen = {};
@@ -1560,18 +1561,16 @@ function loadData() {
   }
 }
 
+// A failed write means the change is NOT on disk. Plume.noteSaveFailed
+// makes that unmistakable rather than letting it look like it worked.
 function saveData() {
-  try { localStorage.setItem(STORE_KEY, JSON.stringify(ingredients)); }
-  catch(e) { alert('Could not save — your browser storage may be full.'); }
+  if (Store.setJSON(STORE_KEY, ingredients)) { Plume.noteSaveOk(); return true; }
+  Plume.noteSaveFailed();
+  return false;
 }
 
-function saveSuppliers() {
-  try { localStorage.setItem(SUPPLIERS_KEY, JSON.stringify(suppliers)); } catch(e) {}
-}
-
-function saveBrands() {
-  try { localStorage.setItem(BRANDS_KEY, JSON.stringify(brands)); } catch(e) {}
-}
+function saveSuppliers() { return Store.setJSON(SUPPLIERS_KEY, suppliers); }
+function saveBrands()    { return Store.setJSON(BRANDS_KEY, brands); }
 
 // Functions list is now a fixed dropdown — no dynamic storage needed.
 
@@ -1727,12 +1726,17 @@ function getActiveLot(ing) {
   return withCost[0];
 }
 
-// Convenience: the active lot's cost/g, or null if unavailable.
+// The active lot's cost/g, or null if unavailable.
+//
+// Delegates to core so this module cannot drift from Formulations,
+// Batchlog and Costing — that drift is what once had one screen showing
+// $0.06/g and another $0.091/g for the same ingredient. Verified case by
+// case against the previous local implementation before switching.
+//
+// getActiveLot() stays local: it returns the lot OBJECT, which this module
+// needs for supplier, lot number and best-by. Core only answers cost.
 function activeCost(ing) {
-  var lot = getActiveLot(ing);
-  if (!lot) return null;
-  var c = parseFloat(lot.costPerG);
-  return (!isNaN(c) && c > 0) ? c : null;
+  return Plume.costPerG(ing);
 }
 
 // Manual designation of a lot as active for costing. Persists the choice on
@@ -1811,221 +1815,10 @@ function togglePropsSection() {
 //   --clay  = warm accent / in-stock row tint
 // So in the Mulberry palette, --bark is a deep berry; in Eucalyptus, --sage
 // is silvery-mint. The role stays; the color shifts.
-var PALETTES = {
-  'coastal': {
-    label: 'Coastal',
-    family: 'blue',
-    vars: {
-      '--cream': '#F4F6F8', '--cream-dark': '#E7ECF1', '--cream-border': '#C9D3DC', '--white': '#FCFDFE',
-      '--bark': '#506880', '--bark-light': '#7A92A8', '--bark-dark': '#2E4256',
-      '--sage': '#6E8C8A', '--sage-light': '#E2EBEA', '--sage-dark': '#3F5856', '--sage-border': '#B8CACA',
-      '--clay': '#C9A074', '--clay-light': '#F2E8DA', '--clay-dark': '#8A6432', '--clay-hover': '#EBD9BE',
-      '--ink': '#1F2A36', '--ink-light': '#5A6776', '--ink-lighter': '#8E99A6',
-      '--warning': '#B07020', '--warning-bg': '#FDF3E3', '--warning-border': '#E8D0A0',
-      '--danger': '#A03020', '--danger-bg': '#FCE8E4', '--danger-border': '#E8C0B8', '--success': '#3F5856'
-    }
-  },
-  'indigo': {
-    label: 'Indigo',
-    family: 'blue',
-    vars: {
-      '--cream': '#F1F1F6', '--cream-dark': '#E4E4EC', '--cream-border': '#C6C6D4', '--white': '#FBFBFD',
-      '--bark': '#3E4768', '--bark-light': '#6970A0', '--bark-dark': '#1F2546',
-      '--sage': '#7480A0', '--sage-light': '#E5E8F0', '--sage-dark': '#454E68', '--sage-border': '#BFC5D4',
-      '--clay': '#A88BB8', '--clay-light': '#EDE2F2', '--clay-dark': '#6E527C', '--clay-hover': '#E0CFE8',
-      '--ink': '#1A1D2E', '--ink-light': '#525870', '--ink-lighter': '#8A8FA4',
-      '--warning': '#B07020', '--warning-bg': '#FDF3E3', '--warning-border': '#E8D0A0',
-      '--danger': '#A03020', '--danger-bg': '#FCE8E4', '--danger-border': '#E8C0B8', '--success': '#454E68'
-    }
-  },
-  'mist': {
-    label: 'Mist',
-    family: 'blue',
-    vars: {
-      '--cream': '#F2F4F4', '--cream-dark': '#E5E9E9', '--cream-border': '#CAD2D2', '--white': '#FBFCFC',
-      '--bark': '#5C7274', '--bark-light': '#869A9C', '--bark-dark': '#34484A',
-      '--sage': '#6E9290', '--sage-light': '#E2EDEC', '--sage-dark': '#3F5C5A', '--sage-border': '#BAD0CE',
-      '--clay': '#C29A8A', '--clay-light': '#F0E4DE', '--clay-dark': '#82584A', '--clay-hover': '#E7D3C9',
-      '--ink': '#222B2E', '--ink-light': '#5C696C', '--ink-lighter': '#909A9D',
-      '--warning': '#B07020', '--warning-bg': '#FDF3E3', '--warning-border': '#E8D0A0',
-      '--danger': '#A03020', '--danger-bg': '#FCE8E4', '--danger-border': '#E8C0B8', '--success': '#3F5C5A'
-    }
-  },
-  'blush': {
-    label: 'Blush',
-    family: 'pink',
-    vars: {
-      '--cream': '#F9F2F1', '--cream-dark': '#F0E4E2', '--cream-border': '#DCC8C6', '--white': '#FEFBFB',
-      '--bark': '#8A5868', '--bark-light': '#AE7E8C', '--bark-dark': '#5A3240',
-      '--sage': '#8A8898', '--sage-light': '#ECE9EE', '--sage-dark': '#52505E', '--sage-border': '#CFCCD6',
-      '--clay': '#D08C82', '--clay-light': '#F5E2DE', '--clay-dark': '#92524A', '--clay-hover': '#EDCEC7',
-      '--ink': '#2C2024', '--ink-light': '#6D5860', '--ink-lighter': '#A08A91',
-      '--warning': '#B07020', '--warning-bg': '#FDF3E3', '--warning-border': '#E8D0A0',
-      '--danger': '#A03020', '--danger-bg': '#FCE8E4', '--danger-border': '#E8C0B8', '--success': '#52505E'
-    }
-  },
-  'petal': {
-    label: 'Petal',
-    family: 'pink',
-    vars: {
-      '--cream': '#FAF3EE', '--cream-dark': '#F2E5DC', '--cream-border': '#DCC8B9', '--white': '#FEFCFA',
-      '--bark': '#A0584C', '--bark-light': '#C68074', '--bark-dark': '#6E2E22',
-      '--sage': '#8C8478', '--sage-light': '#EDE8E1', '--sage-dark': '#544D43', '--sage-border': '#CCC5BA',
-      '--clay': '#E89A82', '--clay-light': '#FAE3D8', '--clay-dark': '#A85A40', '--clay-hover': '#F4CFBE',
-      '--ink': '#2E2018', '--ink-light': '#705A4E', '--ink-lighter': '#A28B7E',
-      '--warning': '#B07020', '--warning-bg': '#FDF3E3', '--warning-border': '#E8D0A0',
-      '--danger': '#A03020', '--danger-bg': '#FCE8E4', '--danger-border': '#E8C0B8', '--success': '#544D43'
-    }
-  },
-  'mulberry': {
-    label: 'Mulberry',
-    family: 'pink',
-    vars: {
-      '--cream': '#F4EDEF', '--cream-dark': '#E8DCDF', '--cream-border': '#CDB8BE', '--white': '#FBF8F9',
-      '--bark': '#7A3E5A', '--bark-light': '#9E6480', '--bark-dark': '#4E1A30',
-      '--sage': '#857482', '--sage-light': '#E7E0E4', '--sage-dark': '#4E424B', '--sage-border': '#C5B8BF',
-      '--clay': '#B07088', '--clay-light': '#EBD8DE', '--clay-dark': '#783E50', '--clay-hover': '#DEBFC8',
-      '--ink': '#26181E', '--ink-light': '#5E4E55', '--ink-lighter': '#94808A',
-      '--warning': '#B07020', '--warning-bg': '#FDF3E3', '--warning-border': '#E8D0A0',
-      '--danger': '#A03020', '--danger-bg': '#FCE8E4', '--danger-border': '#E8C0B8', '--success': '#4E424B'
-    }
-  },
-  'lavender': {
-    label: 'Lavender',
-    family: 'purple',
-    vars: {
-      '--cream': '#F5F3F7', '--cream-dark': '#EAE5EF', '--cream-border': '#D0C8DA', '--white': '#FCFBFD',
-      '--bark': '#6E5C8A', '--bark-light': '#928AAE', '--bark-dark': '#3F3258',
-      '--sage': '#8C8AA0', '--sage-light': '#EAE8EE', '--sage-dark': '#54526A', '--sage-border': '#CECCDA',
-      '--clay': '#B89AC4', '--clay-light': '#EEE2F1', '--clay-dark': '#7C5A8A', '--clay-hover': '#E0CDEA',
-      '--ink': '#221E2E', '--ink-light': '#5E5670', '--ink-lighter': '#928CA4',
-      '--warning': '#B07020', '--warning-bg': '#FDF3E3', '--warning-border': '#E8D0A0',
-      '--danger': '#A03020', '--danger-bg': '#FCE8E4', '--danger-border': '#E8C0B8', '--success': '#54526A'
-    }
-  },
-  'slate': {
-    label: 'Slate',
-    family: 'purple',
-    vars: {
-      '--cream': '#F1F2F5', '--cream-dark': '#E4E6EC', '--cream-border': '#C6CBD4', '--white': '#FBFBFD',
-      '--bark': '#525C72', '--bark-light': '#7C8598', '--bark-dark': '#2E3648',
-      '--sage': '#76808E', '--sage-light': '#E5E8EC', '--sage-dark': '#444C58', '--sage-border': '#C2C8D0',
-      '--clay': '#A88AA0', '--clay-light': '#ECE2E8', '--clay-dark': '#6E5468', '--clay-hover': '#DCCBD6',
-      '--ink': '#1E222C', '--ink-light': '#555C6C', '--ink-lighter': '#8C92A0',
-      '--warning': '#B07020', '--warning-bg': '#FDF3E3', '--warning-border': '#E8D0A0',
-      '--danger': '#A03020', '--danger-bg': '#FCE8E4', '--danger-border': '#E8C0B8', '--success': '#444C58'
-    }
-  },
-  'wisteria': {
-    label: 'Wisteria',
-    family: 'purple',
-    vars: {
-      '--cream': '#F4F2F4', '--cream-dark': '#E8E5E9', '--cream-border': '#CCC4D0', '--white': '#FBFAFC',
-      '--bark': '#7A6A8C', '--bark-light': '#9E8FAE', '--bark-dark': '#4A3A5C',
-      '--sage': '#84927E', '--sage-light': '#E5EAE2', '--sage-dark': '#4E5A48', '--sage-border': '#BDC8B8',
-      '--clay': '#AE8AB8', '--clay-light': '#E8DCE8', '--clay-dark': '#724E7C', '--clay-hover': '#D8C2DC',
-      '--ink': '#24202C', '--ink-light': '#5E566C', '--ink-lighter': '#928BA0',
-      '--warning': '#B07020', '--warning-bg': '#FDF3E3', '--warning-border': '#E8D0A0',
-      '--danger': '#A03020', '--danger-bg': '#FCE8E4', '--danger-border': '#E8C0B8', '--success': '#4E5A48'
-    }
-  },
-  'forest': {
-    label: 'Forest',
-    family: 'green',
-    vars: {
-      '--cream': '#F2F4F0', '--cream-dark': '#E4E8DE', '--cream-border': '#C5CDBE', '--white': '#FBFCFA',
-      '--bark': '#4E6A4A', '--bark-light': '#789078', '--bark-dark': '#2A3E28',
-      '--sage': '#6A8A60', '--sage-light': '#E0EAD8', '--sage-dark': '#3E5638', '--sage-border': '#B5C8AC',
-      '--clay': '#B88858', '--clay-light': '#ECDDC8', '--clay-dark': '#7A5430', '--clay-hover': '#E0CAA8',
-      '--ink': '#1E281C', '--ink-light': '#56624E', '--ink-lighter': '#8A9282',
-      '--warning': '#B07020', '--warning-bg': '#FDF3E3', '--warning-border': '#E8D0A0',
-      '--danger': '#A03020', '--danger-bg': '#FCE8E4', '--danger-border': '#E8C0B8', '--success': '#3E5638'
-    }
-  },
-  'sage-green': {
-    label: 'Sage',
-    family: 'green',
-    vars: {
-      '--cream': '#F4F5F1', '--cream-dark': '#E7E9E2', '--cream-border': '#C9CEC0', '--white': '#FBFCFA',
-      '--bark': '#6E7A5E', '--bark-light': '#929E84', '--bark-dark': '#404834',
-      '--sage': '#869A78', '--sage-light': '#E8EDE0', '--sage-dark': '#4E5C40', '--sage-border': '#C2CCB4',
-      '--clay': '#B89A82', '--clay-light': '#EBE2D8', '--clay-dark': '#7A604E', '--clay-hover': '#DDCEC0',
-      '--ink': '#23271E', '--ink-light': '#5C624E', '--ink-lighter': '#8E9482',
-      '--warning': '#B07020', '--warning-bg': '#FDF3E3', '--warning-border': '#E8D0A0',
-      '--danger': '#A03020', '--danger-bg': '#FCE8E4', '--danger-border': '#E8C0B8', '--success': '#4E5C40'
-    }
-  },
-  'eucalyptus': {
-    label: 'Eucalyptus',
-    family: 'green',
-    vars: {
-      '--cream': '#F1F4F2', '--cream-dark': '#E4E9E5', '--cream-border': '#C5CFC8', '--white': '#FBFCFB',
-      '--bark': '#5E7872', '--bark-light': '#8AA09A', '--bark-dark': '#324842',
-      '--sage': '#7AA098', '--sage-light': '#E0EDE7', '--sage-dark': '#436258', '--sage-border': '#B6CDC4',
-      '--clay': '#A8B8A0', '--clay-light': '#E2EAE0', '--clay-dark': '#688070', '--clay-hover': '#CFD8C8',
-      '--ink': '#1E2A26', '--ink-light': '#566A62', '--ink-lighter': '#8C9A92',
-      '--warning': '#B07020', '--warning-bg': '#FDF3E3', '--warning-border': '#E8D0A0',
-      '--danger': '#A03020', '--danger-bg': '#FCE8E4', '--danger-border': '#E8C0B8', '--success': '#436258'
-    }
-  }
-};
-
-var PALETTE_KEY = 'plume-palette-ingredients';
-var DEFAULT_PALETTE = 'coastal';
-
-function applyPalette(name) {
-  var p = PALETTES[name];
-  if (!p) { p = PALETTES[DEFAULT_PALETTE]; name = DEFAULT_PALETTE; }
-  Object.keys(p.vars).forEach(function(v) {
-    document.documentElement.style.setProperty(v, p.vars[v]);
-  });
-  return name;
-}
-
-function savePaletteChoice(name) {
-  try { localStorage.setItem(PALETTE_KEY, name); } catch (e) {}
-}
-
-function loadPaletteChoice() {
-  try { return localStorage.getItem(PALETTE_KEY) || DEFAULT_PALETTE; }
-  catch (e) { return DEFAULT_PALETTE; }
-}
-
-function selectPalette(name) {
-  var applied = applyPalette(name);
-  savePaletteChoice(applied);
-  renderPaletteSwatches(); // refresh the active indicator
-}
-
-// Render the swatch grid in the Settings modal.
-function renderPaletteSwatches() {
-  var container = document.getElementById('palette-swatches');
-  if (!container) return;
-  var current = loadPaletteChoice();
-  var names = Object.keys(PALETTES);
-  container.innerHTML = names.map(function(name) {
-    var p = PALETTES[name];
-    var v = p.vars;
-    var isActive = (name === current);
-    // Six-color preview: surface, bark (primary), sage (positive),
-    // clay (accent), ink (text), and a soft cream-border for definition.
-    return '<button type="button" class="palette-swatch' + (isActive ? ' active' : '') +
-      '" onclick="selectPalette(\'' + name + '\')" title="' + p.label + '">' +
-      '<div class="palette-swatch-stripes">' +
-        '<span style="background:' + v['--cream'] + '"></span>' +
-        '<span style="background:' + v['--bark'] + '"></span>' +
-        '<span style="background:' + v['--sage'] + '"></span>' +
-        '<span style="background:' + v['--clay'] + '"></span>' +
-        '<span style="background:' + v['--ink'] + '"></span>' +
-      '</div>' +
-      '<div class="palette-swatch-label">' + p.label + '</div>' +
-      '</button>';
-  }).join('');
-}
-
 function openSettings() {
   openModal('modal-settings');
-  renderPaletteSwatches();
+  Plume.renderPaletteSwatches();
+  Plume.renderStorage();
 }
 
 function updateFaTotal() {
@@ -2979,18 +2772,6 @@ function duplicateLotRow(sourceId) {
 }
 
 // ── Stock tally helpers ───────────────────────────────
-function lotQtyToGrams(qty, unit, density) {
-  var q = parseFloat(qty);
-  if (isNaN(q) || q <= 0) return 0;
-  var d = parseFloat(density) || 1.0;
-  if (unit === 'g')     return q;
-  if (unit === 'mL')    return q * d;
-  if (unit === 'fl oz') return q * 29.5735 * d;
-  if (unit === 'oz')    return q * 28.3495;
-  if (unit === 'lb')    return q * 453.592;
-  return q; // fallback
-}
-
 function calcTotalStockG(ing) {
   var lots = migrateLots(ing);
   if (!lots.length) return null;
@@ -3375,7 +3156,6 @@ function openModal(id)  {
   // needs this protection.
   if (id === 'modal-add') snapshotEditFormState();
 }
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
 // Track where each click started. We only close the modal if BOTH mousedown
 // AND mouseup land on the backdrop — this prevents the case where you
@@ -3780,8 +3560,24 @@ async function seederAdd() {
 }
 
 // ── Init ──────────────────────────────────────────────
-applyPalette(loadPaletteChoice());
-loadData();
+// Without plume-core.js there is no storage layer, no palettes and no cost
+// function — nothing below would work. Say so plainly rather than leaving
+// a half-dead page that looks like lost data.
+if (typeof Plume === 'undefined') {
+  document.body.insertAdjacentHTML('afterbegin',
+    '<div style="background:#F9E9E4;border-bottom:2px solid #D9A695;color:#7A3F2C;' +
+    'padding:16px 20px;font-family:sans-serif;font-size:14px;line-height:1.6">' +
+    '<strong>plume-core.js did not load.</strong><br>' +
+    'This page needs <code>plume-core.js</code> in the same folder as ' +
+    '<code>plume-ingredients.html</code>. Upload it to GitHub, wait for the site to rebuild, ' +
+    'then reload with Ctrl+Shift+R (Cmd+Shift+R on a Mac).<br>' +
+    '<em>Your data is safe &mdash; it lives in the browser, not in these files.</em></div>');
+} else {
+  Plume.setModule('ingredients');
+  Plume.boot(function () {
+    loadData();
+  });
+}
 </script>
 
 <!-- Lots drawer -->
