@@ -2373,7 +2373,84 @@ function renderStorage() {
     html += '<span>Other</span><span>' + fmtKB(r.other) + '</span></div>';
   }
   html += '<div style="font-size:11px;color:var(--ink-lighter);line-height:1.5;margin-top:10px">';
-  html += 'All Plume modules share one browser storage budget. If this climbs, export a backup and the biggest savings are usually packaging photos.</div>';
+  html += 'All Plume modules share one browser storage budget of about 5MB, which browsers do not allow to be raised.</div>';
+  if (r.rows.length) {
+    html += '<button class="hist-filter" id="stor-drill-btn" onclick="toggleStorDrill()">What is using the room?</button>';
+    html += '<div id="stor-drill"></div>';
+  }
+  el.innerHTML = html;
+  if (storDrillOpen) renderStorDrill();
+}
+
+// ── What's actually taking up the space ───────────────
+// Knowing that "Ingredients" is the biggest module doesn't tell you what to
+// do about it. This walks the records and sums bytes per field, so the
+// answer is a specific field you can decide about rather than a mystery.
+var storDrillOpen = false;
+function toggleStorDrill() { storDrillOpen = !storDrillOpen; renderStorage(); }
+
+function fieldBreakdown(raw) {
+  var data;
+  try { data = JSON.parse(raw); } catch (e) { return null; }
+  var recs = Array.isArray(data) ? data : null;
+  if (!recs) {
+    // Some keys hold an object wrapping the array
+    for (var k in data) { if (Array.isArray(data[k])) { recs = data[k]; break; } }
+  }
+  if (!recs || !recs.length) return null;
+  var tot = {}, sum = 0;
+  recs.forEach(function(rec) {
+    if (!rec || typeof rec !== 'object') return;
+    for (var f in rec) {
+      var b = 0;
+      try { b = JSON.stringify(rec[f]).length; } catch (e) { b = 0; }
+      tot[f] = (tot[f] || 0) + b;
+      sum += b;
+    }
+  });
+  var arr = [];
+  for (var f2 in tot) arr.push({ field: f2, bytes: tot[f2] });
+  arr.sort(function(a, b) { return b.bytes - a.bytes; });
+  return { fields: arr, sum: sum, count: recs.length };
+}
+
+function renderStorDrill() {
+  var el = document.getElementById('stor-drill');
+  var btn = document.getElementById('stor-drill-btn');
+  if (!el) return;
+  if (btn) btn.textContent = 'Hide breakdown';
+
+  var keys = ['aerie-ingredients-v2','aerie-formulations-v1','aerie-packaging-v1',
+              'aerie-batches-v1','aerie-products-v1'];
+  var names = {
+    'aerie-ingredients-v2':'Ingredients',
+    'aerie-formulations-v1':'Formulations',
+    'aerie-packaging-v1':'Packaging',
+    'aerie-batches-v1':'Batches',
+    'aerie-products-v1':'Products & costing'
+  };
+  var best = null;
+  keys.forEach(function(k) {
+    var raw = '';
+    try { raw = localStorage.getItem(k) || ''; } catch (e) {}
+    if (raw && (!best || raw.length > best.len)) best = { key: k, len: raw.length, raw: raw };
+  });
+  if (!best) { el.innerHTML = ''; return; }
+
+  var bd = fieldBreakdown(best.raw);
+  if (!bd) {
+    el.innerHTML = '<div style="font-size:11px;color:var(--ink-lighter);margin-top:8px">Could not read that data.</div>';
+    return;
+  }
+  var html = '<div style="font-size:11px;color:var(--ink-lighter);margin:8px 0 6px;line-height:1.5">Largest module: <strong>'
+    + (names[best.key] || best.key) + '</strong> \u2014 ' + bd.count + ' records. Biggest fields:</div>';
+  bd.fields.slice(0, 6).forEach(function(f) {
+    var pct = bd.sum ? (100 * f.bytes / bd.sum) : 0;
+    html += '<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0;color:var(--ink-light)">';
+    html += '<span>' + esc(f.field) + '</span><span>' + fmtKB(f.bytes) + ' \u00b7 ' + pct.toFixed(0) + '%</span></div>';
+  });
+  html += '<div style="font-size:11px;color:var(--ink-lighter);line-height:1.5;margin-top:8px">'
+    + 'A single field taking most of the space is usually reference text or an image, and is the cheapest thing to trim.</div>';
   el.innerHTML = html;
 }
 
