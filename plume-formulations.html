@@ -250,6 +250,19 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);m
 .hist-addnote:hover{color:var(--clay)}
 .hist-kind{display:inline-block;font-size:9.5px;letter-spacing:0.08em;text-transform:uppercase;color:var(--clay);border:1px solid var(--clay);border-radius:3px;padding:0 4px;margin-left:5px;vertical-align:1px}
 .hist-trimmed{font-size:10.5px;color:var(--ink-lighter);font-style:italic;padding-top:8px}
+.stor-banner{border-radius:6px;padding:12px 14px;margin-bottom:16px;font-size:12.5px;line-height:1.55;display:flex;gap:10px;align-items:flex-start}
+.stor-banner.warn{background:#FBF3E7;border:1px solid #E0C9A0;color:#6B5433}
+.stor-banner.crit{background:#F9E9E4;border:1px solid #D9A695;color:#7A3F2C}
+.stor-banner b{font-weight:600}
+.stor-banner .sb-x{margin-left:auto;background:none;border:none;font-size:16px;line-height:1;color:inherit;opacity:0.5;cursor:pointer;padding:0 2px;flex-shrink:0}
+.stor-banner .sb-x:hover{opacity:1}
+.stor-banner .btn{padding:4px 10px;font-size:11px;margin-top:8px}
+.hist-scroll{max-height:330px;overflow-y:auto;margin:0 -2px;padding:0 2px}
+.hist-more{width:100%;margin-top:8px;padding:5px;background:none;border:1px solid var(--cream-border);border-radius:4px;font-family:'DM Sans',sans-serif;font-size:11px;color:var(--ink-light);cursor:pointer}
+.hist-more:hover{background:var(--cream-dark);color:var(--ink)}
+.hist-filter{background:none;border:none;padding:0;font-family:'DM Sans',sans-serif;font-size:10.5px;color:var(--ink-lighter);cursor:pointer;text-decoration:underline;text-underline-offset:2px;margin-top:6px}
+.hist-filter:hover{color:var(--clay)}
+.hist-filter.on{color:var(--clay);font-weight:500}
 /* ── Formulation notes view ── */
 .notes-wrap{background:var(--white);border:1px solid var(--cream-border);border-radius:6px;padding:20px;max-width:820px}
 .notes-wrap h3{font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:400;color:var(--bark-dark);margin:0 0 4px}
@@ -387,6 +400,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);m
   <button class="nav-tab" id="nav-ed" style="display:none">Editor</button>
 </nav>
 <div class="app-body">
+  <div id="stor-banner-slot"></div>
   <div id="list-view">
     <div class="sec-header">
       <div class="sec-title">Your formulations</div>
@@ -713,6 +727,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);m
         <div style="font-size:12px;color:var(--ink-lighter);line-height:1.4;margin-bottom:12px">Choose a color palette for this module. Phase badges and quality bars stay consistent across all palettes. Each module remembers its own palette choice.</div>
         <div id="palette-swatches" class="palette-swatch-grid"></div>
       </div>
+      <div style="font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-lighter);margin-bottom:10px;border-top:1px solid var(--cream-border);padding-top:16px">Storage</div>
+      <div style="padding:4px 0 6px" id="storage-body"></div>
     </div>
   </div>
 </div>
@@ -734,11 +750,66 @@ function loadAll() {
   try { var r = localStorage.getItem(FORM_KEY); if (r) forms = JSON.parse(r); } catch(e) {}
   migrateAll();
   renderCards();
+  renderStorBanner();
 }
 
+// Returns true on success. A failed write means the browser storage is
+// full and your edit is NOT on disk -- which, now that saving is automatic,
+// could otherwise go unnoticed for a whole session. So a failure is made
+// loud and an emergency backup is offered on the spot.
 function saveAll() {
-  try { localStorage.setItem(FORM_KEY, JSON.stringify(forms)); }
-  catch(e) { alert('Could not save -- browser storage may be full.'); }
+  try {
+    localStorage.setItem(FORM_KEY, JSON.stringify(forms));
+    storFailed = false;
+    return true;
+  } catch (e) {
+    storFailed = true;
+    renderStorBanner();
+    if (!storAlerted) {
+      storAlerted = true;
+      alert('Your changes could NOT be saved -- browser storage is full.\n\nNothing you do from here will be saved until space is freed. Use the red banner at the top to download a backup first, then see Settings for what is taking up room.');
+    }
+    return false;
+  }
+}
+
+var storFailed  = false;
+var storAlerted = false;
+
+// ── Storage warning banner ────────────────────────────
+// Browser storage is a hard wall (about 5MB per site, not adjustable), and
+// the failure mode is a save that silently doesn't happen. This makes the
+// approach visible well before it matters.
+var STOR_WARN_AT   = 0.75;
+var storBannerHidden = false;
+
+function renderStorBanner() {
+  var slot = document.getElementById('stor-banner-slot');
+  if (!slot) return;
+
+  if (storFailed) {
+    slot.innerHTML = '<div class="stor-banner crit"><div><b>Storage is full \u2014 your changes are not being saved.</b><br>'
+      + 'Download a backup now so nothing is lost, then free up space. Packaging photos are usually the largest item; Settings shows the breakdown.'
+      + '<br><button class="btn" onclick="exportData()">Download backup now</button></div></div>';
+    return;
+  }
+
+  if (storBannerHidden) { slot.innerHTML = ''; return; }
+
+  var r   = storageReport();
+  var pct = r.total / (5 * 1024 * 1024);
+  if (pct < STOR_WARN_AT) { slot.innerHTML = ''; return; }
+
+  slot.innerHTML = '<div class="stor-banner warn"><div><b>Browser storage is about '
+    + Math.round(pct * 100) + '% full.</b> '
+    + 'Plume stores everything in this browser, and the limit is roughly 5MB for the whole app \u2014 it cannot be raised. '
+    + 'Worth exporting a backup and checking Settings to see what is using the room.'
+    + '</div><button class="sb-x" onclick="dismissStorBanner()" title="Hide until next time you open Plume">\u00d7</button></div>';
+}
+
+function dismissStorBanner() {
+  storBannerHidden = true;
+  renderStorBanner();
 }
 
 function exportData() {
@@ -1079,7 +1150,7 @@ function goList() {
   var nv  = document.getElementById('notes-view');
   if (lay) lay.style.display  = 'grid';
   if (nv)  nv.style.display   = 'none';
-  if (dirty && !confirm('You have unsaved changes. Leave without saving?')) return;
+  if (dirty && curId && curVar()) saveFormula(true);
   document.getElementById('list-view').style.display = 'block';
   document.getElementById('editor-view').style.display = 'none';
   document.getElementById('nav-list').classList.add('active');
@@ -1693,9 +1764,9 @@ function buildRow(l, idx, ing, bs, isAddin) {
 }
 
 // ── Batch size controls ───────────────────────────────
-function onBatchIn(v)   { var n=parseFloat(v.replace(',','.')); if(!isNaN(n)&&n>0){markDirty();renderLines();recalc();} }
+function onBatchIn(v)   { var n=parseFloat(v.replace(',','.')); if(!isNaN(n)&&n>0){renderLines();recalc();} }
 function onBatchBlur(v) { var n=parseFloat(v.replace(',','.')); if(isNaN(n)||n<=0) document.getElementById('batch-sz').value=isSoap()?'1000':'100'; renderLines();recalc(); }
-function setBatch(g)    { document.getElementById('batch-sz').value=g; markDirty(); renderLines();recalc(); }
+function setBatch(g)    { document.getElementById('batch-sz').value=g; renderLines();recalc(); }
 
 // ── Skincare input handlers ───────────────────────────
 function onPct(idx, v) {
@@ -2187,19 +2258,123 @@ function diffStates(prev, next) {
   return out;
 }
 
-// History keeps every entry's TEXT forever. Only the restorable snapshots
-// are capped, because those are what actually consume localStorage. Past
-// the cap the oldest entries keep their record and lose only the ability
-// to rewind to them.
-var HIST_SNAP_CAP = 30;
+// ── History trimming ──────────────────────────────────
+// localStorage is roughly 5MB for the whole Plume app -- shared with the
+// packaging module, which stores product photos as base64. History has to
+// live inside a small share of that, and saves are automatic now, so an
+// uncapped log would quietly eat the budget.
+//
+// The rule: a "why" note makes an entry permanent. Those are the entries
+// you deliberately wrote -- the record of what you learned and why you
+// changed something -- and they are cheap, because most entries never get
+// one. Branch points and reverts count as permanent for the same reason.
+// Unnoted automatic entries are the bulk and the noise, so they age out.
+//
+// Snapshots (the restorable copies) cost roughly 8x what an entry's text
+// costs, so they are capped much harder. Reverting is a short-window move
+// -- "more wax didn't help, go back" -- not something reached for months
+// later, by which point the written record is what matters.
+var HIST_SNAP_CAP  = 12;   // unnoted entries that stay revertable
+var HIST_NOTED_CAP = 25;   // noted entries that stay revertable
+var HIST_TEXT_CAP  = 60;   // unnoted entries kept at all
 
-function trimHistorySnaps(v) {
-  var withSnap = [];
-  (v.history || []).forEach(function(h, i) { if (h.snap) withSnap.push(i); });
-  var excess = withSnap.length - HIST_SNAP_CAP;
-  for (var i = 0; i < excess; i++) {
-    v.history[withSnap[i]].snap = null;
+function histProtected(h) {
+  return !!(h.note && String(h.note).trim()) || h.kind !== 'edit';
+}
+
+function trimHistory(v) {
+  var hist = v.history || [];
+
+  // 1. Drop the oldest unnoted entries entirely, past the text cap.
+  var unnotedIdx = [];
+  hist.forEach(function(h, i) { if (!histProtected(h)) unnotedIdx.push(i); });
+  var dropCount = unnotedIdx.length - HIST_TEXT_CAP;
+  if (dropCount > 0) {
+    var drop = {};
+    for (var i = 0; i < dropCount; i++) drop[unnotedIdx[i]] = true;
+    hist = hist.filter(function(h, i) { return !drop[i]; });
   }
+
+  // 2. Of what remains, only the most recent keep restorable snapshots.
+  var seenUnnoted = 0, seenNoted = 0;
+  for (var j = hist.length - 1; j >= 0; j--) {
+    var h = hist[j];
+    if (!h.snap) continue;
+    if (histProtected(h)) {
+      seenNoted++;
+      if (seenNoted > HIST_NOTED_CAP) h.snap = null;
+    } else {
+      seenUnnoted++;
+      if (seenUnnoted > HIST_SNAP_CAP) h.snap = null;
+    }
+  }
+
+  v.history = hist;
+}
+
+// ── Storage usage ─────────────────────────────────────
+// Surfaced in Settings so the ceiling is something you can see coming
+// rather than discover when a save fails.
+function storageReport() {
+  var keys = ['aerie-ingredients-v2','aerie-formulations-v1','aerie-packaging-v1',
+              'aerie-batches-v1','aerie-products-v1'];
+  var rows = [], total = 0;
+  keys.forEach(function(k) {
+    var raw = '';
+    try { raw = localStorage.getItem(k) || ''; } catch (e) {}
+    if (!raw) return;
+    var b = raw.length;
+    total += b;
+    rows.push({ key: k, bytes: b });
+  });
+  // Anything else this app stored, so the total is honest
+  var other = 0;
+  try {
+    for (var i = 0; i < localStorage.length; i++) {
+      var kk = localStorage.key(i);
+      if (keys.indexOf(kk) > -1) continue;
+      other += (localStorage.getItem(kk) || '').length;
+    }
+  } catch (e) {}
+  total += other;
+  return { rows: rows, other: other, total: total };
+}
+
+function fmtKB(b) {
+  return b >= 1048576 ? (b / 1048576).toFixed(2) + ' MB' : Math.round(b / 1024) + ' KB';
+}
+
+function renderStorage() {
+  var el = document.getElementById('storage-body');
+  if (!el) return;
+  var r = storageReport();
+  var LIMIT = 5 * 1024 * 1024;
+  var pct   = Math.min(100, (r.total / LIMIT) * 100);
+  var names = {
+    'aerie-ingredients-v2':'Ingredients',
+    'aerie-formulations-v1':'Formulations (incl. history)',
+    'aerie-packaging-v1':'Packaging (incl. photos)',
+    'aerie-batches-v1':'Batches',
+    'aerie-products-v1':'Products & costing'
+  };
+  var bar = pct > 80 ? 'var(--clay)' : 'var(--sage)';
+  var html = '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px">';
+  html += '<span style="color:var(--ink-light)">' + fmtKB(r.total) + ' of about 5 MB</span>';
+  html += '<span style="color:var(--ink-lighter)">' + pct.toFixed(0) + '%</span></div>';
+  html += '<div style="height:6px;background:var(--cream-dark);border-radius:3px;overflow:hidden;margin-bottom:12px">';
+  html += '<div style="height:100%;width:' + pct.toFixed(1) + '%;background:' + bar + '"></div></div>';
+  r.rows.sort(function(a, b) { return b.bytes - a.bytes; });
+  r.rows.forEach(function(row) {
+    html += '<div style="display:flex;justify-content:space-between;font-size:11.5px;padding:3px 0;color:var(--ink-light)">';
+    html += '<span>' + (names[row.key] || row.key) + '</span><span>' + fmtKB(row.bytes) + '</span></div>';
+  });
+  if (r.other) {
+    html += '<div style="display:flex;justify-content:space-between;font-size:11.5px;padding:3px 0;color:var(--ink-lighter)">';
+    html += '<span>Other</span><span>' + fmtKB(r.other) + '</span></div>';
+  }
+  html += '<div style="font-size:11px;color:var(--ink-lighter);line-height:1.5;margin-top:10px">';
+  html += 'All Plume modules share one browser storage budget. If this climbs, export a backup and the biggest savings are usually packaging photos.</div>';
+  el.innerHTML = html;
 }
 
 function pushHistory(v, kind, changes, note, snapState) {
@@ -2219,11 +2394,11 @@ function pushHistory(v, kind, changes, note, snapState) {
       batchSize:     snapState.batchSize || ''
     } : null
   });
-  trimHistorySnaps(v);
+  trimHistory(v);
 }
 
 // ── Save ──────────────────────────────────────────────
-function saveFormula() {
+function saveFormula(silent) {
   var f = curForm();
   if (!f) return;
 
@@ -2264,7 +2439,7 @@ function saveFormula() {
   saveAll(); dirty = false;
   renderVarTabs();   // keeps the notes dot and version names current
   renderHistory();
-  flashSaved();
+  if (!silent) flashSaved();
 }
 
 function flashSaved() {
@@ -2341,20 +2516,19 @@ function renderVarBar() {
 }
 
 // ── Switching tabs ────────────────────────────────────
-// Switching away from a variant with unsaved edits would silently lose them,
-// so ask first. Answering no leaves you where you are.
-function guardDirty(what) {
-  if (!dirty) return true;
-  if (confirm('You have unsaved changes to this version.\n\nSave them before ' + what + '?')) {
-    saveFormula();
-    return true;
-  }
-  return confirm('Discard your unsaved changes and continue?');
+// Switching tabs just saves. Asking first was the wrong call: nothing is
+// lost either way, every meaningful change is logged in the version's
+// history and can be reverted, and being questioned on the way to simply
+// looking at another version is friction with nothing behind it.
+function persistBeforeSwitch() {
+  if (!curForm() || !curVar()) return;
+  // Runs even when not dirty, so the version's batch size is remembered.
+  saveFormula(true);
 }
 
 function selectVariant(vid) {
   if (vid === curVid && !notesTab) return;
-  if (!guardDirty('switching versions')) return;
+  persistBeforeSwitch();
   notesTab = false;
   curVid   = vid;
   loadVariantIntoEditor();
@@ -2362,7 +2536,7 @@ function selectVariant(vid) {
 
 function selectNotes() {
   if (notesTab) return;
-  if (!guardDirty('switching to notes')) return;
+  persistBeforeSwitch();
   notesTab = true;
   document.getElementById('ed-layout').style.display  = 'none';
   document.getElementById('notes-view').style.display = 'block';
@@ -2380,6 +2554,7 @@ function loadVariantIntoEditor() {
   document.getElementById('ed-layout').style.display  = 'grid';
   document.getElementById('notes-view').style.display = 'none';
 
+  histExpanded = false;   // each version's panel starts short
   fLines = (v.lines || []).map(function(l) { return Object.assign({}, l); });
   document.getElementById('f-status').value   = v.status || 'draft';
   document.getElementById('f-instruct').value = v.instructions || '';
@@ -2507,21 +2682,43 @@ function deleteVariant(vid) {
 // old content and records the revert as its own entry. That's the fix for
 // the old model, where restoring rewound the version number too and the
 // history ended up describing something that hadn't happened.
+var histExpanded = false;   // sidebar shows a short list until asked
+var histNotesOnly = false;  // “what did I write about this” view
+
+function toggleHistExpand() { histExpanded = !histExpanded; renderHistory(); }
+function toggleHistNotes()  { histNotesOnly = !histNotesOnly; renderHistory(); }
+
 function renderHistory() {
   var v    = curVar();
   var body = document.getElementById('hist-body');
   if (!body) return;
   if (!v) { body.innerHTML = ''; return; }
 
-  var h = (v.history || []).slice().reverse();
-  if (!h.length) {
+  var all = (v.history || []).slice().reverse();
+  if (!all.length) {
     body.innerHTML = '<div style="font-size:12px;color:var(--ink-lighter);line-height:1.5">No changes recorded yet. Every save that alters the formula gets logged here automatically.</div>';
     return;
   }
 
+  // The noted entries are the deliberate record; the rest is the automatic
+  // trail. Filtering to notes answers "what did I learn about this formula"
+  // without scrolling past every percentage nudge along the way.
+  var h = histNotesOnly ? all.filter(histProtected) : all;
+  if (histNotesOnly && !h.length) {
+    body.innerHTML = '<div style="font-size:12px;color:var(--ink-lighter);line-height:1.5">Nothing noted yet. Click <strong>+ why?</strong> on any entry to keep it here permanently.</div>'
+      + '<button class="hist-filter on" onclick="toggleHistNotes()">Show all changes</button>';
+    return;
+  }
+
+  // Only a handful up front -- the panel sits beside the formula and should
+  // not push everything else off the screen.
+  var SHOWN   = 5;
+  var clipped = !histExpanded && h.length > SHOWN;
+  var list    = clipped ? h.slice(0, SHOWN) : h;
+
   var anyTrimmed = false;
   var html = '';
-  h.forEach(function(e) {
+  list.forEach(function(e) {
     var d = new Date(e.at);
     var ds = isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
     html += '<div class="hist-row">';
@@ -2548,10 +2745,25 @@ function renderHistory() {
     }
     html += '</div>';
   });
+
+  // Wrap in a scroller once expanded, so a long history stays a panel
+  // rather than a page.
+  var out = (!clipped && h.length > SHOWN) ? ('<div class="hist-scroll">' + html + '</div>') : html;
+
   if (anyTrimmed) {
-    html += '<div class="hist-trimmed">Older entries keep their record but can no longer be reverted to.</div>';
+    out += '<div class="hist-trimmed">Older entries keep their record but can no longer be reverted to. Adding a \u201cwhy\u201d keeps an entry permanently.</div>';
   }
-  body.innerHTML = html;
+  if (h.length > SHOWN) {
+    out += '<button class="hist-more" onclick="toggleHistExpand()">'
+        + (clipped ? ('Show all ' + h.length) : 'Show fewer') + '</button>';
+  }
+  var nNoted = all.filter(histProtected).length;
+  if (nNoted && !histNotesOnly && all.length > nNoted) {
+    out += '<button class="hist-filter" onclick="toggleHistNotes()">Show only the ' + nNoted + ' noted</button>';
+  } else if (histNotesOnly) {
+    out += '<button class="hist-filter on" onclick="toggleHistNotes()">Show all ' + all.length + ' changes</button>';
+  }
+  body.innerHTML = out;
 }
 
 function openHistNote(hid) {
@@ -2624,10 +2836,7 @@ function revertTo(hid) {
 function duplicateFormula() {
   var f = curForm();
   if (!f) return;
-  if (dirty) {
-    if (!confirm('You have unsaved changes. Save first so the copy includes them?')) return;
-    saveFormula();
-  }
+  if (dirty) saveFormula(true);
   var copy = {
     id:        newVid(),
     name:      (f.name || 'Formula') + ' (copy)',
@@ -2784,10 +2993,7 @@ function showIngDetail(ingId) {
 function makeBatchFromFormula() {
   var f = curForm();
   if (!f) { alert('Save the formula before making a batch from it.'); return; }
-  if (dirty) {
-    if (!confirm('You have unsaved changes. Save first so the batch uses the latest edits?')) return;
-    saveFormula();
-  }
+  if (dirty) saveFormula(true);
   // Batchlog reads the formulation's top-level lines, which mirror the
   // version in use. If you're looking at a different one, say so rather
   // than quietly making the wrong thing.
@@ -3170,7 +3376,7 @@ function renderPaletteSwatches() {
       '</button>';
   }).join('');
 }
-function openSettings() { openModal('m-settings'); renderPaletteSwatches(); }
+function openSettings() { openModal('m-settings'); renderPaletteSwatches(); renderStorage(); }
 
 // ── Init ──────────────────────────────────────────────
 applyPalette(loadPaletteChoice());
