@@ -33,7 +33,7 @@ var Plume = (function () {
 // Bump when core changes. Shown in every module's Settings panel, so
 // "is core loaded, and is it the one I just uploaded?" is answerable by
 // looking rather than guessing -- browsers cache .js files stubbornly.
-var VERSION = '1.4';
+var VERSION = '1.5';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -672,6 +672,55 @@ function boot(cb) {
   });
 }
 
+// ══ Product types ═════════════════════════════════════
+// One list. It was duplicated across two <select> blocks in
+// plume-formulations.html, and the soap test was written out a third time
+// in plume-batchlog.html -- the same shape as the phase vocabulary that
+// silently hid Heide's clays and exfoliants from the recipe area.
+//
+// THESE STRINGS ARE STORED DATA. A formulation records `f.type` as the
+// display string itself, so:
+//   - ADDING an entry is free.
+//   - RENAMING or REMOVING one orphans every formulation that used it, and
+//     needs a data migration rather than an edit here.
+// The two soap strings are load-bearing beyond that: the entire soap UI
+// branches on them through isSoapType. Never touch those two.
+var PRODUCT_TYPES = [
+  'Facial serum', 'Face cream', 'Face oil', 'Face balm', 'Eye cream',
+  'Toner / mist', 'Cleanser', 'Exfoliant / scrub', 'Mask',
+  'Body lotion', 'Body butter', 'Body oil', 'Lip balm',
+  'Hair serum', 'Hair mask', 'Shampoo bar', 'Deodorant', 'Other',
+  '---',
+  'Cold Process Soap', 'Hot Process Soap'
+];
+
+function isSoapType(t) {
+  return t === 'Cold Process Soap' || t === 'Hot Process Soap';
+}
+
+// Fills a <select> from PRODUCT_TYPES, preserving the current value if it
+// is still in the list. A value NOT in the list (an older type, or one
+// renamed out from under a formulation) is kept as an extra option rather
+// than silently snapping to blank -- losing a formulation's type on open
+// would be a quiet data loss.
+function fillTypeSelect(el, current) {
+  if (!el) return;
+  var html = '<option value="">-- select --</option>';
+  var found = false;
+  PRODUCT_TYPES.forEach(function (t) {
+    if (t === '---') { html += '<option disabled>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500</option>'; return; }
+    if (t === current) found = true;
+    html += '<option>' + esc(t) + '</option>';
+  });
+  if (current && !found) {
+    html += '<option disabled>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500</option>';
+    html += '<option>' + esc(current) + '</option>';
+  }
+  el.innerHTML = html;
+  el.value = current || '';
+}
+
+
 // ══ Bench sheet ═══════════════════════════════════════
 // The printable recipe card. Lives here rather than in Formulations
 // because Batchlog prints the same sheet from the Make batch popup --
@@ -963,6 +1012,7 @@ return {
   toggleStorDrill: toggleStorDrill, renderStorBanner: renderStorBanner,
   dismissStorBanner: dismissStorBanner,
   noteSaveFailed: noteSaveFailed, noteSaveOk: noteSaveOk,
+  PRODUCT_TYPES: PRODUCT_TYPES, isSoapType: isSoapType, fillTypeSelect: fillTypeSelect,
   buildSheet: buildSheet, openSheet: openSheet,
   boot: boot
 };
