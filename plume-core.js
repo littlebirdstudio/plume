@@ -33,7 +33,7 @@ var Plume = (function () {
 // Bump when core changes. Shown in every module's Settings panel, so
 // "is core loaded, and is it the one I just uploaded?" is answerable by
 // looking rather than guessing -- browsers cache .js files stubbornly.
-var VERSION = '1.2';
+var VERSION = '1.3';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -250,12 +250,18 @@ function costPerG(ing) {
     return (!isNaN(legacy) && legacy > 0) ? legacy : null;
   }
 
+  // A designated active lot is AUTHORITATIVE. If it has no usable cost,
+  // the answer is "unknown" -- not "quietly use some other lot's price".
+  // Falling through here would price a product at a number never chosen,
+  // which is the same failure as the watchlist bug. Ingredients already
+  // behaved this way; Costing and Formulations did not. They do now.
   if (ing.activeLotId) {
     var match = lots.filter(function (l) { return l.id === ing.activeLotId; })[0];
     if (match) {
       var ac = parseFloat(match.costPerG);
-      if (!isNaN(ac) && ac > 0) return ac;
+      return (!isNaN(ac) && ac > 0) ? ac : null;
     }
+    // activeLotId points at a deleted lot -- fall through to cheapest
   }
 
   var costs = lots
