@@ -904,6 +904,17 @@
     padding: calc(0.875rem - 1px) calc(1rem - 1px) !important; /* compensate for thicker border */
   }
   .detail-actions { display: flex; gap: 10px; }
+  /* Second "Back to library" for long ingredient pages -- scrolling all the
+     way up to leave is friction on records with many lots. Set apart from
+     .detail-actions so it never reads as part of that row, which ends in
+     "Delete permanently". */
+  .detail-nav-bottom {
+    display: flex;
+    align-items: center;
+    margin-top: 1.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--cream-border);
+  }
   .notes-box {
     background: var(--cream);
     border-radius: 3px;
@@ -1140,6 +1151,12 @@
       <button class="btn btn-primary" onclick="editCurrent()">Edit ingredient</button>
       <button class="btn btn-danger" onclick="archiveCurrent()">Archive</button>
       <button class="btn btn-danger" onclick="deleteCurrent()">Delete permanently</button>
+    </div>
+    <div class="detail-nav-bottom">
+      <button class="back-link" onclick="showList()">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12L6 8l4-4"/></svg>
+        Back to library
+      </button>
     </div>
   </div>
 
