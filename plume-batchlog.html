@@ -347,6 +347,7 @@ tbody tr:last-child td{border-bottom:none}
 
     <div class="modal-foot">
       <button class="btn" onclick="closeModal('m-new')">Cancel</button>
+      <button class="btn" id="new-print-btn" onclick="printNewBatchSheet()" title="Print the recipe at this batch size, with a tick box per ingredient">Print sheet</button>
       <button class="btn btn-primary" onclick="saveBatch()">Make it!</button>
     </div>
   </div>
@@ -1048,6 +1049,47 @@ function onPreviewAmt(idx, v) {
   }
   // Re-render to refresh "low stock" highlighting
   renderPreviewRows();
+}
+
+// Print the bench sheet for the batch about to be made, scaled to the yield
+// in the popup. Uses the same builder as Formulations, so the two sheets
+// cannot drift. Deliberately does NOT save the batch first -- printing is a
+// read, and she may print, adjust the yield, and print again.
+function printNewBatchSheet() {
+  if (!newFormula) { alert('Pick a formula first.'); return; }
+  var yieldG = parseFloat(document.getElementById('f-yield').value);
+  if (isNaN(yieldG) || yieldG <= 0) { alert('Enter a yield first.'); return; }
+
+  // newFormula is the top-level formulation, whose fields mirror the ACTIVE
+  // variant -- which is the one batches use. So this prints the version
+  // actually being made, without Batchlog needing to know how variants work.
+  // It does need the active variant's NAME for the sheet header, though, so
+  // that a printed card says which version is on the bench. Same rule as
+  // varTitle() in Formulations: an explicit label, else "Version N".
+  var vTitle = '';
+  var vars   = newFormula.variants || [];
+  if (vars.length > 1) {
+    var av = null;
+    for (var i = 0; i < vars.length; i++) {
+      if (vars[i].vid === newFormula.activeVariantId) { av = vars[i]; break; }
+    }
+    if (!av) av = vars[0];
+    vTitle = av.label ? av.label : ('Version ' + (av.num || 1));
+  }
+
+  Plume.openSheet({
+    name:         newFormula.name,
+    type:         newFormula.type,
+    status:       newFormula.status,
+    notes:        newFormula.notes,
+    instructions: newFormula.instructions,
+    variantTitle: vTitle,
+    lines:        newFormula.lines || [],
+    ings:         ings,
+    batchSize:    yieldG,
+    isSoap:       isSoapType(newFormula.type),
+    soapSettings: newFormula.soapSettings
+  });
 }
 
 function saveBatch() {
