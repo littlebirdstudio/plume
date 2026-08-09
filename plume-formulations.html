@@ -212,6 +212,50 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);m
 .inci-list{font-size:12px;color:var(--ink-light);line-height:1.8}
 .inci-item{display:flex;gap:6px;align-items:baseline}
 .inci-num{font-size:10px;color:var(--ink-lighter);min-width:16px}
+/* ── Variant tabs (versions of a formulation) ── */
+#editor-view > .ed-header{margin-bottom:0.9rem}
+.mf-scope{font-size:9px;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-lighter);border:1px solid var(--cream-border);border-radius:3px;padding:1px 4px;margin-left:6px;font-weight:400;vertical-align:1px}
+.var-strip{display:flex;align-items:center;gap:2px;flex-wrap:wrap;border-bottom:1px solid var(--cream-border);margin-bottom:10px;padding-bottom:0}
+.var-tab{font-family:'DM Sans',sans-serif;font-size:12.5px;font-weight:500;padding:7px 13px;border:1px solid transparent;border-bottom:none;background:transparent;color:var(--ink-light);cursor:pointer;border-radius:5px 5px 0 0;margin-bottom:-1px;display:flex;align-items:center;gap:6px;transition:background 0.12s,color 0.12s;max-width:220px}
+.var-tab:hover{background:var(--cream-dark);color:var(--ink)}
+.var-tab.sel{background:var(--white);border-color:var(--cream-border);border-bottom:1px solid var(--white);color:var(--bark-dark);font-weight:600}
+.var-tab .vt-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.var-tab .vt-num{font-size:10px;color:var(--ink-lighter);font-weight:500;flex-shrink:0}
+.var-tab.sel .vt-num{color:var(--ink-light)}
+.var-dot{width:7px;height:7px;border-radius:50%;background:var(--clay);flex-shrink:0}
+.var-add{font-family:'DM Sans',sans-serif;font-size:12px;padding:7px 11px;border:none;background:transparent;color:var(--ink-lighter);cursor:pointer;border-radius:5px 5px 0 0;margin-bottom:-1px}
+.var-add:hover{background:var(--cream-dark);color:var(--ink)}
+.var-spacer{flex:1;min-width:12px}
+.var-notes-tab{font-family:'DM Sans',sans-serif;font-size:12px;padding:7px 13px;border:1px dashed var(--cream-border);border-bottom:none;background:transparent;color:var(--ink-lighter);cursor:pointer;border-radius:5px 5px 0 0;margin-bottom:-1px;display:flex;align-items:center;gap:6px}
+.var-notes-tab:hover{background:var(--cream-dark);color:var(--ink)}
+.var-notes-tab.sel{background:var(--white);border-style:solid;border-color:var(--cream-border);border-bottom:1px solid var(--white);color:var(--bark-dark);font-weight:600}
+.var-notes-tab .vn-dot{width:5px;height:5px;border-radius:50%;background:var(--sage);flex-shrink:0}
+.var-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:1.1rem;font-size:12px;color:var(--ink-light)}
+.var-bar-left{display:flex;align-items:center;gap:8px;min-width:0}
+.var-inuse{display:inline-flex;align-items:center;gap:6px;color:var(--clay);font-weight:500}
+.var-bar-acts{display:flex;align-items:center;gap:4px;flex-shrink:0}
+.var-bar-acts .btn{padding:3px 9px;font-size:11px}
+.var-branch{font-size:11px;color:var(--ink-lighter);font-style:italic;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* ── Change history ── */
+.hist-row{padding:8px 0;border-bottom:1px solid var(--cream-dark);font-size:12px}
+.hist-row:last-child{border-bottom:none}
+.hist-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.hist-date{font-weight:500;color:var(--ink);font-size:11.5px}
+.hist-acts{display:flex;gap:3px;flex-shrink:0}
+.hist-acts .btn{padding:2px 6px;font-size:10px}
+.hist-changes{color:var(--ink-light);font-size:11.5px;line-height:1.45;margin-top:3px}
+.hist-changes div{padding-left:9px;text-indent:-9px}
+.hist-note{color:var(--bark);font-size:11.5px;font-style:italic;line-height:1.4;margin-top:4px;word-break:break-word}
+.hist-addnote{background:none;border:none;padding:0;margin-top:4px;font-family:'DM Sans',sans-serif;font-size:10.5px;color:var(--ink-lighter);cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.hist-addnote:hover{color:var(--clay)}
+.hist-kind{display:inline-block;font-size:9.5px;letter-spacing:0.08em;text-transform:uppercase;color:var(--clay);border:1px solid var(--clay);border-radius:3px;padding:0 4px;margin-left:5px;vertical-align:1px}
+.hist-trimmed{font-size:10.5px;color:var(--ink-lighter);font-style:italic;padding-top:8px}
+/* ── Formulation notes view ── */
+.notes-wrap{background:var(--white);border:1px solid var(--cream-border);border-radius:6px;padding:20px;max-width:820px}
+.notes-wrap h3{font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:400;color:var(--bark-dark);margin:0 0 4px}
+.notes-hint{font-size:12px;color:var(--ink-lighter);line-height:1.55;margin-bottom:14px}
+.notes-wrap textarea{font-family:'DM Sans',sans-serif;font-size:13.5px;line-height:1.65;padding:12px;border:1px solid var(--cream-border);border-radius:4px;background:var(--cream);color:var(--ink);width:100%;outline:none;resize:vertical;min-height:340px}
+.notes-wrap textarea:focus{border-color:var(--sage);background:var(--white)}
 .ver-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--cream-dark);font-size:12px;gap:8px}
 .ver-row:last-child{border-bottom:none}
 .ver-row > div:first-child{flex:1;min-width:0}
@@ -255,7 +299,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);m
 .id-field{margin-bottom:10px}
 .id-field label{font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-lighter);display:block;margin-bottom:3px}
 .id-field p{font-size:13px;color:var(--ink);line-height:1.6}
-@media print{.app-header,.app-nav,.ed-sidebar,.add-bar,.ed-header .btn,.back-lnk,.ing-rm,.pin-btn{display:none!important}body{background:white;font-size:12px}.app-body{max-width:100%;padding:0}.ed-layout{grid-template-columns:1fr}.ing-row{border:none;border-bottom:1px solid #ddd;border-radius:0;padding:5px 0}.phase-label{border-bottom:2px solid #333;margin-bottom:4px}}
+@media print{.app-header,.app-nav,.ed-sidebar,.add-bar,.ed-header .btn,.back-lnk,.ing-rm,.pin-btn,.var-strip,.var-bar,#notes-view{display:none!important}body{background:white;font-size:12px}.app-body{max-width:100%;padding:0}.ed-layout{grid-template-columns:1fr}.ing-row{border:none;border-bottom:1px solid #ddd;border-radius:0;padding:5px 0}.phase-label{border-bottom:2px solid #333;margin-bottom:4px}}
 .soap-col-hdr{display:grid;grid-template-columns:1fr 84px 84px 90px 80px auto;gap:6px;padding:0 10px 4px;font-size:9px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-lighter)}
 .soap-row{display:grid;grid-template-columns:1fr 84px 84px 90px 80px auto;gap:6px;align-items:center;padding:7px 10px;border-radius:4px;margin-bottom:4px;background:var(--white);border:1px solid var(--cream-border)}
 .soap-row:hover{border-color:var(--bark-light)}
@@ -355,25 +399,33 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);m
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12L6 8l4-4"/></svg>
       All formulations
     </button>
-    <div class="ed-layout">
+    <div class="ed-header">
+      <div style="flex:1">
+        <input class="ed-name" id="f-name" placeholder="Formula name..." oninput="markDirty()">
+        <div style="font-size:12px;color:var(--ink-lighter);margin-top:4px" id="f-ver-lbl"></div>
+      </div>
+      <div style="display:flex;gap:8px;flex-shrink:0">
+        <button class="btn" onclick="printFormula()">Print</button>
+        <button class="btn" onclick="duplicateFormula()" title="Copy the whole formulation, with all its versions">Duplicate</button>
+        <button class="btn btn-primary" onclick="saveFormula()">Save</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteFormula()">Delete</button>
+      </div>
+    </div>
+    <div class="var-strip" id="var-strip"></div>
+    <div class="var-bar" id="var-bar"></div>
+    <div id="notes-view" style="display:none">
+      <div class="notes-wrap">
+        <h3>Formulation notes</h3>
+        <div class="notes-hint">Notes that belong to the whole formulation rather than any one version &mdash; what you have learned comparing them, when to reach for which, supplier quirks, customer feedback.</div>
+        <textarea id="f-formnotes" placeholder="e.g. Candelilla makes a firmer bar but runs about 3x the cost. Beeswax version is fine in winter but goes soft above 70F." oninput="markDirty()"></textarea>
+      </div>
+    </div>
+    <div class="ed-layout" id="ed-layout">
       <div class="ed-main">
-        <div class="ed-header">
-          <div style="flex:1">
-            <input class="ed-name" id="f-name" placeholder="Formula name..." oninput="markDirty()">
-            <div style="font-size:12px;color:var(--ink-lighter);margin-top:4px" id="f-ver-lbl"></div>
-          </div>
-          <div style="display:flex;gap:8px;flex-shrink:0">
-            <button class="btn" onclick="printFormula()">Print</button>
-            <button class="btn" onclick="duplicateFormula()" title="Create a copy of this formulation">Duplicate</button>
-            <button class="btn" onclick="saveVersion()">Save as version</button>
-            <button class="btn btn-primary" onclick="saveFormula()">Save</button>
-            <button class="btn btn-danger btn-sm" onclick="deleteFormula()">Delete</button>
-          </div>
-        </div>
         <div class="meta-card">
           <div class="meta-grid">
             <div class="mf">
-              <label>Product type</label>
+              <label>Product type <span class="mf-scope">all versions</span></label>
               <select id="f-type" onchange="onTypeChange()">
                 <option value="">-- select --</option>
                 <option>Facial serum</option><option>Face cream</option><option>Face oil</option>
@@ -387,18 +439,18 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);m
               </select>
             </div>
             <div class="mf">
-              <label>Status</label>
+              <label>Status <span class="mf-scope">this version</span></label>
               <select id="f-status" onchange="markDirty()">
                 <option value="draft">Draft</option><option value="testing">Testing</option>
                 <option value="approved">Approved</option><option value="retired">Retired</option>
               </select>
             </div>
             <div class="mf meta-full">
-              <label>Intention / purpose</label>
+              <label>Intention / purpose <span class="mf-scope">all versions</span></label>
               <textarea id="f-notes" rows="2" placeholder="What is this formula for? Goals, target skin type, inspiration..." oninput="markDirty()"></textarea>
             </div>
             <div class="mf meta-full">
-              <label>Formulation instructions</label>
+              <label>Method / instructions <span class="mf-scope">this version</span></label>
               <textarea id="f-instruct" rows="3" placeholder="Step-by-step process: temperatures, mixing order, special handling..." oninput="markDirty()"></textarea>
             </div>
             <div class="mf meta-full" id="addin-total-row" style="display:none">
@@ -528,9 +580,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);m
             <div style="font-size:12px;color:var(--ink-lighter)">INCI list generates as you add ingredients.</div>
           </div>
         </div>
-        <div class="sb-panel" id="ver-panel" style="display:none">
-          <div class="sb-hdr">Version history</div>
-          <div class="sb-body" id="ver-body"></div>
+        <div class="sb-panel" id="hist-panel">
+          <div class="sb-hdr">Change history</div>
+          <div class="sb-body" id="hist-body"></div>
         </div>
         <div class="sb-panel">
           <div class="sb-hdr">
@@ -578,7 +630,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);m
     <div class="modal-hdr"><div class="modal-title">Log a use</div><button class="modal-x" onclick="closeModal('m-use')">x</button></div>
     <div class="field"><label>Date made *</label><input type="date" id="ul-date"></div>
     <div class="field"><label>Batch size made (g)</label><input type="text" inputmode="decimal" id="ul-batch" placeholder="e.g. 100"></div>
-    <div class="field"><label>Version used</label><input type="text" id="ul-ver" readonly style="background:var(--cream-dark)"></div>
+    <div class="field"><label>Version</label><input type="text" id="ul-ver" readonly style="background:var(--cream-dark)"></div>
     <div class="field"><label>Outcome notes</label><textarea id="ul-notes" rows="4" placeholder="How did it turn out? Texture, scent, stability, feedback, what you would change..."></textarea></div>
     <div class="modal-foot">
       <button class="btn" onclick="closeModal('m-use')">Cancel</button>
@@ -587,21 +639,55 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);m
   </div>
 </div>
 
-<!-- Save as version modal -->
-<div class="modal-ov" id="m-ver">
+<!-- New version (branch) modal -->
+<div class="modal-ov" id="m-branch">
   <div class="modal">
-    <div class="modal-hdr"><div class="modal-title">Save as version</div><button class="modal-x" onclick="closeModal('m-ver')">x</button></div>
-    <div style="font-size:12px;color:var(--ink-light);margin-bottom:10px;line-height:1.5">
-      This archives the currently-saved formulation as <strong id="m-ver-num">version 1</strong> and starts a new working version. Any unsaved edits on screen will be saved into the new working version, not the archive.
+    <div class="modal-hdr"><div class="modal-title">New version</div><button class="modal-x" onclick="closeModal('m-branch')">x</button></div>
+    <div style="font-size:12px;color:var(--ink-light);margin-bottom:12px;line-height:1.5" id="m-branch-intro"></div>
+    <div class="field">
+      <label>Name this version *</label>
+      <input type="text" id="m-branch-name" placeholder="e.g. Beeswax sub" maxlength="40">
+      <div style="font-size:11px;color:var(--ink-lighter);margin-top:4px">A short name for the tab. Six months from now this is what tells you which one is which.</div>
     </div>
     <div class="field">
-      <label>Why this version? (recommended)</label>
-      <input type="text" id="m-ver-label" placeholder="e.g. swapped olive for sunflower" maxlength="120">
-      <div style="font-size:11px;color:var(--ink-lighter);margin-top:4px">A short note about what changed or why you're saving. Helps you find this version later.</div>
+      <label>Why this version? (optional)</label>
+      <input type="text" id="m-branch-why" placeholder="e.g. out of candelilla wax" maxlength="120">
     </div>
     <div class="modal-foot">
-      <button class="btn" onclick="closeModal('m-ver')">Cancel</button>
-      <button class="btn btn-primary" onclick="confirmSaveVersion()">Save as version</button>
+      <button class="btn" onclick="closeModal('m-branch')">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmBranch()">Create version</button>
+    </div>
+  </div>
+</div>
+
+<!-- Rename version modal -->
+<div class="modal-ov" id="m-rename">
+  <div class="modal">
+    <div class="modal-hdr"><div class="modal-title">Rename version</div><button class="modal-x" onclick="closeModal('m-rename')">x</button></div>
+    <div class="field">
+      <label>Version name</label>
+      <input type="text" id="m-rename-name" placeholder="e.g. Candelilla" maxlength="40">
+      <div style="font-size:11px;color:var(--ink-lighter);margin-top:4px">Leave blank to show just the version number.</div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('m-rename')">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmRename()">Save name</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add "why" note to a history entry -->
+<div class="modal-ov" id="m-hnote">
+  <div class="modal">
+    <div class="modal-hdr"><div class="modal-title">Why this change?</div><button class="modal-x" onclick="closeModal('m-hnote')">x</button></div>
+    <div style="font-size:12px;color:var(--ink-light);margin-bottom:10px;line-height:1.5" id="m-hnote-what"></div>
+    <div class="field">
+      <label>Your note</label>
+      <textarea id="m-hnote-text" rows="3" placeholder="e.g. bars were too soft in the cabin"></textarea>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('m-hnote')">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmHistNote()">Save note</button>
     </div>
   </div>
 </div>
@@ -646,6 +732,7 @@ var fLines = [];
 function loadAll() {
   try { var r = localStorage.getItem(ING_KEY);  if (r) ings  = JSON.parse(r); } catch(e) {}
   try { var r = localStorage.getItem(FORM_KEY); if (r) forms = JSON.parse(r); } catch(e) {}
+  migrateAll();
   renderCards();
 }
 
@@ -673,6 +760,9 @@ function importData(e) {
       var ex = new Set(forms.map(function(f) { return f.name.toLowerCase(); }));
       var added = 0;
       arr.forEach(function(f) { if (!ex.has((f.name||'').toLowerCase())) { forms.push(f); added++; } });
+      // A backup taken before versions became tabs has no variants -- run it
+      // through the same migration as on-disk data so it opens correctly.
+      migrateAll();
       saveAll(); renderCards();
       alert('Imported ' + added + ' formulations.');
     } catch(err) { alert('Could not read file.'); }
@@ -984,6 +1074,11 @@ function calcBatchCost(lines, bs) {
 
 // ── Navigation ────────────────────────────────────────
 function goList() {
+  notesTab = false;
+  var lay = document.getElementById('ed-layout');
+  var nv  = document.getElementById('notes-view');
+  if (lay) lay.style.display  = 'grid';
+  if (nv)  nv.style.display   = 'none';
   if (dirty && !confirm('You have unsaved changes. Leave without saving?')) return;
   document.getElementById('list-view').style.display = 'block';
   document.getElementById('editor-view').style.display = 'none';
@@ -1022,7 +1117,12 @@ function renderCards() {
     var dateStr = f.updatedAt ? new Date(f.updatedAt).toLocaleDateString() : '--';
     html += '<div class="fcard" onclick="openFormula(\'' + f.id + '\')">';
     html += '<div class="fcard-name">' + esc(f.name) + '</div>';
-    html += '<div class="fcard-meta">' + esc(f.type || 'Formula') + ' &middot; v' + (f.version||1) + ' &middot; ' + (f.lines||[]).length + ' ingredients</div>';
+    var nv    = (f.variants || []).length;
+    var av    = activeVar(f);
+    var vBit  = nv > 1
+      ? (esc(varTitle(av)) + ' &middot; ' + nv + ' versions')
+      : ('v' + ((av && av.num) || f.version || 1));
+    html += '<div class="fcard-meta">' + esc(f.type || 'Formula') + ' &middot; ' + vBit + ' &middot; ' + (f.lines||[]).length + ' ingredients</div>';
     html += '<div class="fcard-tags">';
     phList.forEach(function(p) { html += '<span class="tag">' + p + '</span>'; });
     html += '<span class="tag" style="background:var(--sage-light);color:var(--sage-dark)">' + (f.status||'draft') + '</span>';
@@ -1047,37 +1147,47 @@ function createFormula() {
   if (!name) { alert('Please enter a formula name.'); return; }
   var t = document.getElementById('new-type').value;
   var isSoapType = t === 'Cold Process Soap' || t === 'Hot Process Soap';
+
+  var v = blankVariant(1, '');
+  // Default: skincare counts add-ins toward 100% (standard practice).
+  // Soap doesn't use this setting (always PPO convention).
+  v.addinsInTotal = !isSoapType;
+
   var f = {
-    id: Date.now().toString() + Math.random().toString(36).slice(2,5),
-    name: name, type: t,
-    status: 'draft', version: 1, notes: '', instructions: '',
-    // Default: skincare counts add-ins toward 100% (standard practice).
-    // Soap doesn't use this setting (always PPO convention).
-    addinsInTotal: !isSoapType,
-    lines: [], versions: [], usageLog: [],
-    createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
+    id:        newVid(),
+    name:      name,
+    type:      t,
+    notes:     '',
+    formNotes: '',
+    variants:  [v],
+    activeVariantId: v.vid,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   };
+  syncActive(f);
   forms.push(f); saveAll(); closeModal('m-new'); openFormula(f.id);
 }
 
 function openFormula(id) {
-  var f = forms.find(function(x) { return x.id === id; });
+  var f = getForm(id);
   if (!f) return;
-  curId = id;
-  fLines = (f.lines||[]).map(function(l) { return Object.assign({}, l); });
-  dirty = false;
-  document.getElementById('f-name').value = f.name;
-  document.getElementById('f-type').value = f.type || '';
-  document.getElementById('f-status').value = f.status || 'draft';
+  migrateFormula(f);
+  curId    = id;
+  notesTab = false;
+  dirty    = false;
+
+  // Formulation-level: shared by every version
+  document.getElementById('f-name').value  = f.name;
+  document.getElementById('f-type').value  = f.type || '';
   document.getElementById('f-notes').value = f.notes || '';
-  document.getElementById('f-instruct').value = f.instructions || '';
-  document.getElementById('f-ver-lbl').textContent = 'Version ' + (f.version||1);
-  // Restore addin-in-total setting. Legacy formulas without the field
-  // default to FALSE so their existing totals don't visibly change.
-  document.getElementById('f-addins-in-total').checked = !!f.addinsInTotal;
-  restoreSoapSettings(f);
-  renderVersionHistory(f); renderUseLog(f);
-  showEditor(f.name); updateSoapUI(); updateAddinTotalRow(); renderLines(); recalc();
+  document.getElementById('f-formnotes').value = f.formNotes || '';
+
+  // Open the version that's in use, which is the one you almost always want
+  var av = activeVar(f);
+  curVid = av ? av.vid : null;
+
+  showEditor(f.name);
+  loadVariantIntoEditor();
 }
 
 function restoreSoapSettings(f) {
@@ -1583,9 +1693,9 @@ function buildRow(l, idx, ing, bs, isAddin) {
 }
 
 // ── Batch size controls ───────────────────────────────
-function onBatchIn(v)   { var n=parseFloat(v.replace(',','.')); if(!isNaN(n)&&n>0){renderLines();recalc();} }
+function onBatchIn(v)   { var n=parseFloat(v.replace(',','.')); if(!isNaN(n)&&n>0){markDirty();renderLines();recalc();} }
 function onBatchBlur(v) { var n=parseFloat(v.replace(',','.')); if(isNaN(n)||n<=0) document.getElementById('batch-sz').value=isSoap()?'1000':'100'; renderLines();recalc(); }
-function setBatch(g)    { document.getElementById('batch-sz').value=g; renderLines();recalc(); }
+function setBatch(g)    { document.getElementById('batch-sz').value=g; markDirty(); renderLines();recalc(); }
 
 // ── Skincare input handlers ───────────────────────────
 function onPct(idx, v) {
@@ -1831,117 +1941,176 @@ function copyInci() {
   });
 }
 
-// ── Save / version / delete ───────────────────────────
-function saveFormula() {
-  var idx = forms.findIndex(function(f) { return f.id === curId; });
-  if (idx < 0) return;
-  forms[idx] = Object.assign({}, forms[idx], {
-    name:         document.getElementById('f-name').value.trim() || forms[idx].name,
-    type:         document.getElementById('f-type').value,
-    status:       document.getElementById('f-status').value,
-    notes:        document.getElementById('f-notes').value,
-    instructions: document.getElementById('f-instruct').value,
-    addinsInTotal: getAddinsInTotal(),
-    lines:        fLines.map(function(l) { return Object.assign({}, l); }),
-    soapSettings: isSoap() ? {
-      superfat:  parseFloat(document.getElementById('soap-superfat').value)   || 5,
-      lyeConc:   parseFloat(document.getElementById('soap-lye-conc').value)   || 33,
-      waterPct:  parseFloat(document.getElementById('soap-water-pct').value)  || 38,
-      lyeMethod: document.getElementById('soap-lye-method').value,
-      lyeType:   document.getElementById('soap-lye-type').value,
-      kohPurity: parseFloat(document.getElementById('soap-koh-purity').value) || 90
-    } : undefined,
-    updatedAt: new Date().toISOString()
-  });
-  saveAll(); dirty = false;
-  document.getElementById('f-ver-lbl').textContent = 'Version ' + (forms[idx].version||1) + ' -- Saved';
-  setTimeout(function() { document.getElementById('f-ver-lbl').textContent = 'Version ' + (forms[idx].version||1); }, 2000);
+// ── Variants (versions of a formulation) ──────────────
+// A formulation owns one or more VARIANTS. A variant is a complete, live
+// formula: its own lines, method, status, batch size, soap settings, usage
+// log and change history. Variants are parallel, not sequential -- the
+// candelilla lotion bar and the beeswax substitute are both permanently
+// valid, and neither supersedes the other.
+//
+// Exactly one variant is ACTIVE. The active variant's content is mirrored
+// onto the formulation's top-level fields, because plume-costing.html and
+// plume-batchlog.html both read f.lines / f.status directly. Those modules
+// need no changes: they always see whichever version is in use.
+//
+// `curVid` is the variant being VIEWED, which is not necessarily the active
+// one -- you can open an old version to look at or edit it without changing
+// what gets costed.
+
+var curVid   = null;   // variant currently on screen
+var notesTab = false;  // true when the formulation-notes tab is showing
+
+function newVid() {
+  return String(Date.now()) + '-' + Math.random().toString(36).slice(2,7);
 }
 
-function saveVersion() {
-  // Open the label modal -- the actual archive happens in confirmSaveVersion()
-  var idx = forms.findIndex(function(f) { return f.id === curId; });
-  if (idx < 0) return;
-  // Refresh the version number shown in the modal copy
-  document.getElementById('m-ver-num').textContent = 'version ' + (forms[idx].version || 1);
-  document.getElementById('m-ver-label').value = '';
-  openModal('m-ver');
-  setTimeout(function() {
-    var inp = document.getElementById('m-ver-label');
-    if (inp) inp.focus();
-  }, 50);
-}
-
-// Read the on-disk saved state for the current formula (not in-memory edits)
-function readSavedFormula(id) {
-  try {
-    var raw = localStorage.getItem(FORM_KEY);
-    if (!raw) return null;
-    var arr = JSON.parse(raw);
-    for (var i = 0; i < arr.length; i++) {
-      if (arr[i].id === id) return arr[i];
-    }
-  } catch (e) {}
+function getForm(id) {
+  for (var i = 0; i < forms.length; i++) if (forms[i].id === id) return forms[i];
   return null;
 }
 
-// Build a snapshot from the *saved* formula (the parachute-able state).
-// Pulls full state -- lines, soap settings, addins flag, notes, instructions,
-// name/type/status -- so restore can do a clean rewind.
-// snapId is unique per snapshot, distinct from `version` which can repeat
-// across multiple archived snapshots (when Option A restore reverts the
-// working version number and a future Save as version archives that same
-// number again, or when a parachute captures a version number that was
-// itself restored from history).
-function buildSnapshot(f, label) {
+function curForm()  { return getForm(curId); }
+
+function getVar(f, vid) {
+  if (!f || !f.variants) return null;
+  for (var i = 0; i < f.variants.length; i++) if (f.variants[i].vid === vid) return f.variants[i];
+  return null;
+}
+
+function curVar() { return getVar(curForm(), curVid); }
+
+function activeVar(f) {
+  if (!f || !f.variants || !f.variants.length) return null;
+  return getVar(f, f.activeVariantId) || f.variants[0];
+}
+
+// Build an empty variant shell
+function blankVariant(num, label) {
   return {
-    snapId:        String(Date.now()) + '-' + Math.random().toString(36).slice(2,7),
-    version:       f.version || 1,
-    savedAt:       new Date().toISOString(),
+    vid:           newVid(),
+    num:           num || 1,
     label:         label || '',
-    name:          f.name || '',
-    type:          f.type || '',
-    status:        f.status || 'draft',
-    lines:         (f.lines || []).map(function(l) { return Object.assign({}, l); }),
-    notes:         f.notes || '',
-    instructions:  f.instructions || '',
-    addinsInTotal: !!f.addinsInTotal,
-    soapSettings:  f.soapSettings ? Object.assign({}, f.soapSettings) : undefined
+    status:        'draft',
+    lines:         [],
+    instructions:  '',
+    batchSize:     '',
+    addinsInTotal: false,
+    soapSettings:  undefined,
+    usageLog:      [],
+    history:       [],
+    branchedFrom:  null,
+    branchNote:    '',
+    createdAt:     new Date().toISOString(),
+    updatedAt:     new Date().toISOString()
   };
 }
 
-function confirmSaveVersion() {
-  var idx = forms.findIndex(function(f) { return f.id === curId; });
-  if (idx < 0) { closeModal('m-ver'); return; }
-  var label = document.getElementById('m-ver-label').value.trim();
+// Next version number for a formulation: one past the highest in use, so
+// numbers are never reused even after a version is deleted.
+function nextVarNum(f) {
+  var max = 0;
+  (f.variants || []).forEach(function(v) { if ((v.num || 0) > max) max = v.num; });
+  return max + 1;
+}
 
-  // Snapshot the *saved* state, not the in-memory edits.
-  // This is the key fix: previously saveVersion snapshotted what was on
-  // screen, which meant the archive contained your unsaved edits and there
-  // was no "before" preserved. Now we read the on-disk state.
-  var saved = readSavedFormula(curId);
-  if (!saved) {
-    // Nothing saved on disk yet -- save first, then snapshot
-    saveFormula();
-    saved = readSavedFormula(curId);
-    if (!saved) { alert('Could not save. Please try again.'); closeModal('m-ver'); return; }
-  }
-  var snap = buildSnapshot(saved, label);
+function varTitle(v) {
+  if (!v) return '';
+  return v.label ? v.label : ('Version ' + (v.num || 1));
+}
 
-  var f  = forms[idx];
-  var nv = (f.version || 1) + 1;
+// ── Migration: old model → variants ───────────────────
+// The previous model was a single working copy plus an archive pile
+// (f.versions[]), where "Save as version" archived a snapshot and "Restore"
+// rewound the working copy AND its version number -- which is why archived
+// version numbers could repeat.
+//
+// Migration is deliberately conservative: each formulation becomes ONE
+// variant holding its current content, and every archived snapshot becomes
+// a revertable entry in that variant's change history. Nothing is guessed
+// into being a separate tab. Splitting off a real second variant is a
+// deliberate act, done when you actually need one.
+//
+// The legacy f.versions and f.usageLog arrays are left in place untouched
+// rather than deleted, so nothing is destroyed if this migration is wrong.
+function migrateFormula(f) {
+  if (f.variants && f.variants.length) return false;
 
-  // Update working copy: bump version, add snapshot to versions array.
-  // Also persist whatever's on screen so the new working version isn't
-  // stale relative to the user's in-progress edits.
-  forms[idx] = Object.assign({}, f, {
-    name:          document.getElementById('f-name').value.trim() || f.name,
-    type:          document.getElementById('f-type').value,
-    status:        document.getElementById('f-status').value,
-    notes:         document.getElementById('f-notes').value,
-    instructions:  document.getElementById('f-instruct').value,
+  var v = blankVariant(f.version || 1, '');
+  v.status        = f.status || 'draft';
+  v.lines         = (f.lines || []).map(function(l) { return Object.assign({}, l); });
+  v.instructions  = f.instructions || '';
+  v.addinsInTotal = !!f.addinsInTotal;
+  v.soapSettings  = f.soapSettings ? Object.assign({}, f.soapSettings) : undefined;
+  v.createdAt     = f.createdAt || new Date().toISOString();
+  v.updatedAt     = f.updatedAt || v.createdAt;
+
+  // Every archived snapshot becomes a history entry, oldest first.
+  var snaps = (f.versions || []).slice().sort(function(a, b) {
+    return String(a.savedAt || '').localeCompare(String(b.savedAt || ''));
+  });
+  snaps.forEach(function(sn) {
+    v.history.push({
+      hid:     newVid(),
+      at:      sn.savedAt || v.createdAt,
+      kind:    'archived',
+      changes: [],
+      note:    sn.label || ('archived as version ' + (sn.version || '?')),
+      snap: {
+        lines:         (sn.lines || []).map(function(l) { return Object.assign({}, l); }),
+        instructions:  sn.instructions || '',
+        status:        sn.status || 'draft',
+        addinsInTotal: !!sn.addinsInTotal,
+        soapSettings:  sn.soapSettings ? Object.assign({}, sn.soapSettings) : undefined,
+        batchSize:     ''
+      }
+    });
+  });
+
+  // All usage entries move across -- there is only one variant to hold them.
+  v.usageLog = (f.usageLog || []).map(function(e) { return Object.assign({}, e); });
+
+  f.variants        = [v];
+  f.activeVariantId = v.vid;
+  if (typeof f.formNotes !== 'string') f.formNotes = '';
+  return true;
+}
+
+function migrateAll() {
+  var changed = false;
+  forms.forEach(function(f) { if (migrateFormula(f)) changed = true; });
+  if (changed) saveAll();
+}
+
+// ── Mirroring: active variant → formulation top level ─
+// Costing and Batchlog read f.lines, f.status, f.instructions etc. directly.
+// Keeping those in sync with the active variant means neither module needs
+// to know variants exist.
+//
+// NOTE: batchSize is deliberately NOT mirrored. plume-batchlog.html reads
+// f.batchSize with a fallback of 100, and formulations has never written
+// that field. Writing it now would silently change how pinned-gram lines
+// scale in existing batches. Batch size stays inside the variant.
+function syncActive(f) {
+  var av = activeVar(f);
+  if (!av) return;
+  f.activeVariantId = av.vid;
+  f.lines         = (av.lines || []).map(function(l) { return Object.assign({}, l); });
+  f.status        = av.status || 'draft';
+  f.instructions  = av.instructions || '';
+  f.addinsInTotal = !!av.addinsInTotal;
+  f.soapSettings  = av.soapSettings ? Object.assign({}, av.soapSettings) : undefined;
+  f.version       = av.num || 1;
+  f.updatedAt     = new Date().toISOString();
+}
+
+// ── Reading the editor into a variant ─────────────────
+function readEditorState() {
+  return {
     lines:         fLines.map(function(l) { return Object.assign({}, l); }),
+    instructions:  document.getElementById('f-instruct').value,
+    status:        document.getElementById('f-status').value,
     addinsInTotal: getAddinsInTotal(),
+    batchSize:     document.getElementById('batch-sz').value || '',
     soapSettings:  isSoap() ? {
       superfat:  parseFloat(document.getElementById('soap-superfat').value)   || 5,
       lyeConc:   parseFloat(document.getElementById('soap-lye-conc').value)   || 33,
@@ -1949,156 +2118,571 @@ function confirmSaveVersion() {
       lyeMethod: document.getElementById('soap-lye-method').value,
       lyeType:   document.getElementById('soap-lye-type').value,
       kohPurity: parseFloat(document.getElementById('soap-koh-purity').value) || 90
-    } : f.soapSettings,
-    version:    nv,
-    versions:   (f.versions || []).concat([snap]),
-    updatedAt:  new Date().toISOString()
-  });
-  saveAll(); dirty = false;
-  closeModal('m-ver');
-  document.getElementById('f-ver-lbl').textContent = 'Version ' + nv;
-  renderVersionHistory(forms[idx]);
-  renderUseLog(forms[idx]);
+    } : undefined
+  };
 }
 
-function renderVersionHistory(f) {
-  var panel    = document.getElementById('ver-panel');
-  var body     = document.getElementById('ver-body');
-  var versions = f.versions || [];
-  if (!versions.length) { panel.style.display = 'none'; return; }
+// ── Auto-diff: what actually changed between two states ──
+// The old model only recorded an iteration if you remembered to press
+// "Save as version". This runs on every save instead, so the record is
+// complete by default. You supply the WHY; the app supplies the WHAT.
+function ingName(id) {
+  var ing = ings.find(function(i) { return i.id === id; });
+  return ing ? ing.name : 'an ingredient';
+}
 
-  // One-time migration: snapshots created before snapId existed get IDs
-  // assigned now so delete/restore can operate unambiguously. Persist if
-  // any IDs were added.
-  var migrated = false;
-  versions.forEach(function(v) {
-    if (!v.snapId) {
-      v.snapId = String(Date.now()) + '-' + Math.random().toString(36).slice(2,7);
-      migrated = true;
+function lineAmountStr(l) {
+  if (l.pinned && l.gramsFixed) return String(l.gramsFixed) + 'g';
+  if (l.addin || l.soapAddin)   return l.gramsFixed ? (String(l.gramsFixed) + 'g') : '';
+  var p = parseFloat(l.pct);
+  return isNaN(p) ? '' : (String(l.pct) + '%');
+}
+
+function diffStates(prev, next) {
+  var out = [];
+  if (!prev) return out;
+
+  var pl = prev.lines || [], nl = next.lines || [];
+  var pMap = {}, nMap = {};
+  pl.forEach(function(l) { if (l.ingId) pMap[l.ingId] = l; });
+  nl.forEach(function(l) { if (l.ingId) nMap[l.ingId] = l; });
+
+  // Added
+  nl.forEach(function(l) {
+    if (!l.ingId || pMap[l.ingId]) return;
+    var a = lineAmountStr(l);
+    out.push('Added ' + ingName(l.ingId) + (a ? ' at ' + a : ''));
+  });
+  // Removed
+  pl.forEach(function(l) {
+    if (!l.ingId || nMap[l.ingId]) return;
+    var a = lineAmountStr(l);
+    out.push('Removed ' + ingName(l.ingId) + (a ? ' (was ' + a + ')' : ''));
+  });
+  // Changed amounts, pinning, phase override
+  nl.forEach(function(l) {
+    if (!l.ingId) return;
+    var p = pMap[l.ingId];
+    if (!p) return;
+    var pa = lineAmountStr(p), na = lineAmountStr(l);
+    if (pa !== na && (pa || na)) {
+      out.push(ingName(l.ingId) + ' ' + (pa || '\u2014') + ' \u2192 ' + (na || '\u2014'));
+    }
+    if (!!p.pinned !== !!l.pinned) {
+      out.push(ingName(l.ingId) + (l.pinned ? ' pinned to grams' : ' unpinned back to %'));
+    }
+    if ((p.phase || '') !== (l.phase || '')) {
+      out.push(ingName(l.ingId) + ' moved to ' + (l.phase || 'its default phase'));
     }
   });
-  if (migrated) saveAll();
 
-  panel.style.display = 'block';
-  var html = '';
-  versions.slice().reverse().forEach(function(v) {
-    var d = new Date(v.savedAt).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
-    html += '<div class="ver-row"><div>';
-    html += '<div class="ver-label">Version ' + v.version + '</div>';
-    html += '<div class="ver-date">' + d + '</div>';
-    if (v.label) html += '<div class="ver-tag">' + esc(v.label) + '</div>';
-    html += '</div><div class="ver-actions">';
-    html += '<button class="btn btn-sm" onclick="restoreVer(\'' + v.snapId + '\')" title="Replace current with this version">Restore</button>';
-    html += '<button class="btn btn-sm btn-danger" onclick="deleteVer(\'' + v.snapId + '\')" title="Delete this archived version">x</button>';
-    html += '</div></div>';
+  if ((prev.instructions || '') !== (next.instructions || '')) out.push('Method edited');
+  if ((prev.status || '') !== (next.status || ''))             out.push('Status ' + (prev.status || 'draft') + ' \u2192 ' + (next.status || 'draft'));
+  if (!!prev.addinsInTotal !== !!next.addinsInTotal)           out.push(next.addinsInTotal ? 'Add-ins now counted in total %' : 'Add-ins no longer counted in total %');
+
+  var ps = JSON.stringify(prev.soapSettings || null);
+  var ns = JSON.stringify(next.soapSettings || null);
+  if (ps !== ns) out.push('Soap settings changed');
+
+  return out;
+}
+
+// History keeps every entry's TEXT forever. Only the restorable snapshots
+// are capped, because those are what actually consume localStorage. Past
+// the cap the oldest entries keep their record and lose only the ability
+// to rewind to them.
+var HIST_SNAP_CAP = 30;
+
+function trimHistorySnaps(v) {
+  var withSnap = [];
+  (v.history || []).forEach(function(h, i) { if (h.snap) withSnap.push(i); });
+  var excess = withSnap.length - HIST_SNAP_CAP;
+  for (var i = 0; i < excess; i++) {
+    v.history[withSnap[i]].snap = null;
+  }
+}
+
+function pushHistory(v, kind, changes, note, snapState) {
+  v.history = v.history || [];
+  v.history.push({
+    hid:     newVid(),
+    at:      new Date().toISOString(),
+    kind:    kind,
+    changes: changes || [],
+    note:    note || '',
+    snap: snapState ? {
+      lines:         (snapState.lines || []).map(function(l) { return Object.assign({}, l); }),
+      instructions:  snapState.instructions || '',
+      status:        snapState.status || 'draft',
+      addinsInTotal: !!snapState.addinsInTotal,
+      soapSettings:  snapState.soapSettings ? Object.assign({}, snapState.soapSettings) : undefined,
+      batchSize:     snapState.batchSize || ''
+    } : null
   });
+  trimHistorySnaps(v);
+}
+
+// ── Save ──────────────────────────────────────────────
+function saveFormula() {
+  var f = curForm();
+  if (!f) return;
+
+  // Formulation-level fields
+  f.name  = document.getElementById('f-name').value.trim() || f.name;
+  f.type  = document.getElementById('f-type').value;
+  f.notes = document.getElementById('f-notes').value;
+  var fn  = document.getElementById('f-formnotes');
+  if (fn) f.formNotes = fn.value;
+
+  var v = curVar();
+  if (v) {
+    var next    = readEditorState();
+    var prev    = {
+      lines:         v.lines,
+      instructions:  v.instructions,
+      status:        v.status,
+      addinsInTotal: v.addinsInTotal,
+      soapSettings:  v.soapSettings,
+      batchSize:     v.batchSize
+    };
+    var changes = diffStates(prev, next);
+
+    v.lines         = next.lines;
+    v.instructions  = next.instructions;
+    v.status        = next.status;
+    v.addinsInTotal = next.addinsInTotal;
+    v.batchSize     = next.batchSize;
+    if (next.soapSettings) v.soapSettings = next.soapSettings;
+    v.updatedAt     = new Date().toISOString();
+
+    // Only record history when something meaningful moved. Re-saving after
+    // a typo fix in the name, or nudging batch size, shouldn't clutter it.
+    if (changes.length) pushHistory(v, 'edit', changes, '', next);
+  }
+
+  syncActive(f);
+  saveAll(); dirty = false;
+  renderVarTabs();   // keeps the notes dot and version names current
+  renderHistory();
+  flashSaved();
+}
+
+function flashSaved() {
+  var el = document.getElementById('f-ver-lbl');
+  if (!el) return;
+  var base = el.getAttribute('data-base') || '';
+  el.textContent = base ? (base + ' \u2014 Saved') : 'Saved';
+  setTimeout(function() { el.textContent = base; }, 2000);
+}
+
+// ── Tab strip ─────────────────────────────────────────
+function renderVarTabs() {
+  var f = curForm();
+  if (!f) return;
+  var strip = document.getElementById('var-strip');
+  var vars  = f.variants || [];
+  var html  = '';
+
+  vars.forEach(function(v) {
+    var isSel    = !notesTab && v.vid === curVid;
+    var isActive = v.vid === f.activeVariantId;
+    var cls      = 'var-tab' + (isSel ? ' sel' : '');
+    var ttl      = isActive ? 'In use for costing and batches' : 'Click to view or edit this version';
+    html += '<button class="' + cls + '" title="' + esc(ttl) + '" onclick="selectVariant(\'' + v.vid + '\')">';
+    if (isActive) html += '<span class="var-dot"></span>';
+    html += '<span class="vt-name">' + esc(varTitle(v)) + '</span>';
+    if (v.label) html += '<span class="vt-num">v' + (v.num || 1) + '</span>';
+    html += '</button>';
+  });
+
+  html += '<button class="var-add" onclick="openBranch()" title="Create a new version starting from the one you are viewing">+ New version</button>';
+  html += '<span class="var-spacer"></span>';
+  var nCls = 'var-notes-tab' + (notesTab ? ' sel' : '');
+  html += '<button class="' + nCls + '" onclick="selectNotes()" title="Notes about the whole formulation">';
+  if ((f.formNotes || '').trim()) html += '<span class="vn-dot"></span>';
+  html += 'Notes</button>';
+
+  strip.innerHTML = html;
+  renderVarBar();
+}
+
+function renderVarBar() {
+  var f   = curForm();
+  var bar = document.getElementById('var-bar');
+  if (!f) { bar.innerHTML = ''; return; }
+
+  if (notesTab) {
+    bar.innerHTML = '<div class="var-bar-left"><span style="color:var(--ink-lighter)">Applies to every version of this formulation.</span></div>';
+    return;
+  }
+
+  var v = curVar();
+  if (!v) { bar.innerHTML = ''; return; }
+  var isActive = v.vid === f.activeVariantId;
+  var nVars    = (f.variants || []).length;
+
+  var left = '<div class="var-bar-left">';
+  if (isActive) {
+    left += '<span class="var-inuse"><span class="var-dot"></span>In use \u2014 costing and batches use this version</span>';
+  } else {
+    left += '<button class="btn btn-sm" onclick="setActiveVariant(\'' + v.vid + '\')" title="Make this the version costing and batches use">Use this version</button>';
+  }
+  if (v.branchNote) {
+    left += '<span class="var-branch">\u00b7 ' + esc(v.branchNote) + '</span>';
+  }
+  left += '</div>';
+
+  var acts = '<div class="var-bar-acts">';
+  acts += '<button class="btn btn-sm" onclick="openRename()">Rename</button>';
+  if (nVars > 1) acts += '<button class="btn btn-sm btn-danger" onclick="deleteVariant(\'' + v.vid + '\')">Delete version</button>';
+  acts += '</div>';
+
+  bar.innerHTML = left + acts;
+}
+
+// ── Switching tabs ────────────────────────────────────
+// Switching away from a variant with unsaved edits would silently lose them,
+// so ask first. Answering no leaves you where you are.
+function guardDirty(what) {
+  if (!dirty) return true;
+  if (confirm('You have unsaved changes to this version.\n\nSave them before ' + what + '?')) {
+    saveFormula();
+    return true;
+  }
+  return confirm('Discard your unsaved changes and continue?');
+}
+
+function selectVariant(vid) {
+  if (vid === curVid && !notesTab) return;
+  if (!guardDirty('switching versions')) return;
+  notesTab = false;
+  curVid   = vid;
+  loadVariantIntoEditor();
+}
+
+function selectNotes() {
+  if (notesTab) return;
+  if (!guardDirty('switching to notes')) return;
+  notesTab = true;
+  document.getElementById('ed-layout').style.display  = 'none';
+  document.getElementById('notes-view').style.display = 'block';
+  var f = curForm();
+  document.getElementById('f-formnotes').value = (f && f.formNotes) || '';
+  document.getElementById('f-ver-lbl').setAttribute('data-base', 'Formulation notes');
+  document.getElementById('f-ver-lbl').textContent = 'Formulation notes';
+  renderVarTabs();
+}
+
+function loadVariantIntoEditor() {
+  var f = curForm(), v = curVar();
+  if (!f || !v) return;
+  notesTab = false;
+  document.getElementById('ed-layout').style.display  = 'grid';
+  document.getElementById('notes-view').style.display = 'none';
+
+  fLines = (v.lines || []).map(function(l) { return Object.assign({}, l); });
+  document.getElementById('f-status').value   = v.status || 'draft';
+  document.getElementById('f-instruct').value = v.instructions || '';
+  document.getElementById('f-addins-in-total').checked = !!v.addinsInTotal;
+  restoreSoapSettings({ soapSettings: v.soapSettings });
+
+  var lbl = varTitle(v) + (v.label ? ' \u00b7 v' + (v.num || 1) : '');
+  var el  = document.getElementById('f-ver-lbl');
+  el.setAttribute('data-base', lbl);
+  el.textContent = lbl;
+
+  updateSoapUI(); updateAddinTotalRow();
+  // Batch size is remembered per version. A version with none saved falls
+  // back to the type default -- otherwise the box keeps whatever the
+  // version you just came from was using, which is quietly wrong.
+  document.getElementById('batch-sz').value =
+    v.batchSize ? v.batchSize : (isSoap() ? '1000' : '100');
+
+  dirty = false;
+  renderVarTabs(); renderHistory(); renderUseLog(v);
+  renderLines(); recalc();
+}
+
+function setActiveVariant(vid) {
+  var f = curForm();
+  if (!f) return;
+  if (dirty) saveFormula();
+  f.activeVariantId = vid;
+  syncActive(f);
+  saveAll();
+  renderVarTabs();
+}
+
+// ── New version (branch from the one you're viewing) ──
+function openBranch() {
+  var v = curVar();
+  if (!v) return;
+  document.getElementById('m-branch-intro').innerHTML =
+    'This copies <strong>' + esc(varTitle(v)) + '</strong> into a new version you can change freely. ' +
+    esc(varTitle(v)) + ' stays exactly as it is.';
+  document.getElementById('m-branch-name').value = '';
+  document.getElementById('m-branch-why').value  = '';
+  openModal('m-branch');
+  setTimeout(function() {
+    var i = document.getElementById('m-branch-name');
+    if (i) i.focus();
+  }, 50);
+}
+
+function confirmBranch() {
+  var f = curForm(), src = curVar();
+  if (!f || !src) { closeModal('m-branch'); return; }
+  var name = document.getElementById('m-branch-name').value.trim();
+  if (!name) { alert('Please give this version a short name.'); return; }
+  var why  = document.getElementById('m-branch-why').value.trim();
+
+  // Capture what's on screen so the branch includes in-progress edits
+  var state = readEditorState();
+
+  var nv = blankVariant(nextVarNum(f), name);
+  nv.status        = state.status;
+  nv.lines         = state.lines;
+  nv.instructions  = state.instructions;
+  nv.addinsInTotal = state.addinsInTotal;
+  nv.batchSize     = state.batchSize;
+  nv.soapSettings  = state.soapSettings;
+  nv.branchedFrom  = src.vid;
+  nv.branchNote    = 'Started from ' + varTitle(src) + (why ? ' \u2014 ' + why : '');
+  pushHistory(nv, 'created', ['Copied from ' + varTitle(src)], why, state);
+
+  f.variants.push(nv);
+  saveAll();
+  closeModal('m-branch');
+
+  curVid = nv.vid;
+  dirty  = false;
+  loadVariantIntoEditor();
+}
+
+// ── Rename / delete a version ─────────────────────────
+function openRename() {
+  var v = curVar();
+  if (!v) return;
+  document.getElementById('m-rename-name').value = v.label || '';
+  openModal('m-rename');
+  setTimeout(function() {
+    var i = document.getElementById('m-rename-name');
+    if (i) { i.focus(); i.select(); }
+  }, 50);
+}
+
+function confirmRename() {
+  var v = curVar();
+  if (!v) { closeModal('m-rename'); return; }
+  v.label = document.getElementById('m-rename-name').value.trim();
+  saveAll();
+  closeModal('m-rename');
+  var lbl = varTitle(v) + (v.label ? ' \u00b7 v' + (v.num || 1) : '');
+  var el  = document.getElementById('f-ver-lbl');
+  el.setAttribute('data-base', lbl);
+  el.textContent = lbl;
+  renderVarTabs();
+}
+
+function deleteVariant(vid) {
+  var f = curForm();
+  if (!f || (f.variants || []).length < 2) return;
+  var v = getVar(f, vid);
+  if (!v) return;
+  var nUse  = (v.usageLog || []).length;
+  var extra = nUse ? ('\n\nIts ' + nUse + ' usage log entr' + (nUse === 1 ? 'y' : 'ies') + ' will go too.') : '';
+  if (!confirm('Delete "' + varTitle(v) + '" permanently?' + extra + '\n\nThis cannot be undone.')) return;
+
+  f.variants = f.variants.filter(function(x) { return x.vid !== vid; });
+  if (f.activeVariantId === vid) f.activeVariantId = f.variants[0].vid;
+  syncActive(f);
+  saveAll();
+  curVid = f.variants[0].vid;
+  dirty  = false;
+  loadVariantIntoEditor();
+}
+
+// ── Change history (per variant) ──────────────────────
+// Append-only. Reverting does not erase what came after it -- it applies the
+// old content and records the revert as its own entry. That's the fix for
+// the old model, where restoring rewound the version number too and the
+// history ended up describing something that hadn't happened.
+function renderHistory() {
+  var v    = curVar();
+  var body = document.getElementById('hist-body');
+  if (!body) return;
+  if (!v) { body.innerHTML = ''; return; }
+
+  var h = (v.history || []).slice().reverse();
+  if (!h.length) {
+    body.innerHTML = '<div style="font-size:12px;color:var(--ink-lighter);line-height:1.5">No changes recorded yet. Every save that alters the formula gets logged here automatically.</div>';
+    return;
+  }
+
+  var anyTrimmed = false;
+  var html = '';
+  h.forEach(function(e) {
+    var d = new Date(e.at);
+    var ds = isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+    html += '<div class="hist-row">';
+    html += '<div class="hist-top"><span class="hist-date">' + ds;
+    if (e.kind === 'revert')   html += '<span class="hist-kind">reverted</span>';
+    if (e.kind === 'created')  html += '<span class="hist-kind">created</span>';
+    if (e.kind === 'archived') html += '<span class="hist-kind">archived</span>';
+    html += '</span><span class="hist-acts">';
+    if (e.snap) {
+      html += '<button class="btn btn-sm" onclick="revertTo(\'' + e.hid + '\')" title="Bring this state back as a new change">Revert</button>';
+    } else {
+      anyTrimmed = true;
+    }
+    html += '</span></div>';
+    if (e.changes && e.changes.length) {
+      html += '<div class="hist-changes">';
+      e.changes.forEach(function(c) { html += '<div>\u00b7 ' + esc(c) + '</div>'; });
+      html += '</div>';
+    }
+    if (e.note) {
+      html += '<div class="hist-note">' + esc(e.note) + '</div>';
+    } else {
+      html += '<button class="hist-addnote" onclick="openHistNote(\'' + e.hid + '\')">+ why?</button>';
+    }
+    html += '</div>';
+  });
+  if (anyTrimmed) {
+    html += '<div class="hist-trimmed">Older entries keep their record but can no longer be reverted to.</div>';
+  }
   body.innerHTML = html;
 }
 
-function restoreVer(snapId) {
-  var idx = forms.findIndex(function(x) { return x.id === curId; });
-  if (idx < 0) return;
-  var f    = forms[idx];
-  var snap = (f.versions || []).find(function(v) { return v.snapId === snapId; });
-  if (!snap) return;
-  var lbl     = snap.label ? ' (' + snap.label + ')' : '';
-  var workVer = f.version || 1;
-  if (!confirm('Restore to version ' + snap.version + lbl + '?\n\nYour current working version (v' + workVer + ') will be auto-archived first so you can get back to it.\n\nAfter restore, you will be editing version ' + snap.version + '.')) return;
+function openHistNote(hid) {
+  var v = curVar();
+  if (!v) return;
+  var e = (v.history || []).find(function(x) { return x.hid === hid; });
+  if (!e) return;
+  var what = (e.changes && e.changes.length) ? e.changes.join('; ') : 'this change';
+  document.getElementById('m-hnote-what').textContent = what;
+  document.getElementById('m-hnote-text').value = e.note || '';
+  document.getElementById('m-hnote').setAttribute('data-hid', hid);
+  openModal('m-hnote');
+  setTimeout(function() {
+    var i = document.getElementById('m-hnote-text');
+    if (i) i.focus();
+  }, 50);
+}
 
-  // Auto-parachute: snapshot the *currently saved* state before clobbering it.
-  // First persist any in-memory edits so the parachute captures the latest.
-  saveFormula();
-  var savedNow = readSavedFormula(curId);
-  if (savedNow) {
-    // Label clearly identifies which version's contents got auto-saved
-    var parachute = buildSnapshot(savedNow, 'auto-archived v' + workVer + ' before restore');
-    forms[idx].versions = (forms[idx].versions || []).concat([parachute]);
+function confirmHistNote() {
+  var v   = curVar();
+  var hid = document.getElementById('m-hnote').getAttribute('data-hid');
+  if (!v || !hid) { closeModal('m-hnote'); return; }
+  var e = (v.history || []).find(function(x) { return x.hid === hid; });
+  if (e) {
+    e.note = document.getElementById('m-hnote-text').value.trim();
+    saveAll();
   }
+  closeModal('m-hnote');
+  renderHistory();
+}
 
-  // Apply the restored snapshot to the working formula. Restore everything
-  // (name, type, status, lines, notes, instructions, addins, soap settings,
-  // AND the version number) so the rewind is complete. After restore, you
-  // are editing v<snap.version> -- the label matches the contents.
-  forms[idx] = Object.assign({}, forms[idx], {
-    name:          snap.name || forms[idx].name,
-    type:          snap.type || forms[idx].type,
-    status:        snap.status || forms[idx].status,
-    lines:         (snap.lines || []).map(function(l) { return Object.assign({}, l); }),
-    notes:         snap.notes || '',
-    instructions:  snap.instructions || '',
-    addinsInTotal: !!snap.addinsInTotal,
-    soapSettings:  snap.soapSettings ? Object.assign({}, snap.soapSettings) : forms[idx].soapSettings,
-    version:       snap.version,  // version number matches restored content
-    updatedAt:     new Date().toISOString()
+function revertTo(hid) {
+  var f = curForm(), v = curVar();
+  if (!f || !v) return;
+  var e = (v.history || []).find(function(x) { return x.hid === hid; });
+  if (!e || !e.snap) return;
+  var d  = new Date(e.at);
+  var ds = isNaN(d.getTime()) ? 'that point' : d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+  if (!confirm('Bring back this version\'s state from ' + ds + '?\n\nNothing is erased \u2014 your current state is logged first, and the revert is recorded as its own entry.')) return;
+
+  // Log where we are now, so the revert itself is undoable
+  var nowState = readEditorState();
+  var changes  = diffStates({
+    lines: v.lines, instructions: v.instructions, status: v.status,
+    addinsInTotal: v.addinsInTotal, soapSettings: v.soapSettings, batchSize: v.batchSize
+  }, nowState);
+  if (changes.length) pushHistory(v, 'edit', changes, '', nowState);
+
+  var sn = e.snap;
+  v.lines         = (sn.lines || []).map(function(l) { return Object.assign({}, l); });
+  v.instructions  = sn.instructions || '';
+  v.status        = sn.status || v.status;
+  v.addinsInTotal = !!sn.addinsInTotal;
+  if (sn.soapSettings) v.soapSettings = Object.assign({}, sn.soapSettings);
+  if (sn.batchSize)    v.batchSize    = sn.batchSize;
+  v.updatedAt = new Date().toISOString();
+
+  pushHistory(v, 'revert', ['Reverted to the state from ' + ds], e.note || '', {
+    lines: v.lines, instructions: v.instructions, status: v.status,
+    addinsInTotal: v.addinsInTotal, soapSettings: v.soapSettings, batchSize: v.batchSize
   });
-  saveAll();
 
-  // Re-open the formula to refresh all the on-screen fields cleanly
-  openFormula(curId);
+  if (f.activeVariantId === v.vid) syncActive(f);
+  saveAll();
+  dirty = false;
+  loadVariantIntoEditor();
 }
 
-function deleteVer(snapId) {
-  var idx = forms.findIndex(function(x) { return x.id === curId; });
-  if (idx < 0) return;
-  var f    = forms[idx];
-  var snap = (f.versions || []).find(function(v) { return v.snapId === snapId; });
-  if (!snap) return;
-  var lbl = snap.label ? ' (' + snap.label + ')' : '';
-  if (!confirm('Permanently delete archived version ' + snap.version + lbl + '? This cannot be undone.')) return;
-  // Filter by snapId, NOT by version number -- multiple snapshots can share
-  // a version number (Option A restore behavior); we only want to remove
-  // the one the user clicked on.
-  forms[idx].versions = (f.versions || []).filter(function(v) { return v.snapId !== snapId; });
-  saveAll();
-  renderVersionHistory(forms[idx]);
-}
-
+// ── Duplicate / delete formulation ────────────────────
 function duplicateFormula() {
-  var idx = forms.findIndex(function(x) { return x.id === curId; });
-  if (idx < 0) return;
+  var f = curForm();
+  if (!f) return;
   if (dirty) {
-    if (!confirm('You have unsaved changes. Save first so the duplicate has your latest edits?')) return;
+    if (!confirm('You have unsaved changes. Save first so the copy includes them?')) return;
     saveFormula();
   }
-  var src = readSavedFormula(curId) || forms[idx];
-  // Deep-copy lines and soap settings; reset identity, version history, usage log
   var copy = {
-    id:            String(Date.now()) + '-' + Math.random().toString(36).slice(2,7),
-    name:          (src.name || 'Formula') + ' (copy)',
-    type:          src.type || '',
-    status:        'draft',  // copies start as draft regardless of source status
-    notes:         src.notes || '',
-    instructions:  src.instructions || '',
-    addinsInTotal: !!src.addinsInTotal,
-    lines:         (src.lines || []).map(function(l) { return Object.assign({}, l); }),
-    soapSettings:  src.soapSettings ? Object.assign({}, src.soapSettings) : undefined,
-    version:       1,
-    versions:      [],   // fresh history
-    usageLog:      [],   // fresh log
-    createdAt:     new Date().toISOString(),
-    updatedAt:     new Date().toISOString()
+    id:        newVid(),
+    name:      (f.name || 'Formula') + ' (copy)',
+    type:      f.type || '',
+    notes:     f.notes || '',
+    formNotes: f.formNotes || '',
+    variants:  (f.variants || []).map(function(v) {
+      return Object.assign({}, v, {
+        vid:      newVid(),
+        status:   'draft',   // copies start as drafts
+        usageLog: [],        // fresh log -- the copy hasn't been made yet
+        history:  [],        // fresh history
+        branchedFrom: null,
+        branchNote:   'Copied from ' + (f.name || 'another formulation'),
+        lines:        (v.lines || []).map(function(l) { return Object.assign({}, l); }),
+        soapSettings: v.soapSettings ? Object.assign({}, v.soapSettings) : undefined,
+        createdAt:    new Date().toISOString(),
+        updatedAt:    new Date().toISOString()
+      });
+    }),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   };
+  if (!copy.variants.length) copy.variants = [blankVariant(1, '')];
+  // Preserve which version was in use, by position
+  var srcIdx = 0;
+  (f.variants || []).forEach(function(v, i) { if (v.vid === f.activeVariantId) srcIdx = i; });
+  copy.activeVariantId = copy.variants[srcIdx] ? copy.variants[srcIdx].vid : copy.variants[0].vid;
+  syncActive(copy);
+
   forms.push(copy);
   saveAll();
   if (confirm('Duplicated as "' + copy.name + '".\n\nOpen the copy now?')) {
     openFormula(copy.id);
   } else {
-    renderCards();  // refresh list in background even though we're staying in editor
+    renderCards();
   }
 }
 
 function deleteFormula() {
-  if (!confirm('Permanently delete this formulation? This cannot be undone.')) return;
-  forms  = forms.filter(function(f) { return f.id !== curId; });
-  saveAll(); curId = null; goList();
+  var f = curForm();
+  var n = f ? (f.variants || []).length : 0;
+  var extra = n > 1 ? ('\n\nAll ' + n + ' versions will be deleted.') : '';
+  if (!confirm('Permanently delete this formulation?' + extra + '\n\nThis cannot be undone.')) return;
+  forms = forms.filter(function(x) { return x.id !== curId; });
+  saveAll(); curId = null; curVid = null; goList();
 }
 
-// ── Usage log ─────────────────────────────────────────
+// ── Usage log (per variant) ───────────────────────────
 function openUsage() {
-  var f = forms.find(function(x) { return x.id === curId; });
+  var v = curVar();
+  if (!v) { alert('Open a version first.'); return; }
   document.getElementById('ul-date').value  = new Date().toISOString().slice(0,10);
   document.getElementById('ul-batch').value = document.getElementById('batch-sz').value || '';
-  document.getElementById('ul-ver').value   = 'v' + (f ? (f.version||1) : 1);
+  document.getElementById('ul-ver').value   = varTitle(v);
   document.getElementById('ul-notes').value = '';
   openModal('m-use');
 }
@@ -2106,88 +2690,51 @@ function openUsage() {
 function saveUseEntry() {
   var date = document.getElementById('ul-date').value;
   if (!date) { alert('Please enter a date.'); return; }
-  var entry = {
-    id:      Date.now().toString(),
+  var v = curVar();
+  if (!v) { closeModal('m-use'); return; }
+  v.usageLog = (v.usageLog || []).concat([{
+    id:      newVid(),
     date:    date,
     batch:   document.getElementById('ul-batch').value,
-    version: document.getElementById('ul-ver').value,
+    version: varTitle(v),
     notes:   document.getElementById('ul-notes').value.trim()
-  };
-  var idx = forms.findIndex(function(f) { return f.id === curId; });
-  if (idx < 0) return;
-  forms[idx].usageLog = (forms[idx].usageLog || []).concat([entry]);
-  saveAll(); closeModal('m-use'); renderUseLog(forms[idx]);
+  }]);
+  saveAll(); closeModal('m-use'); renderUseLog(v);
 }
 
-function renderUseLog(f) {
-  var el  = document.getElementById('use-panel');
-  var log = (f.usageLog || []).slice();
-  if (!log.length) { el.innerHTML = '<div style="font-size:12px;color:var(--ink-lighter)">No uses logged yet.</div>'; return; }
+// Entries are no longer grouped by version number -- the tab already tells
+// you which version this is, so the log is a straight track record for it.
+function renderUseLog(v) {
+  var el = document.getElementById('use-panel');
+  if (!el) return;
+  var log = ((v && v.usageLog) || []).slice();
+  if (!log.length) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--ink-lighter)">No uses logged yet for this version.</div>';
+    return;
+  }
+  log.sort(function(a, b) { return String(b.date || '').localeCompare(String(a.date || '')); });
 
-  // Group entries by version. Each entry stores `version` as a string ("v1").
-  // Group keys preserve insertion order for stability; we'll display newest version first.
-  var groups = {};
-  var order  = [];
+  var html = '<div style="font-size:11px;color:var(--ink-lighter);margin-bottom:8px">Made ' + log.length + ' time' + (log.length === 1 ? '' : 's') + '</div>';
   log.forEach(function(e) {
-    var v = e.version || 'unversioned';
-    if (!groups[v]) { groups[v] = []; order.push(v); }
-    groups[v].push(e);
-  });
-  // Sort entries within each group newest-first
-  Object.keys(groups).forEach(function(k) {
-    groups[k].sort(function(a, b) { return (b.date || '').localeCompare(a.date || ''); });
-  });
-  // Sort version groups newest-first by version number (extract digits from "v3")
-  order.sort(function(a, b) {
-    var na = parseInt(String(a).replace(/[^0-9]/g, ''), 10) || 0;
-    var nb = parseInt(String(b).replace(/[^0-9]/g, ''), 10) || 0;
-    return nb - na;
-  });
-
-  var currentVerLabel = 'v' + (f.version || 1);
-  var html = '';
-  order.forEach(function(verKey) {
-    var entries  = groups[verKey];
-    var isCurrent = (verKey === currentVerLabel);
-    var groupId  = 'uvg-' + verKey.replace(/[^a-zA-Z0-9]/g, '');
-    var bodyCls  = 'use-version-body' + (isCurrent ? '' : ' collapsed');
-    var toggle   = isCurrent ? '\u25BE' : '\u25B8';  // ▾ / ▸
-    var hdrLbl   = verKey === 'unversioned' ? 'Unversioned' : 'Version ' + verKey.replace(/^v/, '');
-    html += '<div class="use-version-group">';
-    html += '<div class="use-version-hdr" onclick="toggleUseVerGroup(\'' + groupId + '\', this)">';
-    html += '<span>' + hdrLbl + (isCurrent ? ' <span class="ver-restore-current">current</span>' : '') + '</span>';
-    html += '<span><span class="uvh-count">' + entries.length + ' entr' + (entries.length === 1 ? 'y' : 'ies') + '</span><span class="uvh-toggle">' + toggle + '</span></span>';
+    var parts = String(e.date || '').split('-');
+    var dt    = parts.length === 3 ? new Date(+parts[0], +parts[1] - 1, +parts[2]) : new Date(e.date);
+    var d     = isNaN(dt.getTime()) ? String(e.date || '') : dt.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+    html += '<div class="use-entry"><div class="use-hdr">';
+    html += '<span class="use-date">' + esc(d) + '</span>';
+    html += '<span class="use-meta">' + (e.batch ? esc(e.batch) + 'g' : '') + '</span>';
+    html += '<button class="use-del" onclick="delUseEntry(\'' + e.id + '\')">x</button></div>';
+    if (e.notes) html += '<div class="use-notes">' + esc(e.notes) + '</div>';
     html += '</div>';
-    html += '<div class="' + bodyCls + '" id="' + groupId + '">';
-    entries.forEach(function(e) {
-      var d = new Date(e.date).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
-      html += '<div class="use-entry"><div class="use-hdr">';
-      html += '<span class="use-date">' + d + '</span>';
-      html += '<span class="use-meta">' + (e.batch ? e.batch + 'g' : '') + '</span>';
-      html += '<button class="use-del" onclick="delUseEntry(\'' + e.id + '\')">x</button></div>';
-      if (e.notes) html += '<div class="use-notes">' + esc(e.notes) + '</div>';
-      html += '</div>';
-    });
-    html += '</div></div>';
   });
   el.innerHTML = html;
 }
 
-function toggleUseVerGroup(bodyId, hdr) {
-  var body = document.getElementById(bodyId);
-  if (!body) return;
-  var open = body.classList.toggle('collapsed');
-  // After toggle, `open` is true if the body is now collapsed
-  var toggleSpan = hdr.querySelector('.uvh-toggle');
-  if (toggleSpan) toggleSpan.textContent = open ? '\u25B8' : '\u25BE';
-}
-
 function delUseEntry(eid) {
   if (!confirm('Remove this log entry?')) return;
-  var idx = forms.findIndex(function(f) { return f.id === curId; });
-  if (idx < 0) return;
-  forms[idx].usageLog = (forms[idx].usageLog || []).filter(function(e) { return e.id !== eid; });
-  saveAll(); renderUseLog(forms[idx]);
+  var v = curVar();
+  if (!v) return;
+  v.usageLog = (v.usageLog || []).filter(function(e) { return e.id !== eid; });
+  saveAll(); renderUseLog(v);
 }
 
 // ── Ingredient detail popup ───────────────────────────
@@ -2235,11 +2782,19 @@ function showIngDetail(ingId) {
 // Open the batch log with this formula pre-selected. If there are unsaved
 // edits, prompt to save first -- otherwise batchlog would read a stale copy.
 function makeBatchFromFormula() {
-  var f = forms.find(function(x) { return x.id === curId; });
+  var f = curForm();
   if (!f) { alert('Save the formula before making a batch from it.'); return; }
   if (dirty) {
-    if (!confirm('You have unsaved changes. Save first so the batch uses the latest version?')) return;
+    if (!confirm('You have unsaved changes. Save first so the batch uses the latest edits?')) return;
     saveFormula();
+  }
+  // Batchlog reads the formulation's top-level lines, which mirror the
+  // version in use. If you're looking at a different one, say so rather
+  // than quietly making the wrong thing.
+  var v = curVar();
+  if (v && v.vid !== f.activeVariantId) {
+    var av = activeVar(f);
+    if (!confirm('You are viewing "' + varTitle(v) + '", but batches use "' + varTitle(av) + '".\n\nMake a batch of "' + varTitle(av) + '"?\n\n(To batch this one instead, cancel and press "Use this version" first.)')) return;
   }
   // Read current batch size to seed the batchlog yield field
   var bs = parseFloat(document.getElementById('batch-sz').value);
@@ -2255,7 +2810,9 @@ function printFormula() {
   if (!f) return;
   var bs  = parseFloat(document.getElementById('batch-sz').value) || 100;
   var win = window.open('', '_blank');
-  var htitle = f.name;
+  // Printed cards go on the bench, so they must say which version they are
+  var pv     = curVar();
+  var htitle = f.name + ((f.variants || []).length > 1 && pv ? ' \u2014 ' + varTitle(pv) : '');
 
   if (isSoap()) {
     // Soap-specific print
