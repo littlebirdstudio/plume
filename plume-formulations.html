@@ -250,13 +250,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);m
 .hist-addnote:hover{color:var(--clay)}
 .hist-kind{display:inline-block;font-size:9.5px;letter-spacing:0.08em;text-transform:uppercase;color:var(--clay);border:1px solid var(--clay);border-radius:3px;padding:0 4px;margin-left:5px;vertical-align:1px}
 .hist-trimmed{font-size:10.5px;color:var(--ink-lighter);font-style:italic;padding-top:8px}
-.stor-banner{border-radius:6px;padding:12px 14px;margin-bottom:16px;font-size:12.5px;line-height:1.55;display:flex;gap:10px;align-items:flex-start}
-.stor-banner.warn{background:#FBF3E7;border:1px solid #E0C9A0;color:#6B5433}
-.stor-banner.crit{background:#F9E9E4;border:1px solid #D9A695;color:#7A3F2C}
-.stor-banner b{font-weight:600}
-.stor-banner .sb-x{margin-left:auto;background:none;border:none;font-size:16px;line-height:1;color:inherit;opacity:0.5;cursor:pointer;padding:0 2px;flex-shrink:0}
-.stor-banner .sb-x:hover{opacity:1}
-.stor-banner .btn{padding:4px 10px;font-size:11px;margin-top:8px}
 .hist-scroll{max-height:330px;overflow-y:auto;margin:0 -2px;padding:0 2px}
 .hist-more{width:100%;margin-top:8px;padding:5px;background:none;border:1px solid var(--cream-border);border-radius:4px;font-family:'DM Sans',sans-serif;font-size:11px;color:var(--ink-light);cursor:pointer}
 .hist-more:hover{background:var(--cream-dark);color:var(--ink)}
@@ -733,6 +726,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);m
   </div>
 </div>
 
+<script src="plume-core.js"></script>
 <script>
 // ── Data & state ──────────────────────────────────────
 var ING_KEY  = 'aerie-ingredients-v2';
@@ -746,71 +740,26 @@ var fLines = [];
 
 // ── Persistence ───────────────────────────────────────
 function loadAll() {
-  try { var r = localStorage.getItem(ING_KEY);  if (r) ings  = JSON.parse(r); } catch(e) {}
-  try { var r = localStorage.getItem(FORM_KEY); if (r) forms = JSON.parse(r); } catch(e) {}
+  ings  = Store.getJSON(ING_KEY,  []) || [];
+  forms = Store.getJSON(FORM_KEY, []) || [];
   migrateAll();
   renderCards();
-  renderStorBanner();
+  Plume.renderStorBanner();
 }
 
 // Returns true on success. A failed write means the browser storage is
 // full and your edit is NOT on disk -- which, now that saving is automatic,
 // could otherwise go unnoticed for a whole session. So a failure is made
 // loud and an emergency backup is offered on the spot.
+// Returns true on success. A failed write means the change is NOT on disk
+// -- and since saving is automatic, that could otherwise go unnoticed for a
+// whole session. Plume.noteSaveFailed makes it loud.
 function saveAll() {
-  try {
-    localStorage.setItem(FORM_KEY, JSON.stringify(forms));
-    storFailed = false;
-    return true;
-  } catch (e) {
-    storFailed = true;
-    renderStorBanner();
-    if (!storAlerted) {
-      storAlerted = true;
-      alert('Your changes could NOT be saved -- browser storage is full.\n\nNothing you do from here will be saved until space is freed. Use the red banner at the top to download a backup first, then see Settings for what is taking up room.');
-    }
-    return false;
-  }
+  if (Store.setJSON(FORM_KEY, forms)) { Plume.noteSaveOk(); return true; }
+  Plume.noteSaveFailed();
+  return false;
 }
 
-var storFailed  = false;
-var storAlerted = false;
-
-// ── Storage warning banner ────────────────────────────
-// Browser storage is a hard wall (about 5MB per site, not adjustable), and
-// the failure mode is a save that silently doesn't happen. This makes the
-// approach visible well before it matters.
-var STOR_WARN_AT   = 0.75;
-var storBannerHidden = false;
-
-function renderStorBanner() {
-  var slot = document.getElementById('stor-banner-slot');
-  if (!slot) return;
-
-  if (storFailed) {
-    slot.innerHTML = '<div class="stor-banner crit"><div><b>Storage is full \u2014 your changes are not being saved.</b><br>'
-      + 'Download a backup now so nothing is lost, then free up space. Packaging photos are usually the largest item; Settings shows the breakdown.'
-      + '<br><button class="btn" onclick="exportData()">Download backup now</button></div></div>';
-    return;
-  }
-
-  if (storBannerHidden) { slot.innerHTML = ''; return; }
-
-  var r   = storageReport();
-  var pct = r.total / (5 * 1024 * 1024);
-  if (pct < STOR_WARN_AT) { slot.innerHTML = ''; return; }
-
-  slot.innerHTML = '<div class="stor-banner warn"><div><b>Browser storage is about '
-    + Math.round(pct * 100) + '% full.</b> '
-    + 'Plume stores everything in this browser, and the limit is roughly 5MB for the whole app \u2014 it cannot be raised. '
-    + 'Worth exporting a backup and checking Settings to see what is using the room.'
-    + '</div><button class="sb-x" onclick="dismissStorBanner()" title="Hide until next time you open Plume">\u00d7</button></div>';
-}
-
-function dismissStorBanner() {
-  storBannerHidden = true;
-  renderStorBanner();
-}
 
 function exportData() {
   var blob = new Blob([JSON.stringify({ formulations: forms }, null, 2)], { type: 'application/json' });
@@ -843,10 +792,6 @@ function importData(e) {
 }
 
 // ── Utilities ─────────────────────────────────────────
-function esc(s) {
-  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
 function markDirty() { dirty = true; }
 
 function isSoap() {
@@ -1063,72 +1008,6 @@ function resetLinePhase(idx) {
   markDirty();
   renderLines();
   recalc();
-}
-
-function bestCpg(ing) {
-  if (!ing) return null;
-  var lots = (ing.lots || []).filter(function(l) { return !l.referenceOnly; });
-  // Legacy fallback when no real lots exist but ing.cost is set
-  if (!lots.length && ing.cost) {
-    var lc = parseFloat(ing.cost);
-    return (!isNaN(lc) && lc > 0) ? lc : null;
-  }
-  // Honor the user's choice of active lot
-  if (ing.activeLotId) {
-    var match = lots.filter(function(l) { return l.id === ing.activeLotId; })[0];
-    if (match) {
-      var ac = parseFloat(match.costPerG);
-      if (!isNaN(ac) && ac > 0) return ac;
-    }
-  }
-  // Fallback: cheapest purchased lot with a usable cost
-  var costs = lots.map(function(l) { return parseFloat(l.costPerG); }).filter(function(c) { return !isNaN(c) && c > 0; });
-  return costs.length ? Math.min.apply(null, costs) : null;
-}
-
-// ── Stock-on-hand helpers (mirrors plume-ingredients.html) ──
-// Convert a lot quantity to grams given its unit and the ingredient's density.
-// Density defaults to 1.0 g/mL if not specified.
-function lotQtyToG(qty, unit, density) {
-  var q = parseFloat(qty);
-  if (isNaN(q) || q <= 0) return 0;
-  var d = parseFloat(density) || 1.0;
-  if (unit === 'g')     return q;
-  if (unit === 'mL')    return q * d;
-  if (unit === 'fl oz') return q * 29.5735 * d;
-  if (unit === 'oz')    return q * 28.3495;
-  if (unit === 'lb')    return q * 453.592;
-  return q;
-}
-
-// Total stock in grams for an ingredient. Returns 0 (not null) when no usable
-// lots exist, so callers can treat it as a plain number. Reference-only
-// ("watchlist") lots do not contribute to stock.
-function stockG(ing) {
-  if (!ing || !ing.lots || !ing.lots.length) return 0;
-  var total = 0;
-  ing.lots.forEach(function(l) {
-    if (l.referenceOnly) return;
-    var qty  = l.qtyPurchased || l.stock || '';
-    var unit = l.qtyUnit      || l.stockUnit || 'g';
-    if (qty) total += lotQtyToG(qty, unit, ing.density);
-  });
-  return total;
-}
-
-// Three-state stock verdict.
-//   needG = 0  -> any positive stock counts as "enough" (used at dropdown time
-//                 and for line rows before a gram amount is entered)
-//   needG > 0  -> compare against the required grams for this line
-// Returns one of 'enough' | 'partial' | 'none'.
-function stockState(ing, needG) {
-  var have = stockG(ing);
-  if (have <= 0) return 'none';
-  if (!needG || needG <= 0) return 'enough';
-  // Tiny tolerance so a line that needs exactly the stock-on-hand reads as
-  // "enough" rather than "partial" due to float fuzz.
-  if (have + 0.001 >= needG) return 'enough';
-  return 'partial';
 }
 
 function calcBatchCost(lines, bs) {
@@ -2312,146 +2191,6 @@ function trimHistory(v) {
   v.history = hist;
 }
 
-// ── Storage usage ─────────────────────────────────
-// Enumerate whatever is actually in storage rather than checking a list of
-// expected keys. A hardcoded list silently misreports the moment a key name
-// drifts -- and it already did: packaging is 'aerie-packaging-v2' and
-// products is 'plume-products-v1', so both were landing in an unlabelled
-// "Other" bucket and the largest consumer was invisible.
-var STOR_NAMES = {
-  'aerie-ingredients-v2':  'Ingredients',
-  'aerie-suppliers-v1':    'Suppliers',
-  'aerie-brands-v1':       'Brands',
-  'aerie-formulations-v1': 'Formulations (incl. history)',
-  'aerie-packaging-v2':    'Packaging (incl. photos)',
-  'aerie-batches-v1':      'Batches',
-  'plume-products-v1':     'Products & costing',
-  'aerie-costing-v1':      'Costing (old, unused)'
-};
-
-function storLabel(k) {
-  if (STOR_NAMES[k]) return STOR_NAMES[k];
-  // Palette and pricing preferences are a few bytes each -- grouped, not listed
-  if (k.indexOf('plume-palette-') === 0 || k.indexOf('plume-pricing-') === 0) return null;
-  return k;
-}
-
-function storageReport() {
-  var rows = [], settings = 0, total = 0;
-  try {
-    for (var i = 0; i < localStorage.length; i++) {
-      var k   = localStorage.key(i);
-      var raw = localStorage.getItem(k) || '';
-      total += raw.length;
-      var label = storLabel(k);
-      if (label === null) { settings += raw.length; continue; }
-      rows.push({ key: k, label: label, bytes: raw.length });
-    }
-  } catch (e) {}
-  rows.sort(function(a, b) { return b.bytes - a.bytes; });
-  return { rows: rows, settings: settings, total: total };
-}
-
-function fmtKB(b) {
-  return b >= 1048576 ? (b / 1048576).toFixed(2) + ' MB' : Math.round(b / 1024) + ' KB';
-}
-
-function renderStorage() {
-  var el = document.getElementById('storage-body');
-  if (!el) return;
-  var r     = storageReport();
-  var LIMIT = 5 * 1024 * 1024;
-  var pct   = Math.min(100, (r.total / LIMIT) * 100);
-  var bar   = pct > 80 ? 'var(--clay)' : 'var(--sage)';
-
-  var html = '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px">';
-  html += '<span style="color:var(--ink-light)">' + fmtKB(r.total) + ' of about 5 MB</span>';
-  html += '<span style="color:var(--ink-lighter)">' + pct.toFixed(0) + '%</span></div>';
-  html += '<div style="height:6px;background:var(--cream-dark);border-radius:3px;overflow:hidden;margin-bottom:12px">';
-  html += '<div style="height:100%;width:' + pct.toFixed(1) + '%;background:' + bar + '"></div></div>';
-
-  r.rows.forEach(function(row) {
-    if (row.bytes < 512) return;
-    html += '<div style="display:flex;justify-content:space-between;font-size:11.5px;padding:3px 0;color:var(--ink-light)">';
-    html += '<span>' + esc(row.label) + '</span><span>' + fmtKB(row.bytes) + '</span></div>';
-  });
-  if (r.settings) {
-    html += '<div style="display:flex;justify-content:space-between;font-size:11.5px;padding:3px 0;color:var(--ink-lighter)">';
-    html += '<span>Settings</span><span>' + fmtKB(r.settings) + '</span></div>';
-  }
-  html += '<div style="font-size:11px;color:var(--ink-lighter);line-height:1.5;margin-top:10px">';
-  html += 'All Plume modules share one browser storage budget of about 5MB, which browsers do not allow to be raised.</div>';
-  if (r.rows.length) {
-    html += '<button class="hist-filter" id="stor-drill-btn" onclick="toggleStorDrill()">What is using the room?</button>';
-    html += '<div id="stor-drill"></div>';
-  }
-  el.innerHTML = html;
-  if (storDrillOpen) renderStorDrill();
-}
-
-// ── What's actually taking up the space ───────────────
-// Knowing which module is biggest doesn't tell you what to do about it.
-// This walks the records and sums bytes per field, so the answer is a
-// specific field you can decide about rather than a mystery.
-var storDrillOpen = false;
-function toggleStorDrill() { storDrillOpen = !storDrillOpen; renderStorage(); }
-
-function fieldBreakdown(raw) {
-  var data;
-  try { data = JSON.parse(raw); } catch (e) { return null; }
-  var recs = Array.isArray(data) ? data : null;
-  if (!recs) {
-    for (var k in data) { if (Array.isArray(data[k])) { recs = data[k]; break; } }
-  }
-  if (!recs || !recs.length) return null;
-  var tot = {}, sum = 0;
-  recs.forEach(function(rec) {
-    if (!rec || typeof rec !== 'object') return;
-    for (var fl in rec) {
-      var b = 0;
-      try { b = JSON.stringify(rec[fl]).length; } catch (e) { b = 0; }
-      tot[fl] = (tot[fl] || 0) + b;
-      sum += b;
-    }
-  });
-  var arr = [];
-  for (var f2 in tot) arr.push({ field: f2, bytes: tot[f2] });
-  arr.sort(function(a, b) { return b.bytes - a.bytes; });
-  return { fields: arr, sum: sum, count: recs.length };
-}
-
-function renderStorDrill() {
-  var el  = document.getElementById('stor-drill');
-  var btn = document.getElementById('stor-drill-btn');
-  if (!el) return;
-  if (btn) btn.textContent = 'Hide breakdown';
-
-  var r = storageReport();
-  // Drill into the largest keys actually present -- not the largest key
-  // whose name we happened to guess correctly.
-  var html = '', shown = 0;
-  for (var i = 0; i < r.rows.length && shown < 2; i++) {
-    var row = r.rows[i];
-    if (row.bytes < 2048) break;
-    var raw = '';
-    try { raw = localStorage.getItem(row.key) || ''; } catch (e) {}
-    var bd = fieldBreakdown(raw);
-    if (!bd) continue;
-    shown++;
-    html += '<div style="font-size:11px;color:var(--ink-lighter);margin:' + (shown === 1 ? '8px' : '14px') + ' 0 6px;line-height:1.5"><strong>'
-         + esc(row.label) + '</strong> \u2014 ' + bd.count + ' records, ' + fmtKB(row.bytes) + '. Biggest fields:</div>';
-    bd.fields.slice(0, 5).forEach(function(fd) {
-      var p = bd.sum ? (100 * fd.bytes / bd.sum) : 0;
-      html += '<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0;color:var(--ink-light)">';
-      html += '<span>' + esc(fd.field) + '</span><span>' + fmtKB(fd.bytes) + ' \u00b7 ' + p.toFixed(0) + '%</span></div>';
-    });
-  }
-  if (!shown) { el.innerHTML = ''; return; }
-  html += '<div style="font-size:11px;color:var(--ink-lighter);line-height:1.5;margin-top:8px">'
-       + 'A single field taking most of the space is usually reference text or an image, and is the cheapest thing to trim.</div>';
-  el.innerHTML = html;
-}
-
 function pushHistory(v, kind, changes, note, snapState) {
   v.history = v.history || [];
   v.history.push({
@@ -3283,179 +3022,16 @@ function printFormula() {
 }
 
 // ── Modal helpers ─────────────────────────────────────
-function openModal(id)  { document.getElementById(id).classList.add('open'); }
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-document.querySelectorAll('.modal-ov').forEach(function(el) {
-  el.addEventListener('click', function(e) { if (e.target === el) el.classList.remove('open'); });
-});
-document.getElementById('m-new').addEventListener('keydown', function(e) { if (e.key === 'Enter') createFormula(); });
-
-// ── Palettes ──────────────────────────────────────────
-// Each palette redefines the palette-level CSS variables (surfaces, bark,
-// sage, clay, ink, status). Categorical colors (phase badges, soap quality
-// bars) are intentionally NOT overridden — they stay consistent across all
-// palettes so "water phase" always reads as blue, etc.
-//
-// Variable names are semantic-by-role, not literal:
-//   --bark  = primary brand tone (headers, primary buttons)
-//   --sage  = "positive/success" tone
-//   --clay  = warm accent / highlight
-// So in the Mulberry palette, --bark is a deep berry; in Eucalyptus, --sage
-// is silvery-mint. The role stays; the color shifts.
-var PALETTES = {
-  'coastal': { label:'Coastal', family:'blue', vars: {
-    '--cream':'#F4F6F8','--cream-dark':'#E7ECF1','--cream-border':'#C9D3DC','--white':'#FCFDFE',
-    '--bark':'#506880','--bark-light':'#7A92A8','--bark-dark':'#2E4256',
-    '--sage':'#6E8C8A','--sage-light':'#E2EBEA','--sage-dark':'#3F5856','--sage-border':'#B8CACA',
-    '--clay':'#C9A074','--clay-light':'#F2E8DA','--clay-dark':'#8A6432','--clay-hover':'#EBD9BE',
-    '--ink':'#1F2A36','--ink-light':'#5A6776','--ink-lighter':'#8E99A6',
-    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
-    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#3F5856'
-  }},
-  'indigo': { label:'Indigo', family:'blue', vars: {
-    '--cream':'#F1F1F6','--cream-dark':'#E4E4EC','--cream-border':'#C6C6D4','--white':'#FBFBFD',
-    '--bark':'#3E4768','--bark-light':'#6970A0','--bark-dark':'#1F2546',
-    '--sage':'#7480A0','--sage-light':'#E5E8F0','--sage-dark':'#454E68','--sage-border':'#BFC5D4',
-    '--clay':'#A88BB8','--clay-light':'#EDE2F2','--clay-dark':'#6E527C','--clay-hover':'#E0CFE8',
-    '--ink':'#1A1D2E','--ink-light':'#525870','--ink-lighter':'#8A8FA4',
-    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
-    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#454E68'
-  }},
-  'mist': { label:'Mist', family:'blue', vars: {
-    '--cream':'#F2F4F4','--cream-dark':'#E5E9E9','--cream-border':'#CAD2D2','--white':'#FBFCFC',
-    '--bark':'#5C7274','--bark-light':'#869A9C','--bark-dark':'#34484A',
-    '--sage':'#6E9290','--sage-light':'#E2EDEC','--sage-dark':'#3F5C5A','--sage-border':'#BAD0CE',
-    '--clay':'#C29A8A','--clay-light':'#F0E4DE','--clay-dark':'#82584A','--clay-hover':'#E7D3C9',
-    '--ink':'#222B2E','--ink-light':'#5C696C','--ink-lighter':'#909A9D',
-    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
-    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#3F5C5A'
-  }},
-  'blush': { label:'Blush', family:'pink', vars: {
-    '--cream':'#F9F2F1','--cream-dark':'#F0E4E2','--cream-border':'#DCC8C6','--white':'#FEFBFB',
-    '--bark':'#8A5868','--bark-light':'#AE7E8C','--bark-dark':'#5A3240',
-    '--sage':'#8A8898','--sage-light':'#ECE9EE','--sage-dark':'#52505E','--sage-border':'#CFCCD6',
-    '--clay':'#D08C82','--clay-light':'#F5E2DE','--clay-dark':'#92524A','--clay-hover':'#EDCEC7',
-    '--ink':'#2C2024','--ink-light':'#6D5860','--ink-lighter':'#A08A91',
-    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
-    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#52505E'
-  }},
-  'petal': { label:'Petal', family:'pink', vars: {
-    '--cream':'#FAF3EE','--cream-dark':'#F2E5DC','--cream-border':'#DCC8B9','--white':'#FEFCFA',
-    '--bark':'#A0584C','--bark-light':'#C68074','--bark-dark':'#6E2E22',
-    '--sage':'#8C8478','--sage-light':'#EDE8E1','--sage-dark':'#544D43','--sage-border':'#CCC5BA',
-    '--clay':'#E89A82','--clay-light':'#FAE3D8','--clay-dark':'#A85A40','--clay-hover':'#F4CFBE',
-    '--ink':'#2E2018','--ink-light':'#705A4E','--ink-lighter':'#A28B7E',
-    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
-    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#544D43'
-  }},
-  'mulberry': { label:'Mulberry', family:'pink', vars: {
-    '--cream':'#F4EDEF','--cream-dark':'#E8DCDF','--cream-border':'#CDB8BE','--white':'#FBF8F9',
-    '--bark':'#7A3E5A','--bark-light':'#9E6480','--bark-dark':'#4E1A30',
-    '--sage':'#857482','--sage-light':'#E7E0E4','--sage-dark':'#4E424B','--sage-border':'#C5B8BF',
-    '--clay':'#B07088','--clay-light':'#EBD8DE','--clay-dark':'#783E50','--clay-hover':'#DEBFC8',
-    '--ink':'#26181E','--ink-light':'#5E4E55','--ink-lighter':'#94808A',
-    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
-    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#4E424B'
-  }},
-  'lavender': { label:'Lavender', family:'purple', vars: {
-    '--cream':'#F5F3F7','--cream-dark':'#EAE5EF','--cream-border':'#D0C8DA','--white':'#FCFBFD',
-    '--bark':'#6E5C8A','--bark-light':'#928AAE','--bark-dark':'#3F3258',
-    '--sage':'#8C8AA0','--sage-light':'#EAE8EE','--sage-dark':'#54526A','--sage-border':'#CECCDA',
-    '--clay':'#B89AC4','--clay-light':'#EEE2F1','--clay-dark':'#7C5A8A','--clay-hover':'#E0CDEA',
-    '--ink':'#221E2E','--ink-light':'#5E5670','--ink-lighter':'#928CA4',
-    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
-    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#54526A'
-  }},
-  'slate': { label:'Slate', family:'purple', vars: {
-    '--cream':'#F1F2F5','--cream-dark':'#E4E6EC','--cream-border':'#C6CBD4','--white':'#FBFBFD',
-    '--bark':'#525C72','--bark-light':'#7C8598','--bark-dark':'#2E3648',
-    '--sage':'#76808E','--sage-light':'#E5E8EC','--sage-dark':'#444C58','--sage-border':'#C2C8D0',
-    '--clay':'#A88AA0','--clay-light':'#ECE2E8','--clay-dark':'#6E5468','--clay-hover':'#DCCBD6',
-    '--ink':'#1E222C','--ink-light':'#555C6C','--ink-lighter':'#8C92A0',
-    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
-    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#444C58'
-  }},
-  'wisteria': { label:'Wisteria', family:'purple', vars: {
-    '--cream':'#F4F2F4','--cream-dark':'#E8E5E9','--cream-border':'#CCC4D0','--white':'#FBFAFC',
-    '--bark':'#7A6A8C','--bark-light':'#9E8FAE','--bark-dark':'#4A3A5C',
-    '--sage':'#84927E','--sage-light':'#E5EAE2','--sage-dark':'#4E5A48','--sage-border':'#BDC8B8',
-    '--clay':'#AE8AB8','--clay-light':'#E8DCE8','--clay-dark':'#724E7C','--clay-hover':'#D8C2DC',
-    '--ink':'#24202C','--ink-light':'#5E566C','--ink-lighter':'#928BA0',
-    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
-    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#4E5A48'
-  }},
-  'forest': { label:'Forest', family:'green', vars: {
-    '--cream':'#F2F4F0','--cream-dark':'#E4E8DE','--cream-border':'#C5CDBE','--white':'#FBFCFA',
-    '--bark':'#4E6A4A','--bark-light':'#789078','--bark-dark':'#2A3E28',
-    '--sage':'#6A8A60','--sage-light':'#E0EAD8','--sage-dark':'#3E5638','--sage-border':'#B5C8AC',
-    '--clay':'#B88858','--clay-light':'#ECDDC8','--clay-dark':'#7A5430','--clay-hover':'#E0CAA8',
-    '--ink':'#1E281C','--ink-light':'#56624E','--ink-lighter':'#8A9282',
-    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
-    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#3E5638'
-  }},
-  'sage-green': { label:'Sage', family:'green', vars: {
-    '--cream':'#F4F5F1','--cream-dark':'#E7E9E2','--cream-border':'#C9CEC0','--white':'#FBFCFA',
-    '--bark':'#6E7A5E','--bark-light':'#929E84','--bark-dark':'#404834',
-    '--sage':'#869A78','--sage-light':'#E8EDE0','--sage-dark':'#4E5C40','--sage-border':'#C2CCB4',
-    '--clay':'#B89A82','--clay-light':'#EBE2D8','--clay-dark':'#7A604E','--clay-hover':'#DDCEC0',
-    '--ink':'#23271E','--ink-light':'#5C624E','--ink-lighter':'#8E9482',
-    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
-    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#4E5C40'
-  }},
-  'eucalyptus': { label:'Eucalyptus', family:'green', vars: {
-    '--cream':'#F1F4F2','--cream-dark':'#E4E9E5','--cream-border':'#C5CFC8','--white':'#FBFCFB',
-    '--bark':'#5E7872','--bark-light':'#8AA09A','--bark-dark':'#324842',
-    '--sage':'#7AA098','--sage-light':'#E0EDE7','--sage-dark':'#436258','--sage-border':'#B6CDC4',
-    '--clay':'#A8B8A0','--clay-light':'#E2EAE0','--clay-dark':'#688070','--clay-hover':'#CFD8C8',
-    '--ink':'#1E2A26','--ink-light':'#566A62','--ink-lighter':'#8C9A92',
-    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
-    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#436258'
-  }}
-};
-
-var PALETTE_KEY = 'plume-palette-formulations';
-var DEFAULT_PALETTE = 'coastal';
-
-function applyPalette(name) {
-  var p = PALETTES[name];
-  if (!p) { p = PALETTES[DEFAULT_PALETTE]; name = DEFAULT_PALETTE; }
-  Object.keys(p.vars).forEach(function(v) {
-    document.documentElement.style.setProperty(v, p.vars[v]);
-  });
-  return name;
-}
-function savePaletteChoice(name) { try { localStorage.setItem(PALETTE_KEY, name); } catch (e) {} }
-function loadPaletteChoice() { try { return localStorage.getItem(PALETTE_KEY) || DEFAULT_PALETTE; } catch (e) { return DEFAULT_PALETTE; } }
-function selectPalette(name) {
-  var applied = applyPalette(name);
-  savePaletteChoice(applied);
-  renderPaletteSwatches();
-}
-function renderPaletteSwatches() {
-  var container = document.getElementById('palette-swatches');
-  if (!container) return;
-  var current = loadPaletteChoice();
-  var names = Object.keys(PALETTES);
-  container.innerHTML = names.map(function(name) {
-    var p = PALETTES[name]; var v = p.vars; var isActive = (name === current);
-    return '<button type="button" class="palette-swatch' + (isActive ? ' active' : '') +
-      '" onclick="selectPalette(\'' + name + '\')" title="' + p.label + '">' +
-      '<div class="palette-swatch-stripes">' +
-        '<span style="background:' + v['--cream'] + '"></span>' +
-        '<span style="background:' + v['--bark'] + '"></span>' +
-        '<span style="background:' + v['--sage'] + '"></span>' +
-        '<span style="background:' + v['--clay'] + '"></span>' +
-        '<span style="background:' + v['--ink'] + '"></span>' +
-      '</div>' +
-      '<div class="palette-swatch-label">' + p.label + '</div>' +
-      '</button>';
-  }).join('');
-}
-function openSettings() { openModal('m-settings'); renderPaletteSwatches(); renderStorage(); }
+function openSettings() { openModal('m-settings'); Plume.renderPaletteSwatches(); Plume.renderStorage(); }
 
 // ── Init ──────────────────────────────────────────────
-applyPalette(loadPaletteChoice());
-loadAll();
+// Plume.boot hydrates storage, applies this module's saved palette, then
+// hands control back. The palette CHOICE stays per-module -- this page
+// still remembers its own colour scheme independently of the others.
+Plume.setModule('formulations');
+Plume.boot(function () {
+  loadAll();
+});
 </script>
 </body>
 </html>
