@@ -30,6 +30,11 @@
 var Plume = (function () {
 'use strict';
 
+// Bump when core changes. Shown in every module's Settings panel, so
+// "is core loaded, and is it the one I just uploaded?" is answerable by
+// looking rather than guessing -- browsers cache .js files stubbornly.
+var VERSION = '1.1';
+
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
 //
@@ -263,27 +268,49 @@ function qtyToGrams(qty, unit, density) {
   return q;
 }
 
-// Total grams on hand across purchased lots, minus what's been used.
+// Total grams on hand across purchased lots.
+//
+// COPIED VERBATIM from the module implementations — not rewritten. Lot
+// quantity lives in `qtyPurchased` with a legacy fallback to `stock`, and
+// the unit in `qtyUnit` with a legacy fallback to `stockUnit`. There is no
+// `l.unit` field. Reading the wrong field name doesn't throw; it silently
+// returns the raw number as grams, so an 8 oz lot reads as 8 g and every
+// stock figure quietly goes wrong. Check the source module before
+// "improving" any field name here.
 function stockG(ing) {
-  if (!ing) return 0;
+  if (!ing || !ing.lots || !ing.lots.length) return 0;
   var total = 0;
-  (ing.lots || []).forEach(function (l) {
+  ing.lots.forEach(function (l) {
     if (l.referenceOnly) return;
-    var have = qtyToGrams(l.qtyPurchased != null ? l.qtyPurchased : l.qty, l.unit, ing.density);
-    var used = parseFloat(l.usedG);
-    if (!isNaN(used) && used > 0) have -= used;
-    if (have > 0) total += have;
+    var qty  = l.qtyPurchased || l.stock || '';
+    var unit = l.qtyUnit      || l.stockUnit || 'g';
+    if (qty) total += qtyToGrams(qty, unit, ing.density);
   });
   return total;
 }
 
-// Three states, so callers don't each invent their own thresholds.
+// Batchlog's contract differs deliberately: null means "no quantity data
+// recorded at all", which it displays differently from a genuine zero.
+// Collapsing the two would make an untracked ingredient look out of stock.
+function stockGOrNull(ing) {
+  if (!ing || !ing.lots) return null;
+  var total = 0, any = false;
+  ing.lots.forEach(function (l) {
+    if (l.referenceOnly) return;
+    var qty  = l.qtyPurchased || l.stock || '';
+    var unit = l.qtyUnit      || l.stockUnit || 'g';
+    if (qty) { total += qtyToGrams(qty, unit, ing.density); any = true; }
+  });
+  return any ? total : null;
+}
+
 function stockState(ing, needG) {
   var have = stockG(ing);
-  var need = parseFloat(needG);
-  if (isNaN(need) || need <= 0) return have > 0 ? 'enough' : 'none';
-  if (have <= 0)   return 'none';
-  if (have >= need) return 'enough';
+  if (have <= 0) return 'none';
+  if (!needG || needG <= 0) return 'enough';
+  // Tiny tolerance so a line needing exactly the stock on hand reads as
+  // "enough" rather than "partial" from float fuzz.
+  if (have + 0.001 >= needG) return 'enough';
   return 'partial';
 }
 
@@ -498,7 +525,8 @@ function renderStorage() {
     html += '<span>Settings</span><span>' + fmtBytes(r.settings) + '</span></div>';
   }
   html += '<div style="font-size:11px;color:var(--ink-lighter);line-height:1.5;margin-top:10px">';
-  html += 'All Plume modules share one browser storage budget of about 5MB, which browsers do not allow to be raised.</div>';
+  html += 'All Plume modules share one browser storage budget of about 5MB, which browsers do not allow to be raised.<br>' +
+          '<span style="opacity:0.75">plume-core.js v' + VERSION + ' &middot; storage: ' + Store.driverName() + '</span></div>';
   if (r.rows.length) {
     html += '<button class="plume-link-btn" onclick="Plume.toggleStorDrill()">What is using the room?</button>';
     html += '<div id="stor-drill"></div>';
@@ -630,10 +658,12 @@ function boot(cb) {
 }
 
 return {
+  VERSION: VERSION,
   Store: Store, KEYS: KEYS, KEY_LABELS: KEY_LABELS,
   esc: esc, openModal: openModal, closeModal: closeModal,
   todayISO: todayISO, parseLocalDate: parseLocalDate, fmtDate: fmtDate, fmtBytes: fmtBytes,
-  costPerG: costPerG, qtyToGrams: qtyToGrams, stockG: stockG, stockState: stockState,
+  costPerG: costPerG, qtyToGrams: qtyToGrams, stockG: stockG,
+  stockGOrNull: stockGOrNull, stockState: stockState,
   PALETTES: PALETTES, setModule: setModule, applyPalette: applyPalette,
   selectPalette: selectPalette, renderPaletteSwatches: renderPaletteSwatches,
   loadPaletteChoice: loadPaletteChoice, savePaletteChoice: savePaletteChoice,
@@ -666,7 +696,7 @@ function bestCpg(ing)           { return Plume.costPerG(ing); }
 function ingCostPerG(ing)       { return Plume.costPerG(ing); }
 function lotQtyToG(q, u, d)     { return Plume.qtyToGrams(q, u, d); }
 function lotQtyToGrams(q, u, d) { return Plume.qtyToGrams(q, u, d); }
-function calcIngStockG(ing)     { return Plume.stockG(ing); }
+function calcIngStockG(ing)     { return Plume.stockGOrNull(ing); }
 function stockG(ing)            { return Plume.stockG(ing); }
 function stockState(ing, need)  { return Plume.stockState(ing, need); }
 function fmtKB(b)               { return Plume.fmtBytes(b); }
