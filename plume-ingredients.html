@@ -1085,8 +1085,22 @@
     <div style="display:flex; align-items:center; gap:14px; margin:0 0 1rem">
       <div style="font-family:'Cormorant Garamond',serif; font-size:22px; font-weight:300; color:var(--bark-dark)">Ingredients</div>
       <button class="btn btn-primary btn-sm" onclick="openAdd()">+ New ingredient</button>
+      <div class="view-toggle">
+        <button id="vt-list" class="on" onclick="setIngView('list')">List</button>
+        <button id="vt-cheat" onclick="setIngView('cheat')">Cheat sheet</button>
+      </div>
     </div>
 
+    <div id="cheat-mode" style="display:none">
+      <div class="cs-top">
+        <input class="search-input cs-search" type="text" id="cs-search" placeholder="Search a function, or what it's for — e.g. thickener, serum" oninput="PlumeCheat.setQuery(this.value)">
+        <button class="btn btn-sm" onclick="PlumeCheat.print(ingredients)" title="Print what's on screen, one group per page">Print</button>
+      </div>
+      <div class="cs-chips" id="cs-chips"></div>
+      <div id="cs-body"></div>
+    </div>
+
+    <div id="list-mode">
     <div class="toolbar">
       <div class="toolbar-left">
         <input class="search-input" type="text" id="search" placeholder="Search name, INCI, function, purpose, or supplier…" oninput="renderTable()">
@@ -1120,7 +1134,7 @@
             <th style="width:24%">Common name</th>
             <th style="width:24%">INCI name</th>
             <th style="width:9%">Phase</th>
-            <th style="width:18%">Primary function</th>
+            <th style="width:18%">Functions</th>
             <th style="width:9%">Price/g</th>
             <th style="width:9%">Stock</th>
           </tr>
@@ -1130,6 +1144,7 @@
         </tbody>
       </table>
     </div>
+    </div><!-- /list-mode -->
   </div>
 
   <!-- Detail view -->
@@ -1208,6 +1223,10 @@
       <div class="field form-full">
         <label>Functions <span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:10px">— pick every one that applies</span></label>
         <div class="fcat-grid" id="f-function-cats"></div>
+      </div>
+      <div class="field form-full">
+        <label>Choose it when… <span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:10px">— what sets it apart from similar ingredients</span></label>
+        <input type="text" id="f-choose" maxlength="160" placeholder="e.g. the formula has niacinamide, salt or acids — it holds its thickness">
       </div>
       <div class="field">
         <label>Function notes <span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:10px">— descriptive depth</span></label>
@@ -1472,6 +1491,7 @@
 </div>
 
 <script src="plume-core.js"></script>
+<script src="plume-cheatsheet.js"></script>
 <script>
 // ── Data & state ──────────────────────────────────────
 // ── Storage keys ─────────────────────────────────────
@@ -2086,9 +2106,25 @@ function renderTable() {
 }
 
 // ── Views ─────────────────────────────────────────────
+// ── List / Cheat sheet toggle ─────────────────────────
+// The cheat sheet (plume-cheatsheet.js) is a second way of looking at the
+// same library. The choice is remembered so returning from an ingredient,
+// or reloading, lands where she was.
+var ingView = 'list';
+function setIngView(v) {
+  ingView = (v === 'cheat' && typeof PlumeCheat !== 'undefined') ? 'cheat' : 'list';
+  document.getElementById('list-mode').style.display  = ingView === 'list'  ? '' : 'none';
+  document.getElementById('cheat-mode').style.display = ingView === 'cheat' ? '' : 'none';
+  document.getElementById('vt-list').classList.toggle('on',  ingView === 'list');
+  document.getElementById('vt-cheat').classList.toggle('on', ingView === 'cheat');
+  Store.set('plume_ing_view', ingView);
+  if (ingView === 'cheat') PlumeCheat.render(ingredients);
+}
+
 function showList() {
   document.getElementById('list-view').style.display  = 'block';
   document.getElementById('detail-view').style.display = 'none';
+  if (ingView === 'cheat') PlumeCheat.render(ingredients);
   // Note: search and filters are intentionally preserved on Back so a user
   // can peek at an ingredient and return to the same filtered view. Filters
   // can be cleared manually via the search input and dropdowns. (Previously
@@ -2152,6 +2188,7 @@ function viewIngredient(id) {
       (headerBrand ? '<div style="font-size:12px;color:var(--bark-light);margin-top:2px;letter-spacing:0.06em;text-transform:uppercase">' + headerBrand + '</div>' : '') +
       '<div class="detail-ing-inci">' + i.inci + '</div>' +
       (i.purpose ? '<div class="detail-purpose">' + esc(i.purpose) + '</div>' : '') +
+      (i.chooseWhen ? '<div style="font-size:12px;color:var(--ink-light);margin-top:6px"><b style="font-weight:500;color:var(--bark-dark)">Choose it when</b> ' + esc(i.chooseWhen) + '</div>' : '') +
     '</div>' +
     '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">' +
       '<span class="phase-badge ' + phaseClass(i.phase) + '">' + i.phase + '</span>' +
@@ -2389,6 +2426,7 @@ function openAdd() {
    'f-colour','f-scent','f-optimal-ph','f-dermal-limits','f-substitution','f-restrictions','f-general-info'
   ].forEach(function(id) { document.getElementById(id).value = ''; });
   document.getElementById('f-purpose').value = '';
+  document.getElementById('f-choose').value  = '';
   renderFuncChips([]);
   // Reset props section to collapsed for a fresh entry
   propsSectionOpen = false;
@@ -2421,6 +2459,7 @@ function editCurrent() {
   document.getElementById('f-min').value      = i.min      || '';
   document.getElementById('f-max').value      = i.max      || '';
   document.getElementById('f-purpose').value = i.purpose || '';
+  document.getElementById('f-choose').value  = i.chooseWhen || '';
   renderFuncChips(Plume.funcCats(i));
   document.getElementById('f-function-notes').value    = i.function  || '';
   document.getElementById('f-function2').value         = i.function2 || '';
@@ -2474,6 +2513,7 @@ function saveIngredient(keepOpen) {
     max:      document.getElementById('f-max').value,
     functionCategory: readFuncChips(),
     purpose:   document.getElementById('f-purpose').value.trim(),
+    chooseWhen: document.getElementById('f-choose').value.trim(),
     function:  document.getElementById('f-function-notes').value.trim(),
     function2: document.getElementById('f-function2').value.trim(),
     absorptionRate:     document.getElementById('f-absorption-rate').value.trim(),
@@ -3232,7 +3272,7 @@ document.querySelectorAll('.modal-overlay').forEach(function(el) {
 // equal.
 var _editFormSnapshot = null;
 var EDIT_FIELD_IDS = ['f-name','f-inci','f-phase','f-flag','f-min','f-max',
-  'f-purpose','f-function-notes','f-function2','f-notes',
+  'f-purpose','f-choose','f-function-notes','f-function2','f-notes',
   'f-density','f-lowstock','f-lowstock-unit',
   'f-absorption-rate','f-heat-stability','f-melting-point','f-oxidation-stability',
   'f-colour','f-scent','f-optimal-ph','f-dermal-limits','f-substitution',
@@ -3626,6 +3666,7 @@ if (typeof Plume === 'undefined') {
   Plume.boot(function () {
     fillFunctionFilter();
     loadData();
+    if (Store.get('plume_ing_view') === 'cheat') setIngView('cheat');
   });
 }
 </script>

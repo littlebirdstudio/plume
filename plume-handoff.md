@@ -1,6 +1,6 @@
 # Plume by Little Bird Studio — Project Handoff
 
-**Last updated:** August 2026 (sessions 6-13)
+**Last updated:** August 2026 (sessions 6-14)
 **Previously known as:** Aerie by Little Bird Studio (renamed to Plume in session 1)
 
 **Business context:** Skincare and soap formulation management system. Currently scoped for personal use by Heide, with active plans to package and sell a version to other small formulators. The market gap is real and now well-characterized — see "Sellable-version strategy" near the end of this document. Little Bird Studio also has pottery and sewing arms; Plume is its cosmetic/skincare branch.
@@ -1068,18 +1068,122 @@ unsaved — the sheet should match the screen); Batchlog passes the stored
 formula and the popup's yield. Batchlog computes the active variant's label
 itself rather than relying on a mirrored field.
 
+**Product types centralised (core v1.5).** `fillTypeSelect` deliberately keeps
+an unrecognised stored type as an extra option instead of snapping the field to
+blank. Because `f.type` is stored as the display string, a select that silently
+rebuilt itself would drop the type off any formulation carrying an older value
+— quiet data loss on open. Tested with a `Beard tonic` fixture.
+
 **Test-design fix:** seven tests hardcoded `'1.3'`, so bumping core to 1.4 turned
 nine assertions red for no reason. The harness now reads the version out of
 `plume-core.js`. A version bump is a normal event and should not need a test edit.
 
-### Immediate — session 14 carry-over
-- **Ingredient cheat sheet** — designed but not built. Full spec below under
-  "Spec: ingredient cheat sheet". Start at build steps 1 and 4; they are small,
-  independently useful, and unblock the rest.
-- **Add `Balm` to the product-type list** (only `Lip balm` exists today). Ask
-  which other types she wants before editing — and read the constraints in the
-  spec first: adding is safe, renaming orphans formulations, and the two soap
-  strings are load-bearing.
+### Session 14 — Cheat sheet build steps 2-4 (the "quick win")
+
+After a long break. Confirmed at the start that the project files and the live
+site were already current (core v1.5), so nothing was half-uploaded.
+
+1. **`functionCategory` is now an array.** Every reader goes through
+   `Plume.funcCats(ing)`, which accepts the old bare string, an array, or
+   nothing. Existing records are **not** migrated in bulk — each converts the
+   first time it is saved from the editor. The FB import still writes strings;
+   that is fine. The editor's single dropdown became toggle chips
+   ("pick every one that applies"). A word not in the list (an older value, an
+   import) gets its own chip and survives the save rather than being dropped.
+2. **New `purpose` field** — one line, labelled *"What do you reach for this
+   for?"*, placed directly under Common name. Shown under the name in the
+   ingredient table, in the detail header, in the Formulations dropdown and in
+   the ingredient popup. Deliberately **not** in `REFERENCE_FIELDS`: it is her
+   own knowledge, and the reference import must never touch it.
+3. **Search.** `Plume.ingMatchRank(ing, q)`: 0 no match, 1 name/INCI, 2
+   function / function notes / secondary functions / purpose. Formulations
+   sorts band 1 before band 2, alphabetical within each, and shows functions +
+   purpose right in the dropdown row. Ingredients' search uses the same
+   matcher plus supplier. "thickener", "serum" and "solubil" all return things
+   now; before, all three returned nothing.
+4. **`Plume.FUNCTION_CATEGORIES`** in core (v1.6) — the list was hardcoded twice
+   in Ingredients (editor and filter bar). Same drift lesson as phases and
+   product types.
+
+**Caught during the build:** the unsaved-changes guard in Ingredients watched
+the old dropdown by ID. Chips are checkboxes, so it now reads them separately —
+otherwise toggling a function would not count as an edit and a backdrop click
+would discard it silently.
+
+**Not added, her call:** `Stabilizer` / `Gellant` are not in the function list,
+though that is how she describes Sepinov and Sepimax. Adding a word is one line
+in core and free; renaming one strands data.
+
+### Session 14 (cont.) — The comparison chart (cheat sheet step 5)
+
+**The design shifted during the conversation, and the shift matters.** Heide's
+framing: *"an at-a-glance comparison to help me choose between similar
+products… what helps determine why I would formulate with this over that."*
+So the chart is built to show DIFFERENCES, not to display every field.
+
+- **New file `plume-cheatsheet.js`**, loaded by Ingredients after core. Kept out
+  of `plume-ingredients.html` (already ~3,600 lines) on purpose. Shown as a
+  **List / Cheat sheet** toggle in the Ingredients header; the choice is
+  remembered (`plume_ing_view` in Store).
+- **Grouped by function**; a multipurpose ingredient appears in every group it
+  belongs to. Ingredients with no function get a "No function set" group, last.
+- **Fixed columns:** Ingredient · *Choose it when…* (the main column) · Your
+  purpose · On hand · Used in (count of non-archived formulations, active AND
+  inactive variants, names on hover).
+- **Offered columns per group** (`GROUP_COLS`): Use % leads every group, then
+  e.g. Phase/pH/Heat stability for thickeners, emulsifiers, solubilizers,
+  surfactants and actives; Phase/pH/Restrictions for preservatives;
+  Absorption/Shelf life/Melting point for emollients; Dermal limit/Scent for
+  essential oils and fragrance.
+- **Auto-hide:** an offered column is hidden only when EVERY row has a value
+  and they all agree (noted under the table: "Not shown — the same for every
+  one: Phase (Cool-down)"). A column with no data at all is omitted silently.
+  If some rows are blank, the column shows — the tests caught an earlier
+  version that hid it and falsely claimed everyone agreed.
+- **Highlight:** a value that differs from a clear majority (≥2 rows agreeing)
+  is marked. Comparison is case- and whitespace-insensitive.
+- **Search** at the top: a function name ("thick", "preserv") shows those whole
+  groups; anything else ("serum", "niacinamide") cross-lists matching rows,
+  kept in their groups, via `Plume.ingMatchRank`. Plus group chips to narrow.
+- **Rows click through** to the ingredient record; Back returns to the chart.
+- **Print** prints what is on screen, one group per page.
+
+**New field `chooseWhen`** ("Choose it when… — what sets it apart from similar
+ingredients"), in the editor under the function chips. Searchable (core v1.7),
+shown in the detail header, the Formulations popup, and the Formulations
+dropdown when there is no purpose line (purpose wins when both exist).
+
+**The distinction that made this click, from Sepimax Zen:** "why I bought it"
+(purpose — hers, unknowable to anyone else, left blank until she fills it) and
+"what it does better than its neighbours" (chooseWhen — objective, and so the
+one field that CAN be researched and pre-filled). Her Geogard ECT experience
+("choose it when you don't care how terrible something smells" — a failed
+hydrating mist) is the example of why her line stays hers: research would have
+recommended exactly what failed.
+
+**Electrolyte tolerance** — the Sepinov/Sepimax difference — deliberately has no
+column; the chooseWhen line carries it.
+
+### Immediate — session 15 carry-over
+- **Pre-fill `chooseWhen` drafts** (agreed, not started). She exports a backup
+  from Ingredients Settings and uploads it; research each ingredient she owns
+  and draft its line. Needs a draft marker so she can tell drafts from lines
+  she has confirmed — not yet designed. Likely route: the existing reference
+  import (`REFERENCE_FIELDS`, fills blanks only, matches by INCI), with
+  `chooseWhen` added and a separate flag; the file must contain only her own
+  ingredients, since unmatched entries are ADDED as new ingredients. Never
+  touch `purpose`.
+- **Column tuning.** She expects "a few passes" to nail down the per-group
+  columns. `GROUP_COLS` in `plume-cheatsheet.js` is the one place to change.
+- **Cheat sheet step 6** — the product-type view derived from her own
+  formulations. Spec below.
+- ~~Add `Balm` to the product-type list~~ — **done session 13.** `Face balm`
+  added; it was the only gap she wanted. Build step 1 of the cheat-sheet spec
+  came with it: `Plume.PRODUCT_TYPES`, `Plume.isSoapType` and
+  `Plume.fillTypeSelect` now live in core (v1.5), replacing two duplicated
+  `<option>` blocks in Formulations and a third copy of the soap test in
+  Batchlog. **Heide has one existing formulation filed under `Face oil` that
+  she intends to move to `Face balm`** — a manual dropdown change, no migration.
 
 ### Carried from session 12
 - **Two open decisions from the conversion, both cosmetic, both hers to make.**

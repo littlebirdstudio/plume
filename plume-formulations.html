@@ -1860,7 +1860,9 @@ function searchIngs(q) {
     var cats = Plume.funcCats(i);
     var why  = '';
     if (cats.length) why += '<b>' + esc(cats.join(' \u00b7 ')) + '</b>';
-    if (i.purpose)   why += (why ? ' \u2014 ' : '') + esc(i.purpose);
+    // Her purpose line if she has written one; otherwise what sets it apart.
+    var line = i.purpose || i.chooseWhen;
+    if (line)        why += (why ? ' \u2014 ' : '') + esc(line);
     html += '<div style="min-width:0"><div class="dd-name">' + esc(i.name) + '</div><div class="dd-inci">' + esc(i.inci) + '</div>' +
       (why ? '<div class="dd-why">' + why + '</div>' : '') + '</div>';
     html += '<div style="display:flex;align-items:center">';
@@ -2901,7 +2903,10 @@ function showIngDetail(ingId) {
     }).join('') + '</div>';
   }
   if (ing.purpose) {
-    html += '<div style="font-size:13px;color:var(--ink);margin-bottom:1rem;padding-left:10px;border-left:2px solid var(--bark-light)">' + esc(ing.purpose) + '</div>';
+    html += '<div style="font-size:13px;color:var(--ink);margin-bottom:0.6rem;padding-left:10px;border-left:2px solid var(--bark-light)">' + esc(ing.purpose) + '</div>';
+  }
+  if (ing.chooseWhen) {
+    html += '<div style="font-size:12px;color:var(--ink-light);margin-bottom:1rem"><b style="font-weight:500;color:var(--bark-dark)">Choose it when</b> ' + esc(ing.chooseWhen) + '</div>';
   }
   html += '<div class="id-grid">';
   html += '<div class="id-field"><label>Phase</label><p>' + ing.phase + '</p></div>';

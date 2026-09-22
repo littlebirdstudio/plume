@@ -33,7 +33,7 @@ var Plume = (function () {
 // Bump when core changes. Shown in every module's Settings panel, so
 // "is core loaded, and is it the one I just uploaded?" is answerable by
 // looking rather than guessing -- browsers cache .js files stubbornly.
-var VERSION = '1.6';
+var VERSION = '1.7';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -699,7 +699,8 @@ function funcCats(ing) {
 // How well an ingredient matches a search. Returns:
 //   0  no match
 //   1  name or INCI -- what the old search matched, so ranked first
-//   2  function, function notes, secondary functions, or purpose
+//   2  function, function notes, secondary functions, purpose, or the
+//      'Choose it when' line
 // Plain substring matching, deliberately: "serum" and "serums" both hit
 // her purpose line with no tag vocabulary to maintain.
 function ingMatchRank(ing, q) {
@@ -708,7 +709,8 @@ function ingMatchRank(ing, q) {
   if (!q) return 0;
   var has = function (x) { return x && String(x).toLowerCase().indexOf(q) !== -1; };
   if (has(ing.name) || has(ing.inci)) return 1;
-  if (funcCats(ing).some(has) || has(ing.function) || has(ing.function2) || has(ing.purpose)) return 2;
+  if (funcCats(ing).some(has) || has(ing.function) || has(ing.function2) || has(ing.purpose) ||
+      has(ing.chooseWhen)) return 2;
   return 0;
 }
 
