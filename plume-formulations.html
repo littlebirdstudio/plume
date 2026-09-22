@@ -187,7 +187,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);m
 .ing-search:focus{border-color:var(--bark-light)}
 .ing-search::placeholder{color:var(--ink-lighter)}
 .srch-wrap{position:relative;flex:1}
-.ing-dd{position:fixed;background:var(--white);border:1px solid var(--cream-border);border-radius:4px;box-shadow:0 4px 16px rgba(44,37,32,0.12);z-index:1000;max-height:260px;overflow-y:auto;width:380px}
+.ing-dd{position:fixed;background:var(--white);border:1px solid var(--cream-border);border-radius:4px;box-shadow:0 4px 16px rgba(44,37,32,0.12);z-index:1000;max-height:360px;overflow-y:auto;width:420px}
+.dd-why{font-size:11px;color:var(--ink-light);margin-top:2px}
+.dd-why b{font-weight:500;color:var(--bark-dark)}
 .dd-item{padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--cream-dark);display:flex;justify-content:space-between;align-items:center}
 .dd-item:last-child{border-bottom:none}
 .dd-item:hover{background:var(--cream)}
@@ -469,7 +471,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);m
         <div id="phase-groups"></div>
         <div class="add-bar">
           <div class="srch-wrap">
-            <input class="ing-search" id="ing-search" placeholder="Search ingredients to add..." oninput="searchIngs(this.value)" autocomplete="off">
+            <input class="ing-search" id="ing-search" placeholder="Search by name, function, or what it's for..." oninput="searchIngs(this.value)" autocomplete="off">
             <div class="ing-dd" id="ing-dd" style="display:none"></div>
           </div>
           <button class="btn btn-sm" id="addin-btn" onclick="toggleAddin()" title="Add as add-in: drops/grams only, not counted in formula %">Add-in</button>
@@ -1835,10 +1837,17 @@ function searchIngs(q) {
   var dd = document.getElementById('ing-dd');
   if (!q.trim()) { dd.style.display = 'none'; return; }
   var have = new Set(fLines.map(function(l) { return l.ingId; }));
-  var res  = ings.filter(function(i) {
-    return !i.archived && !have.has(i.id) &&
-      (i.name.toLowerCase().indexOf(q.toLowerCase()) >= 0 || i.inci.toLowerCase().indexOf(q.toLowerCase()) >= 0);
-  }).slice(0, 12);
+  // Name and INCI matches first (what this search always did), then
+  // anything matched by function or by her purpose line -- so "thickener"
+  // and "serum" now return something instead of nothing. Alphabetical
+  // within each band so the list does not reshuffle as she types.
+  var res = ings.filter(function(i) {
+    return !i.archived && !have.has(i.id) && Plume.ingMatchRank(i, q) > 0;
+  }).sort(function(a, b) {
+    var ra = Plume.ingMatchRank(a, q), rb = Plume.ingMatchRank(b, q);
+    if (ra !== rb) return ra - rb;
+    return (a.name || '').toLowerCase().localeCompare((b.name || '').toLowerCase());
+  }).slice(0, 15);
   if (!res.length) { dd.style.display = 'none'; return; }
   var html = '';
   res.forEach(function(i) {
@@ -1846,7 +1855,14 @@ function searchIngs(q) {
     var inStock = sg > 0;
     var stockTxt = inStock ? (sg >= 1000 ? (sg / 1000).toFixed(1) + 'kg' : Math.round(sg) + 'g') : '';
     html += '<div class="dd-item' + (inStock ? ' in-stock' : '') + '" onclick="addIng(\'' + i.id + '\')">';
-    html += '<div><div class="dd-name">' + esc(i.name) + '</div><div class="dd-inci">' + esc(i.inci) + '</div></div>';
+    // The reminder she needs at the moment of choosing: what it does and
+    // what she bought it for, in the dropdown, without opening anything.
+    var cats = Plume.funcCats(i);
+    var why  = '';
+    if (cats.length) why += '<b>' + esc(cats.join(' \u00b7 ')) + '</b>';
+    if (i.purpose)   why += (why ? ' \u2014 ' : '') + esc(i.purpose);
+    html += '<div style="min-width:0"><div class="dd-name">' + esc(i.name) + '</div><div class="dd-inci">' + esc(i.inci) + '</div>' +
+      (why ? '<div class="dd-why">' + why + '</div>' : '') + '</div>';
     html += '<div style="display:flex;align-items:center">';
     if (inStock) html += '<span class="dd-stock">' + stockTxt + '</span>';
     html += '<span class="dd-phase">' + i.phase + '</span></div></div>';
@@ -2878,8 +2894,14 @@ function showIngDetail(ingId) {
   var costs = lots.map(function(l) { return parseFloat(l.costPerG); }).filter(function(c) { return !isNaN(c) && c > 0; });
   var bc    = costs.length ? Math.min.apply(null, costs) : null;
   var html  = '<div style="font-size:12px;font-style:italic;color:var(--ink-lighter);margin-bottom:0.5rem">' + esc(ing.inci) + '</div>';
-  if (ing.functionCategory) {
-    html += '<div style="margin-bottom:1rem"><span style="display:inline-block;font-size:11px;background:var(--cream-dark);color:var(--bark-dark);padding:3px 10px;border-radius:20px;font-weight:500">' + esc(ing.functionCategory) + '</span></div>';
+  var cats = Plume.funcCats(ing);
+  if (cats.length) {
+    html += '<div style="margin-bottom:0.6rem;display:flex;flex-wrap:wrap;gap:5px">' + cats.map(function(c) {
+      return '<span style="display:inline-block;font-size:11px;background:var(--cream-dark);color:var(--bark-dark);padding:3px 10px;border-radius:20px;font-weight:500">' + esc(c) + '</span>';
+    }).join('') + '</div>';
+  }
+  if (ing.purpose) {
+    html += '<div style="font-size:13px;color:var(--ink);margin-bottom:1rem;padding-left:10px;border-left:2px solid var(--bark-light)">' + esc(ing.purpose) + '</div>';
   }
   html += '<div class="id-grid">';
   html += '<div class="id-field"><label>Phase</label><p>' + ing.phase + '</p></div>';
