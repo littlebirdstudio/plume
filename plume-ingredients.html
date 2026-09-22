@@ -268,6 +268,19 @@
   tbody tr:last-child td { border-bottom: none; }
   .td-name { font-weight: 500; color: var(--bark-dark); }
   .td-inci { font-style: italic; color: var(--ink-light); font-size: 12px; }
+  /* Purpose line: her own words about why she bought it. Shown under the
+     name so "what is THIS again?" is answered without opening the record. */
+  .td-purpose { font-weight: 400; font-size: 12px; color: var(--ink-light); margin-top: 2px; }
+  .detail-purpose { font-size: 13px; color: var(--ink); margin-top: 8px; padding-left: 10px;
+    border-left: 2px solid var(--bark-light); max-width: 520px; }
+  .fcat-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+  .fcat-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12px;
+    padding: 4px 10px; border: 1px solid var(--cream-border); border-radius: 20px;
+    cursor: pointer; user-select: none; color: var(--ink-light); background: var(--white);
+    text-transform: none; letter-spacing: 0; font-weight: 400; margin: 0; }
+  .fcat-chip input { display: none; }
+  .fcat-chip.on { background: var(--cream-dark); border-color: var(--bark-light);
+    color: var(--bark-dark); font-weight: 500; }
 
   /* ── Phase badges ── */
   .phase-badge {
@@ -1076,24 +1089,8 @@
 
     <div class="toolbar">
       <div class="toolbar-left">
-        <input class="search-input" type="text" id="search" placeholder="Search by name, INCI, or supplier…" oninput="renderTable()">
-        <select class="filter" id="f-function-filter" onchange="renderTable()">
-          <option value="">All functions</option>
-          <option value="Emollient">Emollient</option>
-          <option value="Humectant">Humectant</option>
-          <option value="Emulsifier">Emulsifier</option>
-          <option value="Preservative">Preservative</option>
-          <option value="Active">Active</option>
-          <option value="pH Adjuster">pH Adjuster</option>
-          <option value="Thickener">Thickener</option>
-          <option value="Solubilizer">Solubilizer</option>
-          <option value="Surfactant">Surfactant</option>
-          <option value="Exfoliant">Exfoliant</option>
-          <option value="Essential oil">Essential oil</option>
-          <option value="Fragrance">Fragrance</option>
-          <option value="Colorant">Colorant</option>
-          <option value="Other">Other</option>
-        </select>
+        <input class="search-input" type="text" id="search" placeholder="Search name, INCI, function, purpose, or supplier…" oninput="renderTable()">
+        <select class="filter" id="f-function-filter" onchange="renderTable()"><option value="">All functions</option></select>
         <select class="filter" id="filter-phase" onchange="renderTable()">
           <option value="">All phases</option>
           <option value="water">Water</option>
@@ -1176,6 +1173,10 @@
         <label>Common name *</label>
         <input type="text" id="f-name" placeholder="e.g. Rosehip seed oil">
       </div>
+      <div class="field form-full">
+        <label>What do you reach for this for? <span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:10px">— one line, your own words</span></label>
+        <input type="text" id="f-purpose" maxlength="160" placeholder="e.g. Serums — lightweight, cold process, plays well with actives">
+      </div>
       <div class="field">
         <label>INCI name *</label>
         <input type="text" id="f-inci" placeholder="e.g. Rosa Canina Seed Oil">
@@ -1204,25 +1205,9 @@
         <label>Max usage %</label>
         <input type="number" id="f-max" placeholder="100" step="0.01" min="0">
       </div>
-      <div class="field">
-        <label>Primary function</label>
-        <select id="f-function-category">
-          <option value="">— select —</option>
-          <option value="Emollient">Emollient</option>
-          <option value="Humectant">Humectant</option>
-          <option value="Emulsifier">Emulsifier</option>
-          <option value="Preservative">Preservative</option>
-          <option value="Active">Active</option>
-          <option value="pH Adjuster">pH Adjuster</option>
-          <option value="Thickener">Thickener</option>
-          <option value="Solubilizer">Solubilizer</option>
-          <option value="Surfactant">Surfactant</option>
-          <option value="Exfoliant">Exfoliant</option>
-          <option value="Essential oil">Essential oil</option>
-          <option value="Fragrance">Fragrance</option>
-          <option value="Colorant">Colorant</option>
-          <option value="Other">Other</option>
-        </select>
+      <div class="field form-full">
+        <label>Functions <span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:10px">— pick every one that applies</span></label>
+        <div class="fcat-grid" id="f-function-cats"></div>
       </div>
       <div class="field">
         <label>Function notes <span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:10px">— descriptive depth</span></label>
@@ -2058,10 +2043,12 @@ function renderTable() {
     if (i.archived) return false;
     var lots     = migrateLots(i);
     var suppText = lots.map(function(l) { return l.supplier || ''; }).join(' ').toLowerCase();
-    if (q && !i.name.toLowerCase().includes(q) && !i.inci.toLowerCase().includes(q) && !suppText.includes(q)) return false;
+    // Matches name, INCI, every function, the function notes and her purpose
+    // line (Plume.ingMatchRank), plus supplier, which only this screen has.
+    if (q && !Plume.ingMatchRank(i, q) && !suppText.includes(q)) return false;
     if (phase && i.phase !== phase) return false;
     if (flag === 'yes' && i.flag !== 'yes') return false;
-    if (func && i.functionCategory !== func) return false;
+    if (func && Plume.funcCats(i).indexOf(func) === -1) return false;
     if (lowStockActive && !isLowStock(i)) return false;
     if (inStockActive && !hasStock(i)) return false;
     return true;
@@ -2087,10 +2074,11 @@ function renderTable() {
     var inStock = hasStock(i);
     var stockHtml = formatStockDisplay(i);
     return '<tr class="' + (inStock ? 'has-stock' : '') + '" onclick="viewIngredient(\'' + i.id + '\')">' +
-      '<td class="td-name">' + i.name + (warn ? '<span class="expiry-warn" title="Expiring soon"> &#9888;</span>' : '') + (low ? '<span style="color:var(--warning);font-size:10px;margin-left:4px" title="Low stock">\u25bc</span>' : '') + '</td>' +
+      '<td class="td-name">' + i.name + (warn ? '<span class="expiry-warn" title="Expiring soon"> &#9888;</span>' : '') + (low ? '<span style="color:var(--warning);font-size:10px;margin-left:4px" title="Low stock">\u25bc</span>' : '') +
+        (i.purpose ? '<div class="td-purpose">' + esc(i.purpose) + '</div>' : '') + '</td>' +
       '<td class="td-inci">' + i.inci + '</td>' +
       '<td><span class="phase-badge ' + phaseClass(i.phase) + '">' + i.phase + '</span></td>' +
-      '<td style="color:var(--ink-light)">' + (i.functionCategory || '\u2014') + '</td>' +
+      '<td style="color:var(--ink-light)">' + (Plume.funcCats(i).join(', ') || '\u2014') + '</td>' +
       '<td style="font-variant-numeric:tabular-nums">' + (cost !== null ? '$' + cost.toFixed(4) : '\u2014') + '</td>' +
       '<td style="font-size:12px;color:' + (low ? 'var(--warning)' : 'var(--ink-light)') + '">' + stockHtml + '</td>' +
       '</tr>';
@@ -2163,10 +2151,13 @@ function viewIngredient(id) {
       '<div class="detail-ing-name">' + i.name + '</div>' +
       (headerBrand ? '<div style="font-size:12px;color:var(--bark-light);margin-top:2px;letter-spacing:0.06em;text-transform:uppercase">' + headerBrand + '</div>' : '') +
       '<div class="detail-ing-inci">' + i.inci + '</div>' +
+      (i.purpose ? '<div class="detail-purpose">' + esc(i.purpose) + '</div>' : '') +
     '</div>' +
     '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">' +
       '<span class="phase-badge ' + phaseClass(i.phase) + '">' + i.phase + '</span>' +
-      (i.functionCategory ? '<span class="phase-badge" style="background:var(--cream-dark);color:var(--bark-dark)">' + i.functionCategory + '</span>' : '') +
+      Plume.funcCats(i).map(function (c) {
+        return '<span class="phase-badge" style="background:var(--cream-dark);color:var(--bark-dark)">' + esc(c) + '</span>';
+      }).join('') +
       (i.flag === 'yes' ? '<span style="font-size:11px;background:var(--warning-bg);color:var(--warning);padding:3px 10px;border-radius:20px;font-weight:500">Restricted use</span>' : '') +
     '</div>';
 
@@ -2355,6 +2346,40 @@ function toggleGeneralInfo() {
   toggle.textContent = open ? '\u25b8' : '\u25be';
 }
 
+// ── Function chips ────────────────────────────────────
+// functionCategory is an array now (see Plume.funcCats). Each chip is a
+// hidden checkbox inside a label, so a click anywhere on the pill toggles it.
+function renderFuncChips(selected) {
+  var el = document.getElementById('f-function-cats');
+  if (!el) return;
+  var list = Plume.FUNCTION_CATEGORIES.slice();
+  // A value the list does not know (an older word, or an import) is kept as
+  // an extra chip rather than silently dropped on the next save.
+  (selected || []).forEach(function (c) { if (list.indexOf(c) === -1) list.push(c); });
+  el.innerHTML = list.map(function (c) {
+    var on = (selected || []).indexOf(c) !== -1;
+    return '<label class="fcat-chip' + (on ? ' on' : '') + '">' +
+      '<input type="checkbox" value="' + esc(c) + '"' + (on ? ' checked' : '') +
+      ' onchange="this.parentNode.classList.toggle(\'on\', this.checked)">' + esc(c) + '</label>';
+  }).join('');
+}
+function readFuncChips() {
+  var boxes = document.querySelectorAll('#f-function-cats input:checked');
+  var out = [];
+  for (var k = 0; k < boxes.length; k++) out.push(boxes[k].value);
+  return out;
+}
+function fillFunctionFilter() {
+  var el = document.getElementById('f-function-filter');
+  if (!el) return;
+  var cur = el.value;
+  el.innerHTML = '<option value="">All functions</option>' +
+    Plume.FUNCTION_CATEGORIES.map(function (c) {
+      return '<option value="' + esc(c) + '">' + esc(c) + '</option>';
+    }).join('');
+  el.value = cur;
+}
+
 // ── Add / Edit modal ──────────────────────────────────
 function openAdd() {
   editingId = null;
@@ -2363,7 +2388,8 @@ function openAdd() {
    'f-absorption-rate','f-heat-stability','f-melting-point','f-oxidation-stability',
    'f-colour','f-scent','f-optimal-ph','f-dermal-limits','f-substitution','f-restrictions','f-general-info'
   ].forEach(function(id) { document.getElementById(id).value = ''; });
-  document.getElementById('f-function-category').value = '';
+  document.getElementById('f-purpose').value = '';
+  renderFuncChips([]);
   // Reset props section to collapsed for a fresh entry
   propsSectionOpen = false;
   document.getElementById('props-fields').style.display = 'none';
@@ -2394,7 +2420,8 @@ function editCurrent() {
   document.getElementById('f-flag').value     = i.flag     || 'no';
   document.getElementById('f-min').value      = i.min      || '';
   document.getElementById('f-max').value      = i.max      || '';
-  document.getElementById('f-function-category').value = i.functionCategory || '';
+  document.getElementById('f-purpose').value = i.purpose || '';
+  renderFuncChips(Plume.funcCats(i));
   document.getElementById('f-function-notes').value    = i.function  || '';
   document.getElementById('f-function2').value         = i.function2 || '';
   // Properties & characteristics fields
@@ -2445,7 +2472,8 @@ function saveIngredient(keepOpen) {
     flag:     document.getElementById('f-flag').value,
     min:      document.getElementById('f-min').value,
     max:      document.getElementById('f-max').value,
-    functionCategory: document.getElementById('f-function-category').value,
+    functionCategory: readFuncChips(),
+    purpose:   document.getElementById('f-purpose').value.trim(),
     function:  document.getElementById('f-function-notes').value.trim(),
     function2: document.getElementById('f-function2').value.trim(),
     absorptionRate:     document.getElementById('f-absorption-rate').value.trim(),
@@ -3204,7 +3232,7 @@ document.querySelectorAll('.modal-overlay').forEach(function(el) {
 // equal.
 var _editFormSnapshot = null;
 var EDIT_FIELD_IDS = ['f-name','f-inci','f-phase','f-flag','f-min','f-max',
-  'f-function-category','f-function-notes','f-function2','f-notes',
+  'f-purpose','f-function-notes','f-function2','f-notes',
   'f-density','f-lowstock','f-lowstock-unit',
   'f-absorption-rate','f-heat-stability','f-melting-point','f-oxidation-stability',
   'f-colour','f-scent','f-optimal-ph','f-dermal-limits','f-substitution',
@@ -3223,6 +3251,10 @@ function serializeEditForm() {
     var el = document.getElementById(id);
     parts.push(el ? (el.value || '') : '');
   });
+  // Function chips are checkboxes, not a single value, so they are read
+  // separately -- otherwise toggling a function would not count as an edit
+  // and a backdrop click would discard it without asking.
+  parts.push(readFuncChips().join('|'));
   // Lots — read from the DOM rows; this picks up any in-flight edits.
   try {
     var lots = getLots();
@@ -3592,6 +3624,7 @@ if (typeof Plume === 'undefined') {
 } else {
   Plume.setModule('ingredients');
   Plume.boot(function () {
+    fillFunctionFilter();
     loadData();
   });
 }
