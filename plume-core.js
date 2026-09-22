@@ -33,7 +33,7 @@ var Plume = (function () {
 // Bump when core changes. Shown in every module's Settings panel, so
 // "is core loaded, and is it the one I just uploaded?" is answerable by
 // looking rather than guessing -- browsers cache .js files stubbornly.
-var VERSION = '1.5';
+var VERSION = '1.6';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -672,6 +672,47 @@ function boot(cb) {
   });
 }
 
+// ══ Ingredient functions & lookup ═════════════════════
+// The function vocabulary, once. It was hardcoded twice in
+// plume-ingredients.html (the editor and the filter bar) and the cheat
+// sheet will need it a third time -- same drift risk as the phase and
+// product-type lists. Adding an entry is free; renaming one strands every
+// ingredient that carries the old word.
+var FUNCTION_CATEGORIES = [
+  'Emollient', 'Humectant', 'Emulsifier', 'Preservative', 'Active',
+  'pH Adjuster', 'Thickener', 'Solubilizer', 'Surfactant', 'Exfoliant',
+  'Essential oil', 'Fragrance', 'Colorant', 'Other'
+];
+
+// functionCategory used to be ONE value, so a genuinely multipurpose
+// ingredient (Sepinov: thickener AND emulsifier) vanished from every list
+// but the one picked. It is now an array. Old records still hold a bare
+// string, and the Formula Botanica import writes strings too, so every
+// reader goes through this instead of touching the field directly.
+function funcCats(ing) {
+  var v = ing && ing.functionCategory;
+  if (Array.isArray(v)) return v.filter(function (x) { return x && String(x).trim(); });
+  if (v && String(v).trim()) return [String(v).trim()];
+  return [];
+}
+
+// How well an ingredient matches a search. Returns:
+//   0  no match
+//   1  name or INCI -- what the old search matched, so ranked first
+//   2  function, function notes, secondary functions, or purpose
+// Plain substring matching, deliberately: "serum" and "serums" both hit
+// her purpose line with no tag vocabulary to maintain.
+function ingMatchRank(ing, q) {
+  if (!ing) return 0;
+  q = String(q || '').toLowerCase().trim();
+  if (!q) return 0;
+  var has = function (x) { return x && String(x).toLowerCase().indexOf(q) !== -1; };
+  if (has(ing.name) || has(ing.inci)) return 1;
+  if (funcCats(ing).some(has) || has(ing.function) || has(ing.function2) || has(ing.purpose)) return 2;
+  return 0;
+}
+
+
 // ══ Product types ═════════════════════════════════════
 // One list. It was duplicated across two <select> blocks in
 // plume-formulations.html, and the soap test was written out a third time
@@ -1012,6 +1053,7 @@ return {
   toggleStorDrill: toggleStorDrill, renderStorBanner: renderStorBanner,
   dismissStorBanner: dismissStorBanner,
   noteSaveFailed: noteSaveFailed, noteSaveOk: noteSaveOk,
+  FUNCTION_CATEGORIES: FUNCTION_CATEGORIES, funcCats: funcCats, ingMatchRank: ingMatchRank,
   PRODUCT_TYPES: PRODUCT_TYPES, isSoapType: isSoapType, fillTypeSelect: fillTypeSelect,
   buildSheet: buildSheet, openSheet: openSheet,
   boot: boot
