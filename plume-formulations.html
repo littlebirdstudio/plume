@@ -1861,7 +1861,9 @@ function searchIngs(q) {
     var why  = '';
     if (cats.length) why += '<b>' + esc(cats.join(' \u00b7 ')) + '</b>';
     // Her purpose line if she has written one; otherwise what sets it apart.
-    var line = i.purpose || i.chooseWhen;
+    // A multi-line reminder note becomes one line here, items joined by a dot.
+    var line = (i.purpose || i.chooseWhen || '').replace(/\s*\n+\s*/g, ' \u00b7 ');
+    if (line && line.length > 90) line = line.slice(0, 87) + '\u2026';
     if (line)        why += (why ? ' \u2014 ' : '') + esc(line);
     html += '<div style="min-width:0"><div class="dd-name">' + esc(i.name) + '</div><div class="dd-inci">' + esc(i.inci) + '</div>' +
       (why ? '<div class="dd-why">' + why + '</div>' : '') + '</div>';
@@ -2903,10 +2905,10 @@ function showIngDetail(ingId) {
     }).join('') + '</div>';
   }
   if (ing.purpose) {
-    html += '<div style="font-size:13px;color:var(--ink);margin-bottom:0.6rem;padding-left:10px;border-left:2px solid var(--bark-light)">' + esc(ing.purpose) + '</div>';
+    html += '<div style="font-size:13px;color:var(--ink);margin-bottom:0.6rem;padding-left:10px;border-left:2px solid var(--bark-light);white-space:pre-wrap">' + esc(ing.purpose) + '</div>';
   }
   if (ing.chooseWhen) {
-    html += '<div style="font-size:12px;color:var(--ink-light);margin-bottom:1rem"><b style="font-weight:500;color:var(--bark-dark)">Choose it when</b> ' + esc(ing.chooseWhen) + '</div>';
+    html += '<div style="font-size:12px;color:var(--ink-light);margin-bottom:1rem"><b style="font-weight:500;color:var(--bark-dark)">The lowdown</b> ' + esc(ing.chooseWhen) + '</div>';
   }
   html += '<div class="id-grid">';
   html += '<div class="id-field"><label>Phase</label><p>' + ing.phase + '</p></div>';
@@ -3020,6 +3022,12 @@ if (typeof Plume === 'undefined') {
   Plume.setModule('formulations');
   Plume.boot(function () {
     loadAll();
+    // Deep link from Ingredients' "Used in" names: #f=<formulation id>
+    if (location.hash.indexOf('#f=') === 0) {
+      var fid = location.hash.slice(3);
+      try { fid = decodeURIComponent(fid); } catch (e) {}
+      if (forms.some(function (x) { return x.id === fid; })) openFormula(fid);
+    }
   });
 }
 </script>

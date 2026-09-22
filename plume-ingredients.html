@@ -270,10 +270,40 @@
   .td-inci { font-style: italic; color: var(--ink-light); font-size: 12px; }
   /* Purpose line: her own words about why she bought it. Shown under the
      name so "what is THIS again?" is answered without opening the record. */
-  .td-purpose { font-weight: 400; font-size: 12px; color: var(--ink-light); margin-top: 2px; }
+  .td-purpose { font-weight: 400; font-size: 12px; color: var(--ink-light); margin-top: 2px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } /* end with …, not a clean chop */
+  /* In the banner (dark background) the function notes read in the header's
+     light text colour, not the page's dark ink. */
+  .detail-card-header .detail-purpose { color: var(--cream); opacity: .9; border-left-color: var(--bark-light); }
   .detail-purpose { font-size: 13px; color: var(--ink); margin-top: 8px; padding-left: 10px;
     border-left: 2px solid var(--bark-light); max-width: 520px; }
   .fcat-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+  /* Quick look: the row that opens in place under an ingredient in the list. */
+  #tbody tr.ql-open td { background: var(--cream-dark); }
+  #tbody tr.ql-row { cursor: default; }
+  #tbody tr.ql-row > td { background: var(--cream); padding: 0; border-top: none;
+    white-space: normal; overflow: visible; text-overflow: clip; } /* undo the list's one-line cells */
+  .ql { display: grid; grid-template-columns: 2fr 1fr; gap: 18px 28px; padding: 14px 18px 16px; }
+  .ql-k { font-size: 10px; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-lighter); margin: 0 0 3px; }
+  .ql-block + .ql-block { margin-top: 12px; }
+  .ql-pills { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 6px; }
+  .ql-pill { font-size: 11px; background: var(--white); border: 1px solid var(--cream-border); color: var(--bark-dark); padding: 2px 9px; border-radius: 20px; }
+  .ql-side { display: grid; grid-template-columns: auto 1fr; gap: 7px 14px; align-content: start; font-size: 13px; }
+  .ql-side .ql-k { margin: 0; align-self: baseline; }
+  .ql-side > div:not(.ql-k) { color: var(--ink); align-self: baseline; }
+  .ql-side .ql-wide { grid-column: 1 / -1; }
+  .ql-actions { grid-column: 1 / -1; display: flex; gap: 14px; justify-content: flex-end; border-top: 1px solid var(--cream-border); padding-top: 10px; }
+  .ql-actions a { font-size: 12px; color: var(--bark-dark); cursor: pointer; text-decoration: none; }
+  .ql-actions a:hover { text-decoration: underline; }
+  /* Click-to-type notes: used in the quick look, the details page and the cheat sheet. */
+  .note-edit { cursor: text; font-size: 13px; color: var(--ink); min-height: 20px; padding: 2px 4px; margin: 0 -4px;
+    border-radius: 4px; border: 1px dashed transparent; white-space: pre-wrap; }
+  .note-edit:hover { border-color: var(--cream-border); background: var(--white); }
+  .note-edit .ph { color: var(--ink-lighter); font-style: italic; }
+  .note-edit textarea { width: 100%; font: inherit; font-size: 13px; color: var(--ink); border: 1px solid var(--bark-light);
+    border-radius: 4px; padding: 5px 7px; background: var(--white); resize: vertical; outline: none; box-sizing: border-box; }
+  .note-saved { font-size: 10px; color: var(--success); margin-left: 6px; }
+  @media (max-width: 700px) { .ql { grid-template-columns: 1fr; } }
   .fcat-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12px;
     padding: 4px 10px; border: 1px solid var(--cream-border); border-radius: 20px;
     cursor: pointer; user-select: none; color: var(--ink-light); background: var(--white);
@@ -359,6 +389,9 @@
   /* ── Form fields ── */
   .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
   .form-full { grid-column: 1 / -1; }
+  .form-row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+  .restrict-toggle { display: flex !important; align-items: center; gap: 8px; cursor: pointer; }
+  .restrict-toggle input { width: auto !important; margin: 0; }
   .field { display: flex; flex-direction: column; gap: 5px; }
   .field label {
     font-size: 10px;
@@ -1037,6 +1070,7 @@
     .lot-detail-card { grid-template-columns: 1fr 1fr 1fr; }
     .lot-row { grid-template-columns: 1fr 1fr 1fr; }
     .form-grid { grid-template-columns: 1fr; }
+    .form-row3 { grid-template-columns: 1fr; }
   }
 
 /* ── Footer ── */
@@ -1184,49 +1218,17 @@
     </div>
 
     <div class="form-grid">
-      <div class="field form-full">
+      <div class="field">
         <label>Common name *</label>
         <input type="text" id="f-name" placeholder="e.g. Rosehip seed oil">
-      </div>
-      <div class="field form-full">
-        <label>What do you reach for this for? <span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:10px">— one line, your own words</span></label>
-        <input type="text" id="f-purpose" maxlength="160" placeholder="e.g. Serums — lightweight, cold process, plays well with actives">
       </div>
       <div class="field">
         <label>INCI name *</label>
         <input type="text" id="f-inci" placeholder="e.g. Rosa Canina Seed Oil">
       </div>
-      <div class="field">
-        <label>Phase</label>
-        <select id="f-phase">
-          <option value="water">Water</option>
-          <option value="oil">Oil</option>
-          <option value="cool-down">Cool-down</option>
-          <option value="add-in">Add-in</option>
-        </select>
-      </div>
-      <div class="field">
-        <label>Restricted use?</label>
-        <select id="f-flag">
-          <option value="no">No</option>
-          <option value="yes">Yes — has limits</option>
-        </select>
-      </div>
-      <div class="field">
-        <label>Min usage %</label>
-        <input type="number" id="f-min" placeholder="0" step="0.01" min="0">
-      </div>
-      <div class="field">
-        <label>Max usage %</label>
-        <input type="number" id="f-max" placeholder="100" step="0.01" min="0">
-      </div>
       <div class="field form-full">
         <label>Functions <span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:10px">— pick every one that applies</span></label>
         <div class="fcat-grid" id="f-function-cats"></div>
-      </div>
-      <div class="field form-full">
-        <label>Choose it when… <span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:10px">— what sets it apart from similar ingredients</span></label>
-        <input type="text" id="f-choose" maxlength="160" placeholder="e.g. the formula has niacinamide, salt or acids — it holds its thickness">
       </div>
       <div class="field">
         <label>Function notes <span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:10px">— descriptive depth</span></label>
@@ -1236,6 +1238,37 @@
         <label>Secondary functions <span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:10px">— optional notes</span></label>
         <input type="text" id="f-function2" placeholder="e.g. also antioxidant, brightening">
       </div>
+      <div class="field form-full">
+        <label>The lowdown <span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:10px">— strengths and catches, compared with similar ingredients</span></label>
+        <input type="text" id="f-choose" maxlength="200" placeholder="e.g. natural-leaning, broad-spectrum — but a strong smell that shows in mists">
+      </div>
+      <div class="field form-full">
+        <label>Substitutes <span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:10px">— what else could do this job</span></label>
+        <input type="text" id="f-substitution" placeholder="e.g. Mango butter">
+      </div>
+      <div class="form-full form-row3">
+        <div class="field">
+          <label>Phase</label>
+          <select id="f-phase">
+            <option value="water">Water</option>
+            <option value="oil">Oil</option>
+            <option value="cool-down">Cool-down</option>
+            <option value="add-in">Add-in</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Min usage %</label>
+          <input type="number" id="f-min" placeholder="0" step="0.01" min="0">
+        </div>
+        <div class="field">
+          <label>Max usage %</label>
+          <input type="number" id="f-max" placeholder="100" step="0.01" min="0">
+        </div>
+      </div>
+      <div class="field form-full">
+        <label>What I had in mind <span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:10px">— a note to future you: why you bought it</span></label>
+        <textarea id="f-purpose" maxlength="300" rows="2" style="min-height:0" placeholder="e.g. a whisper of body in serums — the ones with niacinamide"></textarea>
+      </div>
     </div>
 
     <div class="section-divider" id="props-section-divider" style="cursor:pointer" onclick="togglePropsSection()">
@@ -1244,6 +1277,10 @@
     </div>
     <div id="props-fields" style="display:none">
       <div class="form-grid" style="margin-bottom:14px">
+        <div class="field form-full">
+          <label class="restrict-toggle"><input type="checkbox" id="f-restricted" onchange="syncRestrictField()"> Restricted use <span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:10px">— has usage or safety limits</span></label>
+          <input type="text" id="f-restrictions" style="display:none;margin-top:6px" placeholder="e.g. Max 1% in leave-on; avoid in pregnancy">
+        </div>
         <div class="field">
           <label>Absorption rate</label>
           <input type="text" id="f-absorption-rate" placeholder="e.g. Fast, Medium, Slow">
@@ -1275,14 +1312,6 @@
         <div class="field">
           <label>Dermal limits <span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:10px">— for essential oils</span></label>
           <input type="text" id="f-dermal-limits" placeholder="e.g. 1% leave-on / 5% rinse-off">
-        </div>
-        <div class="field">
-          <label>Substitution</label>
-          <input type="text" id="f-substitution" placeholder="e.g. Mango butter">
-        </div>
-        <div class="field form-full">
-          <label>Restrictions <span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:10px">— regulatory or usage limits</span></label>
-          <input type="text" id="f-restrictions" placeholder="e.g. Max 1% in leave-on; avoid in pregnancy">
         </div>
         <div class="field form-full">
           <label>Expanded ingredient details <span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:10px">— reference / educational content</span></label>
@@ -2093,19 +2122,144 @@ function renderTable() {
     var low  = isLowStock(i);
     var inStock = hasStock(i);
     var stockHtml = formatStockDisplay(i);
-    return '<tr class="' + (inStock ? 'has-stock' : '') + '" onclick="viewIngredient(\'' + i.id + '\')">' +
+    var qlOpen = qlOpenId === i.id;
+    return '<tr data-ing="' + i.id + '" class="' + (inStock ? 'has-stock' : '') + (qlOpen ? ' ql-open' : '') + '" onclick="toggleQuickLook(\'' + i.id + '\')" title="Click for a quick look">' +
       '<td class="td-name">' + i.name + (warn ? '<span class="expiry-warn" title="Expiring soon"> &#9888;</span>' : '') + (low ? '<span style="color:var(--warning);font-size:10px;margin-left:4px" title="Low stock">\u25bc</span>' : '') +
-        (i.purpose ? '<div class="td-purpose">' + esc(i.purpose) + '</div>' : '') + '</td>' +
+        // The line under the name says what the ingredient IS (function
+        // notes). Her reminder note lives in the quick look, one click away.
+        (i.function ? '<div class="td-purpose" title="' + esc(i.function) + '">' + esc(i.function.length > 120 ? i.function.slice(0, 117) + '\u2026' : i.function) + '</div>' : '') + '</td>' +
       '<td class="td-inci">' + i.inci + '</td>' +
       '<td><span class="phase-badge ' + phaseClass(i.phase) + '">' + i.phase + '</span></td>' +
       '<td style="color:var(--ink-light)">' + (Plume.funcCats(i).join(', ') || '\u2014') + '</td>' +
       '<td style="font-variant-numeric:tabular-nums">' + (cost !== null ? '$' + cost.toFixed(4) : '\u2014') + '</td>' +
       '<td style="font-size:12px;color:' + (low ? 'var(--warning)' : 'var(--ink-light)') + '">' + stockHtml + '</td>' +
-      '</tr>';
+      '</tr>' +
+      (qlOpen ? '<tr class="ql-row"><td colspan="6">' + quickLookHtml(i) + '</td></tr>' : '');
   }).join('');
 }
 
 // ── Views ─────────────────────────────────────────────
+// ── Three levels of looking at an ingredient ──────────
+//   1. Quick look  -- click a row in the list; it opens in place with the
+//      essentials, and the two notes can be typed into right there.
+//   2. Full details -- the complete page (viewIngredient), every field shown.
+//   3. Edit        -- the form, for changing things. Nothing else.
+// Heide's complaint that started this: she opened Edit every time she only
+// wanted to LOOK, because the details page hid things.
+var qlOpenId = null;
+var editFromList = false;
+
+function toggleQuickLook(id) {
+  qlOpenId = (qlOpenId === id) ? null : id;
+  renderTable();
+}
+function openDetailsFromList(e, id) { e.stopPropagation(); viewIngredient(id); }
+function openEditFromList(e, id) {
+  e.stopPropagation();
+  viewingId = id; editFromList = true;
+  editCurrent();
+}
+
+function quickLookHtml(i) {
+  var cats = Plume.funcCats(i);
+  var stock = formatStockDisplay(i);
+  var used = (typeof PlumeCheat !== 'undefined' && PlumeCheat.usageMap) ? (PlumeCheat.usageMap()[i.id] || []) : [];
+  var PH = { water: 'Water', oil: 'Oil', 'cool-down': 'Cool-down', 'add-in': 'Add-in' };
+  return '<div class="ql" onclick="event.stopPropagation()">' +
+    '<div>' +
+      '<div class="ql-block">' +
+        (cats.length ? '<div class="ql-pills">' + cats.map(function (c) { return '<span class="ql-pill">' + esc(c) + '</span>'; }).join('') + '</div>' : '') +
+        '<div style="font-size:13px;color:var(--ink-light)">' + (i.function ? esc(i.function) : '<span style="color:var(--ink-lighter)">No function notes</span>') + '</div>' +
+      '</div>' +
+      '<div class="ql-block"><div class="ql-k">The lowdown</div>' + noteEditHtml(i, 'chooseWhen') + '</div>' +
+      (i.substitution ? '<div class="ql-block"><div class="ql-k">Substitutes</div><div style="font-size:13px">' + esc(i.substitution) + '</div></div>' : '') +
+      '<div class="ql-block"><div class="ql-k">What I had in mind</div>' + noteEditHtml(i, 'purpose') + '</div>' +
+    '</div>' +
+    '<div class="ql-side">' +
+      '<div class="ql-k">Use %</div><div>' + (i.min || i.max ? (i.min || '0') + '\u2013' + (i.max || '100') + '%' : '\u2014') + '</div>' +
+      '<div class="ql-k">Phase</div><div>' + esc(PH[i.phase] || i.phase || '\u2014') + '</div>' +
+      '<div class="ql-k">On hand</div><div>' + (stock || '\u2014') + '</div>' +
+      '<div class="ql-k">Used in</div><div>' + (typeof PlumeCheat !== 'undefined' ? PlumeCheat.usedInHtml(used, 4) : '\u2014') + '</div>' +
+      (i.flag === 'yes' ? '<div class="ql-wide" style="color:var(--warning)">Restricted' + (i.restrictions ? ' \u2014 ' + esc(i.restrictions) : '') + '</div>' : '') +
+    '</div>' +
+    '<div class="ql-actions">' +
+      '<a onclick="openDetailsFromList(event,\'' + i.id + '\')">Full details \u2192</a>' +
+      '<a onclick="openEditFromList(event,\'' + i.id + '\')">Edit</a>' +
+    '</div>' +
+  '</div>';
+}
+
+// ── Click-to-type notes ───────────────────────────────
+// The reminder note (purpose) and 'Choose it when' can be typed into
+// wherever they appear -- quick look, details page, cheat sheet -- without
+// opening the form. Click, type, click away to save (Enter also saves;
+// Shift+Enter for a new line; Escape cancels). One record underneath, so a
+// note typed in any of those places shows up in all of them.
+var NOTE_PLACEHOLDERS = {
+  purpose:    'Add a note \u2014 why did you buy this?',
+  chooseWhen: 'Add \u2014 strengths and catches?'
+};
+// compact: the cheat sheet shows a quiet dash for a blank note instead of
+// the full prompt, so a column of empties doesn't drown the comparison.
+function notePlaceholder(field, compact) {
+  return compact ? '<span class="ph cs-blank">\u2014</span>' : '<span class="ph">' + NOTE_PLACEHOLDERS[field] + '</span>';
+}
+function noteEditHtml(i, field, compact) {
+  var v = i[field] || '';
+  var tip = field === 'purpose' ? 'Click to edit \u2014 Enter for a new line, click away to save' : 'Click to edit';
+  return '<div class="note-edit" data-id="' + i.id + '" data-field="' + field + '"' + (compact ? ' data-compact="1"' : '') +
+    ' title="' + tip + '" onclick="startNoteEdit(event,this)">' +
+    (v ? esc(v) : notePlaceholder(field, compact)) + '</div>';
+}
+function startNoteEdit(e, el) {
+  if (e) e.stopPropagation();
+  if (el.querySelector('textarea')) return;
+  var ing = ingredients.find(function (x) { return x.id === el.getAttribute('data-id'); });
+  if (!ing) return;
+  var field = el.getAttribute('data-field');
+  var ta = document.createElement('textarea');
+  ta.rows = field === 'purpose' ? 3 : 2;
+  ta.maxLength = field === 'purpose' ? 300 : 200;
+  ta.value = ing[field] || '';
+  el.innerHTML = ''; el.appendChild(ta);
+  var cancelled = false;
+  ta.onclick = function (ev) { ev.stopPropagation(); };
+  ta.onkeydown = function (ev) {
+    if (ev.key === 'Escape') { cancelled = true; ta.blur(); }
+    // The reminder note is a little notepad: Enter starts a new line so it
+    // can hold a short list, and clicking away saves. Choose it when is a
+    // single line, so Enter saves it.
+    else if (ev.key === 'Enter' && !ev.shiftKey && field !== 'purpose') { ev.preventDefault(); ta.blur(); }
+  };
+  ta.onblur = function () { commitNote(ing, field, ta.value, cancelled); };
+  ta.focus();
+  try { ta.setSelectionRange(ta.value.length, ta.value.length); } catch (err) {}
+}
+function commitNote(ing, field, value, cancelled) {
+  var v = String(value || '').trim();
+  var changed = !cancelled && v !== (ing[field] || '');
+  if (changed) {
+    if (v) ing[field] = v; else delete ing[field];
+    if (!saveData()) { refreshNoteViews(ing); return; }
+  }
+  refreshNoteViews(ing, changed ? field : null);
+}
+// Update every place this ingredient's notes are showing, in place -- no
+// re-render, so an open quick look stays open and nothing jumps.
+function refreshNoteViews(ing, savedField) {
+  var els = document.querySelectorAll('.note-edit[data-id="' + ing.id + '"]');
+  for (var k = 0; k < els.length; k++) {
+    var el = els[k], f = el.getAttribute('data-field');
+    var v = ing[f] || '';
+    el.innerHTML = (v ? esc(v) : notePlaceholder(f, el.getAttribute('data-compact') === '1')) +
+      (f === savedField ? '<span class="note-saved">Saved</span>' : '');
+  }
+  if (savedField) setTimeout(function () {
+    var tags = document.querySelectorAll('.note-edit[data-id="' + ing.id + '"] .note-saved');
+    for (var k = 0; k < tags.length; k++) tags[k].parentNode.removeChild(tags[k]);
+  }, 1500);
+}
+
 // ── List / Cheat sheet toggle ─────────────────────────
 // The cheat sheet (plume-cheatsheet.js) is a second way of looking at the
 // same library. The choice is remembered so returning from an ingredient,
@@ -2187,8 +2341,7 @@ function viewIngredient(id) {
       '<div class="detail-ing-name">' + i.name + '</div>' +
       (headerBrand ? '<div style="font-size:12px;color:var(--bark-light);margin-top:2px;letter-spacing:0.06em;text-transform:uppercase">' + headerBrand + '</div>' : '') +
       '<div class="detail-ing-inci">' + i.inci + '</div>' +
-      (i.purpose ? '<div class="detail-purpose">' + esc(i.purpose) + '</div>' : '') +
-      (i.chooseWhen ? '<div style="font-size:12px;color:var(--ink-light);margin-top:6px"><b style="font-weight:500;color:var(--bark-dark)">Choose it when</b> ' + esc(i.chooseWhen) + '</div>' : '') +
+      (i.function ? '<div class="detail-purpose">' + esc(i.function) + '</div>' : '') +
     '</div>' +
     '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">' +
       '<span class="phase-badge ' + phaseClass(i.phase) + '">' + i.phase + '</span>' +
@@ -2321,16 +2474,15 @@ function viewIngredient(id) {
     { label: 'Scent',               value: i.scent             },
     { label: 'Optimal pH',          value: i.optimalPh         },
     { label: 'Dermal limits',       value: i.dermalLimits      },
-    { label: 'Substitution',        value: i.substitution      },
-    { label: 'Restrictions',        value: i.restrictions      },
+    { label: 'Restricted use',      value: i.flag === 'yes' ? ('Yes' + (i.restrictions ? ' \u2014 ' + i.restrictions : '')) : (i.restrictions ? 'Not flagged \u2014 ' + i.restrictions : 'No') },
     { label: 'Density (g/mL)',      value: i.density ? i.density + ' g/mL' : '' }
-  ].filter(function(f) { return f.value && String(f.value).trim(); });
+  ];
   var propsHtml = '';
   if (propsFields.length) {
     propsHtml = '<div class="detail-section"><div class="detail-section-title">Properties &amp; characteristics</div>' +
       '<div class="detail-grid">' +
       propsFields.map(function(f) {
-        return '<div class="detail-field"><label>' + f.label + '</label><p>' + esc(String(f.value)) + '</p></div>';
+        return '<div class="detail-field"><label>' + f.label + '</label><p>' + (f.value && String(f.value).trim() ? esc(String(f.value)) : '<span style="color:var(--ink-lighter)">\u2014</span>') + '</p></div>';
       }).join('') +
       '</div></div>';
   }
@@ -2351,11 +2503,18 @@ function viewIngredient(id) {
       '</div>';
   }
 
+  // The details page shows EVERY field, empty ones as a quiet dash, so it is
+  // the full picture and Edit only ever means "change something".
   document.getElementById('d-body').innerHTML =
+    '<div class="detail-grid" style="grid-template-columns:1fr 1fr">' +
+      '<div class="detail-field"><label>The lowdown</label>' + noteEditHtml(i, 'chooseWhen') + '</div>' +
+      '<div class="detail-field"><label>Substitutes</label><p>' + (i.substitution ? esc(i.substitution) : '\u2014') + '</p></div>' +
+      '<div class="detail-field" style="grid-column:1 / -1"><label>What I had in mind</label>' + noteEditHtml(i, 'purpose') + '</div>' +
+    '</div>' +
     '<div class="detail-grid">' +
       '<div class="detail-field"><label>Usage rate</label><p>' + (i.min || i.max ? (i.min||'0') + '% \u2013 ' + (i.max||'100') + '%' : '\u2014') + '</p></div>' +
-      '<div class="detail-field"><label>Function notes</label><p>' + (i.function || '\u2014') + '</p></div>' +
-      (i.function2 ? '<div class="detail-field"><label>Secondary functions</label><p>' + i.function2 + '</p></div>' : '') +
+      '<div class="detail-field"><label>Secondary functions</label><p>' + (i.function2 ? esc(i.function2) : '\u2014') + '</p></div>' +
+      '<div class="detail-field"><label>Used in</label><p>' + (typeof PlumeCheat !== 'undefined' ? PlumeCheat.usedInHtml(PlumeCheat.usageMap()[i.id] || [], 8) : '\u2014') + '</p></div>' +
       (function() { var tg = calcTotalStockG(i); var s = tg !== null ? tg.toFixed(0) + 'g' : '\u2014'; var low = isLowStock(i); var unit = i.lowStockUnit || 'g'; var thresh = i.lowStock ? i.lowStock + ' ' + unit : null; return '<div class="detail-field"><label>Total stock</label><p>' + s + (thresh ? ' <span style="font-size:11px;color:' + (low ? 'var(--warning)' : 'var(--success)') + '">' + (low ? '\u25bc low \u2014 threshold ' + thresh : '\u2713 above ' + thresh) + '</span>' : '') + '</p></div>'; })() +
       (function() {
         var allLinks = migrateLinks(i);
@@ -2368,10 +2527,12 @@ function viewIngredient(id) {
       })() +
     '</div>' +
     propsHtml +
-    (i.notes ? '<div class="detail-section"><div class="detail-section-title">My formulating notes</div><div class="notes-box">' + i.notes + '</div></div>' : '') +
-    generalInfoHtml +
+    '<div class="detail-section"><div class="detail-section-title">My formulating notes</div>' +
+      (i.notes ? '<div class="notes-box">' + i.notes + '</div>' : '<p style="font-size:13px;color:var(--ink-lighter)">\u2014</p>') + '</div>' +
+    (generalInfoHtml || '<div class="detail-section"><div class="detail-section-title">Expanded ingredient details</div><p style="font-size:13px;color:var(--ink-lighter)">\u2014</p></div>') +
     soapHtml +
-    '<div class="detail-section"><div class="detail-section-title">Supplier lots</div>' + lotsHtml + '</div>';
+    '<div class="detail-section"><div class="detail-section-title" style="display:flex;align-items:center;gap:12px">Supplier lots' +
+      '<button class="btn btn-sm" style="letter-spacing:0;text-transform:none" onclick="openLotsFromDetails()">Manage lots &rsaquo;</button></div>' + lotsHtml + '</div>';
 }
 
 function toggleGeneralInfo() {
@@ -2381,6 +2542,20 @@ function toggleGeneralInfo() {
   var open = body.style.display !== 'none';
   body.style.display = open ? 'none' : 'block';
   toggle.textContent = open ? '\u25b8' : '\u25be';
+}
+
+// ── Restricted use ────────────────────────────────────
+// One fact, formerly split across two fields: a yes/no flag (which drives
+// the orange dot in Formulations) and a free-text Restrictions line in
+// Properties. Now a checkbox that reveals the text box. The box also stays
+// visible whenever it already holds text, so imported notes (e.g. a nut
+// allergy caution) are never hidden from the editor -- and unchecking never
+// deletes what was written.
+function syncRestrictField() {
+  var cb = document.getElementById('f-restricted');
+  var tx = document.getElementById('f-restrictions');
+  if (!cb || !tx) return;
+  tx.style.display = (cb.checked || tx.value.trim()) ? '' : 'none';
 }
 
 // ── Function chips ────────────────────────────────────
@@ -2439,7 +2614,8 @@ function openAdd() {
   _isfSavedId = null;
   renderBrandDatalist();
   document.getElementById('f-phase').value = 'water';
-  document.getElementById('f-flag').value  = 'no';
+  document.getElementById('f-restricted').checked = false;
+  syncRestrictField();
   document.getElementById('lots-container').innerHTML = '';
   clearSoapFields();
   addLotRow();
@@ -2455,7 +2631,7 @@ function editCurrent() {
   document.getElementById('f-name').value     = i.name;
   document.getElementById('f-inci').value     = i.inci;
   document.getElementById('f-phase').value    = i.phase;
-  document.getElementById('f-flag').value     = i.flag     || 'no';
+  document.getElementById('f-restricted').checked = i.flag === 'yes';
   document.getElementById('f-min').value      = i.min      || '';
   document.getElementById('f-max').value      = i.max      || '';
   document.getElementById('f-purpose').value = i.purpose || '';
@@ -2478,10 +2654,11 @@ function editCurrent() {
   // Auto-expand the section if any of those fields hold a value
   var hasPropsData = !!(i.absorptionRate || i.heatStability || i.meltingPoint
     || i.oxidationStability || i.colour || i.scent || i.optimalPh
-    || i.dermalLimits || i.substitution || i.restrictions || i.generalInfo);
+    || i.dermalLimits || i.restrictions || i.generalInfo || i.flag === 'yes');
   propsSectionOpen = hasPropsData;
   document.getElementById('props-fields').style.display = hasPropsData ? 'block' : 'none';
   document.getElementById('props-toggle-label').textContent = hasPropsData ? 'hide' : 'show';
+  syncRestrictField();
   loadLinks(migrateLinks(i));
   document.getElementById('f-notes').value    = i.notes    || '';
   document.getElementById('f-density').value  = i.density  ? i.density : '';
@@ -2508,7 +2685,7 @@ function saveIngredient(keepOpen) {
     name:     name,
     inci:     inci,
     phase:    document.getElementById('f-phase').value,
-    flag:     document.getElementById('f-flag').value,
+    flag:     document.getElementById('f-restricted').checked ? 'yes' : 'no',
     min:      document.getElementById('f-min').value,
     max:      document.getElementById('f-max').value,
     functionCategory: readFuncChips(),
@@ -2611,10 +2788,11 @@ function saveIngredient(keepOpen) {
       updateLotsSummary();
     }
     snapshotEditFormState();
-    if (viewingId === editingId) viewIngredient(editingId);
+    if (viewingId === editingId && !editFromList) viewIngredient(editingId);
     return;
   }
   closeModal('modal-add');
+  if (editFromList) { editFromList = false; viewingId = null; renderTable(); return; }
   if (editingId && viewingId === editingId) viewIngredient(editingId);
 }
 
@@ -2943,6 +3121,25 @@ function closeLotsDrawer(e) {
   document.getElementById('lots-drawer-overlay').classList.remove('open');
   document.body.style.overflow = '';
   updateLotsSummary();
+  // Opened straight from the details page (no Edit form on screen): closing
+  // the drawer saves the lots and refreshes the page, since there is no form
+  // Save button to press.
+  if (lotsFromDetails) {
+    lotsFromDetails = false;
+    saveIngredient(false);
+  }
+}
+
+// Manage lots from the details page, one level out from Edit. The lot rows
+// live in the edit form, so the form is loaded (not shown) behind the drawer
+// and saved when the drawer closes.
+var lotsFromDetails = false;
+function openLotsFromDetails() {
+  if (!viewingId) return;
+  editCurrent();
+  closeModal('modal-add');
+  lotsFromDetails = true;
+  openLotsDrawer();
 }
 
 function updateLotsSummary() {
@@ -3271,7 +3468,7 @@ document.querySelectorAll('.modal-overlay').forEach(function(el) {
 // are serialized to a stable string so order-equivalent rows compare
 // equal.
 var _editFormSnapshot = null;
-var EDIT_FIELD_IDS = ['f-name','f-inci','f-phase','f-flag','f-min','f-max',
+var EDIT_FIELD_IDS = ['f-name','f-inci','f-phase','f-min','f-max',
   'f-purpose','f-choose','f-function-notes','f-function2','f-notes',
   'f-density','f-lowstock','f-lowstock-unit',
   'f-absorption-rate','f-heat-stability','f-melting-point','f-oxidation-stability',
@@ -3295,6 +3492,8 @@ function serializeEditForm() {
   // separately -- otherwise toggling a function would not count as an edit
   // and a backdrop click would discard it without asking.
   parts.push(readFuncChips().join('|'));
+  var rc = document.getElementById('f-restricted');
+  parts.push(rc && rc.checked ? 'R' : '');
   // Lots — read from the DOM rows; this picks up any in-flight edits.
   try {
     var lots = getLots();
