@@ -33,7 +33,7 @@ var Plume = (function () {
 // Bump when core changes. Shown in every module's Settings panel, so
 // "is core loaded, and is it the one I just uploaded?" is answerable by
 // looking rather than guessing -- browsers cache .js files stubbornly.
-var VERSION = '1.7';
+var VERSION = '1.8';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -1041,8 +1041,63 @@ function openSheet(o) {
 }
 
 
+// ══ INCI label lists ══════════════════════════════════
+// An ingredient's INCI may name a blend. Suppliers write those three ways:
+// comma-separated, "(and)"-separated, or with an ampersand.
+//
+// NOT split on a bare "and", deliberately: too many single INCI names
+// contain the word, and a wrong split puts an invented substance on a
+// label. A blend written that way lists as one entry, which is visibly
+// odd and therefore fixable by editing the ingredient, rather than
+// silently wrong.
+//
+// Parentheses are otherwise left alone, because they usually carry a
+// synonym that belongs with its name: "Butyrospermum Parkii (Shea) Butter".
+function inciSplit(s) {
+  if (!s) return [];
+  return String(s)
+    .replace(/\(\s*and\s*\)/gi, ',')
+    .split(/[,;]|\s&\s/)
+    .map(function (x) { return x.replace(/\s+/g, ' ').trim(); })
+    .filter(function (x) { return x.length > 0; });
+}
+
+// Takes the formula's lines already in label order (highest concentration
+// first) and returns one entry per distinct component:
+//
+//   [{ name: 'Sodium Benzoate', sources: [item, item] }, ...]
+//
+// `sources` is every input item that contributed the component, so a caller
+// can carry the restricted flag or the add-in tag across, and can tell the
+// user which entries were merged.
+//
+// ORDERING CAVEAT, which callers should surface rather than hide: a
+// component present in two blends has a true combined concentration that
+// Plume cannot know, because a blend does not record its internal split.
+// Keeping the first appearance places it at the position of the larger
+// contributor, which is the right neighbourhood but may sit one notch low.
+function inciMerge(items) {
+  var out = [], seen = {};
+  (items || []).forEach(function (it) {
+    inciSplit(it && it.inci).forEach(function (name) {
+      var key = name.toLowerCase();
+      if (seen[key] !== undefined) { out[seen[key]].sources.push(it); return; }
+      seen[key] = out.length;
+      out.push({ name: name, sources: [it] });
+    });
+  });
+  return out;
+}
+
+// The entries that came from more than one ingredient, for the note that
+// tells the user what was merged.
+function inciMerged(entries) {
+  return (entries || []).filter(function (e) { return e.sources.length > 1; });
+}
+
 return {
   VERSION: VERSION,
+  inciSplit: inciSplit, inciMerge: inciMerge, inciMerged: inciMerged,
   Store: Store, KEYS: KEYS, KEY_LABELS: KEY_LABELS,
   esc: esc, openModal: openModal, closeModal: closeModal,
   todayISO: todayISO, parseLocalDate: parseLocalDate, fmtDate: fmtDate, fmtBytes: fmtBytes,
