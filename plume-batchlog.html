@@ -786,7 +786,10 @@ function populateFormulaPicker() {
   // Reset to first option then add formulas
   sel.innerHTML = '<option value="">-- Pick a formula --</option>';
   // Sort formulas by status then name
-  var sorted = forms.slice().sort(function(a,b) {
+  // Archived formulations are not offered for a new batch. Batches already
+  // made from one are untouched -- they hold their own snapshot.
+  var sorted = forms.filter(function(f) { return !f.archived; })
+    .sort(function(a,b) {
     var sa = a.status || 'draft', sb = b.status || 'draft';
     if (sa !== sb) return sa.localeCompare(sb);
     return (a.name||'').localeCompare(b.name||'');

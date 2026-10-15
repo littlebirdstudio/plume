@@ -1962,7 +1962,9 @@ function openNewProduct() {
   document.getElementById('n-name').value = '';
   var sel = document.getElementById('n-formula');
   sel.innerHTML = '<option value="">-- Pick a formula --</option>';
-  forms.slice().sort(function(a, b) { return (a.name || '').localeCompare(b.name || ''); })
+  // Archived formulations are not offered for a new product.
+  forms.filter(function(f) { return !f.archived; })
+    .sort(function(a, b) { return (a.name || '').localeCompare(b.name || ''); })
     .forEach(function(f) {
       sel.innerHTML += '<option value="' + f.id + '">' + esc(f.name || '(unnamed)') + '</option>';
     });
@@ -2013,9 +2015,14 @@ function openProduct(id) {
 
   var fsel = document.getElementById('p-formula');
   fsel.innerHTML = '<option value="">-- Pick a formula --</option>';
-  forms.slice().sort(function(a, b) { return (a.name || '').localeCompare(b.name || ''); })
+  // Archived formulations are hidden EXCEPT the one this product already
+  // uses. Drop that option and the select would fall back to blank, and
+  // saving would quietly unlink the product from its formula.
+  forms.filter(function(f) { return !f.archived || f.id === p.formulaId; })
+    .sort(function(a, b) { return (a.name || '').localeCompare(b.name || ''); })
     .forEach(function(f) {
-      fsel.innerHTML += '<option value="' + f.id + '">' + esc(f.name || '(unnamed)') + '</option>';
+      fsel.innerHTML += '<option value="' + f.id + '">' + esc(f.name || '(unnamed)') +
+        (f.archived ? ' [archived]' : '') + '</option>';
     });
 
   document.getElementById('p-name').value         = p.name || '';
@@ -2255,6 +2262,9 @@ function renderComponents(p) {
   var formOpts = forms.slice().sort(function(a, b) { return (a.name||'').localeCompare(b.name||''); });
   var html = '';
   rows.forEach(function(c, idx) {
+    // Per row, because each component points at its own formulation: hide
+    // archived ones unless this row already uses it.
+    var rowOpts = formOpts.filter(function(f) { return !f.archived || f.id === c.formulaId; });
     var cf  = findForm(c.formulaId);
     var cpg = formulationCostPerG(cf);
     var wt  = parseFloat(c.netWtG) || 0;
@@ -2263,9 +2273,10 @@ function renderComponents(p) {
     html += '<div class="comp-recipe-row">' +
       '<select onchange="onComponentChange(' + idx + ', \'formulaId\', this.value)">' +
         '<option value="">-- Pick formula --</option>' +
-        formOpts.map(function(f) {
+        rowOpts.map(function(f) {
           var sel = f.id === c.formulaId ? ' selected' : '';
-          return '<option value="' + f.id + '"' + sel + '>' + esc(f.name || '(unnamed)') + '</option>';
+          return '<option value="' + f.id + '"' + sel + '>' + esc(f.name || '(unnamed)') +
+            (f.archived ? ' [archived]' : '') + '</option>';
         }).join('') +
       '</select>' +
       '<input type="number" min="0" step="0.1" value="' + (c.netWtG !== '' && c.netWtG != null ? c.netWtG : '') + '" placeholder="g" onchange="onComponentChange(' + idx + ', \'netWtG\', this.value)">' +

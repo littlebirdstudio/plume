@@ -165,6 +165,36 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);m
 .drag-handle{display:inline-block;color:var(--ink-lighter);cursor:grab;user-select:none;padding:0 6px 0 0;font-size:14px;line-height:1;letter-spacing:-2px;vertical-align:middle}
 .drag-handle:hover{color:var(--ink-light)}
 .drag-handle:active{cursor:grabbing}
+/* ── Archived formulation ── */
+.arch-bar{display:flex;justify-content:flex-end;margin-bottom:0.75rem}
+.arch-tag{font-size:9px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;
+  color:var(--ink-lighter);border:1px solid var(--cream-border);border-radius:3px;
+  padding:1px 5px;margin-left:8px;vertical-align:middle}
+.fcard-archived{opacity:0.68;border-style:dashed}
+.fcard-archived:hover{opacity:1}
+/* ── Locked (approved) version ── */
+.lock-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  padding:9px 14px;border-radius:4px;margin-bottom:1.1rem;font-size:12px}
+.lock-bar-txt{display:flex;align-items:center;gap:7px;min-width:0}
+.lock-bar-txt strong{font-weight:500}
+.lock-bar.is-locked{background:var(--cream-dark);border:1px solid var(--cream-border);color:var(--ink-light)}
+.lock-bar.is-open{background:var(--warning-bg);border:1px solid var(--warning-border);color:var(--warning)}
+.lock-bar .btn{padding:3px 11px;font-size:11px;flex-shrink:0}
+/* Disabled controls read as "not available right now" rather than broken:
+   same shapes, quieter fill, no text cursor. */
+.ed-locked input:disabled,.ed-locked select:disabled,.ed-locked textarea:disabled{
+  background:var(--cream);color:var(--ink-light);cursor:default;opacity:1}
+/* The amount fields already sit on a cream fill, so greying them changes
+   nothing. Drop their frame instead: the numbers read as values rather
+   than as boxes waiting for input. */
+.ed-locked .ing-inp:disabled,.ed-locked .drops-inp:disabled{
+  background:transparent;border-color:transparent;color:var(--ink)}
+.ed-locked .ing-inp.pinned:disabled{background:transparent;color:var(--sage-dark)}
+.ed-locked button:disabled{opacity:0.4;cursor:default}
+.ed-locked .drag-handle{visibility:hidden}
+.ed-locked .ing-row:hover{border-color:var(--cream-border)}
+/* The ingredient name stays live -- opening the popout is reading, not editing. */
+.ed-locked .ing-name-btn{cursor:pointer}
 .ing-row.dragging{opacity:0.4}
 .ing-row.drag-over-top{box-shadow:inset 0 2px 0 0 var(--clay)}
 .ing-row.drag-over-bottom{box-shadow:inset 0 -2px 0 0 var(--clay)}
@@ -420,11 +450,14 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);m
         <button class="btn" onclick="printFormula()">Print</button>
         <button class="btn" onclick="duplicateFormula()" title="Copy the whole formulation, with all its versions">Duplicate</button>
         <button class="btn btn-primary" onclick="saveFormula()">Save</button>
+        <button class="btn btn-sm" id="archive-btn" onclick="toggleArchiveFormula()">Archive</button>
         <button class="btn btn-danger btn-sm" onclick="deleteFormula()">Delete</button>
       </div>
     </div>
     <div class="var-strip" id="var-strip"></div>
     <div class="var-bar" id="var-bar"></div>
+    <div id="arch-bar-ed"></div>
+    <div id="lock-bar"></div>
     <div id="notes-view" style="display:none">
       <div class="notes-wrap">
         <h3>Formulation notes</h3>
@@ -443,7 +476,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);m
             </div>
             <div class="mf">
               <label>Status <span class="mf-scope">this version</span></label>
-              <select id="f-status" onchange="markDirty()">
+              <select id="f-status" onchange="onStatusChange(this)">
                 <option value="draft">Draft</option><option value="testing">Testing</option>
                 <option value="approved">Approved</option><option value="retired">Retired</option>
               </select>
@@ -652,6 +685,19 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);m
     <div class="modal-foot">
       <button class="btn" onclick="closeModal('m-branch')">Cancel</button>
       <button class="btn btn-primary" onclick="confirmBranch()">Create version</button>
+    </div>
+  </div>
+</div>
+
+<!-- Unlock an approved version -->
+<div class="modal-ov" id="m-unlock">
+  <div class="modal">
+    <div class="modal-hdr"><div class="modal-title">Edit an approved version</div><button class="modal-x" onclick="closeModal('m-unlock')">x</button></div>
+    <div style="font-size:12px;color:var(--ink-light);margin-bottom:14px;line-height:1.6" id="m-unlock-intro"></div>
+    <div class="modal-foot" style="flex-direction:column;align-items:stretch;gap:8px">
+      <button class="btn btn-primary" onclick="unlockViaBranch()">Create a new version instead</button>
+      <button class="btn btn-danger" onclick="unlockInPlace()">Edit this approved version</button>
+      <button class="btn" onclick="closeModal('m-unlock')">Cancel</button>
     </div>
   </div>
 </div>
@@ -1134,14 +1180,42 @@ function showEditor(name) {
 }
 
 // ── Cards list ────────────────────────────────────────
+// Archived formulations are hidden from the list unless asked for. The
+// toggle only appears when there is something archived to show, so the
+// control does not advertise a state most libraries never enter.
+var showArchived = false;
+
+function toggleShowArchived() {
+  showArchived = !showArchived;
+  renderCards();
+}
+
 function renderCards() {
   var el = document.getElementById('fcard-container');
   if (!forms.length) {
     el.innerHTML = '<div class="empty"><p>No formulations yet</p><span style="font-size:13px">Click "+ New formulation" to start building your first formula.</span></div>';
     return;
   }
-  var html = '<div class="cards-grid">';
-  forms.forEach(function(f) {
+
+  var nArchived = forms.filter(function(f) { return f.archived; }).length;
+  var list = showArchived ? forms.slice() : forms.filter(function(f) { return !f.archived; });
+
+  var bar = '';
+  if (nArchived) {
+    bar = '<div class="arch-bar">' +
+      '<button class="btn btn-sm" onclick="toggleShowArchived()">' +
+      (showArchived ? 'Hide archived' : 'Show ' + nArchived + ' archived') +
+      '</button></div>';
+  }
+
+  if (!list.length) {
+    el.innerHTML = bar + '<div class="empty"><p>Nothing here</p>' +
+      '<span style="font-size:13px">Every formulation is archived. Use the button above to see them.</span></div>';
+    return;
+  }
+
+  var html = bar + '<div class="cards-grid">';
+  list.forEach(function(f) {
     var phases = {}, phList = [];
     (f.lines||[]).forEach(function(l) {
       var ing = ings.find(function(i) { return i.id === l.ingId; });
@@ -1150,8 +1224,9 @@ function renderCards() {
     var cost = calcBatchCost(f.lines||[], 100);
     var costStr = cost !== null ? ('~$' + cost.toFixed(2) + '/100g') : 'No cost data';
     var dateStr = f.updatedAt ? new Date(f.updatedAt).toLocaleDateString() : '--';
-    html += '<div class="fcard" onclick="openFormula(\'' + f.id + '\')">';
-    html += '<div class="fcard-name">' + esc(f.name) + '</div>';
+    html += '<div class="fcard' + (f.archived ? ' fcard-archived' : '') + '" onclick="openFormula(\'' + f.id + '\')">';
+    html += '<div class="fcard-name">' + esc(f.name) +
+      (f.archived ? '<span class="arch-tag">archived</span>' : '') + '</div>';
     var nv    = (f.variants || []).length;
     var av    = activeVar(f);
     var vBit  = nv > 1
@@ -1616,7 +1691,7 @@ function recalcSoap() {
 
 // ── Skincare rendering ────────────────────────────────
 function renderLines() {
-  if (isSoap()) { renderSoapLines(); return; }
+  if (isSoap()) { renderSoapLines(); applyLockState(); return; }
   var phases  = ['water','oil','cool-down','active','other'];
   var phNames = { water:'Water phase', oil:'Oil phase', 'cool-down':'Cool-down phase', active:'Active phase', other:'Other' };
   var bs = parseFloat(document.getElementById('batch-sz').value) || 100;
@@ -1667,6 +1742,10 @@ function renderLines() {
   if (fc) parts.push(fc + ' ingredient' + (fc !== 1 ? 's' : ''));
   if (ac) parts.push(ac + ' add-in' + (ac !== 1 ? 's' : ''));
   document.getElementById('ing-count').textContent = parts.join(' / ');
+  // Rows are rebuilt from scratch here -- by a batch-size change as much as
+  // by an edit -- so the lock has to be re-applied every time or it silently
+  // falls off the moment the formula is rescaled.
+  applyLockState();
 }
 
 function buildRow(l, idx, ing, bs, isAddin) {
@@ -2389,6 +2468,17 @@ function renderVarTabs() {
   var vars  = f.variants || [];
   var html  = '';
 
+  // Retired versions are hidden, unless you are looking at one -- otherwise
+  // retiring a version would make it unreachable, including to un-retire it.
+  var nRetired = vars.filter(function(v) {
+    return v.status === 'retired' && v.vid !== curVid;
+  }).length;
+  if (!showRetired) {
+    vars = vars.filter(function(v) {
+      return v.status !== 'retired' || v.vid === curVid;
+    });
+  }
+
   vars.forEach(function(v, vi) {
     var isSel    = !notesTab && v.vid === curVid;
     var isActive = v.vid === f.activeVariantId;
@@ -2414,6 +2504,10 @@ function renderVarTabs() {
   });
 
   html += '<button class="var-add" onclick="openBranch()" title="Create a new version starting from the one you are viewing">+ New version</button>';
+  if (nRetired || showRetired) {
+    html += '<button class="var-add" onclick="toggleShowRetired()" title="Retired versions are kept but hidden">' +
+      (showRetired ? 'Hide retired' : 'Show ' + nRetired + ' retired') + '</button>';
+  }
   html += '<span class="var-spacer"></span>';
   var nCls = 'var-notes-tab' + (notesTab ? ' sel' : '');
   html += '<button class="' + nCls + '" onclick="selectNotes()" title="Notes about the whole formulation">';
@@ -2458,6 +2552,173 @@ function renderVarBar() {
   bar.innerHTML = left + acts;
 }
 
+// ── Retiring a version ────────────────────────────────
+// Retired used to be a label with no behaviour. It now hides the version
+// and disqualifies it from being the one costing and batches read, which
+// means retiring the in-use version has to hand that role to another one.
+// Runs before markDirty so a refused handover leaves the select alone.
+function onStatusChange(sel) {
+  var f = curForm(), v = curVar();
+  if (!f || !v) { markDirty(); return; }
+
+  if (sel.value === 'retired') {
+    var live = (f.variants || []).filter(function(x) {
+      return x.vid !== v.vid && x.status !== 'retired';
+    });
+    if (!live.length) {
+      alert('This is the only version left that is not retired.\n\n' +
+            'Retire it and the formulation would have nothing to cost or batch from. ' +
+            'Archive the whole formulation instead.');
+      sel.value = v.status || 'draft';
+      return;
+    }
+    if (f.activeVariantId === v.vid) {
+      if (!confirm('Retire "' + varTitle(v) + '"?\n\n' +
+                   'It is the version costing and batches use, so ' + varTitle(live[0]) +
+                   ' will take over that role.\n\n' +
+                   'The version is kept — it just leaves the tab strip. ' +
+                   'You can bring it back at any time.')) {
+        sel.value = v.status || 'draft';
+        return;
+      }
+      f.activeVariantId = live[0].vid;
+      syncActive(f);
+    }
+  }
+
+  markDirty();
+  // The tab strip depends on status, so it has to redraw.
+  v.status = sel.value;
+  saveFormula(true);
+  renderVarTabs();
+}
+
+// ── Locking approved versions ─────────────────────────
+// A version marked Approved is read-only until explicitly unlocked. The
+// point is not to prevent typing; it is to make editing a formula that
+// Costing and Batchlog already read from a deliberate act rather than an
+// accident. The unlock is per-session and per-version: it is forgotten as
+// soon as you load any version into the editor, including this one again.
+var unlockedVid = null;
+
+// Retired versions stay in the formulation but out of the tab strip.
+var showRetired = false;
+function toggleShowRetired() {
+  showRetired = !showRetired;
+  renderVarTabs();
+}
+
+function isLocked() {
+  if (notesTab) return false;
+  var v = curVar();
+  if (!v || v.status !== 'approved') return false;
+  return v.vid !== unlockedVid;
+}
+
+// Per-version controls. Formulation-level fields (name, type, intention)
+// are shared with every other version and stay editable; so does batch
+// size, which is a working parameter, not part of the formula.
+var LOCK_FIELD_IDS   = ['f-status', 'f-instruct', 'f-addins-in-total'];
+var LOCK_CONTAINERS  = ['#phase-groups', '.add-bar', '#sb-soap-lye'];
+
+function applyLockState() {
+  var locked = isLocked();
+  var layout = document.getElementById('ed-layout');
+  if (layout) layout.classList.toggle('ed-locked', locked);
+
+  LOCK_FIELD_IDS.forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.disabled = locked;
+  });
+
+  LOCK_CONTAINERS.forEach(function(sel) {
+    var root = document.querySelector(sel);
+    if (!root) return;
+    var els = root.querySelectorAll('input, select, textarea, button');
+    for (var k = 0; k < els.length; k++) {
+      // Reading is always allowed: the ingredient name opens the popout.
+      if (els[k].classList.contains('ing-name-btn')) continue;
+      els[k].disabled = locked;
+    }
+  });
+
+  // Rows are reorderable by drag, which no amount of disabling inputs stops.
+  var rows = document.querySelectorAll('#phase-groups .ing-row');
+  for (var r = 0; r < rows.length; r++) rows[r].draggable = !locked;
+
+  renderLockBar(locked);
+}
+
+function renderLockBar(locked) {
+  var bar = document.getElementById('lock-bar');
+  if (!bar) return;
+  var v = curVar();
+
+  if (locked) {
+    bar.innerHTML = '<div class="lock-bar is-locked">' +
+      '<div class="lock-bar-txt">&#128274; <span><strong>Approved — locked.</strong> ' +
+      'Viewing only, so nothing here can be changed by accident.</span></div>' +
+      '<button class="btn" onclick="openUnlock()">Unlock to edit</button>' +
+      '</div>';
+    return;
+  }
+
+  // Unlocked by hand: say so plainly for as long as it lasts.
+  if (v && v.status === 'approved' && v.vid === unlockedVid) {
+    bar.innerHTML = '<div class="lock-bar is-open">' +
+      '<div class="lock-bar-txt">&#128275; <span><strong>Unlocked.</strong> ' +
+      'This version is approved — changes reach costing and anything batched from it.</span></div>' +
+      '<button class="btn" onclick="relock()">Lock again</button>' +
+      '</div>';
+    return;
+  }
+
+  bar.innerHTML = '';
+}
+
+function openUnlock() {
+  var v = curVar();
+  if (!v) return;
+  var f = curForm();
+  var inUse = f && v.vid === f.activeVariantId;
+  // Precise about what an edit does and does not reach. A batch writes its
+  // own ingredient snapshot when it is made, so past batches keep the
+  // amounts they were actually made with. Products read the formula live
+  // and have no per-run cost record, so their cost and label change for
+  // every unit, including ones made months ago.
+  document.getElementById('m-unlock-intro').innerHTML =
+    '<strong>' + esc(varTitle(v)) + '</strong> is approved' +
+    (inUse ? ' and is the version costing and batches use' : '') + '.<br><br>' +
+    'Starting a new version keeps this one exactly as it is, which is usually ' +
+    'what you want.<br><br>' +
+    'Editing it in place: batches you have already made keep the amounts they ' +
+    'were made with, so production records stay accurate. Products are ' +
+    'different — their cost and label ingredient list are read from the ' +
+    'formula live, so both change for every unit, including ones made months ' +
+    'ago. The change is recorded in this version’s history either way.';
+  openModal('m-unlock');
+}
+
+function unlockViaBranch() {
+  closeModal('m-unlock');
+  openBranch();
+}
+
+function unlockInPlace() {
+  var v = curVar();
+  if (!v) { closeModal('m-unlock'); return; }
+  unlockedVid = v.vid;
+  closeModal('m-unlock');
+  applyLockState();
+}
+
+function relock() {
+  unlockedVid = null;
+  // Anything typed while unlocked is kept -- re-locking is not an undo.
+  if (dirty) saveFormula(true);
+  applyLockState();
+}
+
 // ── Switching tabs ────────────────────────────────────
 // Switching tabs just saves. Asking first was the wrong call: nothing is
 // lost either way, every meaningful change is logged in the version's
@@ -2483,6 +2744,7 @@ function selectNotes() {
   notesTab = true;
   document.getElementById('ed-layout').style.display  = 'none';
   document.getElementById('notes-view').style.display = 'block';
+  renderLockBar(false);
   var f = curForm();
   document.getElementById('f-formnotes').value = (f && f.formNotes) || '';
   document.getElementById('f-ver-lbl').setAttribute('data-base', 'Formulation notes');
@@ -2517,8 +2779,12 @@ function loadVariantIntoEditor() {
     v.batchSize ? v.batchSize : (isSoap() ? '1000' : '100');
 
   dirty = false;
+  syncArchiveUI();
+  // An unlock lasts only as long as you stay on the version you unlocked.
+  unlockedVid = null;
   renderVarTabs(); renderHistory(); renderUseLog(v);
   renderLines(); recalc();
+  applyLockState();
 }
 
 function setActiveVariant(vid) {
@@ -2559,6 +2825,10 @@ function confirmBranch() {
 
   var nv = blankVariant(nextVarNum(f), name);
   nv.status        = state.status;
+  // A copy of an approved version has not itself been approved, and
+  // inheriting the status would lock the new version on arrival -- which,
+  // coming from the unlock flow, would be an unusable loop.
+  if (src.status === 'approved') nv.status = 'draft';
   nv.lines         = state.lines;
   nv.instructions  = state.instructions;
   nv.addinsInTotal = state.addinsInTotal;
@@ -2609,6 +2879,18 @@ function deleteVariant(vid) {
   if (!v) return;
   var nUse  = (v.usageLog || []).length;
   var extra = nUse ? ('\n\nIts ' + nUse + ' usage log entr' + (nUse === 1 ? 'y' : 'ies') + ' will go too.') : '';
+
+  // Deleting the in-use version hands that role to whichever version is
+  // left first, which changes what costing and new batches read. It used
+  // to happen without a word.
+  if (f.activeVariantId === vid) {
+    var heir = (f.variants || []).filter(function(x) { return x.vid !== vid; })[0];
+    if (heir) {
+      extra += '\n\nThis is the version costing and batches use. ' +
+        varTitle(heir) + ' will take over that role.';
+    }
+  }
+
   if (!confirm('Delete "' + varTitle(v) + '" permanently?' + extra + '\n\nThis cannot be undone.')) return;
 
   f.variants = f.variants.filter(function(x) { return x.vid !== vid; });
@@ -2819,11 +3101,121 @@ function duplicateFormula() {
   }
 }
 
+// ── Archiving a formulation ───────────────────────────
+// Archiving is the safe counterpart to deleting. The formulation stays in
+// storage, so every product and batch that points at it keeps working; it
+// simply stops being offered for new work. Deleting is for things that were
+// never used.
+function toggleArchiveFormula() {
+  var f = curForm();
+  if (!f) return;
+
+  if (f.archived) {
+    f.archived = false;
+    saveAll();
+    syncArchiveUI();
+    return;
+  }
+
+  var dep = formulaDependents(f.id);
+  var msg = 'Archive "' + (f.name || 'this formulation') + '"?\n\n' +
+    'It disappears from the formulation list and stops being offered when ' +
+    'starting a batch or a product.';
+  if (dep.products.length || dep.batches.length) {
+    msg += '\n\nEverything already using it keeps working: ' +
+      (dep.products.length ? dep.products.length + ' product' + (dep.products.length === 1 ? '' : 's') : '') +
+      (dep.products.length && dep.batches.length ? ' and ' : '') +
+      (dep.batches.length ? dep.batches.length + ' batch' + (dep.batches.length === 1 ? '' : 'es') : '') +
+      ' still cost and label exactly as before.';
+  }
+  msg += '\n\nYou can bring it back at any time.';
+  if (!confirm(msg)) return;
+
+  f.archived = true;
+  if (dirty) saveFormula(true);
+  saveAll();
+  syncArchiveUI();
+}
+
+// Button label and banner follow the formulation's state.
+function syncArchiveUI() {
+  var f = curForm();
+  var btn = document.getElementById('archive-btn');
+  if (btn) btn.textContent = (f && f.archived) ? 'Unarchive' : 'Archive';
+  var bar = document.getElementById('arch-bar-ed');
+  if (!bar) return;
+  if (f && f.archived) {
+    bar.innerHTML = '<div class="lock-bar is-locked">' +
+      '<div class="lock-bar-txt">&#128230; <span><strong>Archived.</strong> ' +
+      'Still costed and labelled wherever it is already used, but not offered ' +
+      'for new batches or products.</span></div>' +
+      '<button class="btn" onclick="toggleArchiveFormula()">Unarchive</button></div>';
+  } else {
+    bar.innerHTML = '';
+  }
+}
+
+// What else points at this formulation. Batches and products both hold a
+// formulaId; nothing anywhere holds a variant id, which is why deleting a
+// single version breaks no references. Read fresh from storage rather than
+// from anything cached at page load -- another tab may have logged a batch
+// since this page opened.
+function formulaDependents(formulaId) {
+  var batches  = Store.getJSON(Plume.KEYS.batches,  []) || [];
+  var products = Store.getJSON(Plume.KEYS.products, []) || [];
+  return {
+    batches: batches.filter(function(b) { return b.formulaId === formulaId; }),
+    // A multi-component product (sample pack, kit) reaches formulations
+    // through components[], not its own formulaId.
+    products: products.filter(function(p) {
+      if (p.formulaId === formulaId) return true;
+      return (p.components || []).some(function(c) { return c.formulaId === formulaId; });
+    })
+  };
+}
+
+// "Lotion bar, Lip butter and 2 more"
+function nameList(items, key, max) {
+  var names = items.map(function(x) { return x[key] || '(unnamed)'; });
+  if (names.length <= max) return names.join(', ');
+  return names.slice(0, max).join(', ') + ' and ' + (names.length - max) + ' more';
+}
+
 function deleteFormula() {
   var f = curForm();
+  if (!f) return;
   var n = f ? (f.variants || []).length : 0;
-  var extra = n > 1 ? ('\n\nAll ' + n + ' versions will be deleted.') : '';
-  if (!confirm('Permanently delete this formulation?' + extra + '\n\nThis cannot be undone.')) return;
+
+  var msg = 'Permanently delete "' + (f.name || 'this formulation') + '"?';
+  if (n > 1) msg += '\n\nAll ' + n + ' versions will be deleted.';
+
+  var dep = formulaDependents(f.id);
+
+  // Products are the ones that break. They read the formula live for both
+  // cost and label, and there is no way to point them at it again once it
+  // is gone.
+  if (dep.products.length) {
+    msg += '\n\n' + dep.products.length + ' product' +
+      (dep.products.length === 1 ? '' : 's') + ' use' +
+      (dep.products.length === 1 ? 's' : '') + ' this formulation: ' +
+      nameList(dep.products, 'name', 4) + '.\n' +
+      'Deleting it leaves ' + (dep.products.length === 1 ? 'that product' : 'those products') +
+      ' with no ingredient list and no cost, and there is no way to relink them.';
+  }
+
+  // Batches are safe: each one wrote its own ingredient snapshot and lot
+  // draws when it was made. Say so, so the count does not read as a threat.
+  if (dep.batches.length) {
+    msg += '\n\n' + dep.batches.length + ' batch' +
+      (dep.batches.length === 1 ? ' was' : 'es were') + ' made from it: ' +
+      nameList(dep.batches, 'batchName', 3) + '.\n' +
+      (dep.batches.length === 1 ? 'That record keeps its' : 'Those records keep their') +
+      ' own ingredient amounts and stay' + (dep.batches.length === 1 ? 's' : '') +
+      ' readable. Only the link back to this recipe goes.';
+  }
+
+  msg += '\n\nThis cannot be undone.';
+  if (!confirm(msg)) return;
   forms = forms.filter(function(x) { return x.id !== curId; });
   saveAll(); curId = null; curVid = null; goList();
 }
