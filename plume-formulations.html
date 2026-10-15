@@ -165,6 +165,14 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);m
 .drag-handle{display:inline-block;color:var(--ink-lighter);cursor:grab;user-select:none;padding:0 6px 0 0;font-size:14px;line-height:1;letter-spacing:-2px;vertical-align:middle}
 .drag-handle:hover{color:var(--ink-light)}
 .drag-handle:active{cursor:grabbing}
+/* ── INCI merge marks ── */
+.inci-merge-mark{font-size:9px;font-weight:600;color:var(--clay-dark);
+  background:var(--clay-light);border-radius:8px;padding:1px 5px;margin-left:5px;
+  vertical-align:middle;letter-spacing:0.04em}
+.inci-merge-note{font-size:11px;line-height:1.55;color:var(--ink-light);
+  background:var(--cream);border:1px solid var(--cream-border);border-radius:3px;
+  padding:7px 9px;margin-top:9px}
+.inci-merge-note strong{font-weight:500;color:var(--bark-dark)}
 /* ── Archived formulation ── */
 .arch-bar{display:flex;justify-content:flex-end;margin-bottom:0.75rem}
 .arch-tag{font-size:9px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;
@@ -1673,19 +1681,16 @@ function recalcSoap() {
     iEl.innerHTML = '<div style="font-size:12px;color:var(--ink-lighter)">INCI list generates as you add ingredients.</div>';
   } else {
     var sorted = oilsForInci.slice().sort(function(a, b) { return (parseFloat(b.pct) || 0) - (parseFloat(a.pct) || 0); });
-    var ihtml = '<div class="inci-list">';
-    var n = 0;
+    var items = [];
     sorted.forEach(function(l) {
       var ing = ings.find(function(x) { return x.id === l.ingId; }); if (!ing) return;
-      ihtml += '<div class="inci-item"><span class="inci-num">' + (++n) + '.</span><span>' + esc(ing.inci) + '</span></div>';
+      items.push({ inci: ing.inci, flag: ing.flag, addin: false, label: ing.name });
     });
     addinsForInci.forEach(function(l) {
       var ing = ings.find(function(x) { return x.id === l.ingId; }); if (!ing) return;
-      ihtml += '<div class="inci-item"><span class="inci-num">' + (++n) + '.</span><span>' + esc(ing.inci) +
-        ' <span style="font-size:10px;color:var(--clay)">(add-in)</span></span></div>';
+      items.push({ inci: ing.inci, flag: ing.flag, addin: true, label: ing.name });
     });
-    ihtml += '</div>';
-    iEl.innerHTML = ihtml;
+    iEl.innerHTML = inciPanelHtml(items, 'add-ins after the oils');
   }
 }
 
@@ -2063,23 +2068,61 @@ function recalc() {
   if (!all.length) {
     iEl.innerHTML = '<div style="font-size:12px;color:var(--ink-lighter)">INCI list generates as you add ingredients.</div>';
   } else {
-    var ihtml = '<div class="inci-list">';
-    all.forEach(function(l, i) {
+    iEl.innerHTML = inciPanelHtml(all.map(function(l) {
       var ing = ings.find(function(x) { return x.id === l.ingId; });
-      ihtml += '<div class="inci-item"><span class="inci-num">' + (i+1) + '.</span><span>' + esc(ing.inci);
-      if (ing.flag === 'yes') ihtml += ' <span style="color:var(--warning)">&#9679;</span>';
-      if (l.addin) ihtml += ' <span style="font-size:10px;color:var(--clay)">(add-in)</span>';
-      ihtml += '</span></div>';
-    });
-    ihtml += '</div><div style="font-size:10px;color:var(--ink-lighter);margin-top:8px">&#9679; = restricted &middot; add-ins after formula ingredients</div>';
-    iEl.innerHTML = ihtml;
+      return { inci: ing.inci, flag: ing.flag, addin: l.addin, label: ing.name };
+    }), 'add-ins after formula ingredients');
   }
+}
+
+// One renderer for both the skincare and the soap panel. Entries are
+// components, not ingredients, so a blend contributes several lines and a
+// component shared by two blends contributes one.
+function inciPanelHtml(items, footNote) {
+  var entries = Plume.inciMerge(items);
+  if (!entries.length) {
+    return '<div style="font-size:12px;color:var(--ink-lighter)">INCI list generates as you add ingredients.</div>';
+  }
+
+  var html = '<div class="inci-list">';
+  entries.forEach(function(e, i) {
+    var restricted = e.sources.some(function(s) { return s.flag === 'yes'; });
+    // Only tagged as an add-in when every contributor is one; a component
+    // that also arrives through a regular line is not an add-in.
+    var addin = e.sources.every(function(s) { return s.addin; });
+    html += '<div class="inci-item"><span class="inci-num">' + (i + 1) + '.</span><span>' + esc(e.name);
+    if (restricted) html += ' <span style="color:var(--warning)">&#9679;</span>';
+    if (addin)      html += ' <span style="font-size:10px;color:var(--clay)">(add-in)</span>';
+    if (e.sources.length > 1) html += ' <span class="inci-merge-mark" title="Also in ' +
+      esc(e.sources.length + ' ingredients') + '">&times;' + e.sources.length + '</span>';
+    html += '</span></div>';
+  });
+  html += '</div>';
+
+  var merged = Plume.inciMerged(entries);
+  if (merged.length) {
+    html += '<div class="inci-merge-note">' +
+      merged.map(function(e) {
+        var names = e.sources.map(function(s) { return esc(s.label || 'an ingredient'); });
+        return '<strong>' + esc(e.name) + '</strong> comes from ' + names.join(' and ') +
+          '. Listed once, at the position of the first.';
+      }).join('<br>') +
+      '<div style="margin-top:5px">Its real total is the two added together, which Plume ' +
+      'cannot know from a blend, so check whether it belongs higher up.</div></div>';
+  }
+
+  html += '<div style="font-size:10px;color:var(--ink-lighter);margin-top:8px">&#9679; = restricted' +
+    (footNote ? ' &middot; ' + footNote : '') + '</div>';
+  return html;
 }
 
 function copyInci() {
   var fl  = fLines.filter(function(l) { return !l.addin && ings.find(function(i) { return i.id === l.ingId; }); });
   fl.sort(function(a, b) { return (parseFloat(b.pct)||0) - (parseFloat(a.pct)||0); });
-  var txt = fl.map(function(l) { return ings.find(function(i) { return i.id === l.ingId; }).inci; }).join(', ');
+  // Copies what the panel shows: components, deduped, in the same order.
+  var txt = Plume.inciMerge(fl.map(function(l) {
+    return { inci: ings.find(function(i) { return i.id === l.ingId; }).inci };
+  })).map(function(e) { return e.name; }).join(', ');
   navigator.clipboard.writeText(txt).then(function() {
     var btn = document.getElementById('copy-btn');
     btn.textContent = 'Copied!';

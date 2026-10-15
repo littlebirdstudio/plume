@@ -92,6 +92,11 @@ main { max-width:1240px; margin:0 auto; padding:24px 22px 60px; }
 .field-full { grid-column:1/-1; }
 .section-hdr { display:flex; align-items:center; justify-content:space-between; font-size:11px; font-weight:600; letter-spacing:0.12em; text-transform:uppercase; color:var(--ink-light); margin:18px 0 10px; padding-bottom:6px; border-bottom:1px solid var(--cream-dark); }
 
+/* ── INCI merge note under the label preview ── */
+.label-merge-note{font-size:11px;line-height:1.55;color:var(--ink-light);
+  background:var(--cream);border:1px solid var(--cream-border);border-radius:3px;
+  padding:7px 9px;margin:8px 0 2px}
+.label-merge-note strong{font-weight:500;color:var(--bark-dark)}
 /* ── Packaging recipe ── */
 .pkg-recipe-row { display:grid; grid-template-columns:1fr 90px 100px 30px; gap:10px; align-items:center; padding:8px 0; border-bottom:1px solid var(--cream-dark); }
 .pkg-recipe-row:last-of-type { border-bottom:none; }
@@ -2515,6 +2520,35 @@ function onOverrideToggle() {
   renderLabel();
 }
 
+// Every line of the formula that carries weight, in label order.
+// Shared by the label text and the merge note so the two cannot disagree.
+function formulaLabelItems(f) {
+  if (!f || !f.lines || !f.lines.length) return [];
+  var lines = f.lines.slice().map(function(l) {
+    var pct = parseFloat(l.pct) || 0;
+    var gf  = parseFloat(l.gramsFixed) || 0;
+    return { line: l, weight: pct > 0 ? pct : gf };
+  }).filter(function(o) { return o.weight > 0; });
+  lines.sort(function(a, b) { return b.weight - a.weight; });
+  return lines.map(function(o) {
+    var ing = findIng(o.line.ingId);
+    return { inci: (ing && ing.inci) || '', label: (ing && ing.name) || '(unknown)' };
+  }).filter(function(x) { return x.inci; });
+}
+
+// Components merged across every formulation a product draws on, so the
+// note under the label preview covers kits as well as single products.
+function productInciMerges(p) {
+  var fs = p.productKind === 'multi'
+    ? (p.components || []).map(function(c) { return findForm(c.formulaId); })
+    : [findForm(p.formulaId)];
+  var merged = [];
+  fs.forEach(function(f) {
+    merged = merged.concat(Plume.inciMerged(Plume.inciMerge(formulaLabelItems(f))));
+  });
+  return merged;
+}
+
 function singleFormulaIngredients(f, mode) {
   if (!f || !f.lines || !f.lines.length) return '(no formulation linked)';
   // For sorting purposes we need a "weight" per line. Use the larger of
@@ -2527,11 +2561,17 @@ function singleFormulaIngredients(f, mode) {
   }).filter(function(o) { return o.weight > 0; });
   if (!lines.length) return '(no ingredients with weight > 0)';
   lines.sort(function(a, b) { return b.weight - a.weight; });
+  // INCI mode lists components, so a blend contributes each of its parts and
+  // a part shared by two blends is listed once. Common-name mode is left
+  // alone: a common name is the product in the bottle, not a list of
+  // substances, so there is nothing to split.
+  if (mode === 'inci') {
+    return Plume.inciMerge(formulaLabelItems(f))
+      .map(function(e) { return e.name; }).join(', ');
+  }
   var names = lines.map(function(o) {
     var ing = findIng(o.line.ingId);
-    if (!ing) return '(unknown)';
-    if (mode === 'inci') return ing.inci || ing.name || '(unnamed)';
-    return ing.name || ing.inci || '(unnamed)';
+    return ing ? (ing.name || ing.inci || '(unnamed)') : '(unknown)';
   });
   return names.join(', ');
 }
@@ -2575,6 +2615,22 @@ function renderLabel() {
   html += '<div class="label-section"><div class="label-section-name">Product</div>' + esc(name) + '</div>';
   if (netWt) html += '<div class="label-section"><div class="label-section-name">Net weight</div>' + esc(netWt) + '</div>';
   html += '<div class="label-section"><div class="label-section-name">Ingredients</div>' + esc(ingredientLine).replace(/\n/g, '<br>') + '</div>';
+  // Say which components were merged, and why their position may be low.
+  // Only when the list being shown is the generated INCI one -- an override
+  // is the user's own text and a note about merging would be wrong.
+  if (mode === 'inci' && !(useOverride && overrideText)) {
+    var merges = productInciMerges(p);
+    if (merges.length) {
+      html += '<div class="label-merge-note">' +
+        merges.map(function(e) {
+          var names = e.sources.map(function(s) { return esc(s.label); });
+          return '<strong>' + esc(e.name) + '</strong> is in ' + names.join(' and ') +
+            ', listed once at the position of the first.';
+        }).join('<br>') +
+        '<div style="margin-top:4px">Its combined amount is higher than either blend alone, ' +
+        'so check it is not sitting too low in the list.</div></div>';
+    }
+  }
   if (sku || barcode) {
     html += '<div class="label-section"><div class="label-section-name">Identifiers</div>' +
       (sku ? 'SKU: ' + esc(sku) : '') +
