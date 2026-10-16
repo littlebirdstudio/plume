@@ -2351,10 +2351,24 @@ function syncArchiveBar() {
   var n = ingredients.filter(function(i) { return i.archived; }).length;
   if (!n) { bar.style.display = 'none'; showArchived = false; return; }
   bar.style.display = 'flex';
+
+  // The wording has to follow the state. It used to say "hidden from this
+  // list" in both, so with archived showing, the one element that explains
+  // the extra rows was flatly contradicting them. Turning the toggle on from
+  // a search and then clearing the search leaves the whole library on screen
+  // with archived mixed in, and that banner was the only thing that could
+  // have said so.
+  var msg = showArchived
+    ? 'Showing ' + n + ' archived ingredient' + (n === 1 ? '' : 's') +
+      ' alongside the rest. They stay out of the add-ingredient search either way.'
+    : n + ' archived ingredient' + (n === 1 ? '' : 's') +
+      ' hidden from this list and from the add-ingredient search';
+
+  bar.style.background   = showArchived ? 'var(--cream-dark)' : 'var(--cream)';
+  bar.style.borderColor  = showArchived ? 'var(--bark-light)' : 'var(--cream-border)';
   bar.innerHTML =
-    '<span style="font-size:12px;color:var(--ink-lighter)">' +
-      n + ' archived ingredient' + (n === 1 ? '' : 's') +
-      ' hidden from this list and from the add-ingredient search' +
+    '<span style="font-size:12px;color:' + (showArchived ? 'var(--ink)' : 'var(--ink-lighter)') + '">' +
+      esc(msg) +
     '</span>' +
     '<button class="btn btn-sm" onclick="toggleShowArchivedIngs()">' +
       (showArchived ? 'Hide archived' : 'Show ' + n + ' archived') +
@@ -2790,6 +2804,7 @@ function viewIngredient(id) {
   }
 
   // Properties section — only render fields with values
+  var dField = densityField(i);
   var propsFields = [
     { label: 'Absorption rate',     value: i.absorptionRate    },
     { label: 'Heat stability',      value: i.heatStability     },
@@ -2803,14 +2818,20 @@ function viewIngredient(id) {
     // An inferred density is still the number the stock and cost figures are
     // built on, so showing a blank here while quietly using 0.92 elsewhere
     // would hide the one assumption most likely to be wrong.
-    { label: 'Density (g/mL)',      value: densityLabel(i) }
+    { label: 'Density (g/mL)',      value: dField.value, note: dField.note }
   ];
   var propsHtml = '';
   if (propsFields.length) {
     propsHtml = '<div class="detail-section"><div class="detail-section-title">Properties &amp; characteristics</div>' +
       '<div class="detail-grid">' +
       propsFields.map(function(f) {
-        return '<div class="detail-field"><label>' + f.label + '</label><p>' + (f.value && String(f.value).trim() ? esc(String(f.value)) : '<span style="color:var(--ink-lighter)">\u2014</span>') + '</p></div>';
+        // Both value and note are escaped. A field that wants emphasis sets
+        // `note`, and the renderer supplies the markup, so no field can ever
+        // inject its own.
+        return '<div class="detail-field"><label>' + f.label + '</label><p>' +
+          (f.value && String(f.value).trim() ? esc(String(f.value)) : '<span style="color:var(--ink-lighter)">\u2014</span>') +
+          (f.note ? ' <span style="font-size:11px;color:var(--ink-lighter)">(' + esc(String(f.note)) + ')</span>' : '') +
+          '</p></div>';
       }).join('') +
       '</div>' +
       // Claims sit apart from the measured properties above, and say whose
@@ -3500,7 +3521,11 @@ function calcTotalStockG(ing) {
     var qty  = l.qtyPurchased || l.stock || '';
     var unit = l.qtyUnit      || l.stockUnit || 'g';
     if (qty) {
-      total += lotQtyToGrams(qty, unit, ing.density);
+      // Resolved, not raw. Passing ing.density here meant a blank fell back
+      // to water, so this display disagreed with Plume.stockG, which does
+      // resolve: a 1000 mL lot of argan read 1000 g on screen while the
+      // shared helper said 912.
+      total += lotQtyToGrams(qty, unit, Plume.densityFor(ing).value);
       hasAny = true;
     }
   });
@@ -3545,7 +3570,10 @@ function isLowStock(ing) {
   if (!ing.lowStock) return false;
   var totalG = calcTotalStockG(ing);
   if (totalG === null) return false;
-  var thresholdG = lotQtyToGrams(ing.lowStock, ing.lowStockUnit || 'g', ing.density);
+  // The threshold has to convert the same way the stock does, or a limit set
+  // in mL is compared against grams measured on a different scale and the
+  // warning fires at the wrong point.
+  var thresholdG = lotQtyToGrams(ing.lowStock, ing.lowStockUnit || 'g', Plume.densityFor(ing).value);
   return totalG < thresholdG;
 }
 
@@ -3826,13 +3854,19 @@ function densityHint() {
 
 // How density reads on the detail screen. Says the number AND where it came
 // from, because "0.92" alone implies she entered it.
-function densityLabel(i) {
+//
+// Returns the number and the note separately rather than a lump of markup:
+// every value in propsFields is escaped on the way out, which is the right
+// default and must stay that way, so the renderer owns the styling.
+function densityField(i) {
   var d = Plume.densityFor(i);
-  if (d.source === 'set')      return d.value + ' g/mL';
-  if (d.source === 'default')  return '';
-  return d.value + ' g/mL <span style="font-size:11px;color:var(--ink-lighter)">(' +
-    (d.source === 'inci' ? 'from the reference' : 'assumed from category') +
-    ', not set. Used for mL and fl oz lots)</span>';
+  if (d.source === 'default') return { value: '', note: '' };
+  return {
+    value: d.value + ' g/mL',
+    note: d.source === 'set' ? ''
+      : (d.source === 'inci' ? 'from the reference' : 'assumed from category') +
+        ', not set. Used for mL and fl oz lots'
+  };
 }
 
 function renderDensityHint() {
