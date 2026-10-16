@@ -266,6 +266,15 @@
     color: var(--ink);
   }
   tbody tr:last-child td { border-bottom: none; }
+  /* The rules above are for the ingredient list, where one-line cells are the
+     point. The SAP review is a different table in a modal and its oil names
+     need the room, so clip and nowrap are undone here. */
+  #sap-review-body td, #sap-review-body th {
+    white-space: normal; overflow: visible; text-overflow: clip;
+    vertical-align: middle; color: var(--ink);
+  }
+  #sap-review-body td:first-child { width: 30%; }
+  #sap-review-body tr:last-child td { border-bottom: 1px solid var(--cream-border); }
   .td-name { font-weight: 500; color: var(--bark-dark); }
   .td-inci { font-style: italic; color: var(--ink-light); font-size: 12px; }
   /* Purpose line: her own words about why she bought it. Shown under the
@@ -1536,6 +1545,14 @@
         </div>
         <button class="btn btn-sm" onclick="patchSoapData()">Run</button>
       </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--cream-border);gap:16px">
+        <div style="flex:1">
+          <div style="font-size:14px;color:var(--ink);margin-bottom:3px">Check SAP values against reference</div>
+          <div style="font-size:12px;color:var(--ink-lighter);line-height:1.4">Compares the SAP values in your library against the reference chart and shows every difference before changing anything. Unlike the import above, this one can correct values you already have.</div>
+        </div>
+        <button class="btn btn-sm" onclick="closeModal('modal-settings'); openSapReview();">Review&hellip;</button>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modal-settings')">Close</button>
@@ -1543,8 +1560,24 @@
   </div>
 </div>
 
+<!-- SAP reference review -->
+<div class="modal-overlay" id="modal-sap">
+  <div class="modal" style="max-width:780px">
+    <div class="modal-header">
+      <div class="modal-title">SAP values vs reference</div>
+      <button class="modal-close" onclick="closeModal('modal-sap')">×</button>
+    </div>
+    <div class="modal-body" style="padding:1.25rem 1.5rem" id="sap-review-body"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-sap')">Cancel</button>
+      <button class="btn btn-primary" id="sap-apply-btn" onclick="applySapRefresh()">Apply changes</button>
+    </div>
+  </div>
+</div>
+
 <script src="plume-core.js"></script>
 <script src="plume-cheatsheet.js"></script>
+<script src="plume-sapdata.js"></script>
 <script>
 // ── Data & state ──────────────────────────────────────
 // ── Storage keys ─────────────────────────────────────
@@ -1952,6 +1985,188 @@ function loadSoapFields(soap) {
     document.getElementById('soap-toggle-label').textContent = 'hide';
     updateFaTotal();
   }
+}
+
+// ── SAP reference check ───────────────────────────────
+// A SAP value that reads HIGHER than the truth makes the lye calculator ask
+// for more lye than the oils can consume, which eats into the superfat and is
+// the direction that can leave soap caustic. A value that reads LOW only makes
+// a greasier bar. So the review groups changes by direction rather than by
+// size, because that is what decides whether a difference matters.
+
+var sapPlan = null;
+
+function faSame(a, b) {
+  if (!a && !b) return true;
+  if (!a || !b) return false;
+  var ka = Object.keys(a), kb = Object.keys(b), i;
+  if (ka.length !== kb.length) return false;
+  ka.sort(); kb.sort();
+  for (i = 0; i < ka.length; i++) {
+    if (ka[i] !== kb[i]) return false;
+    if (Math.abs((a[ka[i]] || 0) - (b[kb[i]] || 0)) > 0.0001) return false;
+  }
+  return true;
+}
+
+function buildSapPlan() {
+  // Buckets are named for what the CURRENT value does, not for which way the
+  // number travels when corrected. Those are opposites, and conflating them
+  // puts an oil under a heading that says the reverse of the truth.
+  var plan = { overstated: [], understated: [], add: [], faOnly: [], agree: 0, unmatched: [] };
+  ingredients.forEach(function (ing) {
+    if (ing.archived) return;
+    var ref = PlumeSap.lookup(ing.name);
+    var cur = ing.soap || {};
+    var hasCur = !!(cur.naoh || cur.koh);
+    if (!ref) {
+      // Only worth reporting if it claims soap data we cannot corroborate.
+      if (hasCur) plan.unmatched.push({ ing: ing });
+      return;
+    }
+    // A reference row with no profile means "not reliably known", NOT zero,
+    // so it must never erase a profile the user already has.
+    var faNew   = ref.fa ? ref.fa : null;
+    var faDiff  = faNew && !faSame(cur.fa, faNew);
+    var sapDiff = Math.abs((cur.naoh || 0) - ref.naoh) > 0.0005 ||
+                  Math.abs((cur.koh  || 0) - ref.koh)  > 0.0005;
+    var item = { ing: ing, ref: ref, oldNaoh: cur.naoh || null, oldKoh: cur.koh || null,
+                 fa: faDiff ? faNew : null };
+    if (!hasCur)      { plan.add.push(item); }
+    else if (sapDiff) { ((cur.naoh || 0) > ref.naoh ? plan.overstated : plan.understated).push(item); }
+    else if (faDiff)  { plan.faOnly.push(item); }
+    else              { plan.agree++; }
+  });
+
+  // Largest discrepancy first. A 6% error on a base oil matters and a third-
+  // decimal rounding does not, and alphabetical order buries the one in the
+  // other.
+  function bySize(a, b) {
+    var pa = a.oldNaoh ? Math.abs((a.ref.naoh - a.oldNaoh) / a.oldNaoh) : 0;
+    var pb = b.oldNaoh ? Math.abs((b.ref.naoh - b.oldNaoh) / b.oldNaoh) : 0;
+    return pb - pa;
+  }
+  plan.overstated.sort(bySize);
+  plan.understated.sort(bySize);
+  return plan;
+}
+
+function sapRow(it, dir) {
+  var B  = 'border-bottom:1px solid var(--cream-border)';
+  var NUM = B + ';text-align:right;font-variant-numeric:tabular-nums;padding:5px 8px';
+  var o = it.oldNaoh, nv = it.ref.naoh;
+  var pct = o ? ((nv - o) / o * 100) : null;
+  var tint = dir === 'overstated' ? 'background:var(--warning-bg)' : '';
+
+  // Both lye types are shown. NaOH alone made a row whose NaOH was unchanged
+  // but whose KOH moved by a third-decimal rounding look like a change to
+  // nothing, and liquid soapers need the KOH figure anyway.
+  function cell(oldV, newV) {
+    var same = oldV !== null && Math.abs(oldV - newV) < 0.00005;
+    return '<td style="' + NUM + '">' +
+      (oldV === null ? '<span style="color:var(--ink-lighter)">none</span>' : oldV.toFixed(4)) +
+      '</td><td style="' + NUM + (same ? ';color:var(--ink-lighter)' : '') + '">' +
+      newV.toFixed(4) + '</td>';
+  }
+
+  return '<tr style="' + tint + '">' +
+    '<td style="' + B + ';padding:5px 8px">' + esc(it.ing.name) + '</td>' +
+    cell(o, nv) +
+    cell(it.oldKoh === undefined ? null : it.oldKoh, it.ref.koh) +
+    '<td style="' + NUM + ';color:var(--ink-lighter)">' +
+      (pct === null ? '\u2014' : (Math.abs(pct) < 0.05 ? 'rounding' : (pct > 0 ? '+' : '') + pct.toFixed(1) + '%')) + '</td>' +
+    '<td style="' + B + ';padding:5px 8px;font-size:11px;color:var(--ink-lighter)">' +
+      (it.fa ? 'profile too' : '') + '</td>' +
+    '</tr>';
+}
+
+function sapTable(title, items, dir, note) {
+  if (!items.length) return '';
+  var h = '<div style="font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-lighter);margin:18px 0 6px">' +
+            esc(title) + ' (' + items.length + ')</div>';
+  if (note) h += '<div style="font-size:12px;color:var(--ink-lighter);line-height:1.45;margin-bottom:8px">' + note + '</div>';
+  h += '<table style="width:100%;border-collapse:collapse;font-size:12px">' +
+       '<tr style="font-size:10px;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-lighter)">' +
+       '<th style="text-align:left;padding:0 8px 2px" rowspan="2">Oil</th>' +
+       '<th style="text-align:center;padding:0 8px 2px;border-bottom:1px solid var(--cream-border)" colspan="2">NaOH (bar)</th>' +
+       '<th style="text-align:center;padding:0 8px 2px;border-bottom:1px solid var(--cream-border)" colspan="2">KOH (liquid)</th>' +
+       '<th style="text-align:right;padding:0 8px 2px" rowspan="2">Change</th>' +
+       '<th style="padding:0 8px 2px" rowspan="2"></th></tr>' +
+       '<tr style="font-size:10px;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-lighter)">' +
+       '<th style="text-align:right;padding:2px 8px 4px;font-weight:400">Now</th>' +
+       '<th style="text-align:right;padding:2px 8px 4px;font-weight:400">Ref</th>' +
+       '<th style="text-align:right;padding:2px 8px 4px;font-weight:400">Now</th>' +
+       '<th style="text-align:right;padding:2px 8px 4px;font-weight:400">Ref</th></tr>';
+  items.forEach(function (it) { h += sapRow(it, dir); });
+  return h + '</table>';
+}
+
+function openSapReview() {
+  if (typeof PlumeSap === 'undefined') {
+    alert('The SAP reference data file did not load. Check that plume-sapdata.js sits beside this page.');
+    return;
+  }
+  sapPlan = buildSapPlan();
+  var p = sapPlan;
+  var total = p.overstated.length + p.understated.length + p.add.length + p.faOnly.length;
+  var h = '';
+
+  h += '<div style="font-size:12px;color:var(--ink-lighter);line-height:1.5;margin-bottom:4px">' +
+       'Reference: ' + esc(PlumeSap.source) + ', ' + PlumeSap.count + ' oils. ' +
+       'Grouped by what your stored value does, and sorted so the largest differences come first. ' +
+       'A change marked "rounding" moves only the third decimal of one lye type.</div>';
+
+  if (!total) {
+    h += '<div style="padding:18px 0;font-size:14px;color:var(--ink)">Everything matches the reference. Nothing to change.</div>';
+    if (p.agree) h += '<div style="font-size:12px;color:var(--ink-lighter)">' + p.agree + ' oils checked and already correct.</div>';
+  } else {
+    h += sapTable('Currently overstated', p.overstated, 'overstated',
+      'Your stored value is higher than the reference, so the calculator has been asking for more lye than these oils can use and your real superfat has been lower than the number you set. This is the group worth reading closely. Correcting them lowers the lye.');
+    h += sapTable('Currently understated', p.understated, 'understated',
+      'Your stored value is lower than the reference, so batches have carried more superfat than intended, which is the harmless direction. Correcting them raises the lye, so a recipe you had dialled in may come out firmer than before.');
+    h += sapTable('No SAP value yet', p.add, 'add', null);
+    h += sapTable('Fatty acid profile only', p.faOnly, 'fa',
+      'SAP already correct; only the composition changes.');
+  }
+
+  if (p.unmatched.length) {
+    h += '<div style="font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-lighter);margin:18px 0 6px">' +
+         'Not in the reference (' + p.unmatched.length + ')</div>' +
+         '<div style="font-size:12px;color:var(--ink-lighter);line-height:1.45">' +
+         'These carry soap data that cannot be checked, usually because the name differs from the reference. Left untouched: ' +
+         p.unmatched.map(function (u) { return esc(u.ing.name); }).join(', ') + '</div>';
+  }
+
+  h += '<div style="margin-top:20px;padding-top:12px;border-top:1px solid var(--cream-border);font-size:12px;color:var(--ink-lighter);line-height:1.5">' +
+       'Only SAP values and fatty acid profiles change. Names, lots, costs and everything else are untouched, and ' +
+       'an oil whose reference row has no profile keeps the profile you already have.</div>';
+
+  document.getElementById('sap-review-body').innerHTML = h;
+  var btn = document.getElementById('sap-apply-btn');
+  btn.textContent = total ? ('Apply ' + total + ' change' + (total === 1 ? '' : 's')) : 'Nothing to apply';
+  btn.disabled = !total;
+  btn.style.opacity = total ? '' : '0.5';
+  openModal('modal-sap');
+}
+
+function applySapRefresh() {
+  if (!sapPlan) return;
+  var n = 0;
+  [sapPlan.overstated, sapPlan.understated, sapPlan.add, sapPlan.faOnly].forEach(function (group) {
+    group.forEach(function (it) {
+      var ing = it.ing;
+      if (!ing.soap) ing.soap = {};
+      ing.soap.naoh = it.ref.naoh;
+      ing.soap.koh  = it.ref.koh;
+      if (it.fa) ing.soap.fa = it.fa;   // never clears an existing profile
+      n++;
+    });
+  });
+  sapPlan = null;
+  saveData();
+  renderTable();
+  closeModal('modal-sap');
+  alert('Updated SAP data on ' + n + ' ingredient' + (n === 1 ? '' : 's') + '.');
 }
 
 function patchSoapData() {
@@ -3681,7 +3896,7 @@ var SEEDER_BATCHES = [
       {name:"Sweet almond oil",inci:"Prunus Amygdalus Dulcis (Sweet Almond) Oil",phase:"oil",function:"Emollient, softening",min:"1",max:"30",flag:"no",notes:"",soap:{naoh:0.136,koh:0.190,fa:{palmitic:7,stearic:2,oleic:69,linoleic:20}}},
       {name:"Rosehip seed oil",inci:"Rosa Canina Seed Oil",phase:"oil",function:"Regenerating, high linoleic acid, antioxidant",min:"1",max:"10",flag:"no",notes:"Oxidizes quickly — store refrigerated; add vitamin E.",soap:{naoh:0.137,koh:0.192,fa:{palmitic:4,stearic:2,oleic:15,linoleic:45,linolenic:33}}},
       {name:"Argan oil",inci:"Argania Spinosa Kernel Oil",phase:"oil",function:"Emollient, antioxidant, non-greasy",min:"1",max:"20",flag:"no",notes:"",soap:{naoh:0.136,koh:0.190,fa:{palmitic:13,stearic:6,oleic:43,linoleic:37}}},
-      {name:"Fractionated coconut oil",inci:"Cocos Nucifera (Coconut) Oil",phase:"oil",function:"Emollient, carrier oil",min:"1",max:"30",flag:"no",notes:"Stays liquid at room temp; long shelf life.",soap:{naoh:0.232,koh:0.324,fa:{lauric:2,myristic:1,palmitic:9,stearic:3,oleic:8,linoleic:2}}},
+      {name:"Fractionated coconut oil",inci:"Caprylic/Capric Triglyceride",phase:"oil",function:"Emollient, carrier oil",min:"1",max:"30",flag:"no",notes:"Stays liquid at room temp; long shelf life. INCI is Caprylic/Capric Triglyceride, not Cocos Nucifera. Fractionating strips the long-chain acids out, so what is left is a different material from the coconut oil it came from.",soap:{naoh:0.232,koh:0.325,fa:{caprylic:55,capric:42,lauric:2}}},
     ]},
     { cat: 'Cool-down phase', items: [
       {name:"Optiphen Plus",inci:"Phenoxyethanol (and) Caprylyl Glycol (and) Sorbic Acid",phase:"cool-down",function:"Broad-spectrum preservation",min:"0.75",max:"1.5",flag:"yes",notes:"Add below 40°C. Check pH compatibility."},
