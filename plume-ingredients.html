@@ -2440,9 +2440,20 @@ function renderTable() {
     if (inStockActive && !hasStock(i)) return false;
     return true;
   });
-  // Sort by common name, case-insensitive. localeCompare handles accents
-  // and mixed case sensibly. Underlying ingredients array order is untouched.
+  // Browsing: sort by common name, case-insensitive. localeCompare handles
+  // accents and mixed case sensibly. Underlying array order is untouched.
+  // Searching: best match first (Plume.ingMatchRank -- names starting with
+  // the query, then words in the name, then INCI, then notes), alphabetical
+  // within each. Before this the search sorted only alphabetically, so "na"
+  // opened on Activated charcoal, matched through a word in its notes.
+  // A supplier-only match ranks after everything else.
+  var rankOf = function(i) {
+    if (!q) return 0;
+    return Plume.ingMatchRank(i, q) || 6;
+  };
   list.sort(function(a, b) {
+    var ra = rankOf(a), rb = rankOf(b);
+    if (ra !== rb) return ra - rb;
     return (a.name || '').toLowerCase().localeCompare((b.name || '').toLowerCase());
   });
   var tbody = document.getElementById('tbody');

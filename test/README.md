@@ -12,7 +12,7 @@ From the repository root:
     npx playwright install chromium
     npm test
 
-`npm test` runs all seven suites and stops at the first failure. To run one:
+`npm test` runs all eight suites and stops at the first failure. To run one:
 
     node test/test-lock.js
 
@@ -41,6 +41,7 @@ version, run the suites, and commit the new lockfile together.
 | `test-sap.js` | 65 | The SAP reference data and the review that applies it: the KOH/NaOH ratio on every row, profiles predicting their own SAP, name lookup surviving the INCI collisions, and applying changes without destroying anything |
 | `test-ing-archive.js` | 47 | Archiving and un-archiving an ingredient; the delete guard naming which formulations break; an archived ingredient still resolving where used but gone from the add picker; a deleted ingredient rendering a marked row instead of vanishing |
 | `test-density.js` | 29 | Density resolution without a DOM: explicit beats reference beats category beats guess; the measured values; the categories that refuse to guess; and the stock arithmetic that now stops treating a litre of oil as a kilogram |
+| `test-search.js` | 18 | Search ordering: names starting with the query first, then a later word of the name, then INCI, then mid-word, then notes; checked in the Ingredients list and the Formulations dropdown |
 
 ## How they run
 
