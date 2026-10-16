@@ -33,7 +33,7 @@ var Plume = (function () {
 // Bump when core changes. Shown in every module's Settings panel, so
 // "is core loaded, and is it the one I just uploaded?" is answerable by
 // looking rather than guessing -- browsers cache .js files stubbornly.
-var VERSION = '1.8';
+var VERSION = '1.9';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -270,6 +270,124 @@ function costPerG(ing) {
   return costs.length ? Math.min.apply(null, costs) : null;
 }
 
+
+// ── Density ──────────────────────────────────────────────────────
+// Converting a lot bought by VOLUME into grams needs a density. Where none
+// was recorded the arithmetic used 1.0, the density of water, which
+// overstates a typical oil by about 7%. That inflated stock on hand and
+// understated cost per gram on every oil bought by the litre.
+//
+// These tables used to live in the Ingredients edit form, where they could
+// only ever produce a suggestion for a human to accept. Nothing else could
+// see them, so the moment a density was left blank every module fell back to
+// water. Here they resolve a density for any ingredient object.
+//
+// The 'measured' entries are Heide's own lookup, 2026-10-16. Her 31 values
+// put 26 of them within 1.5% of the 0.92 carrier-oil default, which is what
+// justifies trusting that default for everything not named here.
+var DENSITY_BY_INCI = {
+  'aqua':                          { value:1.00, why:'water' },
+  'glycerin':                      { value:1.26, why:'typical for glycerin' },
+  // Was 1.02, which is about 4% low. 1,3-propanediol is ~1.06 at 20 C and
+  // ~1.053 at 25 C; the latter is the measured figure.
+  'propanediol':                   { value:1.053, why:'measured, 1,3-propanediol' },
+  'propylene glycol':              { value:1.04, why:'typical for propylene glycol' },
+  'butylene glycol':               { value:1.00, why:'typical for butylene glycol' },
+  'sodium lactate':                { value:1.32, why:'typical for 60% sodium lactate' },
+  'lactic acid':                   { value:1.20, why:'typical for 88% lactic acid' },
+  'aloe barbadensis leaf juice':   { value:1.00, why:'water-based' },
+  'phenoxyethanol':                { value:1.11, why:'typical for phenoxyethanol' },
+  'polysorbate 20':                { value:1.10, why:'typical for polysorbate 20' },
+  'polysorbate 80':                { value:1.06, why:'typical for polysorbate 80' },
+  'decyl glucoside':               { value:1.10, why:'typical as supplied' },
+  'coco glucoside':                { value:1.10, why:'typical as supplied' },
+  'cocamidopropyl betaine':        { value:1.04, why:'typical as supplied' },
+  'caprylic/capric triglyceride':  { value:0.95, why:'typical for fractionated oils' },
+  'squalane':                      { value:0.81, why:'typical for squalane' },
+  'isopropyl myristate':           { value:0.85, why:'typical for IPM' },
+  'c12-15 alkyl benzoate':         { value:0.92, why:'typical for this ester' },
+  'tocopherol':                    { value:0.95, why:'typical for tocopherol' },
+  'ricinus communis seed oil':     { value:0.96, why:'typical for castor oil' },
+  'olea europaea fruit oil':       { value:0.91, why:'typical for olive oil' },
+  'cocos nucifera oil':            { value:0.92, why:'typical for coconut oil' },
+
+  // Measured.
+  'adansonia digitata seed oil':              { value:0.917, why:'measured' },
+  'aleurites moluccana seed oil':             { value:0.925, why:'measured' },
+  'arachis hypogaea oil':                     { value:0.916, why:'measured' },
+  'argania spinosa kernel oil':               { value:0.912, why:'measured' },
+  'borago officinalis seed oil':              { value:0.918, why:'measured' },
+  'brassica campestris seed oil':             { value:0.915, why:'measured' },
+  'calophyllum inophyllum seed oil':          { value:0.942, why:'measured' },
+  'camellia sinensis seed oil':               { value:0.915, why:'measured' },
+  'cannabis sativa seed oil':                 { value:0.926, why:'measured' },
+  'glycine soja oil':                         { value:0.922, why:'measured' },
+  'helianthus annuus seed oil':               { value:0.918, why:'measured' },
+  'hippophae rhamnoides fruit oil':           { value:0.925, why:'measured' },
+  'limnanthes alba seed oil':                 { value:0.912, why:'measured' },
+  'linum usitatissimum seed oil':             { value:0.928, why:'measured' },
+  'macadamia ternifolia seed oil':            { value:0.914, why:'measured' },
+  'melia azadirachta seed oil':               { value:0.940, why:'measured' },
+  'nigella sativa seed oil':                  { value:0.925, why:'measured' },
+  'oenothera biennis oil':                    { value:0.926, why:'measured' },
+  'olea europaea husk oil':                   { value:0.914, why:'measured' },
+  'persea gratissima oil':                    { value:0.920, why:'measured' },
+  'prunus amygdalus dulcis oil':              { value:0.915, why:'measured' },
+  'prunus armeniaca kernel oil':              { value:0.915, why:'measured' },
+  'punica granatum seed oil':                 { value:0.928, why:'measured' },
+  'rosa canina seed oil':                     { value:0.923, why:'measured' },
+  'simmondsia chinensis seed oil':            { value:0.860, why:'measured' },
+  'vitis vinifera seed oil':                  { value:0.923, why:'measured' },
+  'zea mays oil':                             { value:0.921, why:'measured' },
+};
+
+var DENSITY_HINTS = [
+  { cat:'Essential oil', value:0.90, why:'typical for essential oils' },
+  { cat:'Emollient', phase:'oil', value:0.92, why:'typical for carrier oils' },
+  { cat:'Solubilizer', value:1.05, why:'typical for solubilizers' },
+  { cat:'Surfactant',  value:1.05, why:'typical for surfactant blends' },
+  // Hydrosols, aloe, extracts, infusions -- anything that is essentially
+  // water. Still held back for the few categories whose unknown members
+  // genuinely scatter: an unrecognised humectant could be anywhere between
+  // propanediol and glycerin, and a wrong figure is worse than none. The
+  // ones that matter are named in DENSITY_BY_INCI and never reach here.
+  { phase:'water', notCats:['Humectant','Preservative','Active','pH Adjuster','Thickener'],
+    value:1.00, why:'water-based, near enough to 1.0' }
+];
+
+// Lowercase, drop any "(common name)" parenthetical, collapse whitespace.
+function normDensityInci(s) {
+  if (!s) return '';
+  return String(s).toLowerCase().replace(/\([^)]*\)/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+// The density to use for this ingredient, and where it came from.
+//
+// Source matters and is returned alongside the number. A value the user
+// typed must never be quietly overridden by a table, and a value the table
+// inferred must be visible as inferred rather than passing for something she
+// entered. 'default' means nothing is known and the figure is a guess.
+function densityFor(ing) {
+  var explicit = ing && parseFloat(ing.density);
+  if (explicit > 0) return { value: explicit, source: 'set', why: 'set on the ingredient' };
+
+  var key = normDensityInci(ing && ing.inci);
+  if (key && DENSITY_BY_INCI[key]) {
+    return { value: DENSITY_BY_INCI[key].value, source: 'inci', why: DENSITY_BY_INCI[key].why };
+  }
+
+  var cats = funcCats(ing);
+  var phase = ing && ing.phase;
+  for (var k = 0; k < DENSITY_HINTS.length; k++) {
+    var h = DENSITY_HINTS[k];
+    if (h.cat && cats.indexOf(h.cat) === -1) continue;
+    if (h.phase && h.phase !== phase) continue;
+    if (h.notCats && h.notCats.some(function (c) { return cats.indexOf(c) !== -1; })) continue;
+    return { value: h.value, source: 'category', why: h.why };
+  }
+  return { value: 1.0, source: 'default', why: 'no density known, assuming water' };
+}
+
 // Convert a lot quantity to grams. Density only matters for volume units.
 function qtyToGrams(qty, unit, density) {
   var q = parseFloat(qty);
@@ -299,7 +417,7 @@ function stockG(ing) {
     if (l.referenceOnly) return;
     var qty  = l.qtyPurchased || l.stock || '';
     var unit = l.qtyUnit      || l.stockUnit || 'g';
-    if (qty) total += qtyToGrams(qty, unit, ing.density);
+    if (qty) total += qtyToGrams(qty, unit, densityFor(ing).value);
   });
   return total;
 }
@@ -314,7 +432,7 @@ function stockGOrNull(ing) {
     if (l.referenceOnly) return;
     var qty  = l.qtyPurchased || l.stock || '';
     var unit = l.qtyUnit      || l.stockUnit || 'g';
-    if (qty) { total += qtyToGrams(qty, unit, ing.density); any = true; }
+    if (qty) { total += qtyToGrams(qty, unit, densityFor(ing).value); any = true; }
   });
   return any ? total : null;
 }
@@ -1102,6 +1220,8 @@ return {
   esc: esc, openModal: openModal, closeModal: closeModal,
   todayISO: todayISO, parseLocalDate: parseLocalDate, fmtDate: fmtDate, fmtBytes: fmtBytes,
   costPerG: costPerG, qtyToGrams: qtyToGrams, stockG: stockG,
+  densityFor: densityFor, DENSITY_BY_INCI: DENSITY_BY_INCI, DENSITY_HINTS: DENSITY_HINTS,
+  normDensityInci: normDensityInci,
   stockGOrNull: stockGOrNull, stockState: stockState,
   PALETTES: PALETTES, setModule: setModule, applyPalette: applyPalette,
   selectPalette: selectPalette, renderPaletteSwatches: renderPaletteSwatches,
