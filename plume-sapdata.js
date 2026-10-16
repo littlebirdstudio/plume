@@ -52,7 +52,7 @@ var PlumeSap = (function () {
       naoh:0.133, koh:0.187, fa:{palmitic:4,stearic:2,oleic:15,linoleic:45,linolenic:33} },
     { name:'Argan oil', aliases:[], inci:'Argania Spinosa Kernel Oil',
       naoh:0.136, koh:0.191, fa:{palmitic:13,stearic:6,oleic:43,linoleic:37} },
-    { name:'Fractionated coconut oil', aliases:[], inci:'Caprylic/Capric Triglyceride',
+    { name:'Fractionated coconut oil', aliases:['Caprylic capric triglyceride','Caprylic/capric triglyceride','Fractionated coconut','MCT oil'], inci:'Caprylic/Capric Triglyceride',
       naoh:0.232, koh:0.325, fa:{caprylic:55,capric:42,lauric:2} },
     { name:'Mango butter', aliases:[], inci:'Mangifera Indica (Mango) Seed Butter',
       naoh:0.136, koh:0.191, fa:{palmitic:7,stearic:40,oleic:46,linoleic:5} },

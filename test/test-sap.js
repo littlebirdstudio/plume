@@ -133,6 +133,18 @@ const FA_MW = {
     ok('76-degree coconut keeps the botanical INCI',
        /cocos nucifera/i.test(d76.inci), d76.inci);
 
+    // Fractionated coconut oil and caprylic/capric triglyceride are related
+    // grades sold under both names, so a library holding them as two
+    // ingredients must find a value for either. Before the aliases, a
+    // CCT-named ingredient matched nothing at all.
+    ['Caprylic/capric triglyceride', 'Caprylic Capric Triglyceride', 'MCT oil']
+      .forEach(function (n) {
+        ok('"' + n + '" resolves to the fractionated coconut row',
+           Sap.lookup(n) === frac, Sap.lookup(n) && Sap.lookup(n).name);
+      });
+    ok('and that row is still not the 76-degree coconut one',
+       Sap.lookup('MCT oil') !== d76);
+
     // The collision that survives: INCI names the botanical source, grade
     // changes the SAP, and these two grades share a source.
     const sf = Sap.lookup('Safflower oil');
