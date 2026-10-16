@@ -206,6 +206,85 @@ const SEED = `
     await page.close();
   }
 
+  console.log('\n4d. The density note renders as text, not as markup');
+  {
+    // Every value in the detail property grid is escaped on the way out,
+    // which is correct and must stay that way. A first attempt put a styled
+    // <span> in the value and it rendered as literal angle brackets on
+    // screen. The note is a separate field now and the renderer owns the
+    // markup, so this asserts on the rendered TEXT.
+    const { page } = await open('ingredients');
+    await page.evaluate("viewIngredient('i1')");   // Olive oil, no density set
+    await page.waitForTimeout(250);
+    const text = await page.evaluate("document.getElementById('d-body').innerText");
+    const html = await page.evaluate("document.getElementById('d-body').innerHTML");
+
+    ok('no escaped markup leaks into the visible text',
+       !/&lt;span|<span style=/.test(text), text.match(/Density[\s\S]{0,120}/));
+    ok('the density value is shown', /0\.91\s*g\/mL/.test(text), text.match(/Density[\s\S]{0,80}/));
+    ok('and says it came from the reference rather than being set',
+       /from the reference/.test(text) && /not set/.test(text), text.match(/Density[\s\S]{0,120}/));
+    ok('the note is real markup in the DOM, not escaped entities',
+       html.indexOf('&lt;span') === -1);
+
+    // An ingredient with an explicit density gets no note at all.
+    await page.evaluate(`(function () {
+      ingredients.find(function (x) { return x.id === 'i1'; }).density = 0.903;
+      viewIngredient('i1');
+    })()`);
+    await page.waitForTimeout(250);
+    const t2 = await page.evaluate("document.getElementById('d-body').innerText");
+    ok('an explicitly set density shows no provenance note',
+       /0\.903/.test(t2) && !/from the reference/.test(t2), t2.match(/Density[\s\S]{0,80}/));
+    await page.close();
+  }
+
+  console.log('\n4e. The displayed stock agrees with the shared helper');
+  {
+    // Ingredients computes its own stock total for display. It used to pass
+    // the raw ing.density, so a blank fell back to water and the screen said
+    // 1000 g for a 1000 mL lot while Plume.stockG said 912. Two numbers for
+    // one quantity, and the wrong one was the visible one.
+    const seed = `localStorage.setItem('aerie-ingredients-v2', JSON.stringify([
+      { id:'d1', name:'Argan oil', inci:'Argania Spinosa Kernel Oil', phase:'oil',
+        functionCategory:['Emollient'],
+        lots:[{ id:'l1', supplier:'Acme', qtyPurchased:1000, qtyUnit:'mL' }] },
+      { id:'d2', name:'Argan oil by weight', inci:'Argania Spinosa Kernel Oil', phase:'oil',
+        functionCategory:['Emollient'],
+        lots:[{ id:'l2', supplier:'Acme', qtyPurchased:1000, qtyUnit:'g' }] },
+      { id:'d3', name:'Low stock test', inci:'Argania Spinosa Kernel Oil', phase:'oil',
+        functionCategory:['Emollient'], lowStock:'500', lowStockUnit:'mL',
+        lots:[{ id:'l3', supplier:'Acme', qtyPurchased:480, qtyUnit:'mL' }] }
+    ]));
+    localStorage.setItem('aerie-formulations-v1','[]');`;
+    const { page } = await open('ingredients', seed);
+
+    const r = await page.evaluate(`(function () {
+      function f(id) { return ingredients.filter(function (x) { return x.id === id; })[0]; }
+      return {
+        helper:    Plume.stockG(f('d1')),
+        displayed: calcTotalStockG(f('d1')),
+        byWeight:  calcTotalStockG(f('d2')),
+        density:   Plume.densityFor(f('d1')).value,
+        lowStock:  isLowStock(f('d3'))
+      };
+    })()`);
+
+    ok('the shared helper converts the volume', Math.abs(r.helper - 912) < 1, r.helper);
+    ok('and the displayed total now agrees with it',
+       Math.abs(r.displayed - r.helper) < 0.001, [r.displayed, r.helper]);
+    ok('a lot bought by weight is still untouched', r.byWeight === 1000, r.byWeight);
+
+    // 480 mL against a 500 mL threshold is low whichever density is used, but
+    // both sides must convert the SAME way or the comparison is meaningless.
+    ok('the low-stock threshold converts like the stock does', r.lowStock === true, r);
+
+    const cell = await page.evaluate("document.querySelector('#tbody tr td:last-child').innerText");
+    ok('the list cell shows the converted grams, not the raw millilitres',
+       /912/.test(cell) && !/^1000g/.test(cell), cell);
+    await page.close();
+  }
+
   console.log('\n5. Un-archiving, with no dialog in the way');
   {
     const { page, dialogs } = await open('ingredients');
