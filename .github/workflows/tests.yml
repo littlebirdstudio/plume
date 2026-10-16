@@ -1,0 +1,42 @@
+name: Tests
+
+# Runs the four suites on every pull request, and on anything that lands on
+# main. The pull request run is the one that matters: GitHub Pages serves
+# main directly, so a bad merge is live immediately and there is no deploy
+# step in between to catch it.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# A second push to the same branch cancels the first — no point finishing a
+# run against code that has already been replaced.
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      # `npm ci` installs exactly what package-lock.json pins and fails if the
+      # lockfile and package.json disagree, so a run cannot quietly drift onto
+      # a newer jsdom or Playwright than the one the tests were written for.
+      - name: Install dependencies
+        run: npm ci
+
+      # --with-deps pulls the system libraries headless Chromium needs on a
+      # bare Ubuntu runner. Without it the browser installs but will not start.
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run tests
+        run: npm test
