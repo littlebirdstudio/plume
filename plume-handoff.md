@@ -1164,6 +1164,183 @@ recommended exactly what failed.
 **Electrolyte tolerance** — the Sepinov/Sepimax difference — deliberately has no
 column; the chooseWhen line carries it.
 
+### Session 14 (cont.) — Ingredient editor reordered, restricted fields merged
+
+Her requested order, top of the editor: Common name | INCI name (side by side,
+name no longer full width) → **My purpose** (relabelled from "What do you reach
+for this for?", which she found odd; the chart column now also says "My
+purpose") → Choose it when… → **Substitutes** (moved up out of Properties, id
+still `f-substitution`) → Phase | Min % | Max % on one row (`.form-row3`) →
+function chips → Function notes | Secondary functions.
+
+**Restricted use: two fields were one fact.** `flag` (yes/no dropdown, drives
+the orange ● in Formulations and the "Restricted use" badge) and `restrictions`
+(free text in Properties) are now a single checkbox (`#f-restricted`) at the
+top of Properties that reveals the Restrictions box. Data shapes unchanged —
+`flag` is still `'yes'`/`'no'`. The box also shows whenever it already holds
+text, so an imported caution on an unflagged ingredient (Brazil nut oil's nut
+allergy note, the one FB entry with restrictions text) is never hidden, and
+unchecking never deletes text. A flagged ingredient auto-expands Properties so
+the flag cannot hide in a collapsed section. Dirty tracking reads the checkbox
+separately (its `.value` is always "on").
+
+**"Other" function kept** — she wondered why it exists; it is the catch-all for
+things like lye that no real function fits.
+
+### Session 14 (cont.) — Editor order, round two; preview links
+
+**Her refinement of the purpose field:** the general "what it is" should lead,
+and the personal line is *"more like a note pad or reminder for when I am
+looking at all of my actual ingredients wondering what in the world I was
+thinking about when I bought it."* So:
+- Editor order is now: Common name | INCI → function chips → Function notes |
+  Secondary functions → Choose it when… → Substitutes → Phase | Min | Max →
+  **What I had in mind** (field still `purpose`; now a 2-row textarea, max 300
+  chars, hint "a note to future you: why you bought it").
+- Clipped to one line in the list (120 chars) and the Formulations dropdown
+  (90 chars), full text on hover; the cheat sheet cell wraps and shows it all.
+- Her Sepimax example of the split: Functions = Thickener; Function notes =
+  gelling agent; What I had in mind = slightly thicken serums; Choose it when
+  = electrolytes.
+
+**Cheat sheet:** Substitutes column added beside Choose it when, shown only in
+groups where at least one ingredient lists a substitute. Purpose column
+renamed "What I had in mind".
+
+**Preview links (new working pattern).** Since core, a module can't be previewed
+on its own (the preview can't load `plume-core.js`, so it shows the red banner).
+`make_preview.py` builds a self-contained copy — core and the cheat sheet
+inlined, sample data seeded on first open, yellow "Preview" banner with a Reset
+button — published as an Artifact link and republished at the same URL for each
+tweak. She iterates on the preview and only gets real files once it's settled.
+Its storage is private to the preview; never suggest a test folder on the
+GitHub site, which would share her real browser storage.
+
+### Session 14 (cont.) — Three levels: quick look, full details, edit
+
+**The problem, in her words:** the "Edit ingredient" button had a dual purpose —
+she opened it every time she only wanted to LOOK, because the details page hid
+empty fields and folded things away. Her "magic world": select an ingredient in
+the list, more info drops down, then click through to full details and/or edit.
+
+1. **Quick look** (`toggleQuickLook`, `quickLookHtml`): clicking a list row opens
+   an in-place row beneath it (`tr.ql-row`), one at a time; click again to fold.
+   Shows function pills + function notes, Choose it when, Substitutes (if any),
+   What I had in mind, Use %, Phase, On hand, Used in, Restricted. Links: "Full
+   details →" and "Edit". Survives searches/filters that keep the row
+   (`qlOpenId`).
+2. **Full details** (`viewIngredient`): the banner now says what it IS — name,
+   brand, INCI, **function notes**, with phase/function/restricted badges. The
+   working notes moved into the fields: Choose it when | Substitutes, then What
+   I had in mind (full width). **Every field is shown, empty ones as a dash** —
+   all Properties, Secondary functions, My formulating notes, Expanded details —
+   so Edit is never needed just to look. Properties shows "Restricted use:
+   Yes — <limit>" / "Not flagged — <note>" / "No".
+3. **Edit**: the form, unchanged. Opened from the quick look (`editFromList`), it
+   returns to the list after saving; opened from the details page, it returns
+   there, as before.
+
+**Click-to-type notes** (`noteEditHtml`, `startNoteEdit`, `commitNote`,
+`refreshNoteViews`): `purpose` and `chooseWhen` are editable in place in the
+quick look, the details page AND the cheat sheet (she chose to keep the cheat
+sheet editable). Click, type, click away or Enter to save; Shift+Enter new line;
+Escape cancels; clearing deletes the field. A brief "Saved" appears. Updates
+every visible copy in place without re-rendering (an open quick look stays
+open) and patches the list row's one-line reminder. In the cheat sheet blank
+notes render as a quiet dash (`compact`) rather than the full prompt; clicking a
+note cell edits, clicking elsewhere in the row opens the ingredient. One record
+underneath — she asked, and was told, edits anywhere show everywhere.
+
+**Cross-module:** Formulations' "View in library →" and Batchlog's two
+ingredient links (`#ing=<id>`) still land on full details — verified, no
+changes needed there. `PlumeCheat.usageMap` is now exported so the quick look
+can show "Used in".
+
+**Preview:** sample data now reseeds automatically whenever the preview is
+republished (`plume_preview_seed` stamp), so new samples appear without Reset;
+preview edits last until the next update.
+
+**Follow-up tweaks (same session):** the line under each name in the list now
+shows **function notes** (what it is), not the reminder note — she flagged the
+reminder there as "not the best choice". Quick-look side panel is a two-column
+label | value grid. The reminder note (`purpose`) accepts line breaks — Enter
+is a new line, clicking away saves — so it can be a short list; Choose it when
+stays single-line (Enter saves). Formulations' dropdown joins multi-line notes
+with " · "; its popup preserves the line breaks.
+
+**"Choose it when" → "The lowdown" (decided).** She was uneasy with the old
+label: her Geogard example — the smell — is a reason NOT to choose it, which
+the positive framing couldn't hold. Her call: keep ONE field covering pros and
+cons; she offered "Hot tips", "Lowdown" or "Words to the wise" and "The
+lowdown" was used. **Label only — the stored field is still `chooseWhen`**
+(renaming it would need a data migration for no benefit). Hint: "strengths and
+catches, compared with similar ingredients"; max 200 chars. Changed in the
+editor, quick look, details page, cheat sheet header and Formulations popup.
+
+**Used in — names, not a count.** Her point: a number "doesn't actually speak
+to the formulations that it is a part of." `PlumeCheat.usageMap()` now returns
+`{id, name}` pairs and `PlumeCheat.usedInHtml(list, max, forPrint)` renders the
+first few names as links (`plume-formulations.html#f=<id>`, new tab) plus "+N
+more", full list on hover. Quick look shows 4, details page 8 (new "Used in"
+field), cheat sheet 2; print shows plain names. **Formulations now honours a
+`#f=<id>` deep link** on boot and opens that formula — the first link INTO
+Formulations from another module.
+
+**Manage lots, one level out.** It only existed inside the Edit form, so
+managing lots meant opening Edit. Now also a button beside the "Supplier lots"
+heading on the details page (`openLotsFromDetails`): the form is loaded behind
+the scenes, the drawer opens, and closing the drawer saves and refreshes the
+page (`lotsFromDetails`); it sits right beside the heading text, not pushed to the far side. The lowdown column in the cheat sheet is capped at ~260px and wraps, so long notes don't stretch the table. Cheat sheet headers may wrap to two lines (they were colliding on a narrow screen — "What I had in mind" into "On hand"); the reminder column wraps at ~220px; On hand has a minimum width and extra left padding. **Visual checks are now possible — use them.** Headless Chromium (Playwright,
+Python) is available in the workspace: `shoot.py` / `shoot2.py` load the
+preview file and screenshot the cheat sheet (720px and 1280px), the quick look
+and the details page. Several layout bugs this session passed every jsdom test
+and were only visible on screen. Screenshot any visible change before handing
+it over.
+
+**Second gotcha:** Ingredients also sets `table { table-layout: fixed }` on every
+table, so columns share width evenly regardless of content. In the cheat sheet
+that crushed the comparison columns and made names overlap "Use %". `.cs-table`
+now sets `table-layout: auto`; the name column prefers 150px; short values
+(≤14 chars) don't wrap. **Third:** the details banner is dark (`--bark-dark`), so
+the function-notes line there needs light text (`.detail-card-header
+.detail-purpose`) — it was near-invisible. Function notes under names in the list
+now end with "…" instead of being chopped.
+
+**Gotcha found:** Ingredients' page-wide `td` rule (one line, `overflow:hidden`, `text-overflow:ellipsis`) — meant for the list — was inherited by the cheat sheet, truncating names to "Se…", and by the quick-look row. Both now override it explicitly; anything new rendered inside a table on that page needs the same override. Cheat-sheet rows now carry `has-stock` and use the list's blush tint (`--clay-light`, `--clay-hover` on hover). **Print** is landscape with fixed column widths (name 13%, lowdown 21%, substitutes 10%, reminder 17%, on hand 6%, used in 11%; the per-group comparison columns share the rest), every cell wraps, and multi-line reminder notes keep their line breaks. The button in the Edit form stays — a brand-new
+ingredient needs it before it has a details page.
+
+**Open question, not raised with her yet:** there are now two personal note
+fields — the short "What I had in mind" and the older free-form "My formulating
+notes". Worth asking whether both earn their place.
+
+### START HERE — dev tools are in the project
+
+**`plume-devtools.py`** (in the project files) holds the session-14 tooling in
+one file: the jsdom harness, `check.py`, `make_preview.py`, the Playwright
+screenshot scripts and the four test suites (188 checks). Unpack before any
+build work:
+
+    mkdir -p /home/claude/plume && cd /home/claude/plume
+    cp /mnt/project/*.html /mnt/project/*.js /mnt/project/*.json .
+    python3 /mnt/project/plume-devtools.py .
+    npm install jsdom   # if not already present
+
+**Preview a change:** `python3 make_preview.py formulations` (or ingredients,
+batchlog, costing, packaging) writes `/mnt/user-data/outputs/preview-<module>.html`;
+publish it with the Artifact tool and give her the link.
+**Look at it yourself:** `python3 shoot.py /mnt/user-data/outputs/preview-formulations.html
+/tmp/f.png --width 1280 --run "openFormula('f1')" --full`, then `view /tmp/f.png`.
+Do a narrow (~720px) and a desktop (~1280px) shot. More recipes in shoot.py.
+
+Working pattern Heide wants: for visible changes, build and publish a preview
+link first (republish to the same URL per tweak), screenshot it yourself, and
+hand over real files only when she says it's ready. When tooling changes,
+regenerate `plume-devtools.py` for her to replace in the project.
+
+**Next up (her words at the end of session 14):** she noticed some
+improvements in Formulations as a result of this session's changes and wants
+to pick those up in a fresh chat. Ask her for the list.
+
 ### Immediate — session 15 carry-over
 - **Pre-fill `chooseWhen` drafts** (agreed, not started). She exports a backup
   from Ingredients Settings and uploads it; research each ingredient she owns

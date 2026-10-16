@@ -1,0 +1,36 @@
+Copyright (c) 2026 Heide Provencher, trading as Little Bird Studio.
+All rights reserved.
+
+This source code is published so that it can be read. It is not open source,
+and no licence to use it is granted.
+
+You MAY:
+
+  - View and read this source code.
+  - Use the hosted application at https://littlebirdstudio.github.io/plume/
+    for your own personal, non-commercial formulating.
+  - Quote short excerpts for the purpose of commentary, review, teaching or
+    discussion, with attribution.
+
+You MAY NOT, without prior written permission from the copyright holder:
+
+  - Copy, fork, mirror or redistribute this code, in whole or in substantial
+    part.
+  - Modify it, or create derivative works from it.
+  - Host your own copy of it, publicly or privately.
+  - Use it, or any substantial part of it, in any commercial product or
+    service, whether sold, bundled or given away.
+
+Permission may well be granted. If you want to do something with this that
+isn't allowed above, ask: little-bird-studio.com
+
+NO WARRANTY. This software is provided "as is", without warranty of any kind,
+express or implied, including but not limited to the warranties of
+merchantability, fitness for a particular purpose and non-infringement. In no
+event shall the copyright holder be liable for any claim, damages or other
+liability arising from, out of or in connection with the software or its use.
+
+Plume is a formulation record-keeping tool. It performs arithmetic on numbers
+you enter, including saponification calculations. It does not verify that any
+formulation is safe, stable, correctly preserved or legal to sell in your
+jurisdiction. Responsibility for every batch you make rests with you.
