@@ -1,4 +1,4 @@
-// plume-sapdata.js  v1.0
+// plume-sapdata.js  v1.1
 //
 // Saponification values and fatty acid profiles for the oils, butters and
 // waxes Plume knows about. Loaded as a plain script, like plume-core.js --
@@ -18,9 +18,22 @@
 //   than 4% is either explained in a comment on the row or has no profile at
 //   all -- a missing profile here means "not known reliably", never "zero".
 //
-//   One SAP value is NOT from the chart and carries estimated:true on its row.
-//   Anything with that flag is good enough to calculate with and not good
-//   enough to trust silently.
+//   Two SAP values are NOT from the chart and carry estimated:true on their
+//   rows: chia seed oil (not on the chart) and pumpkin seed butter (no chart
+//   row; it takes the oil's value, and a butter is usually the oil plus a
+//   hardener, so its real SAP is likely a little lower). Anything with that
+//   flag is good enough to calculate with and not good enough to trust
+//   silently.
+//
+//   UNKNOWN ON PURPOSE (v1.1, Heide's decision 2026-10-16): murumuru, ucuuba
+//   and sea buckthorn carry naoh:null, koh:null, unknown:true. The sources
+//   disagreed (murumuru: three sources, three numbers; ucuuba: profile 13%
+//   off the chart; sea buckthorn: seed-only and seed-and-berry grades differ
+//   by 7%), and they are obscure or expensive enough that she would rather
+//   see "missing SAP" than calculate lye from a number nobody can stand
+//   behind. The rows stay so the review can find these oils and offer to
+//   CLEAR a stored value; the lye calculator then flags them as missing.
+//   Do not fill these back in without a source she accepts.
 //
 //   Profiles deliberately withheld: murumuru and ucuuba (both disagree with
 //   the chart by more than 10% with no property of the oil to explain it) and
@@ -61,11 +74,11 @@ var PlumeSap = (function () {
     { name:'Cocoa butter', aliases:[], inci:'Theobroma Cacao (Cocoa) Seed Butter',
       naoh:0.138, koh:0.194, fa:{palmitic:26,stearic:34,oleic:35,linoleic:3} },
     { name:'Murumuru butter', aliases:[], inci:'Astrocaryum Murumuru Seed Butter',
-      naoh:0.196, koh:0.275, fa:null },
+      naoh:null, koh:null, unknown:true, fa:null },
     { name:'Cupuacu butter', aliases:[], inci:'Theobroma Grandiflorum Seed Butter',
       naoh:0.137, koh:0.192, fa:{palmitic:9,stearic:35,oleic:42,linoleic:5} },
     { name:'Sea buckthorn oil', aliases:[], inci:'Hippophae Rhamnoides Fruit Oil',
-      naoh:0.139, koh:0.195, fa:{palmitic:30,stearic:1,oleic:33,linoleic:29,linolenic:3} },
+      naoh:null, koh:null, unknown:true, fa:{palmitic:30,stearic:1,oleic:33,linoleic:29,linolenic:3} },
     { name:'Baobab oil', aliases:[], inci:'Adansonia Digitata Seed Oil',
       naoh:0.143, koh:0.2, fa:{palmitic:21,stearic:4,oleic:36,linoleic:31,linolenic:2} },
     { name:'Marula oil', aliases:[], inci:'Sclerocarya Birrea Seed Oil',
@@ -79,7 +92,7 @@ var PlumeSap = (function () {
     { name:'Avocado oil', aliases:[], inci:'Persea Gratissima (Avocado) Oil',
       naoh:0.133, koh:0.186, fa:{palmitic:16,stearic:2,oleic:65,linoleic:15} },
     { name:'Pumpkin seed butter', aliases:[], inci:'Cucurbita Pepo (Pumpkin) Seed Butter',
-      naoh:0.139, koh:0.195, fa:{palmitic:13,stearic:7,oleic:34,linoleic:44} },
+      naoh:0.139, koh:0.195, fa:{palmitic:13,stearic:7,oleic:34,linoleic:44}, estimated:true },
     { name:'Watermelon seed oil', aliases:[], inci:'Citrullus Lanatus (Watermelon) Seed Oil',
       naoh:0.135, koh:0.19, fa:{palmitic:12,stearic:10,oleic:18,linoleic:58} },
     { name:'Pomegranate seed oil', aliases:[], inci:'Punica Granatum Seed Oil',
@@ -127,7 +140,12 @@ var PlumeSap = (function () {
       naoh:0.135, koh:0.189, fa:{palmitic:6,stearic:4,oleic:20,linoleic:68,linolenic:1} },
     { name:'Sunflower oil (high oleic)', aliases:[], inci:'Helianthus Annuus (Sunflower) Seed Oil',
       naoh:0.135, koh:0.189, fa:{palmitic:4,stearic:4,oleic:82,linoleic:4} },
-    { name:'Canola oil (rapeseed)', aliases:['Canola oil'], inci:'Brassica Campestris (Rapeseed) Seed Oil',
+    // Canola IS rapeseed, bred low in erucic acid, so one row answers to both
+    // names (Heide, 2026-10-16). The chart's lower "rapeseed, unrefined" figure
+    // (0.125) fits old high-erucic rapeseed, whose long-chain acid lowers SAP;
+    // the canola sold for cooking and soaping is the low-erucic kind, which is
+    // 0.133 and is what this profile predicts.
+    { name:'Canola oil (rapeseed)', aliases:['Canola oil','Rapeseed oil'], inci:'Brassica Campestris (Rapeseed) Seed Oil',
       naoh:0.133, koh:0.186, fa:{palmitic:4,stearic:2,oleic:61,linoleic:21,linolenic:11} },
     { name:'Beeswax (soap grade)', aliases:['Beeswax'], inci:'Cera Alba',
       naoh:0.067, koh:0.094, fa:null },
@@ -158,7 +176,7 @@ var PlumeSap = (function () {
     { name:'Tucuma butter', aliases:[], inci:'Astrocaryum Tucuma Seed Butter',
       naoh:0.17, koh:0.238, fa:{lauric:48,myristic:25,palmitic:6,stearic:2,oleic:13,linoleic:3} },
     { name:'Ucuuba butter', aliases:[], inci:'Virola Surinamensis Seed Butter',
-      naoh:0.146, koh:0.205, fa:null },
+      naoh:null, koh:null, unknown:true, fa:null },
     { name:'Hazelnut oil', aliases:[], inci:'Corylus Avellana (Hazelnut) Seed Oil',
       naoh:0.139, koh:0.195, fa:{palmitic:5,stearic:2,oleic:78,linoleic:12} },
     { name:'Macadamia nut oil', aliases:[], inci:'Macadamia Ternifolia Seed Oil',
@@ -247,7 +265,7 @@ var PlumeSap = (function () {
   function all() { return OILS.slice(); }
 
   return {
-    version: '1.0',
+    version: '1.1',
     source:  'SoapCalc chart (KOH first, NaOH second)',
     oils:    all,
     lookup:  lookup,

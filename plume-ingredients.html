@@ -2028,7 +2028,7 @@ function buildSapPlan() {
   // Buckets are named for what the CURRENT value does, not for which way the
   // number travels when corrected. Those are opposites, and conflating them
   // puts an oil under a heading that says the reverse of the truth.
-  var plan = { overstated: [], understated: [], add: [], faOnly: [], agree: 0, unmatched: [] };
+  var plan = { overstated: [], understated: [], add: [], faOnly: [], clear: [], agree: 0, unmatched: [] };
   ingredients.forEach(function (ing) {
     if (ing.archived) return;
     var ref = PlumeSap.lookup(ing.name);
@@ -2037,6 +2037,14 @@ function buildSapPlan() {
     if (!ref) {
       // Only worth reporting if it claims soap data we cannot corroborate.
       if (hasCur) plan.unmatched.push({ ing: ing });
+      return;
+    }
+    // Unknown on purpose (plume-sapdata.js v1.1): the sources disagree, so
+    // the reference has NO number and a stored one should go, leaving the
+    // lye calculator to flag the oil as missing SAP rather than trust a
+    // figure nobody can stand behind. Nothing to add when none is stored.
+    if (ref.unknown) {
+      if (hasCur) plan.clear.push({ ing: ing, ref: ref, oldNaoh: cur.naoh || null, oldKoh: cur.koh || null });
       return;
     }
     // A reference row with no profile means "not reliably known", NOT zero,
@@ -2117,6 +2125,32 @@ function sapTable(title, items, dir, note) {
   return h + '</table>';
 }
 
+// Oils whose SAP is deliberately unknown. Their stored value is shown and
+// will be cleared; there is no reference column because there is no number.
+function sapClearTable(items) {
+  if (!items.length) return '';
+  var B = 'border-bottom:1px solid var(--cream-border)';
+  var NUM = B + ';text-align:right;font-variant-numeric:tabular-nums;padding:5px 8px';
+  var h = '<div style="font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-lighter);margin:18px 0 6px">' +
+            'No reliable value (' + items.length + ')</div>' +
+          '<div style="font-size:12px;color:var(--ink-lighter);line-height:1.45;margin-bottom:8px">' +
+            'The sources disagree on these, so the stored value will be cleared. The lye calculator then marks them as missing SAP ' +
+            'instead of calculating from a number nobody can stand behind. Their fatty acid profiles are left alone.</div>' +
+          '<table style="width:100%;border-collapse:collapse;font-size:12px">' +
+          '<tr style="font-size:10px;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-lighter)">' +
+          '<th style="text-align:left;padding:0 8px 4px">Oil</th>' +
+          '<th style="text-align:right;padding:0 8px 4px">NaOH now</th>' +
+          '<th style="text-align:right;padding:0 8px 4px">KOH now</th>' +
+          '<th style="text-align:right;padding:0 8px 4px">After</th></tr>';
+  items.forEach(function (it) {
+    h += '<tr><td style="' + B + ';padding:5px 8px">' + esc(it.ing.name) + '</td>' +
+      '<td style="' + NUM + '">' + (it.oldNaoh === null ? '\u2014' : it.oldNaoh.toFixed(4)) + '</td>' +
+      '<td style="' + NUM + '">' + (it.oldKoh === null ? '\u2014' : it.oldKoh.toFixed(4)) + '</td>' +
+      '<td style="' + NUM + ';color:var(--ink-lighter)">cleared</td></tr>';
+  });
+  return h + '</table>';
+}
+
 function openSapReview() {
   if (typeof PlumeSap === 'undefined') {
     alert('The SAP reference data file did not load. Check that plume-sapdata.js sits beside this page.');
@@ -2124,7 +2158,7 @@ function openSapReview() {
   }
   sapPlan = buildSapPlan();
   var p = sapPlan;
-  var total = p.overstated.length + p.understated.length + p.add.length + p.faOnly.length;
+  var total = p.overstated.length + p.understated.length + p.add.length + p.faOnly.length + p.clear.length;
   var h = '';
 
   h += '<div style="font-size:12px;color:var(--ink-lighter);line-height:1.5;margin-bottom:4px">' +
@@ -2145,6 +2179,7 @@ function openSapReview() {
     h += sapTable('No SAP value yet', p.add, 'add', null);
     h += sapTable('Fatty acid profile only', p.faOnly, 'fa',
       'SAP already correct; only the composition changes.');
+    h += sapClearTable(p.clear);
   }
 
   if (p.unmatched.length) {
@@ -2179,6 +2214,11 @@ function applySapRefresh() {
       if (it.fa) ing.soap.fa = it.fa;   // never clears an existing profile
       n++;
     });
+  });
+  sapPlan.clear.forEach(function (it) {
+    // SAP only. A profile, if she has one, stays.
+    if (it.ing.soap) { delete it.ing.soap.naoh; delete it.ing.soap.koh; }
+    n++;
   });
   sapPlan = null;
   saveData();
@@ -4156,7 +4196,7 @@ var SEEDER_BATCHES = [
       {name:"Mango butter",inci:"Mangifera Indica (Mango) Seed Butter",phase:"oil",function:"Emollient, occlusive, skin-softening",min:"2",max:"20",flag:"no",notes:"",soap:{naoh:0.128,koh:0.179,fa:{palmitic:7,stearic:40,oleic:46,linoleic:5}}},
       {name:"Kokum butter",inci:"Garcinia Indica Seed Butter",phase:"oil",function:"Emollient, occlusive, non-comedogenic",min:"1",max:"15",flag:"no",notes:"Very hard butter — use sparingly.",soap:{naoh:0.135,koh:0.189,fa:{palmitic:2,stearic:57,oleic:39,linoleic:2}}},
       {name:"Cocoa butter",inci:"Theobroma Cacao (Cocoa) Seed Butter",phase:"oil",function:"Emollient, occlusive, antioxidant",min:"2",max:"25",flag:"no",notes:"Natural chocolate scent; use deodorized if needed.",soap:{naoh:0.137,koh:0.192,fa:{palmitic:26,stearic:34,oleic:35,linoleic:3}}},
-      {name:"Murumuru butter",inci:"Astrocaryum Murumuru Seed Butter",phase:"oil",function:"Emollient, conditioning, frizz control",min:"2",max:"20",flag:"no",notes:"",soap:{naoh:0.209,koh:0.293,fa:{lauric:47,myristic:29,palmitic:7,stearic:4,oleic:10,linoleic:2}}},
+      {name:"Murumuru butter",inci:"Astrocaryum Murumuru Seed Butter",phase:"oil",function:"Emollient, conditioning, frizz control",min:"2",max:"20",flag:"no",notes:""},
       {name:"Cupuacu butter",inci:"Theobroma Grandiflorum Seed Butter",phase:"oil",function:"Emollient, high water absorption",min:"2",max:"20",flag:"no",notes:"Can absorb up to 240% its weight in water.",soap:{naoh:0.130,koh:0.182,fa:{palmitic:9,stearic:35,oleic:42,linoleic:5}}},
     ]},
     { cat: 'Waxes', items: [
@@ -4166,7 +4206,7 @@ var SEEDER_BATCHES = [
       {name:"Rice bran wax",inci:"Oryza Sativa (Rice) Bran Wax",phase:"oil",function:"Thickener, skin-conditioning, vegan",min:"1",max:"10",flag:"no",notes:""},
     ]},
     { cat: 'Additional oils', items: [
-      {name:"Sea buckthorn oil",inci:"Hippophae Rhamnoides Fruit Oil",phase:"oil",function:"Antioxidant, regenerating, high carotenoids",min:"0.1",max:"3",flag:"no",notes:"Intensely orange — use at very low %.",soap:{naoh:0.139,koh:0.195,fa:{palmitic:30,stearic:1,oleic:33,linoleic:29,linolenic:3}}},
+      {name:"Sea buckthorn oil",inci:"Hippophae Rhamnoides Fruit Oil",phase:"oil",function:"Antioxidant, regenerating, high carotenoids",min:"0.1",max:"3",flag:"no",notes:"Intensely orange — use at very low %.",soap:{fa:{palmitic:30,stearic:1,oleic:33,linoleic:29,linolenic:3}}},
       {name:"Baobab oil",inci:"Adansonia Digitata Seed Oil",phase:"oil",function:"Emollient, skin-regenerating, omega-rich",min:"1",max:"20",flag:"no",notes:"",soap:{naoh:0.136,koh:0.190,fa:{palmitic:21,stearic:4,oleic:36,linoleic:31,linolenic:2}}},
       {name:"Marula oil",inci:"Sclerocarya Birrea Seed Oil",phase:"oil",function:"Lightweight emollient, antioxidant",min:"1",max:"20",flag:"no",notes:"",soap:{naoh:0.135,koh:0.189,fa:{palmitic:10,stearic:7,oleic:70,linoleic:8}}},
       {name:"Meadowfoam seed oil",inci:"Limnanthes Alba (Meadowfoam) Seed Oil",phase:"oil",function:"Emollient, extends shelf life of other oils",min:"1",max:"20",flag:"no",notes:"Very stable; helps slow oxidation.",soap:{naoh:0.118,koh:0.165,fa:{oleic:63,linoleic:3}}},

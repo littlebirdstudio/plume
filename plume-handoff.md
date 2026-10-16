@@ -1514,7 +1514,7 @@ What this means in practice:
 ### Tests live in the repo now, and CI runs them
 
 `package.json`, `.gitignore`, `package-lock.json` and a `test/` directory are
-committed. `npm test` runs nine suites, ~371 checks (`test-search.js` and `test-ph.js` added session 17).
+committed. `npm test` runs nine suites, ~384 checks (`test-search.js` and `test-ph.js` added session 17).
 `.github/workflows/tests.yml` runs the same on every pull request and on push
 to `main`.
 
@@ -1822,4 +1822,28 @@ bench sheet's section title has the same fix inline.
 target sits outside its preservative's working pH range, using the pH data
 already on ingredient records. Usage-log entries still cannot be edited
 after saving, only deleted; worth asking if pH steps make that more pressing.
+### Session 17 (cont.) — SAP questions settled (plume-sapdata.js v1.1)
 
+Heide closed the four open SAP questions from the backlog:
+
+- **Murumuru, ucuuba, sea buckthorn: SAP unknown on purpose.** Her reason:
+  obscure or expensive oils she is unlikely to soap with, and the sources
+  disagreed. Rows now carry `naoh:null, koh:null, unknown:true`; profiles are
+  kept where the reference had one (sea buckthorn). The rows stay so the SAP
+  review can find these oils: a new **"No reliable value"** group offers to
+  CLEAR a stored value (SAP only, the profile stays), after which the lye
+  calculator marks the oil as missing SAP rather than calculating from a
+  figure nobody can stand behind. The seeder lost murumuru's soap data
+  (including the profile the reference had withheld) and sea buckthorn's SAP.
+  **Do not fill these back in without a source she accepts.**
+- **Canola = rapeseed.** One row answers to both names (`Rapeseed oil` alias
+  added). It stays at 0.133: canola is rapeseed bred low in erucic acid, the
+  chart's lower 0.125 "rapeseed, unrefined" figure fits old high-erucic
+  rapeseed, and the stored profile predicts 0.133. Her old library value
+  (0.124, from the seeder) will show as understated in the review, the
+  harmless direction.
+- **Pumpkin seed butter** now carries `estimated:true` (it had no chart row
+  and took the oil's value), which the provenance rule already required.
+
+`test-sap.js` pins the unknown set to exactly those three, so a silently
+blanked row cannot hide among them (78 checks, was 65).
