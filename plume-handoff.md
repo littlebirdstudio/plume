@@ -92,7 +92,7 @@ Core defines globals with the names modules already use, so **converting a modul
 **A module may override an alias by defining its own function** — this is the intended escape hatch. `plume-ingredients.html` keeps a local `openModal` because it snapshots form state to detect unsaved edits. Share the common case; keep the exception local.
 
 ### Versioning
-`Plume.VERSION` is displayed at the bottom of every converted module's Settings → Storage panel, alongside the active driver name. **Bump it on every core change.** Browsers cache `.js` far more stubbornly than they re-fetch a replaced HTML file, so "is core loaded, and is it the one I just uploaded?" must be answerable by looking. Current: **v1.10** (v1.8 added INCI blend splitting; v1.9 added density resolution; v1.10 ranked search results, best match first).
+`Plume.VERSION` is displayed at the bottom of every converted module's Settings → Storage panel, alongside the active driver name. **Bump it on every core change.** Browsers cache `.js` far more stubbornly than they re-fetch a replaced HTML file, so "is core loaded, and is it the one I just uploaded?" must be answerable by looking. Current: **v1.10** (v1.8 added INCI blend splitting; v1.9 added density resolution; v1.10 ranked search results, best match first; v1.11 added pH records).
 
 ### Upload order matters
 `plume-core.js` **first**, then the HTML. A module that arrives before core shows the missing-core banner until core lands. Core alone breaks nothing.
@@ -1514,7 +1514,7 @@ What this means in practice:
 ### Tests live in the repo now, and CI runs them
 
 `package.json`, `.gitignore`, `package-lock.json` and a `test/` directory are
-committed. `npm test` runs eight suites, ~296 checks (eighth, `test-search.js`, added session 17).
+committed. `npm test` runs nine suites, ~371 checks (`test-search.js` and `test-ph.js` added session 17).
 `.github/workflows/tests.yml` runs the same on every pull request and on push
 to `main`.
 
@@ -1528,6 +1528,7 @@ to `main`.
 | `test-ing-archive.js` | Ingredient archiving, delete guard, missing-ingredient row |
 | `test-density.js` | Density resolution and the stock arithmetic on it |
 | `test-search.js` | Ingredient search ordering (best match first) |
+| `test-ph.js` | pH: version target, usage-log steps, batch final pH, bench sheet |
 
 **Playwright is pinned to an exact version (1.56.0), deliberately.** Each
 release expects one specific Chromium build; a mismatch fails with "Executable
@@ -1759,3 +1760,66 @@ rank, so it is unaffected.
 
 New suite `test-search.js` (18 checks), confirmed to fail 12 of 18 against
 the old code.
+
+### Session 17 (cont.) — pH records (core v1.11)
+
+**Her ask:** capture pH for aqueous products, at least the final pH and
+whether it needed adjusting. Designed together in conversation, then built.
+
+**The split, in her words:** the batch record is where she goes back to find
+the pH of a specific batch, and she does not need to document how she got
+there there; the usage log shows the steps and pH along the way. They record
+different events (sometimes the same one), so each has its own fields and
+nothing is entered twice by design.
+
+1. **Target range per version** (`v.phMin`, `v.phMax`, strings), a "this
+   version" field under Status. Optional; blank is fine. Diffed into change
+   history ("Target pH set to 4.8-5.5", "... -> ..."), copied into a new
+   version, locked with the other per-version fields on an approved version,
+   and mirrored to `f.phMin` / `f.phMax` by `syncActive` (Batchlog reads the
+   top level). Reverting to a snapshot from before pH existed does NOT wipe
+   the current target: it restores the field only when the snapshot has the
+   key.
+2. **Usage-log steps** (`entry.ph = [{v, m, add}]`): a reading, its method
+   (`strip` | `meter`), then optionally what was added before the next
+   reading. Rendered as a chain of pills; only the LAST reading is judged
+   against the target, since an out-of-range start is the point of
+   adjusting. Adjusters are **free text** (her call: a few drops never move
+   stock or cost) with suggestions from every adjuster she has typed before,
+   most-used first. An entry with no readings stores no `ph` key.
+3. **Batch final pH** (`b.finalPh`, `b.finalPhMethod`) in batch detail,
+   editable after save, shown under the yield in the batch list. **A batch
+   snapshots `phMin`/`phMax` at creation**, because a batch is a historical
+   record and a later change to the formula's target must not change how an
+   old batch reads. Batches made before this have no key and fall back to
+   the formula's current target (`batchPhTarget`).
+4. **Bench sheet** gets a pH block (target or a blank, final, a line for
+   readings) for any water-phase formula. Both modules pass the target.
+
+**Readings are stored as the string typed** (after `Plume.parsePh`
+validates 0-14, up to two decimals), so a meter's "5.20" keeps its second
+decimal. She uses strips for a ballpark and a meter to fine-tune, which is
+also why every reading carries its method. Compare with `Plume.phNum`.
+
+**When pH appears at all:** `Plume.isAqueous(lines, ings)`, any non-add-in
+line whose phase (per-line override first) is `water`, or a target/reading
+already present. Never for the two soap types. A balm or oil blend shows no
+pH fields anywhere.
+
+**A bad value never saves silently.** The target field and step readings
+turn red and say why; the usage-log entry and batch edit refuse to save
+until fixed.
+
+**Also fixed:** the usage log defaulted its date with `toISOString()` (UTC),
+so an entry logged after 4pm Alaska time defaulted to tomorrow. Now
+`Plume.todayISO()`.
+
+**Gotcha:** Plume's labels are uppercased by CSS, which turned "pH" into
+"PH". `.ph-word` (core CSS) keeps the case; use it on any new pH label. The
+bench sheet's section title has the same fix inline.
+
+**Possible next step (not built, not promised):** warn when a version's
+target sits outside its preservative's working pH range, using the pH data
+already on ingredient records. Usage-log entries still cannot be edited
+after saving, only deleted; worth asking if pH steps make that more pressing.
+

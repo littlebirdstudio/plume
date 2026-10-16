@@ -33,7 +33,7 @@ var Plume = (function () {
 // Bump when core changes. Shown in every module's Settings panel, so
 // "is core loaded, and is it the one I just uploaded?" is answerable by
 // looking rather than guessing -- browsers cache .js files stubbornly.
-var VERSION = '1.10';
+var VERSION = '1.11';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -769,7 +769,21 @@ function injectStyles() {
   '.stor-banner .sb-x:hover{opacity:1}' +
   '.stor-banner .btn{padding:4px 10px;font-size:11px;margin-top:8px}' +
   '.plume-link-btn{background:none;border:none;padding:0;font-family:inherit;font-size:10.5px;color:var(--ink-lighter);cursor:pointer;text-decoration:underline;text-underline-offset:2px;margin-top:6px}' +
-  '.plume-link-btn:hover{color:var(--clay)}';
+  '.plume-link-btn:hover{color:var(--clay)}' +
+  // pH readings: neutral by default; sage when within target, warning when
+  // outside. Shared so a batch and a usage-log entry look alike.
+  '.ph-badge{display:inline-flex;align-items:baseline;gap:4px;font-size:11.5px;padding:1px 8px;border-radius:10px;' +
+    'background:var(--cream-dark,#F0EBE3);color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}' +
+  '.ph-badge .ph-m{font-size:10px;color:var(--ink-lighter)}' +
+  '.ph-badge.ph-in{background:var(--sage-light);color:var(--sage-dark)}' +
+  '.ph-badge.ph-low,.ph-badge.ph-high{background:var(--warning-bg);color:var(--warning);box-shadow:inset 0 0 0 1px var(--warning-border)}' +
+  '.ph-badge .ph-dir{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em}' +
+  '.ph-steps{display:inline-flex;flex-wrap:wrap;align-items:center;gap:4px 6px;line-height:1.7}' +
+  '.ph-add{font-size:11.5px;color:var(--ink-light);font-style:italic}' +
+  '.ph-arrow{color:var(--ink-lighter);font-size:11px}' +
+  '.ph-next{display:inline-flex;align-items:center;gap:6px}' +
+  // Labels are uppercased across Plume; pH must keep its own case.
+  '.ph-word{text-transform:none!important;letter-spacing:0.02em}';
   var st = document.createElement('style');
   st.id = 'plume-core-css';
   st.appendChild(document.createTextNode(css));
@@ -852,6 +866,114 @@ function ingMatchRank(ing, q) {
   if (funcCats(ing).some(has) || has(ing.function) || has(ing.function2) || has(ing.purpose) ||
       has(ing.chooseWhen)) return 5;
   return 0;
+}
+
+
+// ══ pH (added 2026-10-16) ═════════════════════════════
+// Three places record pH, and they answer different questions:
+//   - a version's TARGET range (Formulations, v.phMin / v.phMax), which
+//     travels with the version like its method does;
+//   - the usage log's STEPS (Formulations), how a test pour got there:
+//     reading, what was added, next reading;
+//   - a batch's FINAL pH (Batchlog), what that batch ended up at.
+// Heide measures with strips for a ballpark and a meter to fine-tune, so
+// every reading carries its method ('strip' | 'meter'), and a strip's "5"
+// is never read back later as if it were a meter's "5.00".
+//
+// Readings are STORED AS THE STRING TYPED, after validation, so a meter's
+// "5.20" keeps its second decimal. Compare with phNum().
+
+// '' for blank, null for something that is not a pH, else the cleaned
+// string. Accepts a comma decimal; 0-14, up to two decimals.
+function parsePh(raw) {
+  var s = String(raw == null ? '' : raw).trim().replace(',', '.');
+  if (!s) return '';
+  if (!/^\d{1,2}(\.\d{1,2})?$/.test(s) && !/^\.\d{1,2}$/.test(s)) return null;
+  var n = parseFloat(s);
+  if (isNaN(n) || n < 0 || n > 14) return null;
+  if (s.charAt(0) === '.') s = '0' + s;
+  return s;
+}
+
+function phNum(s) {
+  var p = parsePh(s);
+  return (p === null || p === '') ? null : parseFloat(p);
+}
+
+// Where a reading sits against a target: 'in' | 'low' | 'high', or ''
+// when there is no reading or no target to compare with. A target may be
+// open on one side (min only, or max only).
+function phRange(val, min, max) {
+  var v = phNum(val), lo = phNum(min), hi = phNum(max);
+  if (v === null || (lo === null && hi === null)) return '';
+  if (lo !== null && v < lo) return 'low';
+  if (hi !== null && v > hi) return 'high';
+  return 'in';
+}
+
+function phTargetText(min, max) {
+  var lo = parsePh(min), hi = parsePh(max);
+  if (lo && hi) return lo + '–' + hi;
+  if (lo) return '≥ ' + lo;
+  if (hi) return '≤ ' + hi;
+  return '';
+}
+
+// Does a formula have a water phase? pH only means something when there is
+// water, so this decides whether pH fields appear at all -- a balm or an
+// oil blend never shows them. Uses the per-line phase override first, same
+// as the editor's effPhase; add-in lines sit outside the phases.
+function isAqueous(lines, ings) {
+  return (lines || []).some(function (l) {
+    if (!l || l.addin) return false;
+    var ing = findIngIn(ings, l.ingId);
+    var ph = l.phase || (ing && ing.phase) || '';
+    return String(ph).toLowerCase() === 'water';
+  });
+}
+
+// One reading as a small pill, tinted by range when there is a target.
+// Escaped throughout: method and value come from stored data.
+function phBadge(val, method, min, max) {
+  var p = parsePh(val);
+  if (!p) return '';
+  var st = phRange(p, min, max);
+  var tip = st === 'in' ? 'Within the target pH' :
+            st === 'low' ? 'Below the target pH (' + phTargetText(min, max) + ')' :
+            st === 'high' ? 'Above the target pH (' + phTargetText(min, max) + ')' : '';
+  return '<span class="ph-badge' + (st ? ' ph-' + st : '') + '"' +
+    (tip ? ' title="' + esc(tip) + '"' : '') + '>pH ' + esc(p) +
+    (method ? ' <span class="ph-m">' + esc(method) + '</span>' : '') +
+    (st === 'low' ? ' <span class="ph-dir">low</span>' : st === 'high' ? ' <span class="ph-dir">high</span>' : '') +
+    '</span>';
+}
+
+// A usage-log step sequence as one line:
+//   pH 6.4 strip -> 4 drops 50% citric -> pH 5.6 meter
+// Each step is { v: reading, m: method, add: what was added AFTER it }.
+// The final reading is tinted against the target; earlier ones are not,
+// since a starting pH outside the target is the point of adjusting.
+function phStepsHtml(steps, min, max) {
+  steps = (steps || []).filter(function (s) { return s && (parsePh(s.v) || (s.add && String(s.add).trim())); });
+  if (!steps.length) return '';
+  var lastReading = -1;
+  steps.forEach(function (s, i) { if (parsePh(s.v)) lastReading = i; });
+  var parts = [];
+  steps.forEach(function (s, i) {
+    if (parsePh(s.v)) parts.push(i === lastReading ? phBadge(s.v, s.m, min, max) : phBadge(s.v, s.m));
+    if (s.add && String(s.add).trim()) parts.push('<span class="ph-add">' + esc(String(s.add).trim()) + '</span>');
+  });
+  // Each arrow travels with the item after it, so a wrapped line never
+  // ends on a stranded arrow.
+  return '<span class="ph-steps">' + parts.map(function (p, i) {
+    return i ? '<span class="ph-next"><span class="ph-arrow">\u2192</span>' + p + '</span>' : p;
+  }).join('') + '</span>';
+}
+
+function phFinal(steps) {
+  var out = null;
+  (steps || []).forEach(function (s) { if (s && parsePh(s.v)) out = s; });
+  return out;
 }
 
 
@@ -1149,6 +1271,26 @@ function buildSkincareSheet(o) {
   };
 }
 
+// Blanks for the dry-erase workflow: the target (when set) and space to
+// write readings and adjustments as she goes, then the final pH. Shown for
+// any water-phase formula, target or not; never for soap or an anhydrous
+// product. Both modules pass the same fields, so their sheets stay
+// identical.
+function phSheetBlock(o) {
+  if (o.isSoap) return '';
+  var target = phTargetText(o.phMin, o.phMax);
+  if (!target && !isAqueous(o.lines, o.ings)) return '';
+  var blank = '<span style="display:inline-block;min-width:70px;border-bottom:1px solid #333">&nbsp;</span>';
+  var wide  = '<span style="display:inline-block;flex:1;border-bottom:1px solid #333">&nbsp;</span>';
+  return '<div class="sec"><div class="sec-title"><span style="text-transform:none">pH</span></div>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:6px 28px;margin-bottom:12px">' +
+    '<span>Target: <strong>' + (target ? esc(target) : blank) + '</strong></span>' +
+    '<span>Final: ' + blank + ' &nbsp;strip / meter</span></div>' +
+    '<div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:8px">' +
+    '<span style="white-space:nowrap">Readings &amp; adjustments:</span>' + wide + '</div>' +
+    '<div style="display:flex;margin-bottom:4px">' + wide + '</div></div>';
+}
+
 function buildSheet(o) {
   o = o || {};
   var built  = o.isSoap ? buildSoapSheet(o) : buildSkincareSheet(o);
@@ -1164,6 +1306,7 @@ function buildSheet(o) {
     (o.instructions ? '<div class="sec"><div class="sec-title">' +
       (o.isSoap ? 'Process instructions' : 'Formulation instructions') +
       '</div><p style="white-space:pre-wrap">' + esc(o.instructions) + '</p></div>' : '') +
+    phSheetBlock(o) +
     '<div class="sec"><div class="sec-title">INCI list (label order)</div>' +
     '<div class="inci">' + esc(built.inci) + '</div></div>' +
     '<scr' + 'ipt>window.onload=function(){window.print();};<\/scr' + 'ipt></body></html>';
@@ -1255,6 +1398,8 @@ return {
   FUNCTION_CATEGORIES: FUNCTION_CATEGORIES, funcCats: funcCats, ingMatchRank: ingMatchRank,
   PRODUCT_TYPES: PRODUCT_TYPES, isSoapType: isSoapType, fillTypeSelect: fillTypeSelect,
   buildSheet: buildSheet, openSheet: openSheet,
+  parsePh: parsePh, phNum: phNum, phRange: phRange, phTargetText: phTargetText,
+  isAqueous: isAqueous, phBadge: phBadge, phStepsHtml: phStepsHtml, phFinal: phFinal,
   boot: boot
 };
 })();
