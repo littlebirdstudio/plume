@@ -65,10 +65,20 @@
 
   /* Phase box outlines (Formulations editor) — between the pale badge tint
      and the saturated dot: readable as an edge, quiet across a whole box. */
-  --ph-water-border:     #B9D2EA;
-  --ph-oil-border:       #E2CFA4;
-  --ph-cool-down-border: #B6D6C6;
-  --ph-active-border:    #C9BFE8;
+  /* Box fills — a few shades lighter than the header band, so the band stays
+     the dominant mark and the rows still read as sitting inside their phase. */
+  --ph-water-wash:     #F2F7FC;
+  --ph-oil-wash:       #FBF6EC;
+  --ph-cool-down-wash: #F2F8F4;
+  --ph-active-wash:    #F7F4FC;
+  --ph-addin-wash:     #FAF4EF;
+
+  /* The oil box outline is NOT --dot-oil (#BA7517). That is within a few
+     degrees of --warning (#B07020), which is the colour of the low-stock
+     left border on a row, so a whole box drawn in it read as a warning.
+     This is the same amber pulled toward bronze: still unmistakably the oil
+     phase beside the other four, no longer confusable with an alert. */
+  --ph-oil-edge:       #9A7B3C;
 
   /* Phase dots (Formulations editor) — pure swatch tones, no bg */
   --dot-water:     #378ADD;
@@ -141,19 +151,28 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);m
 .mf textarea{resize:vertical;min-height:60px}
 /* Each phase is a box in its own colour. The header is the top band of
    that box, so it sits flush — no radius of its own, no gap beneath it. */
-.phase-group{margin-bottom:1.25rem;border:1px solid var(--cream-border);border-radius:4px;overflow:hidden}
+.phase-group{margin-bottom:1.25rem;border:2px solid var(--cream-border);border-radius:4px;overflow:hidden;background:var(--white)}
 .phase-group > .ing-row:first-of-type,
 .phase-group > .soap-row:first-of-type{margin-top:6px}
+/* Rows are inset well clear of the box edge. At a tighter inset the
+   low-stock left border on a row sat almost on the box's own left border
+   and the two read as one smudged edge — worst in the oil phase, where
+   both are warm. The gap is what separates "this row is short" from
+   "this is the boundary of the phase". */
 .phase-group .ing-row,
-.phase-group .soap-row{margin-left:6px;margin-right:6px}
-.phase-group .soap-col-hdr{padding-left:16px;padding-right:16px;padding-top:6px}
-.phase-group .soap-total{margin:4px 6px 6px!important}
-.phase-group.ph-water{border-color:var(--ph-water-border)}
-.phase-group.ph-oil{border-color:var(--ph-oil-border)}
-.phase-group.ph-cool-down{border-color:var(--ph-cool-down-border)}
-.phase-group.ph-active{border-color:var(--ph-active-border)}
-.phase-group.ph-other{border-color:var(--cream-border)}
-.phase-group.ph-addin{border-color:var(--clay-light)}
+.phase-group .soap-row{margin-left:12px;margin-right:12px}
+.phase-group .soap-col-hdr{padding-left:22px;padding-right:22px;padding-top:6px}
+.phase-group .soap-total{margin:4px 12px 8px!important}
+/* The outline matches the weight and tone of the header's own rule, so the
+   band reads as the top edge of the box rather than a separate element.
+   The fill is a wash a few shades lighter than the band, which keeps the
+   band dominant while tying the rows to their phase. */
+.phase-group.ph-water{border-color:var(--dot-water);background:var(--ph-water-wash)}
+.phase-group.ph-oil{border-color:var(--ph-oil-edge);background:var(--ph-oil-wash)}
+.phase-group.ph-cool-down{border-color:var(--dot-cool-down);background:var(--ph-cool-down-wash)}
+.phase-group.ph-active{border-color:var(--dot-active);background:var(--ph-active-wash)}
+.phase-group.ph-other{border-color:var(--ph-other);background:var(--cream)}
+.phase-group.ph-addin{border-color:var(--clay);background:var(--ph-addin-wash)}
 /* Phase group header. The 10px side padding lines the label up with the
    row content below it (.ing-row is padded 7px 10px); it used to sit flush
    left while every row was indented. */
@@ -891,7 +910,7 @@ function getAddinsInTotal() {
   var cb = document.getElementById('f-addins-in-total');
   return !!(cb && cb.checked);
 }
-function onAddinsInTotalChange() { markDirty(); recalc(); }
+function onAddinsInTotalChange() { markDirty(); renderLines(); recalc(); }
 function updateAddinTotalRow() {
   var row     = document.getElementById('addin-total-row');
   var soapNot = document.getElementById('addin-soap-note');
@@ -1771,7 +1790,7 @@ function renderLines() {
   if (addins.length) {
     html += '<div class="phase-group ph-addin"><div class="phase-label ph-addin">' +
       '<span class="pdot" style="background:var(--clay)"></span>Add-ins ' +
-      '<span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:10px;margin-left:4px">(not counted in formula %)</span></div>';
+      '<span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:10px;margin-left:4px">(not counted in formula % unless toggled above)</span></div>';
     addins.forEach(function(r) {
       var ing = ings.find(function(i) { return i.id === r.l.ingId; });
       html += buildRow(r.l, r.idx, ing, bs, true);
@@ -1848,7 +1867,13 @@ function buildRow(l, idx, ing, bs, isAddin) {
   }
   row += '</div>';
   if (isAddin) {
-    row += '<div style="font-size:11px;color:var(--ink-lighter);text-align:right;grid-column:2/4">not in %</div>';
+    // Add-ins carry grams, not a percentage, so when they are counted the
+    // contribution has to be derived from the batch size to be shown at all.
+    var addinPct = getAddinsInTotal() && bs > 0
+      ? ((parseFloat(l.gramsFixed) || 0) / bs * 100)
+      : null;
+    row += '<div style="font-size:11px;color:var(--ink-lighter);text-align:right;grid-column:2/4">' +
+      (addinPct !== null ? addinPct.toFixed(2) + '%' : 'not in %') + '</div>';
   } else {
     row += '<input class="ing-inp" type="text" inputmode="decimal" value="' + dispPct + '" placeholder="0.00" onclick="this.select()" oninput="onPct(' + idx + ',this.value)" onblur="onPctB(' + idx + ',this.value)">';
     row += '<button class="pin-btn' + (pinned?' pinned':'') + '" onclick="togglePin(' + idx + ')" title="' +
