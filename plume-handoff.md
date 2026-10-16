@@ -1,6 +1,12 @@
 # Plume by Little Bird Studio — Project Handoff
 
-**Last updated:** August 2026 (sessions 6-14)
+**Last updated:** 16 October 2026 (sessions 6-16)
+
+> **READ THE SESSIONS 15-16 SECTION AT THE END FIRST.** Claude now has write
+> access to the repository and work goes through pull requests, which changes
+> the working loop described further down. Several statements in the older
+> sections are superseded there, including the claim that the GitHub connector
+> is read-only.
 **Previously known as:** Aerie by Little Bird Studio (renamed to Plume in session 1)
 
 **Business context:** Skincare and soap formulation management system. Currently scoped for personal use by Heide, with active plans to package and sell a version to other small formulators. The market gap is real and now well-characterized — see "Sellable-version strategy" near the end of this document. Little Bird Studio also has pottery and sewing arms; Plume is its cosmetic/skincare branch.
@@ -86,7 +92,7 @@ Core defines globals with the names modules already use, so **converting a modul
 **A module may override an alias by defining its own function** — this is the intended escape hatch. `plume-ingredients.html` keeps a local `openModal` because it snapshots form state to detect unsaved edits. Share the common case; keep the exception local.
 
 ### Versioning
-`Plume.VERSION` is displayed at the bottom of every converted module's Settings → Storage panel, alongside the active driver name. **Bump it on every core change.** Browsers cache `.js` far more stubbornly than they re-fetch a replaced HTML file, so "is core loaded, and is it the one I just uploaded?" must be answerable by looking. Current: **v1.3**.
+`Plume.VERSION` is displayed at the bottom of every converted module's Settings → Storage panel, alongside the active driver name. **Bump it on every core change.** Browsers cache `.js` far more stubbornly than they re-fetch a replaced HTML file, so "is core loaded, and is it the one I just uploaded?" must be answerable by looking. Current: **v1.9** (v1.8 added INCI blend splitting; v1.9 added density resolution).
 
 ### Upload order matters
 `plume-core.js` **first**, then the HTML. A module that arrives before core shows the missing-core banner until core lands. Core alone breaks nothing.
@@ -1392,14 +1398,14 @@ to pick those up in a fresh chat. Ask her for the list.
 
 ### Heide's workflow (confirmed sessions 9 and 11)
 - **Works on desktop.** New computer as of session 9.
-- **Uploads to GitHub exclusively through the github.com website** — drag/upload files in the browser. **No GitHub Desktop, no command line, no local repo clone.** This matters: suggestions involving `git clone`, terminal commands, or local dev setup don't fit and shouldn't be offered as though they do. (I made this mistake in session 9 by assuming a local setup.)
+- **Heide uploads through the github.com website** — drag/upload files in the browser. **She has no GitHub Desktop, no command line and no local clone**, so suggestions involving `git clone` or terminal commands on HER machine still do not fit. (I made that mistake in session 9.) **Since session 16 this is no longer the only route:** Claude pushes branches and opens PRs directly, so a code change reaches her as a diff to review rather than a file to download. Her manual upload remains available and is still how anything outside a PR gets there.
 - The editing loop is: Claude edits files here → Heide downloads → uploads via github.com → GitHub Pages rebuilds. Nothing lives on her machine, so the loop is machine-independent.
 - **Computer migration** therefore requires installing nothing. Only: sign in to github.com and Claude on the new machine, then export the five per-module JSON backups on the old machine and import them on the new one. localStorage is origin-scoped to the GitHub Pages URL and does not transfer automatically. All five modules have Export/Import.
 - Tests incrementally between builds; uploads between sessions to keep files current.
 - **Browser: Chrome.** Relevant because Safari's 7-day ITP storage eviction does not apply.
 - **Upload `plume-core.js` BEFORE the HTML files** that depend on it, and hard-refresh (Ctrl+Shift+R) after a core change — browsers cache `.js` stubbornly. `Plume.VERSION` shows in Settings → Storage so the loaded version is verifiable by looking.
 - **A shared core makes her workflow easier, not harder** — one file uploaded fixes five modules, which is less clicking through the github.com interface, not more. This was the deciding argument.
-- **The GitHub connector in Claude** (`+` → Add from GitHub) syncs repo files into a project as context. It is **read-only** — it removes the chore of keeping project copies current, but does not let Claude commit. The upload step remains manual.
+- **The GitHub connector in Claude** syncs repo files into a project as context. **As of session 16 Claude also has WRITE access** via the GitHub app: it creates branches, commits, pushes and opens pull requests, and Heide reviews the diff on github.com and merges. The read-only description above this line was true until 16 October 2026 and is kept only so an older note does not read as current. See the sessions 15-16 section for the rules that come with it (no stacked PRs, a merged PR is frozen, say when a PR is good-to-go).
 
 ### Design priorities and mental model
 - **Heide is a real formulator** with genuine soap domain knowledge (lye calculations, fatty acid profiles, SAP, INCI norms for small US producers) and a pharmacology background.
@@ -1466,3 +1472,262 @@ to pick those up in a fresh chat. Ask her for the list.
 3. The shape definitions in "Data structure reference" before reading any cross-module code
 4. The cost cascade under Module 1 before touching anything cost-related — it's mirrored in two modules and they must stay in agreement
 5. The barcode generator section under Module 5 before touching label output — the two symbologies share one renderer, and the density thresholds are load-bearing
+
+---
+
+## Sessions 15-16 (15-16 October 2026) — GitHub workflow, SAP data, density, archiving
+
+**The biggest change is not a feature.** Claude now has write access to the
+repository and work goes through pull requests. Several claims elsewhere in
+this document predate that and are wrong; they are corrected below.
+
+### The workflow changed — read this before anything else
+
+**The GitHub connector is no longer read-only.** Claude can create branches,
+commit, push and open pull requests. Heide reviews the diff on github.com and
+merges. The download-and-upload loop is gone for code changes.
+
+What this means in practice:
+
+- Work happens on a branch, never on `main`. `main` is protected by a
+  **ruleset** (not classic branch protection) requiring the `test` status check
+  to pass. The ruleset targets `~DEFAULT_BRANCH`, so feature branches are
+  unprotected and can be force-pushed. It was briefly set to `~ALL`, which
+  blocked branch creation entirely; do not set it back.
+- **Do not stack a PR on another PR's branch.** Heide squash-merges, which
+  replaces a branch's commits with one new commit, so the stacked base never
+  becomes part of `main`'s history and the stacked PR merges into a dead
+  branch. This happened in session 16: PR #8's content had to be re-landed as
+  PR #9. Branch from `main` every time and deal with any conflict.
+- **A merged PR is frozen.** Pushing a follow-up commit to its branch does
+  nothing and runs no CI. This happened four times in one session because
+  Heide reviews quickly. Finish the work before opening the PR.
+- **Say explicitly when a PR is good-to-go.** Her words: *"I don't need to
+  merge until you let me know it is good-to-go, rather than wishing I hadn't."*
+- **Do not sit in a CI polling loop.** Push, tell her, check once. A ten-minute
+  blocking poll reads as the session having stalled, and she said so.
+- **Branch deletion is blocked by the proxy.** Claude can create branches but
+  not delete them; Heide deletes merged branches in the GitHub UI.
+- Her own upload workflow via github.com still exists and still works. It is
+  just no longer the only route.
+
+### Tests live in the repo now, and CI runs them
+
+`package.json`, `.gitignore`, `package-lock.json` and a `test/` directory are
+committed. `npm test` runs seven suites, ~279 checks.
+`.github/workflows/tests.yml` runs the same on every pull request and on push
+to `main`.
+
+| Suite | What it covers |
+|---|---|
+| `test-lock.js` | Approved-version lock (jsdom) |
+| `test-guards.js` | Delete confirmation wording |
+| `test-archive.js` | Formulation archiving, retired versions |
+| `test-inci.js` | Blend INCI splitting and dedup |
+| `test-sap.js` | SAP reference data and the review that applies it |
+| `test-ing-archive.js` | Ingredient archiving, delete guard, missing-ingredient row |
+| `test-density.js` | Density resolution and the stock arithmetic on it |
+
+**Playwright is pinned to an exact version (1.56.0), deliberately.** Each
+release expects one specific Chromium build; a mismatch fails with "Executable
+doesn't exist", which reads like a broken suite but is a version mismatch.
+`package-lock.json` is committed. See `test/README.md`.
+
+`test/helpers.js` inlines local `<script src>` files into a self-contained
+preview under `test/tmp/`, because a `file://` page will not reliably fetch
+them. **Adding a new local script file means adding it to `INLINE` there**, or
+every browser suite throws.
+
+This supersedes the `plume-devtools.py` arrangement described under session 14.
+That file is still in the project but the repo copy is now authoritative.
+
+### LICENSE added
+
+"All rights reserved" with explicit permission to use the hosted app, and no
+permission to copy, fork or resell. Chosen over MIT because of the planned
+sellable fork. It also carries a disclaimer that Plume does arithmetic and does
+not verify that a formulation is safe.
+
+Related finding: **GitHub Pages serves readable source regardless of repo
+visibility**, because Plume is vanilla JS with no build step, and a free
+account cannot publish Pages from a private repo at all. Code secrecy is not
+available on this hosting by any configuration. Plan the sellable fork
+accordingly.
+
+### Phase colours in the formula editor
+
+Each phase group is a box in its own colour: the pale badge tint as a header
+band, the badge ink as text, the saturated dot tone as the rule beneath, and a
+wash a few shades lighter as the box fill.
+
+**`--ph-oil-edge` (#9A7B3C) exists because `--dot-oil` (#BA7517) is within a
+few degrees of `--warning` (#B07020)**, which is the low-stock row border, so a
+whole box drawn in it read as an alert. Heide predicted this before it was
+built. Two fixes were needed: the bronze tone AND widening the row inset from
+6px to 12px, because even in bronze two parallel warm lines 6px apart read as
+one smudged edge.
+
+The add-in button now reads **As add-in** / **As additive** rather than
+"Add-in", because it sits on the same line as the ingredient search and read as
+a second add button rather than a mode switch.
+
+### SAP data: most of it was never real
+
+**The headline finding of session 16.** Of the 44 oils in the seeder carrying
+soap data, **22 shared one of just two value pairs** — thirteen at exactly
+`0.136/0.190`, nine more at `0.135/0.189` — across oils whose real values
+spread from 0.129 to 0.148. A generic figure stamped across unrelated oils.
+
+Nine read **high**, which is the dangerous direction: a SAP value above the
+truth makes the calculator ask for more lye than the oils can consume and eats
+the superfat. Coconut, at 25-30% of most bar recipes, was among them at
+0.190 against a true 0.183.
+
+The fatty acid profiles were the opposite: 34 of 44 predict their own SAP
+within 4%, so they were kept.
+
+**`plume-sapdata.js` (new file, v1.0, 82 oils).** SAP from the SoapCalc chart
+Heide supplied. Two validation laws, both independent of what any source
+claims:
+
+1. **KOH SAP must be 1.4027 x NaOH SAP**, fixed by the molar masses (56.105 and
+   39.997). Every row is checked, so the column order is confirmed by chemistry
+   rather than by trusting a header. Her chart lists KOH first.
+2. **A fatty acid profile predicts a SAP value.** A triglyceride of an acid with
+   molar mass M weighs 3M + 38.04 and takes 3 KOH to saponify. Predictions run
+   about 1% high because real oils carry unsaponifiable matter, which is itself
+   a check that the method works.
+
+Three profiles are **withheld rather than guessed**: murumuru and ucuuba
+disagree with the chart by over 10% with nothing about the oil to explain it,
+and jojoba is a wax ester the triglyceride model does not describe. **`fa:
+null` means "not reliably known", never zero**, and the review never writes a
+profile over one already in the library.
+
+One SAP value carries `estimated:true`: **chia seed oil**, which is not on the
+chart and kept its old placeholder. Heide found this by asking "if a SAP value
+is not known, it is now no longer guessed, is that correct?" Anything not from
+the chart must carry that flag.
+
+**SAP is keyed on NAME, not INCI.** INCI names the botanical source; grade is
+what moves the value. Safflower and high-oleic safflower share one INCI and
+saponify at 0.137 and 0.135. Aliases never shadow another oil's primary name,
+and a test enforces it.
+
+**Fractionated coconut oil was wrong in the seeder** — recorded as
+`Cocos Nucifera (Coconut) Oil` with a profile accounting for 25% of the oil.
+Heide caught it. Fractionating strips the long-chain acids out, so it is
+`Caprylic/Capric Triglyceride` and its composition is the C8/C10 pair. She also
+pointed out that **FCO and CCT are related grades, not one product** (FCO is
+from coconut; CCT may come from palm kernel, and the C8:C10 ratio varies), so
+CCT-style names resolve to the same row via aliases, with a comment saying to
+split them if a real difference between two stocked products is ever known.
+
+**The review tool.** The existing reference importer never overwrites, by
+design, so it could not correct a wrong value. "Check SAP values against
+reference" in Settings is the explicit alternative: it groups oils by what the
+stored value does (overstated / understated / none yet / profile only), sorted
+by how far off, shows both lye types, and applies nothing until confirmed.
+Built as an in-app modal, which is the first piece of the dialog-conversion
+backlog item.
+
+**Bucket naming bug worth remembering:** the buckets were first named for which
+way the number moves when corrected, while the headings described whether the
+stored value read high. Those are opposites, so every oil sat under a heading
+saying the reverse of the truth. Name a bucket after the thing, not the fix.
+
+### Density: stop assuming oil is water
+
+Density converts a lot bought by **volume** into grams. Where none was
+recorded, every module used 1.0, so stock on hand ran ~7% high and cost per
+gram ~7% low on every oil bought by the litre.
+
+The tables that knew better existed but lived in the Ingredients edit form and
+read from DOM fields, so they could only suggest a value to a human and nothing
+else could see them. They are in `plume-core.js` now (v1.9), and
+**`Plume.densityFor(ing)`** resolves from a plain object, returning the value
+AND its source: `set` (she typed it, never overridden), `inci`, `category`, or
+`default` (1.0, an admitted guess). `stockG`, `stockGOrNull`, Ingredients'
+`calcTotalStockG`, `isLowStock` and Batchlog's deduction all use it.
+
+**Heide looked up 31 densities herself, and the striking result is that 26 land
+within 1.5% of the existing 0.92 carrier-oil default**, with her liquid-oil
+median at exactly 0.9200. Her data validated the category default rather than
+replacing it, which is why the remaining ~46 oils are left on it: under 1% of
+error against the 7% the water fallback was costing. The outliers earn their
+own entries, jojoba most of all at 0.860 — a wax ester, the same reason its
+fatty acid profile was withheld.
+
+**Propanediol corrected from 1.02 to 1.053.** Her lookup caught it;
+1,3-propanediol is about 1.06 at 20 C. Glycerin at 1.260 matched.
+
+**Unlike SAP, density has no validating law.** There is no ratio to check and
+no profile to predict from, so a recorded source is the only provenance. Five
+of her 31 carry one.
+
+### Ingredient archiving, and the bug underneath it
+
+Heide asked for un-archive in Ingredients, which Formulations had and
+Ingredients never did. Investigating found something worse.
+
+**Deleting an ingredient silently corrupted formulations.** A line holds an
+ingredient id, so deleting the ingredient left the line pointing at nothing,
+and every render path did `if (!ing) return`. The row vanished while the line
+kept counting toward the percentage total: a two-line formula rendered **one
+row under a header reading 100.00%**. A bench sheet printed from that is simply
+wrong. `deleteCurrent()` confirmed with "This cannot be undone" and checked
+nothing.
+
+**This is the second time a line has vanished while still counting** — the
+first was a stray phase key in session 13, and the comment recording that
+lesson sits a few lines above the code that had the same bug. Lines now resolve
+through `resolveIng()`, which returns a marked stub rather than `undefined`, so
+a missing ingredient renders a dashed warning row saying the formula is short.
+That also surfaces any dangling reference already in the data.
+
+**The delete guard** mirrors the formulation one and **scans every variant**,
+not just the active one. A line lives on a variant; top-level `f.lines` is only
+a mirror of whichever is active, so checking that alone would call an
+ingredient unused while three versions depended on it.
+
+**The archive UI:** a Show archived toggle, dimmed rows with a tag, an
+Unarchive button and banner, and Unarchive in the quick look. The old confirm
+told her to restore by importing a backup, which was never true.
+
+**A search always reaches the archive** (her requirement, and she is right):
+browsing hides it because a short list is the point, but a text query names a
+specific thing, and answering "no results" for something in the archive is how
+a duplicate gets made — one ingredient, two records, lots split between them.
+Category and phase filters do not reach it, because those are browsing.
+
+### Two UI bugs worth recording as patterns
+
+1. **Markup in a data field gets escaped.** The density note was written as a
+   styled `<span>` inside a `propsFields` value, and every value there is
+   escaped on the way out, so it rendered as literal angle brackets. The note
+   is a separate `note` property now and the renderer supplies the markup.
+2. **A banner must follow its state.** The archive bar said "N archived
+   ingredients hidden from this list" *while showing them*, because one
+   sentence served both states. Heide's ingredient list appeared to grow, she
+   checked her data, found nothing added since May, and concluded she was
+   imagining it. She was not: the one element that existed to explain the extra
+   rows was contradicting them.
+
+That second one also exposed the real history: **archiving existed before
+today but there was no way to see or restore archived items**, so things she
+archived months ago went into a hole with no door and she never knew they were
+there. Making the archive visible is what exposed how badly it behaved.
+
+### Session 16 process notes
+
+- **Claude's diagnoses were wrong twice in one stretch**, once asserting a
+  cause confidently and once over-correcting away from a cause that was
+  right. When a user reports something odd, gather the facts before offering
+  an explanation; a plausible story invites agreement and then has to be
+  retracted.
+- **Check `.merged` before concluding a PR is broken.** Twice a PR looked
+  stuck when Heide had simply merged it; a merged PR freezes and cannot be
+  reopened.
+- **Assert that two numbers agree, not that each is plausible.** The density
+  tests verified `stockG` in isolation and passed while the screen showed a
+  different number from the same quantity. Only the disagreement revealed it.
