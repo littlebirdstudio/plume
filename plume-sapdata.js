@@ -18,6 +18,10 @@
 //   than 4% is either explained in a comment on the row or has no profile at
 //   all -- a missing profile here means "not known reliably", never "zero".
 //
+//   One SAP value is NOT from the chart and carries estimated:true on its row.
+//   Anything with that flag is good enough to calculate with and not good
+//   enough to trust silently.
+//
 //   Profiles deliberately withheld: murumuru and ucuuba (both disagree with
 //   the chart by more than 10% with no property of the oil to explain it) and
 //   jojoba (a wax ester, so the triglyceride model does not describe it).
@@ -82,8 +86,9 @@ var PlumeSap = (function () {
       naoh:0.135, koh:0.19, fa:{palmitic:3,stearic:2,oleic:5,linoleic:7,linolenic:78} },
     { name:'Tamanu oil', aliases:[], inci:'Calophyllum Inophyllum Seed Oil',
       naoh:0.148, koh:0.208, fa:{palmitic:12,stearic:14,oleic:41,linoleic:31} },
+    // ESTIMATED: not on the chart; inherited from the previous seeder value, which its own 62% linolenic profile corroborates to within 2%
     { name:'Chia seed oil', aliases:[], inci:'Salvia Hispanica Seed Oil',
-      naoh:0.136, koh:0.19, fa:{palmitic:7,stearic:3,oleic:7,linoleic:19,linolenic:62} },
+      naoh:0.136, koh:0.19, fa:{palmitic:7,stearic:3,oleic:7,linoleic:19,linolenic:62}, estimated:true },
     { name:'Raspberry seed oil', aliases:[], inci:'Rubus Idaeus (Raspberry) Seed Oil',
       naoh:0.133, koh:0.187, fa:{palmitic:3,stearic:2,oleic:13,linoleic:54,linolenic:25} },
     { name:'Plum kernel oil', aliases:[], inci:'Prunus Domestica Seed Oil',
