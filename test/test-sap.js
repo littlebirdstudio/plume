@@ -71,6 +71,15 @@ const FA_MW = {
     const emptyObj = oils.filter(o => o.fa !== null && Object.keys(o.fa).length === 0);
     ok('unknown profiles are null, not an empty object', emptyObj.length === 0,
        emptyObj.map(o => o.name));
+
+    // Any value not taken from the reference chart has to say so on its own
+    // row. An unsourced number that looks like a sourced one is the exact
+    // failure this whole dataset exists to undo.
+    const est = oils.filter(o => o.estimated);
+    ok('estimated values are flagged, not left to pass as sourced',
+       est.length > 0 && est.length <= 3, est.map(o => o.name));
+    ok('and each flagged row still carries a usable value',
+       est.every(o => o.naoh > 0 && o.koh > 0), est.map(o => [o.name, o.naoh]));
   }
 
   console.log('\n2. Profiles predict their own SAP');

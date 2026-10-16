@@ -2076,7 +2076,8 @@ function sapRow(it, dir) {
     '<td style="' + NUM + ';color:var(--ink-lighter)">' +
       (pct === null ? '\u2014' : (Math.abs(pct) < 0.05 ? 'rounding' : (pct > 0 ? '+' : '') + pct.toFixed(1) + '%')) + '</td>' +
     '<td style="' + B + ';padding:5px 8px;font-size:11px;color:var(--ink-lighter)">' +
-      (it.fa ? 'profile too' : '') + '</td>' +
+      [it.fa ? 'profile too' : '', it.ref.estimated ? 'estimated' : '']
+        .filter(function (x) { return x; }).join(', ') + '</td>' +
     '</tr>';
 }
 
@@ -2114,7 +2115,9 @@ function openSapReview() {
   h += '<div style="font-size:12px;color:var(--ink-lighter);line-height:1.5;margin-bottom:4px">' +
        'Reference: ' + esc(PlumeSap.source) + ', ' + PlumeSap.count + ' oils. ' +
        'Grouped by what your stored value does, and sorted so the largest differences come first. ' +
-       'A change marked "rounding" moves only the third decimal of one lye type.</div>';
+       'A change marked "rounding" moves only the third decimal of one lye type. ' +
+       'A row marked "estimated" is one the reference chart does not cover, so its value is a ' +
+       'best available figure rather than a sourced one.</div>';
 
   if (!total) {
     h += '<div style="padding:18px 0;font-size:14px;color:var(--ink)">Everything matches the reference. Nothing to change.</div>';
