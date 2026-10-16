@@ -1,4 +1,4 @@
-// plume-sapdata.js  v1.1
+// plume-sapdata.js  v1.2
 //
 // Saponification values and fatty acid profiles for the oils, butters and
 // waxes Plume knows about. Loaded as a plain script, like plume-core.js --
@@ -48,6 +48,12 @@
 //   libraries also leave INCI blank far more often than they leave a name
 //   blank. Names distinguish these; INCI does not.
 //
+// v1.2 (2026-10-16) added the Formula Botanica directory's names for six oils
+// already here (Rosehip oil, Meadowfoam oil, Tamanu seed oil, Borage seed oil,
+// Flaxseed oil, and its long fractionated coconut name). Same oil, same grade,
+// so Quick add and the SAP review now recognise them; before, a library
+// holding those names fell under "Not in the reference".
+//
 // Aliases never shadow another oil's primary name, so a lookup for
 // "Olive oil" cannot land on "Olive oil (pomace)".
 var PlumeSap = (function () {
@@ -61,11 +67,11 @@ var PlumeSap = (function () {
       naoh:0.066, koh:0.092, fa:null },
     { name:'Sweet almond oil', aliases:[], inci:'Prunus Amygdalus Dulcis (Sweet Almond) Oil',
       naoh:0.139, koh:0.195, fa:{palmitic:7,stearic:2,oleic:69,linoleic:20} },
-    { name:'Rosehip seed oil', aliases:[], inci:'Rosa Canina Seed Oil',
+    { name:'Rosehip seed oil', aliases:['Rosehip oil'], inci:'Rosa Canina Seed Oil',
       naoh:0.133, koh:0.187, fa:{palmitic:4,stearic:2,oleic:15,linoleic:45,linolenic:33} },
     { name:'Argan oil', aliases:[], inci:'Argania Spinosa Kernel Oil',
       naoh:0.136, koh:0.191, fa:{palmitic:13,stearic:6,oleic:43,linoleic:37} },
-    { name:'Fractionated coconut oil', aliases:['Caprylic capric triglyceride','Caprylic/capric triglyceride','Fractionated coconut','MCT oil'], inci:'Caprylic/Capric Triglyceride',
+    { name:'Fractionated coconut oil', aliases:['Caprylic capric triglyceride','Caprylic/capric triglyceride','Fractionated coconut','MCT oil','Fractionated coconut oil/ medium chain triglycerides (mct)'], inci:'Caprylic/Capric Triglyceride',
       naoh:0.232, koh:0.325, fa:{caprylic:55,capric:42,lauric:2} },
     { name:'Mango butter', aliases:[], inci:'Mangifera Indica (Mango) Seed Butter',
       naoh:0.136, koh:0.191, fa:{palmitic:7,stearic:40,oleic:46,linoleic:5} },
@@ -83,7 +89,7 @@ var PlumeSap = (function () {
       naoh:0.143, koh:0.2, fa:{palmitic:21,stearic:4,oleic:36,linoleic:31,linolenic:2} },
     { name:'Marula oil', aliases:[], inci:'Sclerocarya Birrea Seed Oil',
       naoh:0.137, koh:0.192, fa:{palmitic:10,stearic:7,oleic:70,linoleic:8} },
-    { name:'Meadowfoam seed oil', aliases:[], inci:'Limnanthes Alba (Meadowfoam) Seed Oil',
+    { name:'Meadowfoam seed oil', aliases:['Meadowfoam oil'], inci:'Limnanthes Alba (Meadowfoam) Seed Oil',
       naoh:0.12, koh:0.169, fa:null },
     { name:'Castor oil', aliases:[], inci:'Ricinus Communis (Castor) Seed Oil',
       naoh:0.128, koh:0.18, fa:{oleic:4,ricinoleic:90,linoleic:4} },
@@ -97,7 +103,7 @@ var PlumeSap = (function () {
       naoh:0.135, koh:0.19, fa:{palmitic:12,stearic:10,oleic:18,linoleic:58} },
     { name:'Pomegranate seed oil', aliases:[], inci:'Punica Granatum Seed Oil',
       naoh:0.135, koh:0.19, fa:{palmitic:3,stearic:2,oleic:5,linoleic:7,linolenic:78} },
-    { name:'Tamanu oil', aliases:[], inci:'Calophyllum Inophyllum Seed Oil',
+    { name:'Tamanu oil', aliases:['Tamanu seed oil'], inci:'Calophyllum Inophyllum Seed Oil',
       naoh:0.148, koh:0.208, fa:{palmitic:12,stearic:14,oleic:41,linoleic:31} },
     // ESTIMATED: not on the chart; inherited from the previous seeder value, which its own 62% linolenic profile corroborates to within 2%
     { name:'Chia seed oil', aliases:[], inci:'Salvia Hispanica Seed Oil',
@@ -191,13 +197,13 @@ var PlumeSap = (function () {
       naoh:0.133, koh:0.186, fa:{palmitic:10,stearic:1,oleic:54,linoleic:31} },
     { name:'Evening primrose oil', aliases:[], inci:'Oenothera Biennis (Evening Primrose) Oil',
       naoh:0.135, koh:0.19, fa:{palmitic:6,stearic:2,oleic:8,linoleic:74,linolenic:10} },
-    { name:'Borage oil', aliases:[], inci:'Borago Officinalis Seed Oil',
+    { name:'Borage oil', aliases:['Borage seed oil'], inci:'Borago Officinalis Seed Oil',
       naoh:0.135, koh:0.19, fa:{palmitic:10,stearic:4,oleic:16,linoleic:38,linolenic:22} },
     { name:'Black currant seed oil', aliases:[], inci:'Ribes Nigrum (Black Currant) Seed Oil',
       naoh:0.135, koh:0.19, fa:{palmitic:6,stearic:2,oleic:10,linoleic:47,linolenic:30} },
     { name:'Cranberry seed oil', aliases:[], inci:'Vaccinium Macrocarpon (Cranberry) Seed Oil',
       naoh:0.135, koh:0.19, fa:{palmitic:6,stearic:1,oleic:22,linoleic:44,linolenic:25} },
-    { name:'Flax seed oil (linseed)', aliases:['Flax seed oil'], inci:'Linum Usitatissimum (Linseed) Seed Oil',
+    { name:'Flax seed oil (linseed)', aliases:['Flax seed oil','Flaxseed oil'], inci:'Linum Usitatissimum (Linseed) Seed Oil',
       naoh:0.135, koh:0.19, fa:{palmitic:6,stearic:4,oleic:19,linoleic:15,linolenic:55} },
     { name:'Moringa oil', aliases:[], inci:'Moringa Oleifera Seed Oil',
       naoh:0.137, koh:0.192, fa:{palmitic:7,stearic:5,oleic:72,linoleic:1,behenic:6} },
@@ -265,7 +271,7 @@ var PlumeSap = (function () {
   function all() { return OILS.slice(); }
 
   return {
-    version: '1.1',
+    version: '1.2',
     source:  'SoapCalc chart (KOH first, NaOH second)',
     oils:    all,
     lookup:  lookup,
