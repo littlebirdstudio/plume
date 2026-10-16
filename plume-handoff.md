@@ -92,7 +92,7 @@ Core defines globals with the names modules already use, so **converting a modul
 **A module may override an alias by defining its own function** — this is the intended escape hatch. `plume-ingredients.html` keeps a local `openModal` because it snapshots form state to detect unsaved edits. Share the common case; keep the exception local.
 
 ### Versioning
-`Plume.VERSION` is displayed at the bottom of every converted module's Settings → Storage panel, alongside the active driver name. **Bump it on every core change.** Browsers cache `.js` far more stubbornly than they re-fetch a replaced HTML file, so "is core loaded, and is it the one I just uploaded?" must be answerable by looking. Current: **v1.9** (v1.8 added INCI blend splitting; v1.9 added density resolution).
+`Plume.VERSION` is displayed at the bottom of every converted module's Settings → Storage panel, alongside the active driver name. **Bump it on every core change.** Browsers cache `.js` far more stubbornly than they re-fetch a replaced HTML file, so "is core loaded, and is it the one I just uploaded?" must be answerable by looking. Current: **v1.10** (v1.8 added INCI blend splitting; v1.9 added density resolution; v1.10 ranked search results, best match first).
 
 ### Upload order matters
 `plume-core.js` **first**, then the HTML. A module that arrives before core shows the missing-core banner until core lands. Core alone breaks nothing.
@@ -1514,7 +1514,7 @@ What this means in practice:
 ### Tests live in the repo now, and CI runs them
 
 `package.json`, `.gitignore`, `package-lock.json` and a `test/` directory are
-committed. `npm test` runs seven suites, ~279 checks.
+committed. `npm test` runs eight suites, ~296 checks (eighth, `test-search.js`, added session 17).
 `.github/workflows/tests.yml` runs the same on every pull request and on push
 to `main`.
 
@@ -1527,6 +1527,7 @@ to `main`.
 | `test-sap.js` | SAP reference data and the review that applies it |
 | `test-ing-archive.js` | Ingredient archiving, delete guard, missing-ingredient row |
 | `test-density.js` | Density resolution and the stock arithmetic on it |
+| `test-search.js` | Ingredient search ordering (best match first) |
 
 **Playwright is pinned to an exact version (1.56.0), deliberately.** Each
 release expects one specific Chromium build; a mismatch fails with "Executable
@@ -1731,3 +1732,30 @@ there. Making the archive visible is what exposed how badly it behaved.
 - **Assert that two numbers agree, not that each is plausible.** The density
   tests verified `stockG` in isolation and passed while the screen showed a
   different number from the same quantity. Only the disagreement revealed it.
+
+---
+
+## Session 17 (16 October 2026) — Search ordering
+
+**Her report:** typing "n" in the ingredient search did not put names starting
+with N first; "na" opened on Activated charcoal, "nat" on Bakuchiol.
+
+**Cause, two halves.** The Ingredients list matched anywhere (name, INCI,
+function notes, her notes, supplier) and then sorted every match
+alphabetically, so an A-name matched through a word in its notes led the
+list. Formulations already put name/INCI matches ahead of notes matches, but
+"contains" ranked the same as "starts with", so "na" inside Niacinamide or an
+INCI tied with a name beginning with Na.
+
+**Fix (core v1.10).** `Plume.ingMatchRank` now returns five bands, lower is
+better, 0 still meaning no match so every caller that tests it as true/false
+is unchanged: 1 name starts with the query; 2 a later word of the name does;
+3 a word of the INCI does (a parenthesis counts as a word break, so "(Shea)"
+is reachable); 4 mid-word in name or INCI; 5 functions, function notes,
+purpose, lowdown. The Ingredients list sorts by this when searching (supplier
+only matches rank 6, last) and stays plain alphabetical when browsing.
+Formulations needed no logic change. The cheat sheet only filters by the
+rank, so it is unaffected.
+
+New suite `test-search.js` (18 checks), confirmed to fail 12 of 18 against
+the old code.

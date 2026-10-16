@@ -33,7 +33,7 @@ var Plume = (function () {
 // Bump when core changes. Shown in every module's Settings panel, so
 // "is core loaded, and is it the one I just uploaded?" is answerable by
 // looking rather than guessing -- browsers cache .js files stubbornly.
-var VERSION = '1.9';
+var VERSION = '1.10';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -814,21 +814,43 @@ function funcCats(ing) {
   return [];
 }
 
-// How well an ingredient matches a search. Returns:
-//   0  no match
-//   1  name or INCI -- what the old search matched, so ranked first
-//   2  function, function notes, secondary functions, purpose, or the
-//      'Choose it when' line
+// How well an ingredient matches a search. Lower is better; 0 is no match,
+// so callers can keep treating the result as true/false. Returns:
+//   1  the name STARTS with the query        ("ros" -> Rosehip seed oil)
+//   2  a later word of the name starts with it ("seed" -> Rosehip seed oil)
+//   3  a word of the INCI starts with it       ("shea" -> ...(Shea) Butter)
+//   4  name or INCI contains it mid-word       ("na" -> Argania, Sodium)
+//   5  function, function notes, secondary functions, purpose, or the
+//      lowdown line (chooseWhen)
+// Sort by this, then alphabetically, and typing narrows the way a person
+// expects: the first letters typed decide the top of the list. Before
+// 2026-10-16 bands 1-4 were one band and the Ingredients list ignored the
+// rank altogether, so "na" opened on Activated charcoal (a notes match).
 // Plain substring matching, deliberately: "serum" and "serums" both hit
 // her purpose line with no tag vocabulary to maintain.
 function ingMatchRank(ing, q) {
   if (!ing) return 0;
   q = String(q || '').toLowerCase().trim();
   if (!q) return 0;
-  var has = function (x) { return x && String(x).toLowerCase().indexOf(q) !== -1; };
-  if (has(ing.name) || has(ing.inci)) return 1;
+  var low = function (x) { return x ? String(x).toLowerCase() : ''; };
+  var has = function (x) { return low(x).indexOf(q) !== -1; };
+  // True when q begins a word: at the start, or after anything that is not
+  // a letter or digit (space, parenthesis, hyphen, slash).
+  var wordStart = function (s) {
+    var i = s.indexOf(q);
+    while (i !== -1) {
+      if (i === 0 || !/[a-z0-9]/.test(s.charAt(i - 1))) return true;
+      i = s.indexOf(q, i + 1);
+    }
+    return false;
+  };
+  var name = low(ing.name), inci = low(ing.inci);
+  if (name.indexOf(q) === 0) return 1;
+  if (wordStart(name)) return 2;
+  if (wordStart(inci)) return 3;
+  if (name.indexOf(q) !== -1 || inci.indexOf(q) !== -1) return 4;
   if (funcCats(ing).some(has) || has(ing.function) || has(ing.function2) || has(ing.purpose) ||
-      has(ing.chooseWhen)) return 2;
+      has(ing.chooseWhen)) return 5;
   return 0;
 }
 

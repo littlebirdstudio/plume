@@ -2025,10 +2025,11 @@ function searchIngs(q) {
   var dd = document.getElementById('ing-dd');
   if (!q.trim()) { dd.style.display = 'none'; return; }
   var have = new Set(fLines.map(function(l) { return l.ingId; }));
-  // Name and INCI matches first (what this search always did), then
-  // anything matched by function or by her purpose line -- so "thickener"
-  // and "serum" now return something instead of nothing. Alphabetical
-  // within each band so the list does not reshuffle as she types.
+  // Best match first (Plume.ingMatchRank): names that START with the query,
+  // then a word in the name, then INCI, then mid-word hits, then anything
+  // matched by function or her notes -- so "thickener" and "serum" still
+  // return something. Alphabetical within each band so the list does not
+  // reshuffle as she types.
   var res = ings.filter(function(i) {
     return !i.archived && !have.has(i.id) && Plume.ingMatchRank(i, q) > 0;
   }).sort(function(a, b) {
