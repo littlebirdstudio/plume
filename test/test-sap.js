@@ -38,16 +38,27 @@ const FA_MW = {
     ok('reference is populated', oils.length > 50, oils.length);
     ok('count matches the array', Sap.count === oils.length);
 
-    const offRatio = oils.filter(o => Math.abs(o.koh / o.naoh - RATIO) > 0.025);
+    // Unknown on purpose (v1.1, Heide's decision): no number at all, so
+    // the numeric checks below run on the rest. Pinned to exactly these
+    // three so a silently blanked row cannot hide among them.
+    const unknown = oils.filter(o => o.unknown).map(o => o.name).sort();
+    ok('exactly the three oils she chose are unknown',
+       JSON.stringify(unknown) === JSON.stringify(['Murumuru butter', 'Sea buckthorn oil', 'Ucuuba butter']), unknown);
+    ok('an unknown SAP is null, never zero or a leftover number',
+       oils.filter(o => o.unknown).every(o => o.naoh === null && o.koh === null));
+    ok('an unknown row is not also marked estimated', oils.every(o => !(o.unknown && o.estimated)));
+    const known = oils.filter(o => !o.unknown);
+
+    const offRatio = known.filter(o => Math.abs(o.koh / o.naoh - RATIO) > 0.025);
     ok('every row satisfies the KOH/NaOH ratio', offRatio.length === 0,
        offRatio.map(o => o.name + ' ' + (o.koh / o.naoh).toFixed(4)));
 
-    const nonPositive = oils.filter(o => !(o.naoh > 0) || !(o.koh > 0));
-    ok('no row has a missing or zero SAP value', nonPositive.length === 0,
+    const nonPositive = known.filter(o => !(o.naoh > 0) || !(o.koh > 0));
+    ok('no other row has a missing or zero SAP value', nonPositive.length === 0,
        nonPositive.map(o => o.name));
 
     // KOH must exceed NaOH for the same oil; a transposed row would invert.
-    ok('KOH always exceeds NaOH', oils.every(o => o.koh > o.naoh));
+    ok('KOH always exceeds NaOH', known.every(o => o.koh > o.naoh));
 
     const noName = oils.filter(o => !o.name || !o.inci);
     ok('every row has a name and an INCI', noName.length === 0, noName.map(o => o.name));
@@ -78,6 +89,9 @@ const FA_MW = {
     const est = oils.filter(o => o.estimated);
     ok('estimated values are flagged, not left to pass as sourced',
        est.length > 0 && est.length <= 3, est.map(o => o.name));
+    // Pumpkin seed butter has no chart row and took the oil's value.
+    ok('pumpkin seed butter is among them',
+       est.some(o => o.name === 'Pumpkin seed butter'), est.map(o => o.name));
     ok('and each flagged row still carries a usable value',
        est.every(o => o.naoh > 0 && o.koh > 0), est.map(o => [o.name, o.naoh]));
   }
@@ -91,7 +105,7 @@ const FA_MW = {
     const kohPerG = a => 3 * 56.105 / (3 * FA_MW[a] + 38.04);
     const diffs = [];
     Sap.oils().forEach(o => {
-      if (!o.fa) return;
+      if (!o.fa || o.unknown) return;   // no SAP to predict against
       const tot = Object.keys(o.fa).reduce((s, k) => s + o.fa[k], 0);
       const pred = Object.keys(o.fa).reduce((s, k) => s + o.fa[k] / tot * kohPerG(k), 0);
       diffs.push({ name: o.name, pct: (pred - o.koh) / o.koh * 100 });
@@ -157,7 +171,7 @@ const FA_MW = {
     // Any INCI shared by rows with DIFFERENT SAP would be silently
     // mis-resolved by an INCI-keyed lookup. Catch new ones as they appear.
     const byInci = {};
-    Sap.oils().forEach(o => {
+    Sap.oils().filter(o => !o.unknown).forEach(o => {
       const k = Sap._norm(String(o.inci).replace(/\([^)]*\)/g, ' '));
       (byInci[k] = byInci[k] || []).push(o);
     });
@@ -176,6 +190,11 @@ const FA_MW = {
 
     const saff = Sap.lookup('Safflower oil');
     ok('plain "Safflower oil" is not the high-oleic row', saff.name === 'Safflower oil');
+
+    // Canola is rapeseed bred low in erucic acid; one row answers to both.
+    const canola = Sap.lookup('Canola oil');
+    ok('"Rapeseed oil" finds the canola row', canola && Sap.lookup('Rapeseed oil') === canola);
+    ok('at the low-erucic value its profile predicts', canola && Math.abs(canola.naoh - 0.133) < 0.0001, canola && canola.naoh);
 
     // No alias may shadow another oil's primary name.
     const primaries = {};
@@ -215,6 +234,13 @@ const FA_MW = {
     { id: 'i7', name: 'Glycerin', inci: 'Glycerin', phase: 'water', lots: [] },
     // Correct SAP *and* a matching profile, so it should be counted as
     // agreeing and appear in no bucket at all.
+    // Unknown on purpose. Murumuru holds the old seeder's 0.209 (the high,
+    // superfat-eating direction) and a profile; sea buckthorn holds nothing.
+    { id: 'i9', name: 'Murumuru butter', inci: 'Astrocaryum Murumuru Seed Butter',
+      phase: 'oil', lots: [], soap: { naoh: 0.209, koh: 0.293,
+      fa: { lauric: 47, myristic: 29, palmitic: 7, stearic: 4, oleic: 10, linoleic: 2 } } },
+    { id: 'i10', name: 'Sea buckthorn oil', inci: 'Hippophae Rhamnoides Fruit Oil',
+      phase: 'oil', lots: [] },
     { id: 'i8', name: 'Kokum butter', inci: 'Garcinia Indica Seed Butter',
       phase: 'oil', lots: [], soap: { naoh: 0.135, koh: 0.190,
       fa: { palmitic: 2, stearic: 57, oleic: 39, linoleic: 2 } } }
@@ -249,10 +275,18 @@ const FA_MW = {
         add:         n(p.add),
         faOnly:      n(p.faOnly),
         unmatched:   n(p.unmatched),
+        clear:       n(p.clear),
         agree:       p.agree
       };
     })()`);
     const anyBucket = [].concat(plan.overstated, plan.understated, plan.add, plan.faOnly);
+
+    ok('a stored value on an unknown oil is offered for clearing',
+       JSON.stringify(plan.clear) === JSON.stringify(['Murumuru butter']), plan.clear);
+    ok('and is not "corrected" to some other number',
+       anyBucket.indexOf('Murumuru butter') === -1, anyBucket);
+    ok('an unknown oil with nothing stored is offered nothing',
+       anyBucket.concat(plan.clear).indexOf('Sea buckthorn oil') === -1);
 
     // Stored 0.190 against a reference of 0.183: the stored value is too high,
     // so the calculator has been asking for lye the oils cannot consume.
@@ -297,6 +331,8 @@ const FA_MW = {
     const body = await page.evaluate("document.getElementById('sap-review-body').innerText");
     ok('the review explains the lye direction', /more lye/.test(body) && /superfat/.test(body), body.slice(0, 160));
     ok('the unverifiable oil is named in the review', /Unobtainium/.test(body));
+    ok('the review says which value will be cleared and why',
+       /No reliable value/i.test(body) && /Murumuru butter/.test(body) && /cleared/.test(body), body.slice(-500));
 
     const before = await page.evaluate(`(function () {
       var g = ingredients.filter(function (i) { return i.name === 'Glycerin'; })[0];
@@ -314,6 +350,8 @@ const FA_MW = {
         shea:    f('Shea butter').soap,
         cupuacu: f('Cupuacu butter').soap,
         unob:    f('Unobtainium oil').soap,
+        muru:    f('Murumuru butter').soap,
+        buck:    f('Sea buckthorn oil').soap,
         jojobaFa: JSON.stringify(f('Jojoba oil').soap.fa),
         glycerin: f('Glycerin').soap === undefined,
         names:   ingredients.map(function (i) { return i.name; }).length,
@@ -338,6 +376,10 @@ const FA_MW = {
     ok('a withheld profile does not erase the existing one',
        after.jojobaFa === before.jojobaFa, [before.jojobaFa, after.jojobaFa]);
 
+    ok('the unknown oil\'s SAP is cleared, both lye types',
+       after.muru && after.muru.naoh === undefined && after.muru.koh === undefined, after.muru);
+    ok('but its profile stays', after.muru && after.muru.fa && after.muru.fa.lauric === 47, after.muru);
+    ok('an unknown oil with nothing stored gains nothing', after.buck === undefined, after.buck);
     ok('an oil absent from the reference is left untouched',
        Math.abs(after.unob.naoh - 0.111) < 0.0001, after.unob.naoh);
     ok('a non-soap ingredient gains no soap object', after.glycerin === true);
@@ -348,7 +390,7 @@ const FA_MW = {
     // Re-running must now find nothing, or the plan is not converging.
     const second = await page.evaluate(`(function () {
       var p = buildSapPlan();
-      return p.overstated.length + p.understated.length + p.add.length + p.faOnly.length;
+      return p.overstated.length + p.understated.length + p.add.length + p.faOnly.length + p.clear.length;
     })()`);
     ok('a second pass finds nothing left to change', second === 0, second);
     await page.close();
