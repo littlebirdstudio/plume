@@ -2366,6 +2366,19 @@ function toggleShowArchivedIngs() {
   renderTable();
 }
 
+// Archived ingredients the current search would have found, had they not been
+// archived. Runs only when the visible list came back empty, so the cost is
+// paid on the one screen where it buys something.
+function matchesArchived() {
+  var q = (document.getElementById('search').value || '').toLowerCase();
+  if (!q) return [];
+  return ingredients.filter(function(i) {
+    if (!i.archived) return false;
+    var suppText = migrateLots(i).map(function(l) { return l.supplier || ''; }).join(' ').toLowerCase();
+    return Plume.ingMatchRank(i, q) || suppText.indexOf(q) !== -1;
+  });
+}
+
 // ── Table ─────────────────────────────────────────────
 function renderTable() {
   var q     = document.getElementById('search').value.toLowerCase();
@@ -2395,6 +2408,21 @@ function renderTable() {
   syncArchiveBar();
   var noActive = ingredients.filter(function(i) { return !i.archived; }).length === 0;
   if (!list.length) {
+    // "No results" is a lie when the thing searched for is sitting in the
+    // archive. Without this the only honest conclusion is that it was never
+    // added, which is how an archive quietly becomes a black hole.
+    var hidden = !showArchived ? matchesArchived() : [];
+    if (hidden.length) {
+      tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state">' +
+        '<p>Nothing active matches</p>' +
+        '<span>' + hidden.length + ' archived ingredient' + (hidden.length === 1 ? '' : 's') +
+        ' match' + (hidden.length === 1 ? 'es' : '') + ': ' +
+        esc(hidden.slice(0, 4).map(function(i) { return i.name; }).join(', ')) +
+        (hidden.length > 4 ? ' and ' + (hidden.length - 4) + ' more' : '') + '</span>' +
+        '<div style="margin-top:10px"><button class="btn btn-sm" onclick="toggleShowArchivedIngs()">Include archived</button></div>' +
+        '</div></td></tr>';
+      return;
+    }
     tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><p>' + (noActive ? 'No ingredients yet' : (lowStockActive ? 'No low stock items' : (inStockActive ? 'No ingredients in stock' : 'No results'))) + '</p>' +
       '<span>' + (noActive ? 'Click &quot;+ New ingredient&quot; to get started, or use Quick add from Settings for a curated starter list' : (lowStockActive ? 'All stocked items are above their threshold' : (inStockActive ? 'Add lot quantities to ingredients you have on hand' : 'Try adjusting your search or filters'))) + '</span></div></td></tr>';
     return;
@@ -2439,6 +2467,13 @@ function toggleQuickLook(id) {
   renderTable();
 }
 function openDetailsFromList(e, id) { e.stopPropagation(); viewIngredient(id); }
+
+function unarchiveFromList(e, id) {
+  e.stopPropagation();
+  var idx = ingredients.findIndex(function(i) { return i.id === id; });
+  if (idx > -1) delete ingredients[idx].archived;
+  saveData(); renderTable(); renderStats();
+}
 function openEditFromList(e, id) {
   e.stopPropagation();
   viewingId = id; editFromList = true;
@@ -2470,6 +2505,10 @@ function quickLookHtml(i) {
     '<div class="ql-actions">' +
       '<a onclick="openDetailsFromList(event,\'' + i.id + '\')">Full details \u2192</a>' +
       '<a onclick="openEditFromList(event,\'' + i.id + '\')">Edit</a>' +
+      // Restoring from the list, rather than opening the detail screen to do
+      // it. Archived rows are only on screen because they were asked for, and
+      // asking for them is nearly always a prelude to bringing one back.
+      (i.archived ? '<a onclick="unarchiveFromList(event,\'' + i.id + '\')">Unarchive</a>' : '') +
     '</div>' +
   '</div>';
 }

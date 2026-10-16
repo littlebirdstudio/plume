@@ -39,7 +39,7 @@ version, run the suites, and commit the new lockfile together.
 | `test-archive.js` | 32 | Archived formulations leaving the list and the pickers while staying resolvable for products that already use them; retired versions leaving the tab strip |
 | `test-inci.js` | 29 | Splitting blend INCI strings; merging a shared component once; the merge note; common-name mode left alone |
 | `test-sap.js` | 61 | The SAP reference data and the review that applies it: the KOH/NaOH ratio on every row, profiles predicting their own SAP, name lookup surviving the INCI collisions, and applying changes without destroying anything |
-| `test-ing-archive.js` | 37 | Archiving and un-archiving an ingredient; the delete guard naming which formulations break; an archived ingredient still resolving where used but gone from the add picker; a deleted ingredient rendering a marked row instead of vanishing |
+| `test-ing-archive.js` | 47 | Archiving and un-archiving an ingredient; the delete guard naming which formulations break; an archived ingredient still resolving where used but gone from the add picker; a deleted ingredient rendering a marked row instead of vanishing |
 
 ## How they run
 

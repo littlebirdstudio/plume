@@ -155,6 +155,57 @@ const SEED = `
     await page.close();
   }
 
+  console.log('\n4b. Searching for something archived says so');
+  {
+    const { page } = await open('ingredients');
+    // "Retired wax" is archived. With the toggle off the search finds nothing,
+    // and a bare "No results" would read as "you never added it".
+    await page.evaluate("document.getElementById('search').value = 'retired'; renderTable();");
+    await page.waitForTimeout(200);
+    let body = await page.evaluate("document.getElementById('tbody').innerText");
+    ok('it does not claim there are no results', !/^No results/m.test(body), body);
+    ok('it says how many archived ones match', /1 archived ingredient match/.test(body), body);
+    ok('and names it', /Retired wax/.test(body), body);
+
+    const btn = await page.evaluate("document.querySelector('#tbody button') ? document.querySelector('#tbody button').textContent : null");
+    ok('it offers a button to include them', btn === 'Include archived', btn);
+    await page.evaluate("document.querySelector('#tbody button').click()");
+    await page.waitForTimeout(200);
+    body = await page.evaluate("document.getElementById('tbody').innerText");
+    // The tag is uppercased by CSS text-transform, which innerText reflects.
+    ok('clicking it reveals the match', /Retired wax/.test(body) && /archived/i.test(body), body);
+
+    // A search that genuinely matches nothing must still say so plainly.
+    await page.evaluate("showArchived = false; document.getElementById('search').value = 'zzzznothing'; renderTable();");
+    await page.waitForTimeout(200);
+    body = await page.evaluate("document.getElementById('tbody').innerText");
+    ok('a real miss still reads as no results', /No results/.test(body), body);
+    await page.close();
+  }
+
+  console.log('\n4c. Restoring straight from the list');
+  {
+    const { page, dialogs } = await open('ingredients');
+    await page.evaluate('toggleShowArchivedIngs()');
+    await page.waitForTimeout(200);
+    await page.evaluate("toggleQuickLook('i3')");
+    await page.waitForTimeout(250);
+    const acts = await page.evaluate("Array.from(document.querySelectorAll('.ql-actions a')).map(function(a){return a.textContent;})");
+    ok('an archived row offers Unarchive in the quick look', acts.indexOf('Unarchive') !== -1, acts);
+
+    await page.evaluate("unarchiveFromList({stopPropagation:function(){}}, 'i3')");
+    await page.waitForTimeout(250);
+    ok('it restores without opening the detail screen',
+       (await page.evaluate("ingredients.find(function(i){return i.id==='i3';}).archived")) === undefined);
+    ok('and without a dialog', dialogs.length === 0, dialogs);
+
+    await page.evaluate("toggleQuickLook('i1')");
+    await page.waitForTimeout(250);
+    const acts2 = await page.evaluate("Array.from(document.querySelectorAll('.ql-actions a')).map(function(a){return a.textContent;})");
+    ok('a live row does not offer it', acts2.indexOf('Unarchive') === -1, acts2);
+    await page.close();
+  }
+
   console.log('\n5. Un-archiving, with no dialog in the way');
   {
     const { page, dialogs } = await open('ingredients');
