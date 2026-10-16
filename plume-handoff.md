@@ -1514,7 +1514,7 @@ What this means in practice:
 ### Tests live in the repo now, and CI runs them
 
 `package.json`, `.gitignore`, `package-lock.json` and a `test/` directory are
-committed. `npm test` runs eleven suites, ~455 checks (`test-search.js`, `test-ph.js`, `test-version.js` and `test-starter.js` added session 17).
+committed. `npm test` runs eleven suites, ~486 checks (`test-search.js`, `test-ph.js`, `test-version.js` and `test-starter.js` added session 17).
 `.github/workflows/tests.yml` runs the same on every pull request and on push
 to `main`.
 
@@ -1873,40 +1873,70 @@ AFTER their scripts, so it does not exist yet when `boot` runs.
 **Palette: no change, by decision.** Per-module palettes stay, default
 `sage-green`. Recorded under "Carried from session 12".
 
-### Session 17 (cont.) — Quick add rebuilt (core v1.13, plume-sapdata.js v1.2)
+### Session 17 (cont.) — Quick add rebuilt as a comprehensive starter list (core v1.13, plume-sapdata.js v1.2)
 
-**Her ask:** remove "Patch soap data", and roll the Formula Botanica
-reference data into Quick add so Quick add is the richer, single place to
-start from. "Import ingredient reference data" removed with it (her call).
-No "fill in existing ingredients" feature: she wanted Quick add itself more
-robust, not a second enrichment tool.
+**Her ask, and why:** clean up Settings and prepare for the sellable
+version by making Quick add a comprehensive starting list. Removed "Patch
+soap data" (it copied the stale seeder SAP values back in) and "Import
+ingredient reference data" (folded into Quick add). Reorganized by type and
+stripped the borrowed text in the same change, her call: the Formula
+Botanica prose has little use after first setup.
 
-- **`plume-starter.js` (new, v1.0)** holds the starter list, 278 items in six
-  tabs: the five curated tabs unchanged in shape, plus a **Formula Botanica**
-  tab (108 directory entries that matched nothing curated, grouped by
-  function). 74 curated items gained directory details. Merge rules are in
-  the file header; the two that matter: an INCI-only match also needs the
-  names to share a real word (Red clay's INCI is listed as kaolin and must
-  not fold into Kaolin clay), and grade-specific facts (oxidation stability,
-  melting point, absorption, heat stability) only fill an exact-name or sole
-  match (high-oleic sunflower must not inherit "unstable"). Built once by a
-  script; future edits go straight into the file. `fb_ingredients.json` stays
-  in the repo as the source.
-- **No SAP numbers in the starter list.** `starterToIngredient()` looks the
-  oil up in `plume-sapdata.js` by name as it is added: SoapCalc value if
-  there is one, nothing if it is unknown or absent. The old seeder values
-  were the stale ones (coconut 0.190).
-- **Six SAP aliases** for the directory's names of oils already in SoapCalc
-  (Rosehip oil, Meadowfoam oil, Tamanu seed oil, Borage seed oil, Flaxseed
-  oil, the long fractionated-coconut name). These also let the SAP review
-  recognise those names in her existing library.
-- **One INCI correction:** Tapioca starch was "Manihot Esculenta Root
-  Extract" (an extract's INCI); now "Tapioca Starch".
-- **Quick add UI:** items already in the library are greyed, tagged "in
-  library" and cannot be ticked; each row shows its function line.
-- **Bug fixed, older than today:** switching tabs rebuilt the list and
-  silently dropped ticks made on other tabs, though the modal invites
-  selecting across tabs. Ticks now live in `seederPicked` (keys `t-c-i`).
+**`plume-starter.js` v2.0 (new file):** 261 ingredients, each with a
+`type`, in 18 types (Carrier oils, Butters and fats, Waxes, Esters and light
+emollients, Infused oils and CO2 extracts, Emulsifiers and solubilizers,
+Thickeners and gums, Humectants, Waters and hydrosols, Surfactants, Actives
+vitamins and acids, Botanical extracts and glycerites, Preservatives
+antioxidants and chelators, Essential oils, Clays and charcoal, Exfoliants,
+Powders and starches, Soap making). Built from Plume's curated list plus the
+Formula Botanica directory, then:
 
-New suite `test-starter.js` (46 checks).
+- **One entry per ingredient.** "(organic)" and "(soap grade)" purchasing
+  variants and cross-tab repeats folded; real grades kept apart (virgin vs
+  76-degree coconut, regular vs high-oleic sunflower, LMW vs HMW hyaluronic
+  acid). Her "Your Ingredients" tab, which was her purchase history, is gone
+  as a category.
+- **Camellia stays two entries:** her "Camellia oil (tea seed)" is *Camellia
+  sinensis* and has a SoapCalc row; the directory's "Camellia seed oil" is
+  *japonica/oleifera* and has none. Folding them would have handed one
+  species the other's SAP.
+- **Merge safety:** an INCI-only match also needed the names to share a real
+  word (Red clay's INCI is listed as kaolin); grade-specific facts
+  (oxidation stability, melting point, absorption, heat stability) only
+  filled an exact-name or sole match (high-oleic sunflower must not inherit
+  "unstable").
+- **No borrowed prose.** `generalInfo` stripped; short factual fields kept.
+  Her library's existing records keep their text; only what Quick add
+  offers changed.
+- **No SAP numbers.** `starterToIngredient()` takes SAP from
+  `plume-sapdata.js` by name as an oil is added; nothing if SoapCalc lacks it
+  or it is unknown on purpose. Seven aliases added there (Rosehip oil,
+  Meadowfoam oil, Tamanu seed oil, Borage seed oil, Flaxseed oil, the long
+  fractionated-coconut name, Camellia oil (tea seed)), which also help the
+  SAP review recognise those names in her library.
+- **`aka` (former names)** on 35 items: folded and renamed names plus the
+  directory names that merged under a different name ("Glycerine"). Search
+  and the in-library check use them, so a library holding "Rosehip oil" from
+  the old import shows Rosehip seed oil as already there. Three directory
+  names are deliberately NOT mapped because each covers two grades (Coconut
+  oil, Sodium hyaluronate, Aloe vera). `type` and `aka` are never stored on
+  the ingredient.
+- Directory brand names properly cased (Sucragel AOF Bio, Spectrastat G2
+  Natural (MB), SCS...). Tapioca starch's INCI corrected from an extract's to
+  "Tapioca Starch".
 
+**Quick add UI:** a search box (the same `Plume.ingMatchRank`, best match
+first, plus former names) and a **Type dropdown**, over one list grouped by
+type. A dropdown, not chips: nineteen chips took four or five rows and
+squeezed the list. Ingredients already in the library are greyed and tagged.
+Ticks are kept by item index, so they survive searching and changing type;
+the old tabs rebuilt the list and silently dropped ticks made elsewhere, a
+bug older than today. "Select / clear all shown" acts on what is visible.
+Adding saves once (it used to save after every ingredient with a pause) and
+reports a failed save.
+
+**For the sellable fork:** this file is the starting library a buyer gets.
+Adding an ingredient means adding an item with a listed type; a test fails on
+an unknown type. The build was one-off; edit the file directly.
+
+New suite `test-starter.js` (77 checks).

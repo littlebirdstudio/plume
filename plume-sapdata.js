@@ -50,7 +50,8 @@
 //
 // v1.2 (2026-10-16) added the Formula Botanica directory's names for six oils
 // already here (Rosehip oil, Meadowfoam oil, Tamanu seed oil, Borage seed oil,
-// Flaxseed oil, and its long fractionated coconut name). Same oil, same grade,
+// Flaxseed oil, and its long fractionated coconut name), plus Quick add's
+// "Camellia oil (tea seed)" for the Camellia sinensis row. Same oil, same grade,
 // so Quick add and the SAP review now recognise them; before, a library
 // holding those names fell under "Not in the reference".
 //
@@ -116,7 +117,7 @@ var PlumeSap = (function () {
       naoh:0.139, koh:0.195, fa:{palmitic:13,stearic:3,oleic:24,linoleic:58} },
     { name:'Coconut oil, virgin (organic)', aliases:['Coconut oil, virgin'], inci:'Cocos Nucifera (Coconut) Oil',
       naoh:0.183, koh:0.257, fa:{caprylic:7,capric:6,lauric:48,myristic:18,palmitic:9,stearic:3,oleic:7,linoleic:2} },
-    { name:'Camellia oil (organic)', aliases:['Camellia oil'], inci:'Camellia Sinensis Seed Oil',
+    { name:'Camellia oil (organic)', aliases:['Camellia oil','Camellia oil (tea seed)','Tea seed oil'], inci:'Camellia Sinensis Seed Oil',
       naoh:0.138, koh:0.193, fa:{palmitic:8,stearic:2,oleic:80,linoleic:8} },
     { name:'Pomegranate oil (organic)', aliases:['Pomegranate oil'], inci:'Punica Granatum Seed Oil',
       naoh:0.135, koh:0.19, fa:{palmitic:3,stearic:2,oleic:5,linoleic:7,linolenic:78} },

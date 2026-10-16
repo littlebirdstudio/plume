@@ -1027,6 +1027,12 @@
     transition: all 0.15s;
   }
   .seeder-tab.active { background: var(--bark); color: var(--cream); border-color: var(--bark); }
+  .seeder-filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+  .seeder-search, .seeder-type { box-sizing: border-box; font: inherit; font-size: 13px; padding: 8px 10px;
+    border: 1px solid var(--cream-border); border-radius: 3px; background: var(--white); color: var(--ink); outline: none; }
+  .seeder-search { flex: 1 1 220px; min-width: 0; }
+  .seeder-type { flex: 0 1 260px; min-width: 0; }
+  .seeder-search:focus, .seeder-type:focus { border-color: var(--bark-light); }
   .seeder-cat-label {
     font-size: 10px;
     font-weight: 500;
@@ -1501,12 +1507,15 @@
       <div class="modal-title">Quick add — starter ingredients</div>
       <button class="modal-close" onclick="closeModal('modal-seeder')">×</button>
     </div>
-    <div style="font-size:13px;color:var(--ink-light);margin-bottom:1rem">Select ingredients across any tab, then click "Add selected." Ones already in your library are marked and cannot be added twice. Oils take their SAP values from the SoapCalc reference as they are added.</div>
-    <div class="seeder-tabs" id="seeder-tabs"></div>
+    <div style="font-size:13px;color:var(--ink-light);margin-bottom:1rem">Search or choose a type, tick what you want, then "Add selected." Ticks are kept while you search. Ones already in your library are marked. Oils take their SAP values from the SoapCalc reference.</div>
+    <div class="seeder-filters">
+      <input type="search" id="seeder-search" class="seeder-search" placeholder="Search by name, INCI or what it does…" aria-label="Search the starter list" oninput="setSeederQuery(this.value)" autocomplete="off">
+      <select id="seeder-type" class="seeder-type" aria-label="Ingredient type" onchange="setSeederType(this.value)"></select>
+    </div>
     <div id="seeder-content" style="max-height:400px;overflow-y:auto"></div>
     <div class="seeder-footer">
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-        <button class="btn btn-sm" onclick="seederToggleAll()">Select / deselect all on tab</button>
+        <button class="btn btn-sm" onclick="seederToggleAll()">Select / clear all shown</button>
         <span style="font-size:12px;color:var(--ink-light)" id="seeder-count">0 selected</span>
       </div>
       <button class="btn btn-sage" id="seeder-add-btn" onclick="seederAdd()">Add selected to library</button>
@@ -1541,7 +1550,7 @@
       <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--cream-border);gap:16px">
         <div style="flex:1">
           <div style="font-size:14px;color:var(--ink);margin-bottom:3px">Quick add starter ingredients</div>
-          <div style="font-size:12px;color:var(--ink-lighter);line-height:1.4">Browse about 280 common ingredients, including the Formula Botanica directory, and add any to your library with their details filled in. Oils arrive with SoapCalc SAP values.</div>
+          <div style="font-size:12px;color:var(--ink-lighter);line-height:1.4">Browse about 260 common ingredients by type, or search, and add any to your library with their details filled in. Oils arrive with SoapCalc SAP values.</div>
         </div>
         <button class="btn btn-sm" onclick="closeModal('modal-settings'); openSeeder();">Open…</button>
       </div>
@@ -1596,7 +1605,6 @@ var suppliers         = [];
 var brands            = [];
 var editingId         = null;
 var viewingId         = null;
-var seederTab         = 0;
 var editingSupplierId = null;
 var soapSectionOpen   = false;
 var propsSectionOpen  = false;
@@ -4010,98 +4018,126 @@ function serializeEditForm() {
 }
 
 // ── Seeder data ───────────────────────────────────────
-// The starter list lives in plume-starter.js (Quick add's curated items
-// merged with the Formula Botanica directory, 2026-10-16). Empty if that
-// file did not load, so Quick add shows nothing rather than throwing.
-var SEEDER_BATCHES = (typeof PlumeStarter !== 'undefined') ? PlumeStarter.tabs : [];
+// The starter list lives in plume-starter.js: one list of ingredients, each
+// with a type, in the type order given there. Empty if that file did not
+// load, so Quick add says so rather than throwing.
+var SEEDER_ITEMS = (typeof PlumeStarter !== 'undefined') ? PlumeStarter.items : [];
+var SEEDER_TYPES = (typeof PlumeStarter !== 'undefined') ? PlumeStarter.types : [];
 
-// Ticks are remembered across tabs ("t-c-i" keys). The list used to be
-// rebuilt on every tab switch, which silently dropped ticks made on other
-// tabs even though the modal invites selecting across them.
+// ── Quick add: one list, by type, with search and type chips ──
+// Reorganized 2026-10-16 for a general audience: the starter list is one
+// flat list of ingredients, each with a type (plume-starter.js). Ticks are
+// kept by item index in seederPicked, so they survive searching and
+// switching chips -- the old tabs rebuilt the list and dropped them.
 var seederPicked = new Set();
+var seederType   = '';
+var seederQuery  = '';
 
 function openSeeder() {
   seederPicked = new Set();
-  renderSeederTabs();
+  seederType = ''; seederQuery = '';
+  var q = document.getElementById('seeder-search');
+  if (q) q.value = '';
+  renderSeederChips();
   renderSeederContent();
+  updateSeederCount();
   openModal('modal-seeder');
 }
 
-function renderSeederTabs() {
-  document.getElementById('seeder-tabs').innerHTML = SEEDER_BATCHES.map(function(b, i) {
-    return '<button class="seeder-tab' + (i === seederTab ? ' active' : '') + '" onclick="switchSeederTab(' + i + ')">' + b.label + '</button>';
-  }).join('');
+// A dropdown, not chips: with nineteen types, chips took four or five rows
+// and squeezed the list they were meant to filter.
+function renderSeederChips() {
+  var counts = {};
+  SEEDER_ITEMS.forEach(function(it) { counts[it.type] = (counts[it.type] || 0) + 1; });
+  var sel = document.getElementById('seeder-type');
+  sel.innerHTML = '<option value="">All types (' + SEEDER_ITEMS.length + ')</option>' +
+    SEEDER_TYPES.map(function(t) {
+      return '<option value="' + esc(t) + '">' + esc(t) + ' (' + (counts[t] || 0) + ')</option>';
+    }).join('');
+  sel.value = seederType;
 }
 
-function switchSeederTab(i) {
-  seederTab = i;
-  renderSeederTabs();
+function setSeederType(t) {
+  seederType = t || '';
+  renderSeederChips();
   renderSeederContent();
-  updateSeederCount();
 }
 
-// Names already in the library, archived ones included, so Quick add can
-// mark them instead of quietly skipping them at the end.
+function setSeederQuery(v) {
+  seederQuery = String(v || '').trim();
+  renderSeederContent();
+}
+
+// Library names, archived ones included, so Quick add can mark what is
+// already there. Purchasing qualifiers are ignored, so a library holding
+// "Grapeseed oil (organic)" marks the starter's "Grapeseed oil".
+function seederNameKey(n) {
+  return String(n || '').toLowerCase().replace(/\((organic|soap grade)\)/g, '').replace(/\s+/g, ' ').trim();
+}
 function libraryNameSet() {
-  return new Set(ingredients.map(function(i) { return String(i.name || '').toLowerCase(); }));
+  return new Set(ingredients.map(function(i) { return seederNameKey(i.name); }));
+}
+// A starter item is in the library under its name or any former name
+// ('aka': "Rosehip oil" from the old import is Rosehip seed oil).
+function seederInLib(item, have) {
+  if (have.has(seederNameKey(item.name))) return true;
+  return (item.aka || []).some(function(a) { return have.has(seederNameKey(a)); });
 }
 
 function renderSeederContent() {
-  var batch = SEEDER_BATCHES[seederTab];
-  if (!batch) {
-    document.getElementById('seeder-content').innerHTML =
-      '<div style="padding:16px 0;font-size:13px;color:var(--ink-light)">The starter list did not load. Check that plume-starter.js sits beside this page.</div>';
+  var box = document.getElementById('seeder-content');
+  if (!SEEDER_ITEMS.length) {
+    box.innerHTML = '<div style="padding:16px 0;font-size:13px;color:var(--ink-light)">The starter list did not load. Check that plume-starter.js sits beside this page.</div>';
     return;
   }
   var have = libraryNameSet();
-  document.getElementById('seeder-content').innerHTML = batch.cats.map(function(cat, ci) {
-    return '<div class="seeder-cat-label">' + esc(cat.cat) + '</div>' +
-      cat.items.map(function(item, i) {
-        var cbId = 'sc-' + seederTab + '-' + ci + '-' + i;
-        var inLib = have.has(String(item.name).toLowerCase());
-        var fn = item.function ? String(item.function) : '';
-        if (fn.length > 90) fn = fn.slice(0, 87) + '\u2026';
-        return '<label class="seeder-item' + (inLib ? ' in-lib' : '') + '" for="' + cbId + '">' +
-          '<input type="checkbox" id="' + cbId + '" data-batch="' + seederTab + '" data-cat="' + ci + '" data-idx="' + i + '"' +
-            (inLib ? ' disabled' : (seederPicked.has(seederTab + '-' + ci + '-' + i) ? ' checked' : '')) +
-            ' onchange="seederPick(this)">' +
-          '<div class="seeder-item-info">' +
-            '<div class="seeder-item-name">' + esc(item.name) + '</div>' +
-            '<div class="seeder-item-inci">' + esc(item.inci) + '</div>' +
-            (fn ? '<div class="seeder-item-fn">' + esc(fn) + '</div>' : '') +
-          '</div>' +
-          (inLib ? '<span class="in-lib-tag">in library</span>' : '') +
-          '<span class="phase-badge ' + phaseClass(item.phase) + '" style="font-size:10px">' + esc(item.phase) + '</span>' +
-        '</label>';
-      }).join('');
-  }).join('');
-}
-
-// A starter item becomes a library ingredient. SAP comes from the SoapCalc
-// reference at this moment, by name: the starter list stores no SAP numbers
-// (its old ones were the stale values session 16 found). No reference row, or
-// one marked unknown, means no SAP -- the lye calculator then says so, rather
-// than calculating from a guess. The reference's fatty acid profile wins;
-// the starter's is the fallback.
-function starterToIngredient(item) {
-  var ing = JSON.parse(JSON.stringify(item));
-  var fa  = item.soap && item.soap.fa ? item.soap.fa : null;
-  delete ing.soap;
-  var ref = (typeof PlumeSap !== 'undefined') ? PlumeSap.lookup(item.name) : null;
-  if (ref && !ref.unknown && ref.naoh) {
-    ing.soap = { naoh: ref.naoh, koh: ref.koh };
-    if (ref.fa || fa) ing.soap.fa = ref.fa || fa;
-  } else if (fa) {
-    ing.soap = { fa: fa };
+  var q = seederQuery;
+  var shown = [];
+  SEEDER_ITEMS.forEach(function(it, idx) {
+    if (seederType && it.type !== seederType) return;
+    var rank = q ? Plume.ingMatchRank(it, q) : 0;
+    if (q && !rank && (it.aka || []).some(function(a) { return a.toLowerCase().indexOf(q.toLowerCase()) !== -1; })) rank = 2;
+    if (q && !rank) return;
+    shown.push({ it: it, idx: idx, rank: rank });
+  });
+  if (!shown.length) {
+    box.innerHTML = '<div style="padding:16px 0;font-size:13px;color:var(--ink-light)">No starter ingredients match' +
+      (q ? ' "' + esc(q) + '"' : '') + (seederType ? ' in ' + esc(seederType) : '') + '.</div>';
+    return;
   }
-  ing.lots    = [];
-  ing.id      = Date.now().toString() + Math.random().toString(36).slice(2, 6);
-  ing.created = new Date().toISOString();
-  return ing;
+  var html = '';
+  SEEDER_TYPES.forEach(function(t) {
+    var rows = shown.filter(function(r) { return r.it.type === t; });
+    if (!rows.length) return;
+    // Best match first while searching, alphabetical within each band.
+    rows.sort(function(a, b) {
+      return (a.rank - b.rank) || a.it.name.toLowerCase().localeCompare(b.it.name.toLowerCase());
+    });
+    html += '<div class="seeder-cat-label">' + esc(t) + '</div>';
+    rows.forEach(function(r) {
+      var it = r.it, cbId = 'sc-' + r.idx;
+      var inLib = seederInLib(it, have);
+      var fn = it.function ? String(it.function) : '';
+      if (fn.length > 90) fn = fn.slice(0, 87) + '…';
+      html += '<label class="seeder-item' + (inLib ? ' in-lib' : '') + '" for="' + cbId + '">' +
+        '<input type="checkbox" id="' + cbId + '" data-idx="' + r.idx + '"' +
+          (inLib ? ' disabled' : (seederPicked.has(r.idx) ? ' checked' : '')) +
+          ' onchange="seederPick(this)">' +
+        '<div class="seeder-item-info">' +
+          '<div class="seeder-item-name">' + esc(it.name) + '</div>' +
+          '<div class="seeder-item-inci">' + esc(it.inci) + '</div>' +
+          (fn ? '<div class="seeder-item-fn">' + esc(fn) + '</div>' : '') +
+        '</div>' +
+        (inLib ? '<span class="in-lib-tag">in library</span>' : '') +
+        '<span class="phase-badge ' + phaseClass(it.phase) + '" style="font-size:10px">' + esc(it.phase) + '</span>' +
+      '</label>';
+    });
+  });
+  box.innerHTML = html;
 }
 
 function seederPick(cb) {
-  var k = cb.dataset.batch + '-' + cb.dataset.cat + '-' + cb.dataset.idx;
+  var k = parseInt(cb.dataset.idx, 10);
   if (cb.checked) seederPicked.add(k); else seederPicked.delete(k);
   updateSeederCount();
 }
@@ -4110,6 +4146,8 @@ function updateSeederCount() {
   document.getElementById('seeder-count').textContent = seederPicked.size + ' selected';
 }
 
+// Selects or clears everything currently shown (after search and chip),
+// skipping ingredients already in the library.
 function seederToggleAll() {
   var visible = document.querySelectorAll('#seeder-content input[type=checkbox]:not(:disabled)');
   var anyUnchecked = Array.from(visible).some(function(c) { return !c.checked; });
@@ -4117,49 +4155,63 @@ function seederToggleAll() {
   updateSeederCount();
 }
 
-async function seederAdd() {
-  var checked = Array.from(seederPicked).map(function(k) {
-    var p = k.split('-');
-    return { dataset: { batch: p[0], cat: p[1], idx: p[2] } };
-  });
-  if (!checked.length) { alert('Select at least one ingredient.'); return; }
-
-  var btn = document.getElementById('seeder-add-btn');
-  btn.disabled = true;
-  document.getElementById('seeder-progress').style.display = 'block';
-  var bar    = document.getElementById('seeder-bar');
-  var status = document.getElementById('seeder-status');
-  status.className = 'seeder-status';
-  status.textContent = 'Preparing…';
-
-  var existingNames = libraryNameSet();
-  var toAdd = [];
-  checked.forEach(function(cb) {
-    var batch = SEEDER_BATCHES[parseInt(cb.dataset.batch, 10)];
-    var cat   = batch && batch.cats[parseInt(cb.dataset.cat, 10)];
-    var item  = cat && cat.items[parseInt(cb.dataset.idx, 10)];
-    if (!item) return;
-    var key = String(item.name).toLowerCase();
-    if (!existingNames.has(key)) {
-      existingNames.add(key);   // the same item ticked on two tabs is added once
-      toAdd.push(starterToIngredient(item));
-    }
-  });
-
-  var skipped = checked.length - toAdd.length;
-  var added   = 0;
-  for (var i = 0; i < toAdd.length; i++) {
-    ingredients.push(toAdd[i]);
-    saveData();
-    added++;
-    bar.style.width = Math.round(((i + 1) / toAdd.length) * 100) + '%';
-    status.textContent = 'Saving ' + (i + 1) + ' of ' + toAdd.length + '…';
-    await new Promise(function(r) { setTimeout(r, 40); });
+// A starter item becomes a library ingredient. SAP comes from the SoapCalc
+// reference at this moment, by name: the starter list stores no SAP numbers
+// (its old ones were the stale values session 16 found). No reference row, or
+// one marked unknown, means no SAP -- the lye calculator then says so, rather
+// than calculating from a guess. The reference's fatty acid profile wins;
+// the starter's is the fallback. 'type' and 'aka' are Quick add's own
+// grouping and matching, and are not stored on the ingredient.
+function starterToIngredient(item) {
+  var ing = JSON.parse(JSON.stringify(item));
+  var fa  = item.soap && item.soap.fa ? item.soap.fa : null;
+  delete ing.soap;
+  delete ing.type;
+  delete ing.aka;
+  var ref = (typeof PlumeSap !== 'undefined') ? PlumeSap.lookup(item.name) : null;
+  if (ref && !ref.unknown && ref.naoh) {
+    ing.soap = { naoh: ref.naoh, koh: ref.koh };
+    if (ref.fa || fa) ing.soap.fa = ref.fa || fa;
+  } else if (fa) {
+    ing.soap = { fa: fa };
   }
+  ing.lots    = [];
+  ing.id      = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  ing.created = new Date().toISOString();
+  return ing;
+}
 
-  btn.disabled = false;
+// Saves once at the end. It used to save after every ingredient with a
+// pause between, which for a first-time add of the whole list meant
+// hundreds of saves of an ever-growing library.
+function seederAdd() {
+  var picked = Array.from(seederPicked);
+  if (!picked.length) { alert('Select at least one ingredient.'); return; }
+  var status = document.getElementById('seeder-status');
+  document.getElementById('seeder-progress').style.display = 'block';
+
+  var existing = libraryNameSet();
+  var toAdd = [];
+  picked.forEach(function(idx) {
+    var item = SEEDER_ITEMS[idx];
+    if (!item) return;
+    if (seederInLib(item, existing)) return;
+    existing.add(seederNameKey(item.name));
+    toAdd.push(starterToIngredient(item));
+  });
+  var skipped = picked.length - toAdd.length;
+
+  toAdd.forEach(function(ing) { ingredients.push(ing); });
+  var saved = toAdd.length ? saveData() : true;
+  document.getElementById('seeder-bar').style.width = '100%';
+  if (saved === false) {
+    status.className = 'seeder-status';
+    status.textContent = 'Could not save: browser storage is full. See the red banner for a backup.';
+    return;
+  }
   status.className = 'seeder-status status-ok';
-  status.textContent = 'Done! Added ' + added + ' ingredient' + (added !== 1 ? 's' : '') + (skipped ? ', ' + skipped + ' already in library' : '') + '.';
+  status.textContent = 'Added ' + toAdd.length + ' ingredient' + (toAdd.length !== 1 ? 's' : '') +
+    (skipped ? ', ' + skipped + ' already in library' : '') + '.';
   renderTable(); renderStats();
   seederPicked = new Set();
   renderSeederContent();

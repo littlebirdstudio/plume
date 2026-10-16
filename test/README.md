@@ -44,7 +44,7 @@ version, run the suites, and commit the new lockfile together.
 | `test-search.js` | 18 | Search ordering: names starting with the query first, then a later word of the name, then INCI, then mid-word, then notes; checked in the Ingredients list and the Formulations dropdown |
 | `test-ph.js` | 75 | pH records: parsing and range checks; which formulas get pH (water phase only, never soap); the bench sheet block; the version target (validation, history, mirroring, new versions, approval lock); usage-log steps; a batch's final pH against the target it was made with |
 | `test-version.js` | 25 | One app version: no footer types its own, and every page (landing page included) shows core's version |
-| `test-starter.js` | 46 | Quick add: the merged starter list (no stored SAP, nothing from the directory lost, grade-safe merging), SAP taken from SoapCalc as oils are added, in-library marking, ticks kept across tabs, the removed buttons |
+| `test-starter.js` | 77 | Quick add: the by-type starter list (one entry per ingredient, grades kept apart, no borrowed prose, no stored SAP, former names recognised), search and chips, SAP from SoapCalc as oils are added, in-library marking, the removed buttons |
 
 ## How they run
 
