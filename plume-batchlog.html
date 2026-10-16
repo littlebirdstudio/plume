@@ -1803,7 +1803,9 @@ function lotQtyG(lot, density) {
 function planIngredientDraw(ing, needG) {
   if (needG <= 0) return { ok: true, draws: [] };
   var lots    = fifoOrderedLots(ing);
-  var density = ing.density;
+  // Same resolved density the stock figures use, or the deduction would
+  // disagree with the number shown beside it.
+  var density = Plume.densityFor(ing).value;
   var remaining = needG;
   var draws = [];
   for (var i = 0; i < lots.length && remaining > 0; i++) {

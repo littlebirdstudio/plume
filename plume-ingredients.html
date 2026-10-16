@@ -2800,7 +2800,10 @@ function viewIngredient(id) {
     { label: 'Optimal pH',          value: i.optimalPh         },
     { label: 'Dermal limits',       value: i.dermalLimits      },
     { label: 'Restricted use',      value: i.flag === 'yes' ? ('Yes' + (i.restrictions ? ' \u2014 ' + i.restrictions : '')) : (i.restrictions ? 'Not flagged \u2014 ' + i.restrictions : 'No') },
-    { label: 'Density (g/mL)',      value: i.density ? i.density + ' g/mL' : '' }
+    // An inferred density is still the number the stock and cost figures are
+    // built on, so showing a blank here while quietly using 0.92 elsewhere
+    // would hide the one assumption most likely to be wrong.
+    { label: 'Density (g/mL)',      value: densityLabel(i) }
   ];
   var propsHtml = '';
   if (propsFields.length) {
@@ -3717,7 +3720,7 @@ function saveNewBrand(val) {
 function lotSizeToGrams(size, unit, density) {
   var s = parseFloat(size);
   if (isNaN(s) || s <= 0) return null;
-  var d = parseFloat(density) || 1.0; // default density = water
+  var d = parseFloat(density) || 1.0; // caller resolves via Plume.densityFor
   if (unit === 'g')     return s;
   if (unit === 'mL')    return s * d;
   if (unit === 'fl oz') return s * 29.5735 * d;
@@ -3796,65 +3799,40 @@ function calcLotCostPerG(lotId) {
 // temperature. Where a material is normally sold as a solution the usual
 // concentration is assumed and named, since that is what arrives in the
 // bottle. Add to this list freely; it is a lookup, not logic.
-var DENSITY_BY_INCI = {
-  'aqua':                          { value:1.00, why:'water' },
-  'glycerin':                      { value:1.26, why:'typical for glycerin' },
-  'propanediol':                   { value:1.02, why:'typical for propanediol' },
-  'propylene glycol':              { value:1.04, why:'typical for propylene glycol' },
-  'butylene glycol':               { value:1.00, why:'typical for butylene glycol' },
-  'sodium lactate':                { value:1.32, why:'typical for 60% sodium lactate' },
-  'lactic acid':                   { value:1.20, why:'typical for 88% lactic acid' },
-  'aloe barbadensis leaf juice':   { value:1.00, why:'water-based' },
-  'phenoxyethanol':                { value:1.11, why:'typical for phenoxyethanol' },
-  'polysorbate 20':                { value:1.10, why:'typical for polysorbate 20' },
-  'polysorbate 80':                { value:1.06, why:'typical for polysorbate 80' },
-  'decyl glucoside':               { value:1.10, why:'typical as supplied' },
-  'coco glucoside':                { value:1.10, why:'typical as supplied' },
-  'cocamidopropyl betaine':        { value:1.04, why:'typical as supplied' },
-  'caprylic/capric triglyceride':  { value:0.95, why:'typical for fractionated oils' },
-  'squalane':                      { value:0.81, why:'typical for squalane' },
-  'isopropyl myristate':           { value:0.85, why:'typical for IPM' },
-  'c12-15 alkyl benzoate':         { value:0.92, why:'typical for this ester' },
-  'tocopherol':                    { value:0.95, why:'typical for tocopherol' },
-  'ricinus communis seed oil':     { value:0.96, why:'typical for castor oil' },
-  'olea europaea fruit oil':       { value:0.91, why:'typical for olive oil' },
-  'cocos nucifera oil':            { value:0.92, why:'typical for coconut oil' }
-};
-
-// Category fallbacks, used only when the INCI is not in the table above.
-// First match wins, so the specific rules sit before the water catch-all.
-var DENSITY_HINTS = [
-  { cat:'Essential oil', value:0.90, why:'typical for essential oils' },
-  { cat:'Emollient', phase:'oil', value:0.92, why:'typical for carrier oils' },
-  { cat:'Solubilizer', value:1.05, why:'typical for solubilizers' },
-  { cat:'Surfactant',  value:1.05, why:'typical for surfactant blends' },
-  // Hydrosols, aloe, extracts, infusions -- anything that is essentially
-  // water. Still held back for the few categories whose unknown members
-  // genuinely scatter: an unrecognised humectant could be anywhere between
-  // propanediol and glycerin, and a wrong figure is worse than none. The
-  // ones that matter are named in DENSITY_BY_INCI and never reach here.
-  { phase:'water', notCats:['Humectant','Preservative','Active','pH Adjuster','Thickener'],
-    value:1.00, why:'water-based — near enough to 1.0' }
-];
-
+// The density tables moved to plume-core.js so every module can reach them,
+// not just this form. densityHint() still reads the FORM fields rather than a
+// saved ingredient, because it has to react to what is typed before any of it
+// is saved.
 function densityHint() {
   // 1. The ingredient itself, by INCI.
   var inciEl = document.getElementById('f-inci');
-  var key = normaliseInci(inciEl ? inciEl.value : '');
-  if (key && DENSITY_BY_INCI[key]) return DENSITY_BY_INCI[key];
+  var key = Plume.normDensityInci(inciEl ? inciEl.value : '');
+  if (key && Plume.DENSITY_BY_INCI[key]) return Plume.DENSITY_BY_INCI[key];
 
   // 2. Otherwise, what its category and phase imply.
   var phaseEl = document.getElementById('f-phase');
   var phase = phaseEl ? phaseEl.value : '';
   var cats = readFuncChips();
-  for (var k = 0; k < DENSITY_HINTS.length; k++) {
-    var h = DENSITY_HINTS[k];
+  var HINTS = Plume.DENSITY_HINTS;
+  for (var k = 0; k < HINTS.length; k++) {
+    var h = HINTS[k];
     if (h.cat && cats.indexOf(h.cat) === -1) continue;
     if (h.phase && h.phase !== phase) continue;
     if (h.notCats && h.notCats.some(function(c) { return cats.indexOf(c) !== -1; })) continue;
     return h;
   }
   return null;
+}
+
+// How density reads on the detail screen. Says the number AND where it came
+// from, because "0.92" alone implies she entered it.
+function densityLabel(i) {
+  var d = Plume.densityFor(i);
+  if (d.source === 'set')      return d.value + ' g/mL';
+  if (d.source === 'default')  return '';
+  return d.value + ' g/mL <span style="font-size:11px;color:var(--ink-lighter)">(' +
+    (d.source === 'inci' ? 'from the reference' : 'assumed from category') +
+    ', not set. Used for mL and fl oz lots)</span>';
 }
 
 function renderDensityHint() {

@@ -2,7 +2,7 @@
 
 Regression suites for the parts of Plume where a quiet wrong answer is worse
 than a crash: the approved-version lock, the delete guards, archiving, the
-INCI label list, and the SAP reference data.
+INCI label list, and the SAP and density reference data.
 
 ## Running them
 
@@ -12,7 +12,7 @@ From the repository root:
     npx playwright install chromium
     npm test
 
-`npm test` runs all six suites and stops at the first failure. To run one:
+`npm test` runs all seven suites and stops at the first failure. To run one:
 
     node test/test-lock.js
 
@@ -38,8 +38,9 @@ version, run the suites, and commit the new lockfile together.
 | `test-guards.js` | 21 | What the delete confirmations say — which products break, which batches survive, which version inherits the in-use role |
 | `test-archive.js` | 32 | Archived formulations leaving the list and the pickers while staying resolvable for products that already use them; retired versions leaving the tab strip |
 | `test-inci.js` | 29 | Splitting blend INCI strings; merging a shared component once; the merge note; common-name mode left alone |
-| `test-sap.js` | 61 | The SAP reference data and the review that applies it: the KOH/NaOH ratio on every row, profiles predicting their own SAP, name lookup surviving the INCI collisions, and applying changes without destroying anything |
+| `test-sap.js` | 65 | The SAP reference data and the review that applies it: the KOH/NaOH ratio on every row, profiles predicting their own SAP, name lookup surviving the INCI collisions, and applying changes without destroying anything |
 | `test-ing-archive.js` | 47 | Archiving and un-archiving an ingredient; the delete guard naming which formulations break; an archived ingredient still resolving where used but gone from the add picker; a deleted ingredient rendering a marked row instead of vanishing |
+| `test-density.js` | 29 | Density resolution without a DOM: explicit beats reference beats category beats guess; the measured values; the categories that refuse to guess; and the stock arithmetic that now stops treating a litre of oil as a kilogram |
 
 ## How they run
 
