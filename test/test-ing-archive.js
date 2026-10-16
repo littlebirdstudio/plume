@@ -143,15 +143,26 @@ const SEED = `
     ok('an archived ingredient is not listed', !/Retired wax/.test(names), names);
     ok('live ingredients are listed', /Olive oil/.test(names) && /Shea butter/.test(names), names);
 
-    const bar = await page.evaluate("document.getElementById('ing-arch-bar').innerText");
+    let bar = await page.evaluate("document.getElementById('ing-arch-bar').innerText");
     ok('the bar offers the archived count', /Show 1 archived/.test(bar), bar);
     ok('and says where they are hidden from', /add-ingredient search/.test(bar), bar);
+    ok('while hidden, it says hidden', /hidden from this list/.test(bar), bar);
 
     await page.evaluate('toggleShowArchivedIngs()');
     await page.waitForTimeout(200);
     names = await page.evaluate("Array.from(document.querySelectorAll('#tbody .td-name')).map(function(e){return e.textContent;}).join('|')");
     ok('archived shown when asked', /Retired wax/.test(names), names);
-    ok('and tagged as archived', /archived/.test(names), names);
+    ok('and tagged as archived', /archived/i.test(names), names);
+
+    // The banner has to follow the state. Saying "hidden" while they are on
+    // screen makes the extra rows inexplicable, which is exactly how this
+    // was found.
+    bar = await page.evaluate("document.getElementById('ing-arch-bar').innerText");
+    ok('while showing, it does NOT still claim they are hidden',
+       !/hidden from this list/.test(bar), bar);
+    ok('it says they are being shown', /Showing 1 archived/.test(bar), bar);
+    ok('and that the add-ingredient search is unaffected either way',
+       /add-ingredient search/.test(bar), bar);
     await page.close();
   }
 
@@ -180,6 +191,35 @@ const SEED = `
     await page.waitForTimeout(200);
     body = await page.evaluate("document.getElementById('tbody').innerText");
     ok('a real miss still reads as no results', /No results/.test(body), body);
+    await page.close();
+  }
+
+  console.log('\n4b-ii. Include archived outlives the search that offered it');
+  {
+    // Turning the toggle on from a search hint and then clearing the search
+    // leaves the whole library on screen with archived mixed in. That is
+    // defensible for a global toggle, but only if the banner says so, since
+    // nothing else explains why the list suddenly grew.
+    const { page } = await open('ingredients');
+    const rows = () => page.evaluate("document.querySelectorAll('#tbody tr').length");
+    const before = await rows();
+
+    await page.evaluate("document.getElementById('search').value='retired'; renderTable();");
+    await page.waitForTimeout(150);
+    await page.evaluate("document.querySelector('#tbody button').click()");
+    await page.waitForTimeout(150);
+    await page.evaluate("document.getElementById('search').value=''; renderTable();");
+    await page.waitForTimeout(150);
+
+    const after = await rows();
+    ok('clearing the search leaves archived in the list', after > before, [before, after]);
+    const bar = await page.evaluate("document.getElementById('ing-arch-bar').innerText");
+    ok('and the banner explains why the list grew',
+       /Showing 1 archived/.test(bar) && !/hidden from this list/.test(bar), bar);
+
+    await page.reload();
+    await page.waitForTimeout(400);
+    ok('a reload returns to hiding them', (await rows()) === before, await rows());
     await page.close();
   }
 

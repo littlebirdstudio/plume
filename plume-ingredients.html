@@ -2351,10 +2351,24 @@ function syncArchiveBar() {
   var n = ingredients.filter(function(i) { return i.archived; }).length;
   if (!n) { bar.style.display = 'none'; showArchived = false; return; }
   bar.style.display = 'flex';
+
+  // The wording has to follow the state. It used to say "hidden from this
+  // list" in both, so with archived showing, the one element that explains
+  // the extra rows was flatly contradicting them. Turning the toggle on from
+  // a search and then clearing the search leaves the whole library on screen
+  // with archived mixed in, and that banner was the only thing that could
+  // have said so.
+  var msg = showArchived
+    ? 'Showing ' + n + ' archived ingredient' + (n === 1 ? '' : 's') +
+      ' alongside the rest. They stay out of the add-ingredient search either way.'
+    : n + ' archived ingredient' + (n === 1 ? '' : 's') +
+      ' hidden from this list and from the add-ingredient search';
+
+  bar.style.background   = showArchived ? 'var(--cream-dark)' : 'var(--cream)';
+  bar.style.borderColor  = showArchived ? 'var(--bark-light)' : 'var(--cream-border)';
   bar.innerHTML =
-    '<span style="font-size:12px;color:var(--ink-lighter)">' +
-      n + ' archived ingredient' + (n === 1 ? '' : 's') +
-      ' hidden from this list and from the add-ingredient search' +
+    '<span style="font-size:12px;color:' + (showArchived ? 'var(--ink)' : 'var(--ink-lighter)') + '">' +
+      esc(msg) +
     '</span>' +
     '<button class="btn btn-sm" onclick="toggleShowArchivedIngs()">' +
       (showArchived ? 'Hide archived' : 'Show ' + n + ' archived') +
