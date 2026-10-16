@@ -30,10 +30,13 @@
 var Plume = (function () {
 'use strict';
 
-// Bump when core changes. Shown in every module's Settings panel, so
-// "is core loaded, and is it the one I just uploaded?" is answerable by
-// looking rather than guessing -- browsers cache .js files stubbornly.
-var VERSION = '1.11';
+// THE app version (decided 2026-10-16). Every footer shows it, stamped by
+// stampVersion(), and Settings -> Storage shows it too, so there is one
+// number and it cannot drift the way the old hand-typed footers did
+// (v0.4 / v0.5 / v0.6 across five modules). BUMP IT IN EVERY PULL REQUEST,
+// core change or not: it is how "is this the update I just merged?" is
+// answered by looking, and browsers cache .js files stubbornly.
+var VERSION = '1.12';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -790,12 +793,26 @@ function injectStyles() {
   document.head.appendChild(st);
 }
 
+// Fills every <span class="plume-version"> with the app version.
+// Some pages (Ingredients, Packaging) put the footer AFTER their scripts,
+// so it does not exist yet when boot runs; wait for it in that case.
+function stampVersion() {
+  if (typeof document === 'undefined' || !document.querySelectorAll) return;
+  if (document.readyState === 'loading' && document.addEventListener) {
+    document.addEventListener('DOMContentLoaded', stampVersion);
+    return;
+  }
+  var els = document.querySelectorAll('.plume-version');
+  for (var i = 0; i < els.length; i++) els[i].textContent = 'v' + VERSION;
+}
+
 // ══ Boot ══════════════════════════════════════════════
 // The one asynchronous moment in a Plume page: hydrate, then render.
 // When the driver becomes IndexedDB or an API, this is the only place
 // that has to wait — everything downstream stays synchronous.
 function boot(cb) {
   injectStyles();
+  stampVersion();
   Store.onQuotaError(noteSaveFailed);
   Store.init(function () {
     applyPalette(loadPaletteChoice());
@@ -1397,7 +1414,7 @@ return {
   noteSaveFailed: noteSaveFailed, noteSaveOk: noteSaveOk,
   FUNCTION_CATEGORIES: FUNCTION_CATEGORIES, funcCats: funcCats, ingMatchRank: ingMatchRank,
   PRODUCT_TYPES: PRODUCT_TYPES, isSoapType: isSoapType, fillTypeSelect: fillTypeSelect,
-  buildSheet: buildSheet, openSheet: openSheet,
+  buildSheet: buildSheet, openSheet: openSheet, stampVersion: stampVersion,
   parsePh: parsePh, phNum: phNum, phRange: phRange, phTargetText: phTargetText,
   isAqueous: isAqueous, phBadge: phBadge, phStepsHtml: phStepsHtml, phFinal: phFinal,
   boot: boot
