@@ -92,7 +92,7 @@ Core defines globals with the names modules already use, so **converting a modul
 **A module may override an alias by defining its own function** — this is the intended escape hatch. `plume-ingredients.html` keeps a local `openModal` because it snapshots form state to detect unsaved edits. Share the common case; keep the exception local.
 
 ### Versioning
-`Plume.VERSION` is displayed at the bottom of every converted module's Settings → Storage panel, alongside the active driver name. **Bump it on every core change.** Browsers cache `.js` far more stubbornly than they re-fetch a replaced HTML file, so "is core loaded, and is it the one I just uploaded?" must be answerable by looking. Current: **v1.10** (v1.8 added INCI blend splitting; v1.9 added density resolution; v1.10 ranked search results, best match first; v1.11 added pH records; v1.12 made it the one app version, shown in every footer).
+`Plume.VERSION` is displayed at the bottom of every converted module's Settings → Storage panel, alongside the active driver name. **Bump it on every core change.** Browsers cache `.js` far more stubbornly than they re-fetch a replaced HTML file, so "is core loaded, and is it the one I just uploaded?" must be answerable by looking. Current: **v1.10** (v1.8 added INCI blend splitting; v1.9 added density resolution; v1.10 ranked search results, best match first; v1.11 added pH records; v1.12 made it the one app version, shown in every footer; v1.13 rebuilt Quick add).
 
 ### Upload order matters
 `plume-core.js` **first**, then the HTML. A module that arrives before core shows the missing-core banner until core lands. Core alone breaks nothing.
@@ -144,8 +144,8 @@ Section header: `Ingredients` title with `+ New ingredient` button next to it.
 
 ### Settings modal sections
 - **Appearance** — palette switcher (12 presets)
-- **Data import** — quick-add starter ingredients (one-time seeder), reference-data JSON merge by INCI
-- **Maintenance** — patch soap data
+- **Data import** — Quick add (the starter list in `plume-starter.js`, which since session 17 includes the Formula Botanica directory). The separate reference-JSON import was removed in session 17.
+- **Maintenance** — Check SAP values against reference. "Patch soap data" was removed in session 17: it copied the stale seeder SAP values back in.
 
 Buttons inside settings modal use `.btn` (not `.btn-ghost`) — ghost styling is for the dark header and is invisible on white modal backgrounds.
 
@@ -1351,11 +1351,11 @@ to pick those up in a fresh chat. Ask her for the list.
 - **Pre-fill `chooseWhen` drafts** (agreed, not started). She exports a backup
   from Ingredients Settings and uploads it; research each ingredient she owns
   and draft its line. Needs a draft marker so she can tell drafts from lines
-  she has confirmed — not yet designed. Likely route: the existing reference
-  import (`REFERENCE_FIELDS`, fills blanks only, matches by INCI), with
-  `chooseWhen` added and a separate flag; the file must contain only her own
-  ingredients, since unmatched entries are ADDED as new ingredients. Never
-  touch `purpose`.
+  she has confirmed — not yet designed. **The route planned here (the
+  reference import) no longer exists: it was removed in session 17.** Needs
+  its own small import or review step instead, ideally modelled on the SAP
+  review (shows every proposed line, applies on confirmation, never adds new
+  ingredients). Never touch `purpose`.
 - **Column tuning.** She expects "a few passes" to nail down the per-group
   columns. `GROUP_COLS` in `plume-cheatsheet.js` is the one place to change.
 - **Cheat sheet step 6** — the product-type view derived from her own
@@ -1514,7 +1514,7 @@ What this means in practice:
 ### Tests live in the repo now, and CI runs them
 
 `package.json`, `.gitignore`, `package-lock.json` and a `test/` directory are
-committed. `npm test` runs ten suites, ~409 checks (`test-search.js`, `test-ph.js` and `test-version.js` added session 17).
+committed. `npm test` runs eleven suites, ~486 checks (`test-search.js`, `test-ph.js`, `test-version.js` and `test-starter.js` added session 17).
 `.github/workflows/tests.yml` runs the same on every pull request and on push
 to `main`.
 
@@ -1530,6 +1530,7 @@ to `main`.
 | `test-search.js` | Ingredient search ordering (best match first) |
 | `test-ph.js` | pH: version target, usage-log steps, batch final pH, bench sheet |
 | `test-version.js` | Every footer shows core's version; none types its own |
+| `test-starter.js` | Quick add: merged starter list, SAP from SoapCalc at add time, in-library marking |
 
 **Playwright is pinned to an exact version (1.56.0), deliberately.** Each
 release expects one specific Chromium build; a mismatch fails with "Executable
@@ -1872,3 +1873,70 @@ AFTER their scripts, so it does not exist yet when `boot` runs.
 **Palette: no change, by decision.** Per-module palettes stay, default
 `sage-green`. Recorded under "Carried from session 12".
 
+### Session 17 (cont.) — Quick add rebuilt as a comprehensive starter list (core v1.13, plume-sapdata.js v1.2)
+
+**Her ask, and why:** clean up Settings and prepare for the sellable
+version by making Quick add a comprehensive starting list. Removed "Patch
+soap data" (it copied the stale seeder SAP values back in) and "Import
+ingredient reference data" (folded into Quick add). Reorganized by type and
+stripped the borrowed text in the same change, her call: the Formula
+Botanica prose has little use after first setup.
+
+**`plume-starter.js` v2.0 (new file):** 261 ingredients, each with a
+`type`, in 18 types (Carrier oils, Butters and fats, Waxes, Esters and light
+emollients, Infused oils and CO2 extracts, Emulsifiers and solubilizers,
+Thickeners and gums, Humectants, Waters and hydrosols, Surfactants, Actives
+vitamins and acids, Botanical extracts and glycerites, Preservatives
+antioxidants and chelators, Essential oils, Clays and charcoal, Exfoliants,
+Powders and starches, Soap making). Built from Plume's curated list plus the
+Formula Botanica directory, then:
+
+- **One entry per ingredient.** "(organic)" and "(soap grade)" purchasing
+  variants and cross-tab repeats folded; real grades kept apart (virgin vs
+  76-degree coconut, regular vs high-oleic sunflower, LMW vs HMW hyaluronic
+  acid). Her "Your Ingredients" tab, which was her purchase history, is gone
+  as a category.
+- **Camellia stays two entries:** her "Camellia oil (tea seed)" is *Camellia
+  sinensis* and has a SoapCalc row; the directory's "Camellia seed oil" is
+  *japonica/oleifera* and has none. Folding them would have handed one
+  species the other's SAP.
+- **Merge safety:** an INCI-only match also needed the names to share a real
+  word (Red clay's INCI is listed as kaolin); grade-specific facts
+  (oxidation stability, melting point, absorption, heat stability) only
+  filled an exact-name or sole match (high-oleic sunflower must not inherit
+  "unstable").
+- **No borrowed prose.** `generalInfo` stripped; short factual fields kept.
+  Her library's existing records keep their text; only what Quick add
+  offers changed.
+- **No SAP numbers.** `starterToIngredient()` takes SAP from
+  `plume-sapdata.js` by name as an oil is added; nothing if SoapCalc lacks it
+  or it is unknown on purpose. Seven aliases added there (Rosehip oil,
+  Meadowfoam oil, Tamanu seed oil, Borage seed oil, Flaxseed oil, the long
+  fractionated-coconut name, Camellia oil (tea seed)), which also help the
+  SAP review recognise those names in her library.
+- **`aka` (former names)** on 35 items: folded and renamed names plus the
+  directory names that merged under a different name ("Glycerine"). Search
+  and the in-library check use them, so a library holding "Rosehip oil" from
+  the old import shows Rosehip seed oil as already there. Three directory
+  names are deliberately NOT mapped because each covers two grades (Coconut
+  oil, Sodium hyaluronate, Aloe vera). `type` and `aka` are never stored on
+  the ingredient.
+- Directory brand names properly cased (Sucragel AOF Bio, Spectrastat G2
+  Natural (MB), SCS...). Tapioca starch's INCI corrected from an extract's to
+  "Tapioca Starch".
+
+**Quick add UI:** a search box (the same `Plume.ingMatchRank`, best match
+first, plus former names) and a **Type dropdown**, over one list grouped by
+type. A dropdown, not chips: nineteen chips took four or five rows and
+squeezed the list. Ingredients already in the library are greyed and tagged.
+Ticks are kept by item index, so they survive searching and changing type;
+the old tabs rebuilt the list and silently dropped ticks made elsewhere, a
+bug older than today. "Select / clear all shown" acts on what is visible.
+Adding saves once (it used to save after every ingredient with a pause) and
+reports a failed save.
+
+**For the sellable fork:** this file is the starting library a buyer gets.
+Adding an ingredient means adding an item with a listed type; a test fails on
+an unknown type. The build was one-off; edit the file directly.
+
+New suite `test-starter.js` (77 checks).

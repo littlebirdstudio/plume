@@ -16,7 +16,7 @@ const path = require('path');
 const ROOT = path.join(__dirname, '..');
 const TMP = path.join(__dirname, 'tmp');
 
-const INLINE = ['plume-core.js', 'plume-cheatsheet.js', 'plume-sapdata.js'];
+const INLINE = ['plume-core.js', 'plume-cheatsheet.js', 'plume-sapdata.js', 'plume-starter.js'];
 
 function buildPreview(module) {
   fs.mkdirSync(TMP, { recursive: true });

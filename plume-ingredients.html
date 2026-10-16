@@ -1027,6 +1027,12 @@
     transition: all 0.15s;
   }
   .seeder-tab.active { background: var(--bark); color: var(--cream); border-color: var(--bark); }
+  .seeder-filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+  .seeder-search, .seeder-type { box-sizing: border-box; font: inherit; font-size: 13px; padding: 8px 10px;
+    border: 1px solid var(--cream-border); border-radius: 3px; background: var(--white); color: var(--ink); outline: none; }
+  .seeder-search { flex: 1 1 220px; min-width: 0; }
+  .seeder-type { flex: 0 1 260px; min-width: 0; }
+  .seeder-search:focus, .seeder-type:focus { border-color: var(--bark-light); }
   .seeder-cat-label {
     font-size: 10px;
     font-weight: 500;
@@ -1048,6 +1054,10 @@
   .seeder-item-info { flex: 1; }
   .seeder-item-name { font-size: 13px; font-weight: 500; color: var(--ink); }
   .seeder-item-inci { font-size: 11px; font-style: italic; color: var(--ink-lighter); }
+  .seeder-item-fn { font-size: 11px; color: var(--ink-light); margin-top: 1px; }
+  .seeder-item.in-lib { opacity: 0.55; cursor: default; }
+  .seeder-item .in-lib-tag { font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-lighter); border: 1px solid var(--cream-border); border-radius: 3px; padding: 1px 5px; white-space: nowrap; }
+  .seeder-item-info { min-width: 0; }
   .seeder-footer {
     display: flex; align-items: center; justify-content: space-between;
     margin-top: 1.25rem; padding-top: 1rem;
@@ -1497,12 +1507,15 @@
       <div class="modal-title">Quick add — starter ingredients</div>
       <button class="modal-close" onclick="closeModal('modal-seeder')">×</button>
     </div>
-    <div style="font-size:13px;color:var(--ink-light);margin-bottom:1rem">Select ingredients across any tab, then click "Add selected." Already-saved ingredients will be skipped automatically.</div>
-    <div class="seeder-tabs" id="seeder-tabs"></div>
+    <div style="font-size:13px;color:var(--ink-light);margin-bottom:1rem">Search or choose a type, tick what you want, then "Add selected." Ticks are kept while you search. Ones already in your library are marked. Oils take their SAP values from the SoapCalc reference.</div>
+    <div class="seeder-filters">
+      <input type="search" id="seeder-search" class="seeder-search" placeholder="Search by name, INCI or what it does…" aria-label="Search the starter list" oninput="setSeederQuery(this.value)" autocomplete="off">
+      <select id="seeder-type" class="seeder-type" aria-label="Ingredient type" onchange="setSeederType(this.value)"></select>
+    </div>
     <div id="seeder-content" style="max-height:400px;overflow-y:auto"></div>
     <div class="seeder-footer">
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-        <button class="btn btn-sm" onclick="seederToggleAll()">Select / deselect all on tab</button>
+        <button class="btn btn-sm" onclick="seederToggleAll()">Select / clear all shown</button>
         <span style="font-size:12px;color:var(--ink-light)" id="seeder-count">0 selected</span>
       </div>
       <button class="btn btn-sage" id="seeder-add-btn" onclick="seederAdd()">Add selected to library</button>
@@ -1537,34 +1550,19 @@
       <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--cream-border);gap:16px">
         <div style="flex:1">
           <div style="font-size:14px;color:var(--ink);margin-bottom:3px">Quick add starter ingredients</div>
-          <div style="font-size:12px;color:var(--ink-lighter);line-height:1.4">Browse and add common ingredients from a curated reference list. Useful when seeding a new library; usually a one-time setup step.</div>
+          <div style="font-size:12px;color:var(--ink-lighter);line-height:1.4">Browse about 260 common ingredients by type, or search, and add any to your library with their details filled in. Oils arrive with SoapCalc SAP values.</div>
         </div>
         <button class="btn btn-sm" onclick="closeModal('modal-settings'); openSeeder();">Open…</button>
       </div>
 
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--cream-border);gap:16px">
-        <div style="flex:1">
-          <div style="font-size:14px;color:var(--ink);margin-bottom:3px">Import ingredient reference data</div>
-          <div style="font-size:12px;color:var(--ink-lighter);line-height:1.4">Merges a JSON file of ingredient definitions into your library. Existing ingredients are enriched (no overwrites); new ingredients are added without supplier lots.</div>
-        </div>
-        <button class="btn btn-sm" onclick="document.getElementById('import-reference-input').click()">Import…</button>
-        <input type="file" id="import-reference-input" accept=".json" style="display:none" onchange="importReferenceData(event)">
-      </div>
 
       <div style="font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-lighter);margin-top:20px;margin-bottom:10px">Maintenance utilities</div>
 
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--cream-border);gap:16px">
-        <div style="flex:1">
-          <div style="font-size:14px;color:var(--ink);margin-bottom:3px">Patch soap data</div>
-          <div style="font-size:12px;color:var(--ink-lighter);line-height:1.4">Adds SAP values and fatty acid profiles to existing oils and butters that are missing soap data.</div>
-        </div>
-        <button class="btn btn-sm" onclick="patchSoapData()">Run</button>
-      </div>
 
       <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--cream-border);gap:16px">
         <div style="flex:1">
           <div style="font-size:14px;color:var(--ink);margin-bottom:3px">Check SAP values against reference</div>
-          <div style="font-size:12px;color:var(--ink-lighter);line-height:1.4">Compares the SAP values in your library against the reference chart and shows every difference before changing anything. Unlike the import above, this one can correct values you already have.</div>
+          <div style="font-size:12px;color:var(--ink-lighter);line-height:1.4">Compares the SAP values in your library against the SoapCalc reference and shows every difference before changing anything. Applying it overwrites your values with the reference.</div>
         </div>
         <button class="btn btn-sm" onclick="closeModal('modal-settings'); openSapReview();">Review&hellip;</button>
       </div>
@@ -1593,6 +1591,7 @@
 <script src="plume-core.js"></script>
 <script src="plume-cheatsheet.js"></script>
 <script src="plume-sapdata.js"></script>
+<script src="plume-starter.js"></script>
 <script>
 // ── Data & state ──────────────────────────────────────
 // ── Storage keys ─────────────────────────────────────
@@ -1606,7 +1605,6 @@ var suppliers         = [];
 var brands            = [];
 var editingId         = null;
 var viewingId         = null;
-var seederTab         = 0;
 var editingSupplierId = null;
 var soapSectionOpen   = false;
 var propsSectionOpen  = false;
@@ -2227,31 +2225,7 @@ function applySapRefresh() {
   alert('Updated SAP data on ' + n + ' ingredient' + (n === 1 ? '' : 's') + '.');
 }
 
-function patchSoapData() {
-  var soapLookup = {};
-  SEEDER_BATCHES.forEach(function(batch) {
-    batch.cats.forEach(function(cat) {
-      cat.items.forEach(function(item) {
-        if (item.soap) soapLookup[item.name.toLowerCase()] = item.soap;
-      });
-    });
-  });
-  var patched = 0, skipped = 0;
-  ingredients.forEach(function(ing) {
-    if (ing.soap) { skipped++; return; }
-    var match = soapLookup[ing.name.toLowerCase()];
-    if (match) { ing.soap = match; patched++; }
-  });
-  if (patched === 0 && skipped === 0) {
-    alert('No matching ingredients found. Make sure your ingredient names match the seeder exactly.');
-    return;
-  }
-  saveData(); renderTable();
-  alert('Done! Patched ' + patched + ' ingredient' + (patched !== 1 ? 's' : '') + ' with soap data.' +
-    (skipped ? ' ' + skipped + ' already had soap data and were left untouched.' : ''));
-}
-
-// ── Reference data import ─────────────────────────────
+// ── INCI normalising ─────────────────────────────
 // Normalises an INCI for matching: lowercases, strips "(common name)"
 // parentheticals, collapses whitespace.
 function normaliseInci(s) {
@@ -2260,113 +2234,6 @@ function normaliseInci(s) {
     .replace(/\([^)]*\)/g, ' ')   // strip parenthetical content
     .replace(/\s+/g, ' ')          // collapse whitespace
     .trim();
-}
-
-// Fields that may be enriched on an existing ingredient. Only blank/missing
-// fields are filled; never overwrite anything the user already has.
-var REFERENCE_FIELDS = [
-  'functionCategory','function','function2','min','max','phase',
-  'absorptionRate','heatStability','meltingPoint','oxidationStability',
-  'colour','scent','optimalPh','dermalLimits','substitution','restrictions','generalInfo',
-  'claims'
-];
-
-function importReferenceData(e) {
-  var file = e.target.files[0];
-  if (!file) return;
-  var reader = new FileReader();
-  reader.onload = function(ev) {
-    var refData;
-    try {
-      refData = JSON.parse(ev.target.result);
-    } catch (err) {
-      alert('That file is not valid JSON.');
-      e.target.value = '';
-      return;
-    }
-    if (!Array.isArray(refData)) {
-      alert('Expected a JSON array of ingredients.');
-      e.target.value = '';
-      return;
-    }
-
-    // Build an INCI lookup of current ingredients (active only).
-    var existingByInci = {};
-    ingredients.forEach(function(ing) {
-      if (ing.archived) return;
-      var k = normaliseInci(ing.inci);
-      if (k && !existingByInci[k]) existingByInci[k] = ing;
-    });
-
-    // Plan the merge before applying — gives us a count for confirmation.
-    var toEnrich = []; // existing ingredients that will gain fields
-    var toAdd    = []; // new ingredients to insert
-    refData.forEach(function(r) {
-      if (!r || !r.name || !r.inci) return;
-      var match = existingByInci[normaliseInci(r.inci)];
-      if (match) {
-        // Determine which fields would actually be added (no overwrite)
-        var added = REFERENCE_FIELDS.filter(function(f) {
-          return r[f] && !(match[f] && String(match[f]).trim());
-        });
-        // Soap data: only fill if existing has none
-        var addsSoap = r.soap && !match.soap;
-        if (added.length || addsSoap) {
-          toEnrich.push({ existing: match, ref: r, fields: added, soap: addsSoap });
-        }
-      } else {
-        toAdd.push(r);
-      }
-    });
-
-    var msg = 'Import preview:\n\n' +
-      '  Enrich ' + toEnrich.length + ' existing ingredient' + (toEnrich.length === 1 ? '' : 's') + '\n' +
-      '  Add ' + toAdd.length + ' new ingredient' + (toAdd.length === 1 ? '' : 's') + '\n' +
-      '  Skip ' + (refData.length - toEnrich.length - toAdd.length) + ' (already complete or unmatched)\n\n' +
-      'Existing ingredients keep all your data — only blank fields are filled.\n' +
-      'New ingredients are added without supplier lots.\n\n' +
-      'Proceed?';
-    if (!confirm(msg)) {
-      e.target.value = '';
-      return;
-    }
-
-    // Apply enrichments
-    toEnrich.forEach(function(plan) {
-      plan.fields.forEach(function(f) {
-        plan.existing[f] = plan.ref[f];
-      });
-      if (plan.soap) plan.existing.soap = plan.ref.soap;
-    });
-
-    // Apply additions — strip any properties we don't want (lots, ids, etc.)
-    toAdd.forEach(function(r) {
-      var newIng = {
-        id:      Date.now().toString() + Math.random().toString(36).slice(2,8),
-        created: new Date().toISOString(),
-        name:    r.name,
-        inci:    r.inci,
-        phase:   r.phase || 'water',
-        flag:    r.flag  || 'no',
-        min:     r.min   || '',
-        max:     r.max   || '',
-        lots:    []
-      };
-      REFERENCE_FIELDS.forEach(function(f) {
-        if (r[f]) newIng[f] = r[f];
-      });
-      if (r.soap) newIng.soap = r.soap;
-      ingredients.push(newIng);
-    });
-
-    saveData();
-    renderTable();
-    renderStats();
-    alert('Imported. Enriched ' + toEnrich.length + ', added ' + toAdd.length + '.');
-    closeModal('modal-settings');
-    e.target.value = '';
-  };
-  reader.readAsText(file);
 }
 
 // ── Stats ─────────────────────────────────────────────
@@ -4151,338 +4018,203 @@ function serializeEditForm() {
 }
 
 // ── Seeder data ───────────────────────────────────────
-var SEEDER_BATCHES = [
-  { label: 'Essentials', cats: [
-    { cat: 'Water phase', items: [
-      {name:"Distilled water",inci:"Aqua",phase:"water",function:"Solvent, base",min:"",max:"",flag:"no",notes:"Use distilled only; tap water introduces microbial risk."},
-      {name:"Rose hydrosol",inci:"Rosa Damascena Flower Water",phase:"water",function:"Humectant, fragrant water, skin-soothing",min:"",max:"",flag:"no",notes:""},
-      {name:"Aloe vera juice",inci:"Aloe Barbadensis Leaf Juice",phase:"water",function:"Soothing, humectant, anti-inflammatory",min:"",max:"",flag:"no",notes:"Use 1:1 or 10x concentration — check label."},
-      {name:"Glycerin",inci:"Glycerin",phase:"water",function:"Humectant",min:"1",max:"10",flag:"no",notes:"Can feel tacky at high concentrations."},
-      {name:"Niacinamide",inci:"Niacinamide",phase:"water",function:"Pore-minimizing, brightening, barrier support",min:"2",max:"10",flag:"no",notes:"Avoid combining with high-dose vitamin C."},
-      {name:"Hyaluronic acid (LMW)",inci:"Sodium Hyaluronate",phase:"water",function:"Deep humectant, plumping",min:"0.1",max:"2",flag:"no",notes:"Low molecular weight penetrates deeper than HMW."},
-      {name:"Panthenol (B5)",inci:"Panthenol",phase:"water",function:"Humectant, skin-soothing, hair conditioning",min:"0.5",max:"5",flag:"no",notes:""},
-    ]},
-    { cat: 'Oil phase', items: [
-      {name:"BTMS-50",inci:"Behentrimonium Methosulfate (and) Cetyl Alcohol",phase:"oil",function:"Emulsifier, conditioning",min:"4",max:"8",flag:"no",notes:"Self-emulsifying; good for conditioners and lotions."},
-      {name:"Emulsifying wax NF",inci:"Cetearyl Alcohol (and) Polysorbate 60",phase:"oil",function:"Emulsifier",min:"3",max:"8",flag:"no",notes:""},
-      {name:"Cetyl alcohol",inci:"Cetyl Alcohol",phase:"oil",function:"Emollient, thickener, emulsion stabilizer",min:"1",max:"5",flag:"no",notes:"Despite the name, not drying — a fatty alcohol."},
-      {name:"Shea butter",inci:"Butyrospermum Parkii (Shea) Butter",phase:"oil",function:"Emollient, occlusive, rich moisturizer",min:"2",max:"25",flag:"no",notes:"Unrefined has more nutrients; refined has neutral scent.",soap:{naoh:0.128,koh:0.179,fa:{palmitic:6,stearic:37,oleic:44,linoleic:7}}},
-      {name:"Jojoba oil",inci:"Simmondsia Chinensis (Jojoba) Seed Oil",phase:"oil",function:"Emollient, skin-identical wax ester",min:"1",max:"30",flag:"no",notes:"Very stable; long shelf life. Technically a liquid wax ester, not a triglyceride — does not saponify in the traditional sense. SAP value is approximate; use sparingly in soap (max 10%) as it does not contribute to lather.",soap:{naoh:0.069,koh:0.097,fa:{oleic:11,linoleic:1}}},
-      {name:"Sweet almond oil",inci:"Prunus Amygdalus Dulcis (Sweet Almond) Oil",phase:"oil",function:"Emollient, softening",min:"1",max:"30",flag:"no",notes:"",soap:{naoh:0.136,koh:0.190,fa:{palmitic:7,stearic:2,oleic:69,linoleic:20}}},
-      {name:"Rosehip seed oil",inci:"Rosa Canina Seed Oil",phase:"oil",function:"Regenerating, high linoleic acid, antioxidant",min:"1",max:"10",flag:"no",notes:"Oxidizes quickly — store refrigerated; add vitamin E.",soap:{naoh:0.137,koh:0.192,fa:{palmitic:4,stearic:2,oleic:15,linoleic:45,linolenic:33}}},
-      {name:"Argan oil",inci:"Argania Spinosa Kernel Oil",phase:"oil",function:"Emollient, antioxidant, non-greasy",min:"1",max:"20",flag:"no",notes:"",soap:{naoh:0.136,koh:0.190,fa:{palmitic:13,stearic:6,oleic:43,linoleic:37}}},
-      {name:"Fractionated coconut oil",inci:"Caprylic/Capric Triglyceride",phase:"oil",function:"Emollient, carrier oil",min:"1",max:"30",flag:"no",notes:"Stays liquid at room temp; long shelf life. INCI is Caprylic/Capric Triglyceride, not Cocos Nucifera. Fractionating strips the long-chain acids out, so what is left is a different material from the coconut oil it came from.",soap:{naoh:0.232,koh:0.325,fa:{caprylic:55,capric:42,lauric:2}}},
-    ]},
-    { cat: 'Cool-down phase', items: [
-      {name:"Optiphen Plus",inci:"Phenoxyethanol (and) Caprylyl Glycol (and) Sorbic Acid",phase:"cool-down",function:"Broad-spectrum preservation",min:"0.75",max:"1.5",flag:"yes",notes:"Add below 40°C. Check pH compatibility."},
-      {name:"Vitamin E (tocopherol)",inci:"Tocopherol",phase:"cool-down",function:"Antioxidant, extends shelf life of oils",min:"0.1",max:"1",flag:"no",notes:"Not a preservative — protects oils from rancidity only."},
-      {name:"Allantoin",inci:"Allantoin",phase:"cool-down",function:"Soothing, healing, skin-smoothing",min:"0.1",max:"2",flag:"no",notes:"Dissolve in a small amount of warm water first."},
-    ]},
-    { cat: 'Actives', items: [
-      {name:"Vitamin C (L-ascorbic acid)",inci:"Ascorbic Acid",phase:"active",function:"Antioxidant, brightening, collagen support",min:"5",max:"20",flag:"yes",notes:"Unstable — use low pH (below 3.5)."},
-      {name:"Retinol",inci:"Retinol",phase:"active",function:"Anti-aging, cell turnover",min:"0.025",max:"1",flag:"yes",notes:"Light and air sensitive. Check market regulations."},
-      {name:"Lactic acid",inci:"Lactic Acid",phase:"active",function:"AHA exfoliant, humectant, pH adjustment",min:"1",max:"10",flag:"yes",notes:"Check and adjust final formula pH."},
-      {name:"Salicylic acid",inci:"Salicylic Acid",phase:"active",function:"BHA exfoliant, anti-acne, pore-clearing",min:"0.5",max:"2",flag:"yes",notes:"Restricted in many markets — verify local regulations."},
-    ]},
-    { cat: 'Other', items: [
-      {name:"Citric acid",inci:"Citric Acid",phase:"other",function:"pH adjuster (down), chelating agent",min:"",max:"",flag:"no",notes:"Use diluted — 10% or 20% solution for easier control."},
-      {name:"Sodium hydroxide (lye)",inci:"Sodium Hydroxide",phase:"other",function:"pH adjuster (up)",min:"",max:"",flag:"yes",notes:"Handle with extreme care — caustic."},
-      {name:"Xanthan gum",inci:"Xanthan Gum",phase:"other",function:"Thickener, stabilizer",min:"0.1",max:"1",flag:"no",notes:"Pre-mix with glycerin to avoid clumping."},
-      {name:"Carbomer (Carbopol)",inci:"Carbomer",phase:"other",function:"Thickener, gel former",min:"0.2",max:"1",flag:"no",notes:"Requires neutralization with NaOH or TEA."},
-    ]},
-  ]},
-  { label: 'Butters, Oils & EOs', cats: [
-    { cat: 'Butters', items: [
-      {name:"Mango butter",inci:"Mangifera Indica (Mango) Seed Butter",phase:"oil",function:"Emollient, occlusive, skin-softening",min:"2",max:"20",flag:"no",notes:"",soap:{naoh:0.128,koh:0.179,fa:{palmitic:7,stearic:40,oleic:46,linoleic:5}}},
-      {name:"Kokum butter",inci:"Garcinia Indica Seed Butter",phase:"oil",function:"Emollient, occlusive, non-comedogenic",min:"1",max:"15",flag:"no",notes:"Very hard butter — use sparingly.",soap:{naoh:0.135,koh:0.189,fa:{palmitic:2,stearic:57,oleic:39,linoleic:2}}},
-      {name:"Cocoa butter",inci:"Theobroma Cacao (Cocoa) Seed Butter",phase:"oil",function:"Emollient, occlusive, antioxidant",min:"2",max:"25",flag:"no",notes:"Natural chocolate scent; use deodorized if needed.",soap:{naoh:0.137,koh:0.192,fa:{palmitic:26,stearic:34,oleic:35,linoleic:3}}},
-      {name:"Murumuru butter",inci:"Astrocaryum Murumuru Seed Butter",phase:"oil",function:"Emollient, conditioning, frizz control",min:"2",max:"20",flag:"no",notes:""},
-      {name:"Cupuacu butter",inci:"Theobroma Grandiflorum Seed Butter",phase:"oil",function:"Emollient, high water absorption",min:"2",max:"20",flag:"no",notes:"Can absorb up to 240% its weight in water.",soap:{naoh:0.130,koh:0.182,fa:{palmitic:9,stearic:35,oleic:42,linoleic:5}}},
-    ]},
-    { cat: 'Waxes', items: [
-      {name:"Beeswax",inci:"Cera Alba",phase:"oil",function:"Thickener, occlusive, emulsifier aid",min:"2",max:"30",flag:"no",notes:"Higher % = firmer product."},
-      {name:"Candelilla wax",inci:"Euphorbia Cerifera (Candelilla) Wax",phase:"oil",function:"Vegan wax, thickener, occlusive",min:"1",max:"15",flag:"no",notes:"Use about half the amount when substituting for beeswax."},
-      {name:"Carnauba wax",inci:"Copernicia Cerifera (Carnauba) Wax",phase:"oil",function:"Hardener, high-gloss finish",min:"0.5",max:"5",flag:"no",notes:""},
-      {name:"Rice bran wax",inci:"Oryza Sativa (Rice) Bran Wax",phase:"oil",function:"Thickener, skin-conditioning, vegan",min:"1",max:"10",flag:"no",notes:""},
-    ]},
-    { cat: 'Additional oils', items: [
-      {name:"Sea buckthorn oil",inci:"Hippophae Rhamnoides Fruit Oil",phase:"oil",function:"Antioxidant, regenerating, high carotenoids",min:"0.1",max:"3",flag:"no",notes:"Intensely orange — use at very low %.",soap:{fa:{palmitic:30,stearic:1,oleic:33,linoleic:29,linolenic:3}}},
-      {name:"Baobab oil",inci:"Adansonia Digitata Seed Oil",phase:"oil",function:"Emollient, skin-regenerating, omega-rich",min:"1",max:"20",flag:"no",notes:"",soap:{naoh:0.136,koh:0.190,fa:{palmitic:21,stearic:4,oleic:36,linoleic:31,linolenic:2}}},
-      {name:"Marula oil",inci:"Sclerocarya Birrea Seed Oil",phase:"oil",function:"Lightweight emollient, antioxidant",min:"1",max:"20",flag:"no",notes:"",soap:{naoh:0.135,koh:0.189,fa:{palmitic:10,stearic:7,oleic:70,linoleic:8}}},
-      {name:"Meadowfoam seed oil",inci:"Limnanthes Alba (Meadowfoam) Seed Oil",phase:"oil",function:"Emollient, extends shelf life of other oils",min:"1",max:"20",flag:"no",notes:"Very stable; helps slow oxidation.",soap:{naoh:0.118,koh:0.165,fa:{oleic:63,linoleic:3}}},
-      {name:"Castor oil",inci:"Ricinus Communis (Castor) Seed Oil",phase:"oil",function:"Humectant, thickener, glossy film-former",min:"1",max:"30",flag:"no",notes:"Essential in lip products.",soap:{naoh:0.128,koh:0.180,fa:{ricinoleic:90,oleic:4,linoleic:4}}},
-      {name:"Hemp seed oil",inci:"Cannabis Sativa Seed Oil",phase:"oil",function:"Emollient, high linoleic acid, balancing",min:"1",max:"20",flag:"no",notes:"Good for acne-prone and sensitive skin.",soap:{naoh:0.136,koh:0.190,fa:{palmitic:6,stearic:2,oleic:12,linoleic:57,linolenic:21}}},
-      {name:"Avocado oil",inci:"Persea Gratissima (Avocado) Oil",phase:"oil",function:"Rich emollient, penetrating, vitamin-rich",min:"1",max:"20",flag:"no",notes:"",soap:{naoh:0.133,koh:0.186,fa:{palmitic:16,stearic:2,oleic:65,linoleic:15}}},
-      {name:"Squalane",inci:"Squalane",phase:"oil",function:"Lightweight emollient, skin-identical, non-comedogenic",min:"1",max:"15",flag:"no",notes:"Derived from sugarcane or olives."},
-    ]},
-    { cat: 'Surfactants', items: [
-      {name:"Decyl glucoside",inci:"Decyl Glucoside",phase:"water",function:"Mild non-ionic surfactant, foaming cleanser",min:"5",max:"20",flag:"no",notes:"Very gentle; good for sensitive skin."},
-      {name:"Coco glucoside",inci:"Coco Glucoside",phase:"water",function:"Mild surfactant, foam booster",min:"5",max:"20",flag:"no",notes:""},
-      {name:"Sodium cocoyl isethionate (SCI)",inci:"Sodium Cocoyl Isethionate",phase:"oil",function:"Mild surfactant, solid cleanser",min:"20",max:"70",flag:"no",notes:"Used in solid shampoo bars."},
-      {name:"Cocamidopropyl betaine",inci:"Cocamidopropyl Betaine",phase:"water",function:"Amphoteric surfactant, foam booster",min:"3",max:"15",flag:"no",notes:"Reduces irritation when combined with anionic surfactants."},
-    ]},
-    { cat: 'Botanicals', items: [
-      {name:"Green tea extract",inci:"Camellia Sinensis Leaf Extract",phase:"water",function:"Antioxidant, anti-inflammatory, soothing",min:"0.5",max:"5",flag:"no",notes:""},
-      {name:"Chamomile extract",inci:"Anthemis Nobilis Flower Extract",phase:"water",function:"Soothing, anti-inflammatory, calming",min:"0.5",max:"5",flag:"no",notes:""},
-      {name:"Calendula extract",inci:"Calendula Officinalis Flower Extract",phase:"water",function:"Soothing, wound-healing",min:"0.5",max:"5",flag:"no",notes:"Also available as oil infusion."},
-      {name:"Oat extract (colloidal)",inci:"Avena Sativa (Oat) Kernel Extract",phase:"water",function:"Soothing, barrier-protecting, anti-itch",min:"0.5",max:"5",flag:"no",notes:"Excellent for sensitive and eczema-prone skin."},
-      {name:"Licorice root extract",inci:"Glycyrrhiza Glabra (Licorice) Root Extract",phase:"water",function:"Brightening, anti-inflammatory",min:"0.1",max:"2",flag:"no",notes:"Pairs well with niacinamide."},
-      {name:"Bakuchiol",inci:"Bakuchiol",phase:"oil",function:"Plant-based retinol alternative, anti-aging",min:"0.5",max:"2",flag:"no",notes:"More stable than retinol; suitable for sensitive skin."},
-    ]},
-    { cat: 'Essential oils', items: [
-      {name:"Lavender essential oil",inci:"Lavandula Angustifolia (Lavender) Oil",phase:"cool-down",function:"Soothing, calming, antimicrobial",min:"0.5",max:"3",flag:"yes",notes:"Check IFRA limits."},
-      {name:"Tea tree essential oil",inci:"Melaleuca Alternifolia (Tea Tree) Leaf Oil",phase:"cool-down",function:"Antimicrobial, antifungal, purifying",min:"0.5",max:"3",flag:"yes",notes:"Strong — use at low %."},
-      {name:"Frankincense essential oil",inci:"Boswellia Carterii Oil",phase:"cool-down",function:"Anti-aging, regenerating, grounding scent",min:"0.5",max:"2",flag:"yes",notes:"Check IFRA."},
-      {name:"Geranium essential oil",inci:"Pelargonium Graveolens Flower Oil",phase:"cool-down",function:"Balancing, skin-toning, floral",min:"0.2",max:"2",flag:"yes",notes:"Check IFRA limits for leave-on products."},
-      {name:"Peppermint essential oil",inci:"Mentha Piperita (Peppermint) Oil",phase:"cool-down",function:"Cooling, invigorating, analgesic",min:"0.1",max:"1",flag:"yes",notes:"Low usage rate for leave-on. Not for children under 6."},
-      {name:"Rosemary essential oil",inci:"Rosmarinus Officinalis (Rosemary) Leaf Oil",phase:"cool-down",function:"Antioxidant, stimulating, antimicrobial",min:"0.2",max:"1",flag:"yes",notes:""},
-      {name:"Eucalyptus essential oil",inci:"Eucalyptus Globulus Leaf Oil",phase:"cool-down",function:"Decongestant, antimicrobial, cooling",min:"0.1",max:"1",flag:"yes",notes:"Not suitable for children under 10."},
-      {name:"Ylang ylang essential oil",inci:"Cananga Odorata Flower Oil",phase:"cool-down",function:"Floral, sebum-balancing",min:"0.02",max:"0.8",flag:"yes",notes:"Very potent — use sparingly."},
-      {name:"Cedarwood essential oil",inci:"Cedrus Atlantica Bark Oil",phase:"cool-down",function:"Woody, grounding, mild antimicrobial",min:"0.2",max:"2",flag:"yes",notes:"Good fixative in blends."},
-      {name:"Clary sage essential oil",inci:"Salvia Sclarea Oil",phase:"cool-down",function:"Balancing, skin-soothing",min:"0.2",max:"2",flag:"yes",notes:"Avoid during pregnancy."},
-    ]},
-    { cat: 'Preservative boosters', items: [
-      {name:"Ethylhexylglycerin",inci:"Ethylhexylglycerin",phase:"cool-down",function:"Preservative booster, skin-conditioning",min:"0.3",max:"1",flag:"no",notes:"Commonly paired with phenoxyethanol."},
-      {name:"Sodium benzoate",inci:"Sodium Benzoate",phase:"water",function:"Preservative (yeast/mold)",min:"0.1",max:"0.5",flag:"yes",notes:"Effective below pH 5."},
-      {name:"Potassium sorbate",inci:"Potassium Sorbate",phase:"water",function:"Preservative (mold/yeast)",min:"0.1",max:"0.5",flag:"yes",notes:"Works below pH 6.5."},
-      {name:"EDTA (disodium)",inci:"Disodium EDTA",phase:"water",function:"Chelating agent, preservative booster",min:"0.1",max:"0.5",flag:"no",notes:""},
-    ]},
-  ]},
-  { label: 'Hydrosols, Esters & More', cats: [
-    { cat: 'Hydrosols', items: [
-      {name:"Rosemary hydrosol",inci:"Rosmarinus Officinalis (Rosemary) Flower Water",phase:"water",function:"Antioxidant, scalp-stimulating, clarifying",min:"",max:"",flag:"no",notes:"Can replace part or all of the water phase."},
-      {name:"Lavender hydrosol",inci:"Lavandula Angustifolia Flower Water",phase:"water",function:"Soothing, balancing, gentle toner",min:"",max:"",flag:"no",notes:""},
-      {name:"Chamomile hydrosol",inci:"Anthemis Nobilis Flower Water",phase:"water",function:"Calming, anti-inflammatory",min:"",max:"",flag:"no",notes:""},
-      {name:"Neroli hydrosol",inci:"Citrus Aurantium Amara Flower Water",phase:"water",function:"Brightening, skin-regenerating",min:"",max:"",flag:"no",notes:"Lovely in facial toners and mists."},
-      {name:"Witch hazel hydrosol",inci:"Hamamelis Virginiana Water",phase:"water",function:"Astringent, pore-tightening",min:"",max:"",flag:"no",notes:"Choose alcohol-free for sensitive skin."},
-      {name:"Peppermint hydrosol",inci:"Mentha Piperita Flower Water",phase:"water",function:"Cooling, refreshing",min:"",max:"",flag:"no",notes:"Milder than the EO."},
-      {name:"Helichrysum hydrosol",inci:"Helichrysum Italicum Flower Water",phase:"water",function:"Skin-regenerating, anti-aging",min:"",max:"",flag:"no",notes:"Premium hydrosol; excellent in facial serums."},
-    ]},
-    { cat: 'Esters', items: [
-      {name:"Isopropyl myristate (IPM)",inci:"Isopropyl Myristate",phase:"oil",function:"Lightweight emollient, penetration enhancer",min:"1",max:"10",flag:"no",notes:"Reduces greasy feel. Can be comedogenic at high levels."},
-      {name:"C12-15 alkyl benzoate",inci:"C12-15 Alkyl Benzoate",phase:"oil",function:"Lightweight emollient, dry silky feel",min:"1",max:"15",flag:"no",notes:"Very elegant skin feel."},
-      {name:"Ethylhexyl palmitate",inci:"Ethylhexyl Palmitate",phase:"oil",function:"Emollient, lightweight, silky texture",min:"1",max:"15",flag:"no",notes:""},
-      {name:"Dicaprylyl carbonate",inci:"Dicaprylyl Carbonate",phase:"oil",function:"Lightweight emollient, dry finish",min:"1",max:"15",flag:"no",notes:"Excellent silicone alternative."},
-      {name:"Cetyl esters",inci:"Cetyl Esters",phase:"oil",function:"Emollient, pearlescent",min:"1",max:"5",flag:"no",notes:"Adds luxurious, slightly waxy feel."},
-      {name:"Myristyl myristate",inci:"Myristyl Myristate",phase:"oil",function:"Emollient, thickener",min:"1",max:"5",flag:"no",notes:"Waxy solid — melt into oil phase."},
-    ]},
-    { cat: 'Betaines and amino acids', items: [
-      {name:"Betaine (trimethylglycine)",inci:"Betaine",phase:"water",function:"Humectant, osmoprotectant, soothing",min:"0.5",max:"5",flag:"no",notes:"Derived from sugar beet. Different from cocamidopropyl betaine — this is a pure amino acid derivative with humectant and soothing properties."},
-      {name:"Sodium PCA",inci:"Sodium PCA",phase:"water",function:"Humectant, natural moisturizing factor",min:"0.5",max:"5",flag:"no",notes:"One of the skin's own NMF components."},
-      {name:"Arginine",inci:"Arginine",phase:"water",function:"Amino acid humectant, pH buffer",min:"0.5",max:"3",flag:"no",notes:"Also used to neutralize carbomer gels."},
-      {name:"Silk amino acids",inci:"Hydrolyzed Silk",phase:"water",function:"Film-forming, conditioning, slip",min:"0.5",max:"3",flag:"no",notes:""},
-      {name:"Sodium lactate",inci:"Sodium Lactate",phase:"water",function:"Humectant, NMF component",min:"0.5",max:"5",flag:"no",notes:""},
-    ]},
-    { cat: 'Emulsifiers', items: [
-      {name:"Olivem 1000",inci:"Cetearyl Olivate (and) Sorbitan Olivate",phase:"oil",function:"Natural emulsifier, lamellar structure",min:"3",max:"8",flag:"no",notes:"Creates a biomimetic lamellar structure similar to skin."},
-      {name:"Polawax",inci:"Emulsifying Wax NF",phase:"oil",function:"All-in-one emulsifier, reliable",min:"5",max:"10",flag:"no",notes:"Very forgiving and stable."},
-      {name:"Glyceryl stearate",inci:"Glyceryl Stearate",phase:"oil",function:"Co-emulsifier, skin-conditioning",min:"1",max:"5",flag:"no",notes:""},
-      {name:"Glyceryl stearate SE",inci:"Glyceryl Stearate SE",phase:"oil",function:"Self-emulsifying, mild",min:"3",max:"8",flag:"no",notes:"Can work alone for simple O/W emulsions."},
-      {name:"Lecithin (sunflower)",inci:"Helianthus Annuus (Sunflower) Seed Oil (and) Lecithin",phase:"oil",function:"Natural emulsifier, skin-replenishing",min:"0.5",max:"3",flag:"no",notes:""},
-      {name:"Polysorbate 20",inci:"Polysorbate 20",phase:"water",function:"Solubilizer for EOs in water",min:"0.5",max:"5",flag:"no",notes:"Primarily for incorporating EOs into water-based products."},
-      {name:"Polysorbate 80",inci:"Polysorbate 80",phase:"water",function:"Emulsifier, solubilizer for heavier oils",min:"1",max:"5",flag:"no",notes:""},
-    ]},
-    { cat: 'Specialty butters and oils', items: [
-      {name:"Carrot seed butter",inci:"Daucus Carota Sativa (Carrot) Seed Butter",phase:"oil",function:"Antioxidant, skin-regenerating, vitamin-rich",min:"1",max:"15",flag:"no",notes:"Rich in beta-carotene; may add slight orange tint."},
-      {name:"Carrot seed oil",inci:"Daucus Carota Sativa Seed Oil",phase:"oil",function:"Antioxidant, regenerating, high carotenoids",min:"0.5",max:"5",flag:"no",notes:"Intensely yellow-orange — use at low %."},
-      {name:"Pumpkin seed butter",inci:"Cucurbita Pepo (Pumpkin) Seed Butter",phase:"oil",function:"Emollient, antioxidant, zinc-rich",min:"1",max:"15",flag:"no",notes:"",soap:{naoh:0.135,koh:0.189,fa:{palmitic:13,stearic:7,oleic:34,linoleic:44}}},
-      {name:"Watermelon seed oil",inci:"Citrullus Lanatus (Watermelon) Seed Oil",phase:"oil",function:"Lightweight emollient, non-comedogenic",min:"1",max:"20",flag:"no",notes:"Excellent for acne-prone and oily skin.",soap:{naoh:0.136,koh:0.190,fa:{palmitic:12,stearic:10,oleic:18,linoleic:58}}},
-      {name:"Pomegranate seed oil",inci:"Punica Granatum Seed Oil",phase:"oil",function:"Antioxidant, regenerating, punicic acid",min:"0.5",max:"10",flag:"no",notes:"Premium anti-aging ingredient.",soap:{naoh:0.135,koh:0.189,fa:{palmitic:3,stearic:2,oleic:5,linoleic:7,linolenic:78}}},
-      {name:"Tamanu oil",inci:"Calophyllum Inophyllum Seed Oil",phase:"oil",function:"Wound-healing, anti-inflammatory",min:"1",max:"10",flag:"no",notes:"Dark green color and strong scent.",soap:{naoh:0.136,koh:0.190,fa:{palmitic:12,stearic:14,oleic:41,linoleic:31}}},
-      {name:"Chia seed oil",inci:"Salvia Hispanica Seed Oil",phase:"oil",function:"Emollient, high omega-3",min:"1",max:"15",flag:"no",notes:"Oxidizes quickly — keep refrigerated.",soap:{naoh:0.136,koh:0.190,fa:{palmitic:7,stearic:3,oleic:7,linoleic:19,linolenic:62}}},
-      {name:"Raspberry seed oil",inci:"Rubus Idaeus (Raspberry) Seed Oil",phase:"oil",function:"Antioxidant, high omega-3 and -6",min:"1",max:"10",flag:"no",notes:"",soap:{naoh:0.136,koh:0.190,fa:{palmitic:3,stearic:2,oleic:13,linoleic:54,linolenic:25}}},
-      {name:"Plum kernel oil",inci:"Prunus Domestica Seed Oil",phase:"oil",function:"Lightweight emollient, fast-absorbing",min:"1",max:"20",flag:"no",notes:"Similar feel to argan oil.",soap:{naoh:0.136,koh:0.190,fa:{palmitic:4,stearic:1,oleic:68,linoleic:24}}},
-      {name:"Black seed oil",inci:"Nigella Sativa Seed Oil",phase:"oil",function:"Anti-inflammatory, antimicrobial",min:"0.5",max:"5",flag:"no",notes:"Strong, distinctive scent — blend carefully.",soap:{naoh:0.136,koh:0.190,fa:{palmitic:13,stearic:3,oleic:24,linoleic:58}}},
-    ]},
-    { cat: 'Additional actives', items: [
-      {name:"Alpha arbutin",inci:"Alpha-Arbutin",phase:"water",function:"Brightening, gentle, melanin inhibitor",min:"0.3",max:"2",flag:"no",notes:"More stable and gentler than kojic acid."},
-      {name:"Azelaic acid",inci:"Azelaic Acid",phase:"water",function:"Brightening, anti-acne, rosacea support",min:"5",max:"20",flag:"yes",notes:"Above 15% is prescription-only in some markets."},
-      {name:"Kojic acid",inci:"Kojic Acid",phase:"water",function:"Brightening, tyrosinase inhibitor",min:"0.5",max:"2",flag:"yes",notes:"Unstable — can discolor. Use with chelating agents."},
-      {name:"Tranexamic acid",inci:"Tranexamic Acid",phase:"water",function:"Brightening, hyperpigmentation",min:"1",max:"5",flag:"no",notes:"More stable than kojic or vitamin C."},
-      {name:"Ferulic acid",inci:"Ferulic Acid",phase:"active",function:"Antioxidant, stabilizes vitamin C and E",min:"0.1",max:"0.5",flag:"no",notes:"Classic pairing: vitamin C + E + ferulic acid."},
-      {name:"Resveratrol",inci:"Resveratrol",phase:"active",function:"Antioxidant, anti-aging",min:"0.1",max:"1",flag:"no",notes:"Light-sensitive — use opaque packaging."},
-      {name:"Madecassoside (cica)",inci:"Madecassoside",phase:"water",function:"Wound-healing, barrier repair",min:"0.1",max:"1",flag:"no",notes:"Active compound from centella asiatica."},
-      {name:"Coenzyme Q10",inci:"Ubiquinone",phase:"oil",function:"Antioxidant, anti-aging",min:"0.05",max:"0.5",flag:"no",notes:"Bright orange — will color product."},
-    ]},
-    { cat: 'Texture and misc', items: [
-      {name:"Tapioca starch",inci:"Manihot Esculenta Root Extract",phase:"other",function:"Mattifying, oil-absorbing, silky feel",min:"1",max:"5",flag:"no",notes:"Natural silicone alternative."},
-      {name:"Arrowroot powder",inci:"Maranta Arundinacea Root Powder",phase:"other",function:"Mattifying, oil-absorbing",min:"1",max:"5",flag:"no",notes:"Good in natural deodorants and body powders."},
-      {name:"Kaolin clay",inci:"Kaolin",phase:"other",function:"Absorbent, mild cleansing",min:"2",max:"30",flag:"no",notes:"Gentlest of the cosmetic clays."},
-      {name:"Bentonite clay",inci:"Bentonite",phase:"other",function:"Deep cleansing, detoxifying",min:"2",max:"20",flag:"no",notes:"Stronger than kaolin. May be drying."},
-      {name:"Zinc oxide",inci:"Zinc Oxide",phase:"other",function:"UV filter, antimicrobial, soothing",min:"1",max:"25",flag:"yes",notes:"Requires testing for SPF claims."},
-      {name:"Propylene glycol",inci:"Propylene Glycol",phase:"water",function:"Humectant, solvent",min:"1",max:"10",flag:"no",notes:""},
-      {name:"Butylene glycol",inci:"Butylene Glycol",phase:"water",function:"Humectant, solvent, milder than PG",min:"1",max:"8",flag:"no",notes:""},
-      {name:"Magnesium sulfate",inci:"Magnesium Sulfate",phase:"water",function:"Bath mineral, electrolyte",min:"",max:"",flag:"no",notes:"Epsom salt."},
-    ]},
-  ]},
-  { label: 'Your Ingredients', cats: [
-    { cat: 'Humectants and water phase', items: [
-      {name:"Hyaluronic acid (HMW)",inci:"Sodium Hyaluronate",phase:"water",brand:"",function:"Humectant, film-forming, surface hydration",min:"0.1",max:"2",flag:"no",notes:"High molecular weight — stays on skin surface, creates plumping film. Use alongside LMW HA for layered hydration."},
-      {name:"Aloe vera gel",inci:"Aloe Barbadensis Leaf Gel",phase:"water",brand:"",function:"Soothing, cooling, humectant, anti-inflammatory",min:"",max:"",flag:"no",notes:"Thick gel form — different from juice. Can be used as a base or partial water replacement."},
-      {name:"Aloe vera powder",inci:"Aloe Barbadensis Leaf Extract",phase:"water",brand:"",function:"Soothing, humectant, anti-inflammatory, concentrated",min:"0.1",max:"2",flag:"no",notes:"Reconstitute with water before use. Check concentration ratio on your specific product (100:1 or 200:1 is common)."},
-      {name:"1,3-Propanediol",inci:"Propanediol",phase:"water",brand:"",function:"Humectant, solvent, penetration enhancer, preservative booster",min:"1",max:"10",flag:"no",notes:"Plant-derived (corn sugar). Cleaner alternative to propylene glycol. Great co-solvent for actives and EOs."},
-      {name:"Niacinamide powder",inci:"Niacinamide",phase:"water",brand:"",function:"Pore-minimizing, brightening, barrier support",min:"2",max:"10",flag:"no",notes:"Powder form — dissolve fully in warm water before adding to formula. Same INCI as liquid niacinamide."},
-    ]},
-    { cat: 'Thickeners and stabilizers', items: [
-      {name:"Guar gum",inci:"Cyamopsis Tetragonoloba (Guar) Gum",phase:"water",brand:"",function:"Thickener, film-former, conditioning, slip",min:"0.1",max:"1",flag:"no",notes:"Disperse in oil or glycerin first to avoid clumping. Gives a slightly different texture than xanthan — good in cleansers and hair care."},
-      {name:"CMC powder (carboxymethyl cellulose)",inci:"Cellulose Gum",phase:"water",brand:"",function:"Thickener, film-former, stabilizer",min:"0.5",max:"2",flag:"no",notes:"Pre-mix with glycerin or propanediol before adding to water. Creates clear gels with a slightly slimy feel."},
-      {name:"Xanthan gum",inci:"Xanthan Gum",phase:"water",brand:"",function:"Thickener, stabilizer, suspension agent",min:"0.1",max:"1",flag:"no",notes:"Pre-mix with glycerin to avoid clumping. Very effective at low levels."},
-    ]},
-    { cat: 'Emulsifiers', items: [
-      {name:"Cetearyl alcohol",inci:"Cetearyl Alcohol",phase:"oil",brand:"",function:"Co-emulsifier, thickener, emulsion stabilizer, conditioning",min:"1",max:"6",flag:"no",notes:"Fatty alcohol blend — adds body and creaminess to emulsions. Not drying despite the name."},
-      {name:"Cetyl alcohol",inci:"Cetyl Alcohol",phase:"oil",brand:"",function:"Emollient, thickener, emulsion stabilizer",min:"1",max:"5",flag:"no",notes:"Produces slightly lighter texture than cetearyl alcohol. Often used together."},
-      {name:"Ecomulse",inci:"Glyceryl Stearate (and) Cetearyl Alcohol (and) Sodium Stearoyl Lactylate",phase:"oil",brand:"Lotioncrafter",function:"Natural self-emulsifier, ECOCERT approved, conditioning",min:"2",max:"10",flag:"no",notes:"Anionic — not compatible with cationic ingredients (e.g. BTMS, conditioning quats). Add to hot oil phase. Target pH 5–7.5. Gives a soft, talc-like skin feel."},
-      {name:"Polyglyceryl-3 oleate",inci:"Polyglyceryl-3 Oleate",phase:"oil",brand:"",function:"Natural emulsifier, skin-conditioning, mild",min:"1",max:"5",flag:"no",notes:"HLB ~6-7. Works well in W/O or as co-emulsifier in O/W. COSMOS approved. Derived from vegetable glycerin and oleic acid."},
-      {name:"SurfPro CF",inci:"Glycerin (and) Caprylic/Capric Triglyceride (and) Aqua (and) Sucrose Laurate",phase:"water",brand:"Lotioncrafter",function:"Cold process emulsifier, oil thickener, natural origin",min:"5",max:"25",flag:"no",notes:"100% natural origin, ECOCERT/COSMOS approved. Use as cold process emulsifier (5–10%) or oil thickener/gel former (20–25%). Must maintain pH 4.5–8 throughout formulation. Add oil slowly with high-speed mixing."},
-    ]},
-    { cat: 'Preservatives', items: [
-      {name:"Optiphen",inci:"Phenoxyethanol (and) Caprylyl Glycol",phase:"cool-down",brand:"",function:"Broad-spectrum preservative, paraben-free",min:"0.5",max:"1.5",flag:"yes",notes:"Works in both aqueous and anhydrous systems. pH range 4–8. Add below 60°C. Note: weaker mold/yeast coverage than Optiphen Plus — consider pairing with a booster for high-risk formulas."},
-      {name:"Optiphen Plus",inci:"Phenoxyethanol (and) Caprylyl Glycol (and) Sorbic Acid",phase:"cool-down",brand:"",function:"Broad-spectrum preservative, bacteria, yeast and mold",min:"0.75",max:"1.5",flag:"yes",notes:"Stronger than Optiphen — includes sorbic acid for yeast/mold coverage. Best below pH 6. Add at or below 80°C. Lotioncrafter product."},
-      {name:"Liquid Germall Plus",inci:"Propylene Glycol (and) Diazolidinyl Urea (and) Iodopropynyl Butylcarbamate",phase:"cool-down",brand:"",function:"Broad-spectrum preservative, highly effective at low levels",min:"0.1",max:"0.5",flag:"yes",notes:"Very effective at extremely low usage. Broad pH range 3–8. Add below 50°C. Note: not recommended in products for children under 3 (except bath/rinse-off). Restricted in EU — US use is fine."},
-    ]},
-    { cat: 'Specialty actives', items: [
-      {name:"Actifcol advanced botanical",inci:"Water (and) Glycerin (and) Sodium Citrate (and) Lentinus Edodes Extract (and) Potassium Sorbate (and) Sodium Benzoate (and) Phytic Acid",phase:"water",brand:"Lotioncrafter",function:"Collagen-boosting, antioxidant, anti-aging, shiitake mushroom extract",min:"2",max:"10",flag:"no",notes:"Shiitake mushroom-based extract that prevents collagen deterioration and improves skin structure. Trademark of Lipotec — cannot reference the Actifcol name in marketing without a signed agreement with Lipotec. Incompatible with electrolytes (≤2%) and SLS (≤30%). Water soluble; add to water phase."},
-      {name:"Ceramide complex",inci:"Ceramide NP (and) Ceramide AP (and) Ceramide EOP (and) Phytosphingosine (and) Cholesterol (and) Sodium Lauroyl Lactylate (and) Carbomer (and) Xanthan Gum",phase:"water",brand:"Lotioncrafter",function:"Barrier repair, skin-identical lipids, deep hydration, anti-aging",min:"1",max:"5",flag:"no",notes:"Add to aqueous phase. Store at 46–59°F (8–15°C). Shelf life 24 months properly stored. Typical use 3–5% for dry/aging skin. Do not apply undiluted directly to skin."},
-      {name:"Isoamyl laurate",inci:"Isoamyl Laurate",phase:"oil",brand:"",function:"Lightweight emollient, dry skin feel, silicone alternative",min:"1",max:"15",flag:"no",notes:"Natural-origin ester derived from isoamyl alcohol and lauric acid. Very elegant dry, non-greasy skin feel. Good replacement for silicones and heavier esters. COSMOS approved."},
-    ]},
-    { cat: 'Carrier oils (organic)', items: [
-      {name:"Coconut oil, virgin (organic)",inci:"Cocos Nucifera (Coconut) Oil",phase:"oil",brand:"",function:"Emollient, occlusive, antimicrobial, solid at room temp",min:"1",max:"30",flag:"no",notes:"Organic virgin (unrefined). Solid below ~76°F — melt before use. Higher lauric acid content than fractionated. Distinct coconut scent. More occlusive than fractionated version. Note: shares the same INCI as fractionated coconut oil — distinguish them in your formula notes by specifying virgin vs fractionated.",soap:{naoh:0.190,koh:0.266,fa:{lauric:49,myristic:18,palmitic:9,stearic:3,oleic:8,linoleic:2}}},
-      {name:"Camellia oil (organic)",inci:"Camellia Sinensis Seed Oil",phase:"oil",brand:"",function:"Lightweight emollient, antioxidant, skin-brightening",min:"1",max:"25",flag:"no",notes:"Organic. High in oleic acid. Excellent for facial serums — absorbs without greasiness. Traditional Japanese beauty oil.",soap:{naoh:0.136,koh:0.190,fa:{palmitic:8,stearic:2,oleic:80,linoleic:8}}},
-      {name:"Rosemary oil (organic)",inci:"Rosmarinus Officinalis (Rosemary) Leaf Oil",phase:"oil",brand:"",function:"Antioxidant, scalp-stimulating, antimicrobial",min:"1",max:"10",flag:"no",notes:"Organic carrier/infused oil — not the essential oil. If this is rosemary-infused oil, the INCI will vary by carrier. Verify your specific product's INCI."},
-      {name:"Pomegranate oil (organic)",inci:"Punica Granatum Seed Oil",phase:"oil",brand:"",function:"Antioxidant, regenerating, punicic acid, anti-aging",min:"0.5",max:"10",flag:"no",notes:"Organic. One of the few oils containing punicic acid (omega-5). Premium anti-aging ingredient.",soap:{naoh:0.135,koh:0.189,fa:{palmitic:3,stearic:2,oleic:5,linoleic:7,linolenic:78}}},
-      {name:"Marula oil (organic)",inci:"Sclerocarya Birrea Seed Oil",phase:"oil",brand:"",function:"Lightweight emollient, antioxidant, fast-absorbing",min:"1",max:"20",flag:"no",notes:"Organic. Non-greasy finish. High in oleic acid.",soap:{naoh:0.135,koh:0.189,fa:{palmitic:10,stearic:7,oleic:70,linoleic:8}}},
-      {name:"Baobab oil (organic)",inci:"Adansonia Digitata Seed Oil",phase:"oil",brand:"",function:"Emollient, skin-regenerating, omega-rich",min:"1",max:"20",flag:"no",notes:"Organic. Absorbs well. Good in facial serums and hair oils.",soap:{naoh:0.136,koh:0.190,fa:{palmitic:21,stearic:4,oleic:36,linoleic:31,linolenic:2}}},
-      {name:"Grapeseed oil (organic)",inci:"Vitis Vinifera (Grape) Seed Oil",phase:"oil",brand:"",function:"Lightweight emollient, antioxidant, non-comedogenic",min:"1",max:"30",flag:"no",notes:"Organic. Light, fast-absorbing. High in linoleic acid — good for oily and acne-prone skin. Shorter shelf life than some oils.",soap:{naoh:0.135,koh:0.189,fa:{palmitic:6,stearic:4,oleic:16,linoleic:72}}},
-      {name:"Pumpkin seed oil (organic)",inci:"Cucurbita Pepo Seed Oil",phase:"oil",brand:"",function:"Emollient, antioxidant, zinc-rich, anti-inflammatory",min:"1",max:"15",flag:"no",notes:"Organic. Deep orange color — may tint formula.",soap:{naoh:0.135,koh:0.189,fa:{palmitic:13,stearic:7,oleic:34,linoleic:44}}},
-      {name:"Apricot kernel oil (organic)",inci:"Prunus Armeniaca Kernel Oil",phase:"oil",brand:"",function:"Lightweight emollient, skin-softening, vitamin-rich",min:"1",max:"30",flag:"no",notes:"Organic. Similar to sweet almond oil but lighter. Excellent for sensitive and mature skin.",soap:{naoh:0.135,koh:0.189,fa:{palmitic:5,stearic:1,oleic:68,linoleic:25}}},
-    ]},
-    { cat: 'Exfoliants and clays', items: [
-      {name:"Walnut shell powder",inci:"Juglans Regia (Walnut) Shell Powder",phase:"other",brand:"",function:"Physical exfoliant, skin polishing",min:"1",max:"10",flag:"no",notes:"Check particle size — very fine for facial use, coarser for body scrubs. Note: some regulatory concern about angular shell powders causing micro-tears; ensure you're using cosmetically milled versions."},
-      {name:"Cranberry seeds",inci:"Vaccinium Macrocarpon Seed",phase:"other",brand:"",function:"Gentle physical exfoliant, antioxidant-rich",min:"1",max:"8",flag:"no",notes:"Gentler than walnut shell — rounded natural seeds. Good for facial scrubs."},
-      {name:"Apricot kernels",inci:"Prunus Armeniaca Kernel Powder",phase:"other",brand:"",function:"Physical exfoliant, skin polishing",min:"1",max:"10",flag:"no",notes:"Verify cosmetically milled for safe particle edges. Good mid-strength exfoliant."},
-      {name:"French green clay",inci:"Montmorillonite",phase:"other",brand:"",function:"Detoxifying, absorbing, toning, minerally rich",min:"5",max:"30",flag:"no",notes:"More active than white kaolin — best for oily/combination skin. Can be drying; pair with soothing ingredients."},
-      {name:"Moroccan rhassoul clay",inci:"Ghassoul",phase:"other",brand:"",function:"Cleansing, absorbing, skin-smoothing, conditioning",min:"10",max:"50",flag:"no",notes:"Unique among clays — has some natural conditioning properties. Good for both skin and hair masks. Less drying than other clays."},
-    ]},
-    { cat: 'Rose geranium', items: [
-      {name:"Rose geranium hydrosol",inci:"Pelargonium Graveolens Flower Water",phase:"water",brand:"",function:"Balancing, toning, gentle astringent, floral scent",min:"",max:"",flag:"no",notes:"Different from regular geranium hydrosol — more pronounced rose note. Good in facial toners, mists, and as partial water replacement."},
-      {name:"Rose geranium essential oil",inci:"Pelargonium Graveolens Flower Oil",phase:"cool-down",brand:"",function:"Balancing, skin-toning, floral, sebum-regulating",min:"0.2",max:"2",flag:"yes",notes:"Check IFRA limits. Similar to geranium EO but with a distinctly rosy character."},
-    ]},
-  ]},
-  { label: 'Soap Making', cats: [
-    { cat: 'Lye', items: [
-      {name:"Sodium hydroxide (lye, NaOH)",inci:"Sodium Hydroxide",phase:"other",brand:"",function:"Saponifying agent for bar soap",min:"",max:"",flag:"yes",notes:"Handle with extreme care — highly caustic. Always add lye to water, never water to lye. Wear gloves and eye protection. 99%+ purity required for accurate soap calculations. Store in airtight container — absorbs moisture from air."},
-      {name:"Potassium hydroxide (KOH)",inci:"Potassium Hydroxide",phase:"other",brand:"",function:"Saponifying agent for liquid soap",min:"",max:"",flag:"yes",notes:"Used for liquid and soft soap. Usually 90% purity — account for this in lye calculations. Same safety precautions as NaOH. Always add to water, not the reverse."},
-    ]},
-    { cat: 'Core soap oils', items: [
-      {name:"Olive oil",inci:"Olea Europaea (Olive) Fruit Oil",phase:"oil",brand:"",function:"Conditioning, moisturizing, gentle lather, Castile soap base",min:"",max:"",flag:"no",notes:"Workhorse of soap making. High oleic acid produces mild, conditioning bars. Pure olive oil soap (Castile) takes 4–6 weeks to cure. Pomace grade saponifies similarly but may produce more DOS (dreaded orange spots) over time.",soap:{naoh:0.134,koh:0.188,fa:{palmitic:13,stearic:3,oleic:71,linoleic:10,linolenic:1}}},
-      {name:"Coconut oil (76°)",inci:"Cocos Nucifera (Coconut) Oil",phase:"oil",brand:"",function:"Cleansing, hard bar, fluffy lather",min:"",max:"",flag:"no",notes:"Standard soap-grade coconut oil (76° melt point). The workhorse cleansing oil — high lauric/myristic acid produces hard bars with abundant fluffy lather. Keep under 30% in most recipes to avoid drying. Can use up to 100% with 20%+ superfat for a cleansing bar.",soap:{naoh:0.190,koh:0.266,fa:{lauric:49,myristic:18,palmitic:9,stearic:3,oleic:8,linoleic:2}}},
-      {name:"Palm oil",inci:"Elaeis Guineensis (Palm) Oil",phase:"oil",brand:"",function:"Hardness, stable lather, long-lasting bar",min:"",max:"",flag:"no",notes:"Adds hardness and longevity to bars. High palmitic acid contributes to stable, creamy lather. Controversial ingredient — source RSPO-certified sustainable palm if using. Palm-free alternative: blend tallow or lard with shea and cocoa butter.",soap:{naoh:0.141,koh:0.198,fa:{lauric:1,myristic:1,palmitic:44,stearic:5,oleic:39,linoleic:10}}},
-      {name:"Palm kernel oil",inci:"Elaeis Guineensis (Palm) Kernel Oil",phase:"oil",brand:"",function:"Cleansing, hard bar, similar to coconut oil",min:"",max:"",flag:"no",notes:"Similar soap properties to coconut oil but slightly different fatty acid profile. Can substitute for coconut oil at same %. Source sustainably — same concerns as palm oil.",soap:{naoh:0.178,koh:0.250,fa:{lauric:48,myristic:16,palmitic:9,stearic:3,oleic:15,linoleic:3}}},
-      {name:"Lard (pork)",inci:"Lard",phase:"oil",brand:"",function:"Hardness, creamy lather, skin-feel",min:"",max:"",flag:"no",notes:"Produces very skin-friendly, creamy-lathering bars. High palmitic and stearic acids give hardness without brittleness. Not vegan. An excellent palm-free hardener.",soap:{naoh:0.138,koh:0.194,fa:{myristic:1,palmitic:26,stearic:14,oleic:44,linoleic:10}}},
-      {name:"Beef tallow",inci:"Tallow",phase:"oil",brand:"",function:"Hardness, long-lasting bar, traditional soap base",min:"",max:"",flag:"no",notes:"Traditional soap base — similar to lard but slightly harder. Produces long-lasting, hard bars with creamy lather. Not vegan. Excellent palm alternative.",soap:{naoh:0.140,koh:0.196,fa:{myristic:4,palmitic:26,stearic:22,oleic:38,linoleic:3}}},
-      {name:"Sunflower oil",inci:"Helianthus Annuus (Sunflower) Seed Oil",phase:"oil",brand:"",function:"Conditioning, skin-softening, high linoleic",min:"",max:"",flag:"no",notes:"Keep under 15% in soap — high linoleic acid can cause DOS (dreaded orange spots) over time. Adds skin-conditioning properties. Use high-oleic sunflower for better stability.",soap:{naoh:0.134,koh:0.188,fa:{palmitic:6,stearic:4,oleic:20,linoleic:68,linolenic:1}}},
-      {name:"Sunflower oil (high oleic)",inci:"Helianthus Annuus (Sunflower) Seed Oil",phase:"oil",brand:"",function:"Conditioning, stable, good soap longevity",min:"",max:"",flag:"no",notes:"More stable than standard sunflower in soap — lower linoleic means less risk of DOS. Better choice than regular sunflower for soap making. Use up to 20%.",soap:{naoh:0.136,koh:0.190,fa:{palmitic:4,stearic:4,oleic:82,linoleic:4}}},
-      {name:"Canola oil (rapeseed)",inci:"Brassica Campestris (Rapeseed) Seed Oil",phase:"oil",brand:"",function:"Conditioning, budget-friendly, similar to olive",min:"",max:"",flag:"no",notes:"Budget alternative to olive oil. Produces conditioning bars but softer — needs more hard oils to balance. Keep under 33%.",soap:{naoh:0.124,koh:0.174,fa:{palmitic:4,stearic:2,oleic:61,linoleic:21,linolenic:11}}},
-    ]},
-    { cat: 'Soap additives', items: [
-      {name:"Sodium lactate",inci:"Sodium Lactate",phase:"water",brand:"",function:"Accelerates unmolding, harder bar faster",min:"1",max:"3",flag:"no",notes:"Add to cooled lye water at 1 tsp per pound of oils (~3%). Helps bars release from molds faster and produces harder bars sooner. Do not exceed 3% — can cause ricing or acceleration."},
-      {name:"Kaolin clay (soap grade)",inci:"Kaolin",phase:"other",brand:"",function:"Silky lather, smooth texture, color",min:"1",max:"3",flag:"no",notes:"Add 1 tsp per pound of oils. Dispersed in a small amount of oil before adding to soap batter. Adds slip and silkiness to lather."},
-      {name:"Sodium chloride (table salt)",inci:"Sodium Chloride",phase:"other",brand:"",function:"Salt bar base, hard bar, tightens lather",min:"",max:"",flag:"no",notes:"Used in salt bars — 80–100% of oil weight in salt added at light trace. Produces very hard bars that must be cut within 10–20 minutes of pouring. Lather is lotion-like rather than fluffy."},
-      {name:"Beeswax (soap grade)",inci:"Cera Alba",phase:"oil",brand:"",function:"Hardness, glossy finish",min:"1",max:"3",flag:"no",notes:"Use sparingly in soap — too much causes draggy lather. Adds hardness and a slight sheen. Melt and add to oils before soaping.",soap:{naoh:0.069,koh:0.097,fa:{}}},
-      {name:"Tussah silk fibers",inci:"Silk",phase:"other",brand:"",function:"Silky lather, conditioning, sheen",min:"",max:"",flag:"no",notes:"Dissolve a small pinch in the hot lye solution — the silk dissolves in lye. Produces incredibly silky lather and adds a subtle sheen to bars."},
-    ]},
-  ]},
-];
+// The starter list lives in plume-starter.js: one list of ingredients, each
+// with a type, in the type order given there. Empty if that file did not
+// load, so Quick add says so rather than throwing.
+var SEEDER_ITEMS = (typeof PlumeStarter !== 'undefined') ? PlumeStarter.items : [];
+var SEEDER_TYPES = (typeof PlumeStarter !== 'undefined') ? PlumeStarter.types : [];
 
-// ── Seeder ────────────────────────────────────────────
+// ── Quick add: one list, by type, with search and type chips ──
+// Reorganized 2026-10-16 for a general audience: the starter list is one
+// flat list of ingredients, each with a type (plume-starter.js). Ticks are
+// kept by item index in seederPicked, so they survive searching and
+// switching chips -- the old tabs rebuilt the list and dropped them.
+var seederPicked = new Set();
+var seederType   = '';
+var seederQuery  = '';
+
 function openSeeder() {
-  renderSeederTabs();
+  seederPicked = new Set();
+  seederType = ''; seederQuery = '';
+  var q = document.getElementById('seeder-search');
+  if (q) q.value = '';
+  renderSeederChips();
   renderSeederContent();
+  updateSeederCount();
   openModal('modal-seeder');
 }
 
-function renderSeederTabs() {
-  document.getElementById('seeder-tabs').innerHTML = SEEDER_BATCHES.map(function(b, i) {
-    return '<button class="seeder-tab' + (i === seederTab ? ' active' : '') + '" onclick="switchSeederTab(' + i + ')">' + b.label + '</button>';
-  }).join('');
+// A dropdown, not chips: with nineteen types, chips took four or five rows
+// and squeezed the list they were meant to filter.
+function renderSeederChips() {
+  var counts = {};
+  SEEDER_ITEMS.forEach(function(it) { counts[it.type] = (counts[it.type] || 0) + 1; });
+  var sel = document.getElementById('seeder-type');
+  sel.innerHTML = '<option value="">All types (' + SEEDER_ITEMS.length + ')</option>' +
+    SEEDER_TYPES.map(function(t) {
+      return '<option value="' + esc(t) + '">' + esc(t) + ' (' + (counts[t] || 0) + ')</option>';
+    }).join('');
+  sel.value = seederType;
 }
 
-function switchSeederTab(i) {
-  seederTab = i;
-  renderSeederTabs();
+function setSeederType(t) {
+  seederType = t || '';
+  renderSeederChips();
   renderSeederContent();
-  updateSeederCount();
+}
+
+function setSeederQuery(v) {
+  seederQuery = String(v || '').trim();
+  renderSeederContent();
+}
+
+// Library names, archived ones included, so Quick add can mark what is
+// already there. Purchasing qualifiers are ignored, so a library holding
+// "Grapeseed oil (organic)" marks the starter's "Grapeseed oil".
+function seederNameKey(n) {
+  return String(n || '').toLowerCase().replace(/\((organic|soap grade)\)/g, '').replace(/\s+/g, ' ').trim();
+}
+function libraryNameSet() {
+  return new Set(ingredients.map(function(i) { return seederNameKey(i.name); }));
+}
+// A starter item is in the library under its name or any former name
+// ('aka': "Rosehip oil" from the old import is Rosehip seed oil).
+function seederInLib(item, have) {
+  if (have.has(seederNameKey(item.name))) return true;
+  return (item.aka || []).some(function(a) { return have.has(seederNameKey(a)); });
 }
 
 function renderSeederContent() {
-  var batch = SEEDER_BATCHES[seederTab];
-  document.getElementById('seeder-content').innerHTML = batch.cats.map(function(cat) {
-    return '<div class="seeder-cat-label">' + cat.cat + '</div>' +
-      cat.items.map(function(item, i) {
-        var cbId = 'sc-' + seederTab + '-' + cat.cat.replace(/[\s\/\(\)]/g, '-') + '-' + i;
-        return '<div class="seeder-item">' +
-          '<input type="checkbox" id="' + cbId + '" data-batch="' + seederTab + '" data-cat="' + cat.cat + '" data-idx="' + i + '" onchange="updateSeederCount()">' +
-          '<div class="seeder-item-info">' +
-            '<div class="seeder-item-name">' + item.name + '</div>' +
-            '<div class="seeder-item-inci">' + item.inci + '</div>' +
-          '</div>' +
-          '<span class="phase-badge ' + phaseClass(item.phase) + '" style="font-size:10px">' + item.phase + '</span>' +
-        '</div>';
-      }).join('');
-  }).join('');
+  var box = document.getElementById('seeder-content');
+  if (!SEEDER_ITEMS.length) {
+    box.innerHTML = '<div style="padding:16px 0;font-size:13px;color:var(--ink-light)">The starter list did not load. Check that plume-starter.js sits beside this page.</div>';
+    return;
+  }
+  var have = libraryNameSet();
+  var q = seederQuery;
+  var shown = [];
+  SEEDER_ITEMS.forEach(function(it, idx) {
+    if (seederType && it.type !== seederType) return;
+    var rank = q ? Plume.ingMatchRank(it, q) : 0;
+    if (q && !rank && (it.aka || []).some(function(a) { return a.toLowerCase().indexOf(q.toLowerCase()) !== -1; })) rank = 2;
+    if (q && !rank) return;
+    shown.push({ it: it, idx: idx, rank: rank });
+  });
+  if (!shown.length) {
+    box.innerHTML = '<div style="padding:16px 0;font-size:13px;color:var(--ink-light)">No starter ingredients match' +
+      (q ? ' "' + esc(q) + '"' : '') + (seederType ? ' in ' + esc(seederType) : '') + '.</div>';
+    return;
+  }
+  var html = '';
+  SEEDER_TYPES.forEach(function(t) {
+    var rows = shown.filter(function(r) { return r.it.type === t; });
+    if (!rows.length) return;
+    // Best match first while searching, alphabetical within each band.
+    rows.sort(function(a, b) {
+      return (a.rank - b.rank) || a.it.name.toLowerCase().localeCompare(b.it.name.toLowerCase());
+    });
+    html += '<div class="seeder-cat-label">' + esc(t) + '</div>';
+    rows.forEach(function(r) {
+      var it = r.it, cbId = 'sc-' + r.idx;
+      var inLib = seederInLib(it, have);
+      var fn = it.function ? String(it.function) : '';
+      if (fn.length > 90) fn = fn.slice(0, 87) + '…';
+      html += '<label class="seeder-item' + (inLib ? ' in-lib' : '') + '" for="' + cbId + '">' +
+        '<input type="checkbox" id="' + cbId + '" data-idx="' + r.idx + '"' +
+          (inLib ? ' disabled' : (seederPicked.has(r.idx) ? ' checked' : '')) +
+          ' onchange="seederPick(this)">' +
+        '<div class="seeder-item-info">' +
+          '<div class="seeder-item-name">' + esc(it.name) + '</div>' +
+          '<div class="seeder-item-inci">' + esc(it.inci) + '</div>' +
+          (fn ? '<div class="seeder-item-fn">' + esc(fn) + '</div>' : '') +
+        '</div>' +
+        (inLib ? '<span class="in-lib-tag">in library</span>' : '') +
+        '<span class="phase-badge ' + phaseClass(it.phase) + '" style="font-size:10px">' + esc(it.phase) + '</span>' +
+      '</label>';
+    });
+  });
+  box.innerHTML = html;
 }
 
-function updateSeederCount() {
-  var n = document.querySelectorAll('#modal-seeder input[type=checkbox]:checked').length;
-  document.getElementById('seeder-count').textContent = n + ' selected';
-}
-
-function seederToggleAll() {
-  var visible = document.querySelectorAll('#seeder-content input[type=checkbox]');
-  var anyUnchecked = Array.from(visible).some(function(c) { return !c.checked; });
-  visible.forEach(function(c) { c.checked = anyUnchecked; });
+function seederPick(cb) {
+  var k = parseInt(cb.dataset.idx, 10);
+  if (cb.checked) seederPicked.add(k); else seederPicked.delete(k);
   updateSeederCount();
 }
 
-async function seederAdd() {
-  var checked = Array.from(document.querySelectorAll('#modal-seeder input[type=checkbox]:checked'));
-  if (!checked.length) { alert('Select at least one ingredient.'); return; }
+function updateSeederCount() {
+  document.getElementById('seeder-count').textContent = seederPicked.size + ' selected';
+}
 
-  var btn = document.getElementById('seeder-add-btn');
-  btn.disabled = true;
-  document.getElementById('seeder-progress').style.display = 'block';
-  var bar    = document.getElementById('seeder-bar');
-  var status = document.getElementById('seeder-status');
-  status.className = 'seeder-status';
-  status.textContent = 'Preparing…';
+// Selects or clears everything currently shown (after search and chip),
+// skipping ingredients already in the library.
+function seederToggleAll() {
+  var visible = document.querySelectorAll('#seeder-content input[type=checkbox]:not(:disabled)');
+  var anyUnchecked = Array.from(visible).some(function(c) { return !c.checked; });
+  visible.forEach(function(c) { c.checked = anyUnchecked; seederPick(c); });
+  updateSeederCount();
+}
 
-  var existingNames = new Set(ingredients.map(function(i) { return i.name.toLowerCase(); }));
-  var toAdd = [];
-  checked.forEach(function(cb) {
-    var batch = SEEDER_BATCHES[parseInt(cb.dataset.batch)];
-    var cat   = batch.cats.find(function(c) { return c.cat === cb.dataset.cat; });
-    var item  = cat.items[parseInt(cb.dataset.idx)];
-    if (!existingNames.has(item.name.toLowerCase())) {
-      toAdd.push(Object.assign({}, item, { lots: [], id: Date.now().toString() + Math.random().toString(36).slice(2,6), created: new Date().toISOString() }));
-    }
-  });
-
-  var skipped = checked.length - toAdd.length;
-  var added   = 0;
-  for (var i = 0; i < toAdd.length; i++) {
-    ingredients.push(toAdd[i]);
-    saveData();
-    added++;
-    bar.style.width = Math.round(((i + 1) / toAdd.length) * 100) + '%';
-    status.textContent = 'Saving ' + (i + 1) + ' of ' + toAdd.length + '…';
-    await new Promise(function(r) { setTimeout(r, 40); });
+// A starter item becomes a library ingredient. SAP comes from the SoapCalc
+// reference at this moment, by name: the starter list stores no SAP numbers
+// (its old ones were the stale values session 16 found). No reference row, or
+// one marked unknown, means no SAP -- the lye calculator then says so, rather
+// than calculating from a guess. The reference's fatty acid profile wins;
+// the starter's is the fallback. 'type' and 'aka' are Quick add's own
+// grouping and matching, and are not stored on the ingredient.
+function starterToIngredient(item) {
+  var ing = JSON.parse(JSON.stringify(item));
+  var fa  = item.soap && item.soap.fa ? item.soap.fa : null;
+  delete ing.soap;
+  delete ing.type;
+  delete ing.aka;
+  var ref = (typeof PlumeSap !== 'undefined') ? PlumeSap.lookup(item.name) : null;
+  if (ref && !ref.unknown && ref.naoh) {
+    ing.soap = { naoh: ref.naoh, koh: ref.koh };
+    if (ref.fa || fa) ing.soap.fa = ref.fa || fa;
+  } else if (fa) {
+    ing.soap = { fa: fa };
   }
+  ing.lots    = [];
+  ing.id      = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  ing.created = new Date().toISOString();
+  return ing;
+}
 
-  btn.disabled = false;
+// Saves once at the end. It used to save after every ingredient with a
+// pause between, which for a first-time add of the whole list meant
+// hundreds of saves of an ever-growing library.
+function seederAdd() {
+  var picked = Array.from(seederPicked);
+  if (!picked.length) { alert('Select at least one ingredient.'); return; }
+  var status = document.getElementById('seeder-status');
+  document.getElementById('seeder-progress').style.display = 'block';
+
+  var existing = libraryNameSet();
+  var toAdd = [];
+  picked.forEach(function(idx) {
+    var item = SEEDER_ITEMS[idx];
+    if (!item) return;
+    if (seederInLib(item, existing)) return;
+    existing.add(seederNameKey(item.name));
+    toAdd.push(starterToIngredient(item));
+  });
+  var skipped = picked.length - toAdd.length;
+
+  toAdd.forEach(function(ing) { ingredients.push(ing); });
+  var saved = toAdd.length ? saveData() : true;
+  document.getElementById('seeder-bar').style.width = '100%';
+  if (saved === false) {
+    status.className = 'seeder-status';
+    status.textContent = 'Could not save: browser storage is full. See the red banner for a backup.';
+    return;
+  }
   status.className = 'seeder-status status-ok';
-  status.textContent = 'Done! Added ' + added + ' ingredient' + (added !== 1 ? 's' : '') + (skipped ? ', ' + skipped + ' already in library' : '') + '.';
+  status.textContent = 'Added ' + toAdd.length + ' ingredient' + (toAdd.length !== 1 ? 's' : '') +
+    (skipped ? ', ' + skipped + ' already in library' : '') + '.';
   renderTable(); renderStats();
-  checked.forEach(function(cb) { cb.checked = false; });
+  seederPicked = new Set();
+  renderSeederContent();
   updateSeederCount();
 }
 
