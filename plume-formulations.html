@@ -571,7 +571,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);m
             <input class="ing-search" id="ing-search" placeholder="Search by name, function, or what it's for..." oninput="searchIngs(this.value)" autocomplete="off">
             <div class="ing-dd" id="ing-dd" style="display:none"></div>
           </div>
-          <button class="btn btn-sm" id="addin-btn" onclick="toggleAddin()" title="Add as add-in: drops/grams only, not counted in formula %">Add-in</button>
+          <button class="btn btn-sm" id="addin-btn" onclick="toggleAddin()" title="Changes what the search adds: the next ingredient goes in as an add-in, measured in drops or grams">As add-in</button>
         </div>
         <div id="addin-note" style="font-size:11px;color:var(--clay);margin-top:4px;display:none">Add-in mode on -- next ingredient will not be counted in formula %</div>
         <div id="ing-count" style="margin-top:0.5rem;font-size:12px;color:var(--ink-lighter)"></div>
@@ -1407,13 +1407,11 @@ function updateSoapUI() {
   });
   // Add-in button label
   var btn = document.getElementById('addin-btn');
-  if (btn) btn.textContent = soap ? 'Add-in (additive)' : 'Add-in';
-  // Search placeholder
-  var srch = document.getElementById('ing-search');
-  if (srch) srch.placeholder = soap ? 'Search oils, butters, lye, additives...' : 'Search ingredients to add...';
+  if (btn) btn.textContent = soap ? 'As additive' : 'As add-in';
   // Hide any open addin note
   document.getElementById('addin-note').style.display = 'none';
   addinMode = false;
+  syncSearchPlaceholder();
 }
 
 function onLyeMethodChange() {
@@ -2043,11 +2041,26 @@ function addIng(id) {
   markDirty(); renderLines(); if (isSoap()) recalcSoap(); else recalc();
 }
 
+// The search box says what the next pick will do. Four cases, one place,
+// because the mode and the soap/skincare split used to be read in three
+// different functions that could not see each other.
+function syncSearchPlaceholder() {
+  var srch = document.getElementById('ing-search');
+  if (!srch) return;
+  var soap = isSoap();
+  srch.placeholder = addinMode
+    ? (soap ? 'Next pick goes in as an additive\u2026'
+            : 'Next pick goes in as an add-in\u2026')
+    : (soap ? 'Search oils, butters, lye, additives\u2026'
+            : 'Search ingredients to add\u2026');
+}
+
 function resetAddinMode() {
   addinMode = false;
   var btn = document.getElementById('addin-btn');
   btn.style.background = ''; btn.style.color = ''; btn.style.borderColor = '';
   document.getElementById('addin-note').style.display = 'none';
+  syncSearchPlaceholder();
 }
 
 function toggleAddin() {
@@ -2060,7 +2073,8 @@ function toggleAddin() {
   note.style.display    = addinMode ? 'block' : 'none';
   note.textContent      = isSoap()
     ? 'Add-in mode on \u2014 next ingredient will be added as an additive (not counted in lye calc)'
-    : 'Add-in mode on -- next ingredient will not be counted in formula %';
+    : 'Add-in mode on \u2014 next ingredient will not be counted in formula %';
+  syncSearchPlaceholder();
 }
 
 // ── Skincare recalc ───────────────────────────────────
