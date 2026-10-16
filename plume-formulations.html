@@ -63,6 +63,13 @@
   --ph-active-bg:    #EDE8F8; --ph-active-fg:    #4A3A8A;
   --ph-other:        #888780; /* "other" phase dot in formulations */
 
+  /* Phase box outlines (Formulations editor) — between the pale badge tint
+     and the saturated dot: readable as an edge, quiet across a whole box. */
+  --ph-water-border:     #B9D2EA;
+  --ph-oil-border:       #E2CFA4;
+  --ph-cool-down-border: #B6D6C6;
+  --ph-active-border:    #C9BFE8;
+
   /* Phase dots (Formulations editor) — pure swatch tones, no bg */
   --dot-water:     #378ADD;
   --dot-oil:       #BA7517;
@@ -132,11 +139,25 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);m
 .mf input,.mf select,.mf textarea{font-family:'DM Sans',sans-serif;font-size:13px;padding:6px 8px;border:1px solid var(--cream-border);border-radius:3px;background:var(--white);color:var(--ink);width:100%;outline:none}
 .mf input:focus,.mf select:focus,.mf textarea:focus{border-color:var(--bark-light)}
 .mf textarea{resize:vertical;min-height:60px}
-.phase-group{margin-bottom:1.5rem}
+/* Each phase is a box in its own colour. The header is the top band of
+   that box, so it sits flush — no radius of its own, no gap beneath it. */
+.phase-group{margin-bottom:1.25rem;border:1px solid var(--cream-border);border-radius:4px;overflow:hidden}
+.phase-group > .ing-row:first-of-type,
+.phase-group > .soap-row:first-of-type{margin-top:6px}
+.phase-group .ing-row,
+.phase-group .soap-row{margin-left:6px;margin-right:6px}
+.phase-group .soap-col-hdr{padding-left:16px;padding-right:16px;padding-top:6px}
+.phase-group .soap-total{margin:4px 6px 6px!important}
+.phase-group.ph-water{border-color:var(--ph-water-border)}
+.phase-group.ph-oil{border-color:var(--ph-oil-border)}
+.phase-group.ph-cool-down{border-color:var(--ph-cool-down-border)}
+.phase-group.ph-active{border-color:var(--ph-active-border)}
+.phase-group.ph-other{border-color:var(--cream-border)}
+.phase-group.ph-addin{border-color:var(--clay-light)}
 /* Phase group header. The 10px side padding lines the label up with the
    row content below it (.ing-row is padded 7px 10px); it used to sit flush
    left while every row was indented. */
-.phase-label{font-size:10px;font-weight:500;letter-spacing:0.15em;text-transform:uppercase;color:var(--ink-lighter);padding:6px 10px;border-bottom:2px solid var(--cream-border);border-radius:3px 3px 0 0;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.phase-label{font-size:10px;font-weight:500;letter-spacing:0.15em;text-transform:uppercase;color:var(--ink-lighter);padding:6px 10px;border-bottom:2px solid var(--cream-border);margin-bottom:0;display:flex;align-items:center;gap:8px}
 
 /* Each phase wears its own colour: the pale badge tint as a band, the badge
    ink as the text, and the saturated dot tone as the rule underneath. These
@@ -364,7 +385,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);m
 .id-field{margin-bottom:10px}
 .id-field label{font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-lighter);display:block;margin-bottom:3px}
 .id-field p{font-size:13px;color:var(--ink);line-height:1.6}
-@media print{.app-header,.app-nav,.ed-sidebar,.add-bar,.ed-header .btn,.back-lnk,.ing-rm,.pin-btn,.var-strip,.var-bar,#notes-view{display:none!important}body{background:white;font-size:12px}.app-body{max-width:100%;padding:0}.ed-layout{grid-template-columns:1fr}.ing-row{border:none;border-bottom:1px solid #ddd;border-radius:0;padding:5px 0}.phase-label{border-bottom:2px solid #333;margin-bottom:4px;padding-left:0;background:none!important;color:#000!important;border-bottom-color:#333!important}}
+@media print{.app-header,.app-nav,.ed-sidebar,.add-bar,.ed-header .btn,.back-lnk,.ing-rm,.pin-btn,.var-strip,.var-bar,#notes-view{display:none!important}body{background:white;font-size:12px}.app-body{max-width:100%;padding:0}.ed-layout{grid-template-columns:1fr}.ing-row{border:none;border-bottom:1px solid #ddd;border-radius:0;padding:5px 0;margin-left:0!important;margin-right:0!important}.phase-group{border:none!important;border-radius:0}.phase-label{border-bottom:2px solid #333;margin-bottom:4px;padding-left:0;background:none!important;color:#000!important;border-bottom-color:#333!important}}
 .soap-col-hdr{display:grid;grid-template-columns:1fr 84px 84px 90px 80px auto;gap:6px;padding:0 10px 4px;font-size:9px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-lighter)}
 .soap-row{display:grid;grid-template-columns:1fr 84px 84px 90px 80px auto;gap:6px;align-items:center;padding:7px 10px;border-radius:4px;margin-bottom:4px;background:var(--white);border:1px solid var(--cream-border)}
 .soap-row:hover{border-color:var(--bark-light)}
@@ -1454,7 +1475,7 @@ function renderSoapLines() {
   // Additive rows
   var addinHtml = '';
   if (addins.length) {
-    addinHtml += '<div class="phase-group" style="margin-top:1rem">' +
+    addinHtml += '<div class="phase-group ph-addin" style="margin-top:1rem">' +
       '<div class="phase-label ph-addin">' +
       '<span class="pdot" style="background:var(--clay)"></span>' +
       'Additives / add-ins <span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:10px;margin-left:4px">' +
@@ -1495,8 +1516,8 @@ function renderSoapLines() {
                 :              (100 - totalOilPct).toFixed(2) + '% remaining';
   var totalBg   = overLimit  ? 'var(--danger-bg)' : (atLimit ? 'var(--sage-light)' : 'var(--warning-bg)');
   var totalFg   = overLimit  ? 'var(--danger)'    : (atLimit ? 'var(--success)'    : 'var(--warning)');
-  var totalRow  = oils.length ? ('<div style="display:flex;justify-content:space-between;align-items:center;' +
-    'padding:8px 10px;font-size:12px;font-weight:500;margin-top:4px;border-radius:3px;' +
+  var totalRow  = oils.length ? ('<div class="soap-total" style="display:flex;justify-content:space-between;align-items:center;' +
+    'padding:8px 10px;font-size:12px;font-weight:500;border-radius:3px;' +
     'background:' + totalBg + ';color:' + totalFg + '">' +
     '<span>' + totalMsg + '</span>' +
     '<span>' + totalOilPct.toFixed(2) + '% \u2014 ' + totalOilG.toFixed(0) + 'g</span></div>') : '';
@@ -1504,10 +1525,12 @@ function renderSoapLines() {
   var empty = !oils.length ? '<div style="color:var(--ink-lighter);font-size:13px;padding:1rem 0">No oils yet \u2014 search below to add your first one.</div>' : '';
 
   document.getElementById('phase-groups').innerHTML =
-    '<div style="font-size:10px;font-weight:500;letter-spacing:0.15em;text-transform:uppercase;color:var(--ink-lighter);' +
-    'padding:6px 0;border-bottom:1px solid var(--cream-border);margin-bottom:8px">Oils &amp; butters ' +
-    '<span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:11px">\u2014 % of total oil weight</span></div>' +
-    colHdr + (oilHtml || empty) + totalRow + addinHtml;
+    '<div class="phase-group ph-oil">' +
+      '<div class="phase-label ph-oil"><span class="pdot dot-oil"></span>Oils &amp; butters ' +
+      '<span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:10px;margin-left:4px">' +
+      '\u2014 % of total oil weight</span></div>' +
+      colHdr + (oilHtml || empty) + totalRow +
+    '</div>' + addinHtml;
 
   document.getElementById('ing-count').textContent = oils.length
     ? oils.length + ' oil' + (oils.length !== 1 ? 's' : '') + ' \u2014 ' +
@@ -1741,12 +1764,12 @@ function renderLines() {
   var html = '';
   phases.forEach(function(p) {
     if (!grouped[p] || !grouped[p].length) return;
-    html += '<div class="phase-group"><div class="phase-label ph-' + p + '"><span class="pdot dot-' + p + '"></span>' + phNames[p] + '</div>';
+    html += '<div class="phase-group ph-' + p + '"><div class="phase-label ph-' + p + '"><span class="pdot dot-' + p + '"></span>' + phNames[p] + '</div>';
     grouped[p].forEach(function(r) { html += buildRow(r.l, r.idx, r.ing, bs, false); });
     html += '</div>';
   });
   if (addins.length) {
-    html += '<div class="phase-group"><div class="phase-label ph-addin">' +
+    html += '<div class="phase-group ph-addin"><div class="phase-label ph-addin">' +
       '<span class="pdot" style="background:var(--clay)"></span>Add-ins ' +
       '<span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:10px;margin-left:4px">(not counted in formula %)</span></div>';
     addins.forEach(function(r) {
