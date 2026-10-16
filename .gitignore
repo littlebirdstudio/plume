@@ -1,7 +1,10 @@
 # Test dependencies and build artifacts. The app itself ships no dependencies
 # and needs no build — only the test suites use npm.
+#
+# package-lock.json is deliberately NOT ignored. It pins the test tooling, so
+# a new jsdom or Playwright release cannot turn the tests red on its own. CI
+# installs from it with `npm ci`.
 node_modules/
-package-lock.json
 test/tmp/
 
 # Local scratch

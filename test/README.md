@@ -8,13 +8,27 @@ INCI label list.
 
 From the repository root:
 
-    npm install
+    npm ci
     npx playwright install chromium
     npm test
 
 `npm test` runs all four suites and stops at the first failure. To run one:
 
     node test/test-lock.js
+
+CI runs the same thing on every pull request (`.github/workflows/tests.yml`).
+
+### Why Playwright is pinned to an exact version
+
+Every Playwright release expects one specific Chromium build, so the two move
+together. Most sandboxes and CI images ship a prebuilt Chromium, and if the
+installed Playwright wants a different build number it refuses to start with
+"Executable doesn't exist" — which reads like a broken test suite but is only
+a version mismatch.
+
+`playwright` is therefore pinned exactly (not `^`) in package.json, and
+`package-lock.json` is committed. Upgrading is a deliberate act: bump the
+version, run the suites, and commit the new lockfile together.
 
 ## What each one covers
 
