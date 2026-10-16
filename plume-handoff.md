@@ -92,7 +92,7 @@ Core defines globals with the names modules already use, so **converting a modul
 **A module may override an alias by defining its own function** — this is the intended escape hatch. `plume-ingredients.html` keeps a local `openModal` because it snapshots form state to detect unsaved edits. Share the common case; keep the exception local.
 
 ### Versioning
-`Plume.VERSION` is displayed at the bottom of every converted module's Settings → Storage panel, alongside the active driver name. **Bump it on every core change.** Browsers cache `.js` far more stubbornly than they re-fetch a replaced HTML file, so "is core loaded, and is it the one I just uploaded?" must be answerable by looking. Current: **v1.10** (v1.8 added INCI blend splitting; v1.9 added density resolution; v1.10 ranked search results, best match first; v1.11 added pH records).
+`Plume.VERSION` is displayed at the bottom of every converted module's Settings → Storage panel, alongside the active driver name. **Bump it on every core change.** Browsers cache `.js` far more stubbornly than they re-fetch a replaced HTML file, so "is core loaded, and is it the one I just uploaded?" must be answerable by looking. Current: **v1.10** (v1.8 added INCI blend splitting; v1.9 added density resolution; v1.10 ranked search results, best match first; v1.11 added pH records; v1.12 made it the one app version, shown in every footer).
 
 ### Upload order matters
 `plume-core.js` **first**, then the HTML. A module that arrives before core shows the missing-core banner until core lands. Core alone breaks nothing.
@@ -1032,7 +1032,7 @@ All of it is much easier to decide once phases 1-2 have shown who bites and why.
 - **Square item setup** — codes into the SKU field, items not services, done on desktop in Square Dashboard.
 
 ### Immediate — other
-- **Decide on version stamp** — footers still show `v0.6` despite two sessions of work. Fix the stale `v0.4` print footer in Formulations.
+- ~~Decide on version stamp~~ — **settled session 17**: footers show `Plume.VERSION`; see the session 17 notes.
 - **Name the sellable fork** — gates domain, positioning, copy
 
 ### Higher-value next features
@@ -1370,8 +1370,8 @@ to pick those up in a fresh chat. Ask her for the list.
 
 ### Carried from session 12
 - **Two open decisions from the conversion, both cosmetic, both hers to make.**
-  1. **Palette default drift.** Costing, Batchlog and Packaging each defaulted to `coastal`; core defaults to `sage-green`. Saved choices are unaffected — this only shows on a module where a palette was never explicitly picked. Either accept it, or change `DEFAULT_PALETTE` in core (which would then also move Ingredients and Formulations, converted since session 11).
-  2. **Version stamps are inconsistent across footers**: Costing says v0.6, Batchlog v0.5, Packaging and Ingredients v0.4. Worth a single sweep to one number rather than a per-file decision.
+  1. ~~Palette default drift~~ **Settled session 17: keep per-module palettes and the `sage-green` default.** Her call, recommended: different colours help tell tabs apart, and any module not in the colours she wants is fixed by picking once in its Settings. An app-wide palette was the alternative; dark mode will need a global key anyway (backlog). Original note: **Palette default drift.** Costing, Batchlog and Packaging each defaulted to `coastal`; core defaults to `sage-green`. Saved choices are unaffected — this only shows on a module where a palette was never explicitly picked. Either accept it, or change `DEFAULT_PALETTE` in core (which would then also move Ingredients and Formulations, converted since session 11).
+  2. ~~Version stamps~~ **Settled session 17** (see the session 17 notes). Original note: **Version stamps are inconsistent across footers**: Costing says v0.6, Batchlog v0.5, Packaging and Ingredients v0.4. Worth a single sweep to one number rather than a per-file decision.
 - **Watch for newly-missing costs.** Costing and Batchlog no longer fall through to another lot when the active lot has a blank cost/g. Any ingredient in that state will start reading as a missing cost. That is data becoming visible; the fix is filling in the lot's cost/g in Ingredients.
 - ~~Print sheet from the "Make batch" popup~~ — **built session 13.** `Plume.buildSheet(opts)` / `Plume.openSheet(opts)` in core (v1.4); both modules call it, and a test asserts the two produce byte-identical output. Tick box column added after Grams in all three tables. Original spec, kept for reference: (agreed spec, not built). Identical to the Formulations sheet, scaled to the batch size in the popup, printing the variant actually in use. Recipe and instructions only. **A checkbox column added after the Grams column** in all three tables (skincare, soap, soap add-ins), sized for a dry-erase marker — Heide keeps sheets behind a plastic protector and marks off ingredients as she adds them, because oils and computers don't mix. **Build it as a shared function in core** so Formulations and Batchlog print the same sheet; `newFormula` in Batchlog already holds the whole formula object, so no data plumbing is needed.
 - ~~Manual reordering of variant tabs~~ — **built session 13.** Drag a tab; order saves immediately via `saveAll()` rather than waiting on the dirty flag, since tab order belongs to the formulation, not the variant being edited. `v.num` and `activeVariantId` untouched. Tabs are only draggable when there is more than one. Original spec: so the most-used variant can sit first. Display order only — version numbers unaffected. Drag-to-reorder matches the existing pattern in formulation lines and the costing product list. **In-use marker stays manual; tabs do not auto-sort.**
@@ -1514,7 +1514,7 @@ What this means in practice:
 ### Tests live in the repo now, and CI runs them
 
 `package.json`, `.gitignore`, `package-lock.json` and a `test/` directory are
-committed. `npm test` runs nine suites, ~384 checks (`test-search.js` and `test-ph.js` added session 17).
+committed. `npm test` runs ten suites, ~409 checks (`test-search.js`, `test-ph.js` and `test-version.js` added session 17).
 `.github/workflows/tests.yml` runs the same on every pull request and on push
 to `main`.
 
@@ -1529,6 +1529,7 @@ to `main`.
 | `test-density.js` | Density resolution and the stock arithmetic on it |
 | `test-search.js` | Ingredient search ordering (best match first) |
 | `test-ph.js` | pH: version target, usage-log steps, batch final pH, bench sheet |
+| `test-version.js` | Every footer shows core's version; none types its own |
 
 **Playwright is pinned to an exact version (1.56.0), deliberately.** Each
 release expects one specific Chromium build; a mismatch fails with "Executable
@@ -1822,6 +1823,7 @@ bench sheet's section title has the same fix inline.
 target sits outside its preservative's working pH range, using the pH data
 already on ingredient records. Usage-log entries still cannot be edited
 after saving, only deleted; worth asking if pH steps make that more pressing.
+
 ### Session 17 (cont.) — SAP questions settled (plume-sapdata.js v1.1)
 
 Heide closed the four open SAP questions from the backlog:
@@ -1847,3 +1849,26 @@ Heide closed the four open SAP questions from the backlog:
 
 `test-sap.js` pins the unknown set to exactly those three, so a silently
 blanked row cannot hide among them (78 checks, was 65).
+
+### Session 17 (cont.) — One app version (core v1.12)
+
+**Decided with her:** one automatic number. `Plume.VERSION` in
+`plume-core.js` IS the app version. Every footer has a
+`<span class="plume-version">` that core fills (`Plume.stampVersion()`,
+called from `boot`; the landing page loads core only to call it), and
+Settings → Storage shows the same number. The old footers carried
+hand-typed v0.4 / v0.5 / v0.6 (two with "May 2026"), and Formulations had no
+footer at all; it has one now.
+
+**Rule that comes with it: bump `VERSION` in every pull request, core change
+or not.** That is what lets her confirm, by looking at any footer, that the
+update she just merged is the one loaded. Tests read the number from core,
+so a bump never needs a test edit.
+
+**Gotcha found by the test:** Ingredients and Packaging place their footer
+AFTER their scripts, so it does not exist yet when `boot` runs.
+`stampVersion` waits for `DOMContentLoaded` when the page is still loading.
+
+**Palette: no change, by decision.** Per-module palettes stay, default
+`sage-green`. Recorded under "Carried from session 12".
+
