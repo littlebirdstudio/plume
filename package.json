@@ -1,0 +1,13 @@
+{
+  "name": "plume",
+  "version": "0.6.0",
+  "private": true,
+  "description": "Formulation and production management for Little Bird Studio. The app itself has no build step and no runtime dependencies; this file exists only for the test suites.",
+  "scripts": {
+    "test": "node test/test-lock.js && node test/test-guards.js && node test/test-archive.js && node test/test-inci.js"
+  },
+  "devDependencies": {
+    "jsdom": "^26.0.0",
+    "playwright": "^1.50.0"
+  }
+}

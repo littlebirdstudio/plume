@@ -1,0 +1,9 @@
+# Test dependencies and build artifacts. The app itself ships no dependencies
+# and needs no build — only the test suites use npm.
+node_modules/
+package-lock.json
+test/tmp/
+
+# Local scratch
+*.png
+.DS_Store
