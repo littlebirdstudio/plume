@@ -12,7 +12,7 @@ From the repository root:
     npx playwright install chromium
     npm test
 
-`npm test` runs all five suites and stops at the first failure. To run one:
+`npm test` runs all six suites and stops at the first failure. To run one:
 
     node test/test-lock.js
 
@@ -38,7 +38,8 @@ version, run the suites, and commit the new lockfile together.
 | `test-guards.js` | 21 | What the delete confirmations say — which products break, which batches survive, which version inherits the in-use role |
 | `test-archive.js` | 32 | Archived formulations leaving the list and the pickers while staying resolvable for products that already use them; retired versions leaving the tab strip |
 | `test-inci.js` | 29 | Splitting blend INCI strings; merging a shared component once; the merge note; common-name mode left alone |
-| `test-sap.js` | 59 | The SAP reference data and the review that applies it: the KOH/NaOH ratio on every row, profiles predicting their own SAP, name lookup surviving the INCI collisions, and applying changes without destroying anything |
+| `test-sap.js` | 61 | The SAP reference data and the review that applies it: the KOH/NaOH ratio on every row, profiles predicting their own SAP, name lookup surviving the INCI collisions, and applying changes without destroying anything |
+| `test-ing-archive.js` | 47 | Archiving and un-archiving an ingredient; the delete guard naming which formulations break; an archived ingredient still resolving where used but gone from the add picker; a deleted ingredient rendering a marked row instead of vanishing |
 
 ## How they run
 
@@ -74,6 +75,19 @@ predicting SAP from its own composition. Both hold whatever the source says,
 so a transposed column or an invented profile fails without anyone having to
 notice it by eye. That is what caught the previous SAP values, most of which
 turned out to be one placeholder number stamped across unrelated oils.
+
+**A row that cannot be resolved must still be drawn.** Twice now a line has
+vanished from the formula editor while still counting toward the total: once
+from a stray phase key, once from an ingredient that had been deleted. Both
+times the formula went on reporting 100% while rendering less than that, which
+is the worst possible failure for something you print and then weigh against.
+Render a marked placeholder instead of returning early, and assert that the
+number of rows equals the number of lines.
+
+**Use the real entry point, not the internals.** The first draft of the
+archive suite set `activeVariantId` by hand and called a module-local
+`syncActive`, which does not exist on the page. `selectVariant(vid)` is what
+the version tabs call, so it is what the test should call.
 
 **Name the buckets after the thing, not the fix.** The review first grouped
 oils by which way the number moved when corrected, while labelling the groups

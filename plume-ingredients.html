@@ -266,6 +266,17 @@
     color: var(--ink);
   }
   tbody tr:last-child td { border-bottom: none; }
+  /* Archived rows read as present but set aside: dimmed, never hidden, and
+     still fully clickable, because the whole point of showing them is to be
+     able to open one and bring it back. */
+  tbody tr.row-archived td { opacity: 0.6; }
+  tbody tr.row-archived:hover td { opacity: 1; }
+  .arch-tag {
+    display: inline-block; margin-left: 6px; padding: 1px 6px;
+    font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--ink-lighter); background: var(--cream-dark);
+    border-radius: 2px; vertical-align: middle;
+  }
   /* The rules above are for the ingredient list, where one-line cells are the
      point. The SAP review is a different table in a modal and its oil names
      need the room, so clip and nowrap are undone here. */
@@ -1190,6 +1201,9 @@
       <div id="recently-viewed-list" style="display:flex;gap:8px;flex-wrap:wrap"></div>
     </div>
 
+    <!-- Only rendered when something is archived; see syncArchiveBar(). -->
+    <div id="ing-arch-bar" style="display:none;align-items:center;justify-content:space-between;gap:12px;padding:8px 12px;margin-bottom:10px;border:1px solid var(--cream-border);border-radius:4px;background:var(--cream)"></div>
+
     <div class="table-wrap">
       <table>
         <thead>
@@ -1218,13 +1232,14 @@
         Back to library
       </button>
     </div>
+    <div id="d-arch-banner" style="display:none;padding:10px 14px;margin-bottom:12px;border:1px solid var(--cream-border);border-radius:4px;background:var(--cream);font-size:13px;color:var(--ink-light);line-height:1.45"></div>
     <div class="detail-card">
       <div class="detail-card-header" id="d-header"></div>
       <div class="detail-card-body" id="d-body"></div>
     </div>
     <div class="detail-actions">
       <button class="btn btn-primary" onclick="editCurrent()">Edit ingredient</button>
-      <button class="btn btn-danger" onclick="archiveCurrent()">Archive</button>
+      <button class="btn" id="d-archive-btn" onclick="toggleArchiveCurrent()">Archive</button>
       <button class="btn btn-danger" onclick="deleteCurrent()">Delete permanently</button>
     </div>
     <div class="detail-nav-bottom">
@@ -2325,6 +2340,45 @@ function renderStats() {
   document.getElementById('s-suppliers').textContent = sup.size;
 }
 
+// ── Archived ingredients ──────────────────────────────
+// The toggle only appears when something is archived, so an empty library
+// never shows a control for a state it cannot be in. Mirrors Formulations.
+var showArchived = false;
+
+function syncArchiveBar() {
+  var bar = document.getElementById('ing-arch-bar');
+  if (!bar) return;
+  var n = ingredients.filter(function(i) { return i.archived; }).length;
+  if (!n) { bar.style.display = 'none'; showArchived = false; return; }
+  bar.style.display = 'flex';
+  bar.innerHTML =
+    '<span style="font-size:12px;color:var(--ink-lighter)">' +
+      n + ' archived ingredient' + (n === 1 ? '' : 's') +
+      ' hidden from this list and from the add-ingredient search' +
+    '</span>' +
+    '<button class="btn btn-sm" onclick="toggleShowArchivedIngs()">' +
+      (showArchived ? 'Hide archived' : 'Show ' + n + ' archived') +
+    '</button>';
+}
+
+function toggleShowArchivedIngs() {
+  showArchived = !showArchived;
+  renderTable();
+}
+
+// Archived ingredients the current search would have found, had they not been
+// archived. Runs only when the visible list came back empty, so the cost is
+// paid on the one screen where it buys something.
+function matchesArchived() {
+  var q = (document.getElementById('search').value || '').toLowerCase();
+  if (!q) return [];
+  return ingredients.filter(function(i) {
+    if (!i.archived) return false;
+    var suppText = migrateLots(i).map(function(l) { return l.supplier || ''; }).join(' ').toLowerCase();
+    return Plume.ingMatchRank(i, q) || suppText.indexOf(q) !== -1;
+  });
+}
+
 // ── Table ─────────────────────────────────────────────
 function renderTable() {
   var q     = document.getElementById('search').value.toLowerCase();
@@ -2332,7 +2386,7 @@ function renderTable() {
   var flag  = document.getElementById('filter-flag').value;
   var func  = document.getElementById('f-function-filter').value;
   var list  = ingredients.filter(function(i) {
-    if (i.archived) return false;
+    if (i.archived && !showArchived) return false;
     var lots     = migrateLots(i);
     var suppText = lots.map(function(l) { return l.supplier || ''; }).join(' ').toLowerCase();
     // Matches name, INCI, every function, the function notes and her purpose
@@ -2351,8 +2405,24 @@ function renderTable() {
     return (a.name || '').toLowerCase().localeCompare((b.name || '').toLowerCase());
   });
   var tbody = document.getElementById('tbody');
+  syncArchiveBar();
   var noActive = ingredients.filter(function(i) { return !i.archived; }).length === 0;
   if (!list.length) {
+    // "No results" is a lie when the thing searched for is sitting in the
+    // archive. Without this the only honest conclusion is that it was never
+    // added, which is how an archive quietly becomes a black hole.
+    var hidden = !showArchived ? matchesArchived() : [];
+    if (hidden.length) {
+      tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state">' +
+        '<p>Nothing active matches</p>' +
+        '<span>' + hidden.length + ' archived ingredient' + (hidden.length === 1 ? '' : 's') +
+        ' match' + (hidden.length === 1 ? 'es' : '') + ': ' +
+        esc(hidden.slice(0, 4).map(function(i) { return i.name; }).join(', ')) +
+        (hidden.length > 4 ? ' and ' + (hidden.length - 4) + ' more' : '') + '</span>' +
+        '<div style="margin-top:10px"><button class="btn btn-sm" onclick="toggleShowArchivedIngs()">Include archived</button></div>' +
+        '</div></td></tr>';
+      return;
+    }
     tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><p>' + (noActive ? 'No ingredients yet' : (lowStockActive ? 'No low stock items' : (inStockActive ? 'No ingredients in stock' : 'No results'))) + '</p>' +
       '<span>' + (noActive ? 'Click &quot;+ New ingredient&quot; to get started, or use Quick add from Settings for a curated starter list' : (lowStockActive ? 'All stocked items are above their threshold' : (inStockActive ? 'Add lot quantities to ingredients you have on hand' : 'Try adjusting your search or filters'))) + '</span></div></td></tr>';
     return;
@@ -2366,8 +2436,8 @@ function renderTable() {
     var inStock = hasStock(i);
     var stockHtml = formatStockDisplay(i);
     var qlOpen = qlOpenId === i.id;
-    return '<tr data-ing="' + i.id + '" class="' + (inStock ? 'has-stock' : '') + (qlOpen ? ' ql-open' : '') + '" onclick="toggleQuickLook(\'' + i.id + '\')" title="Click for a quick look">' +
-      '<td class="td-name">' + i.name + (warn ? '<span class="expiry-warn" title="Expiring soon"> &#9888;</span>' : '') + (low ? '<span style="color:var(--warning);font-size:10px;margin-left:4px" title="Low stock">\u25bc</span>' : '') +
+    return '<tr data-ing="' + i.id + '" class="' + (inStock ? 'has-stock' : '') + (qlOpen ? ' ql-open' : '') + (i.archived ? ' row-archived' : '') + '" onclick="toggleQuickLook(\'' + i.id + '\')" title="Click for a quick look">' +
+      '<td class="td-name">' + i.name + (i.archived ? '<span class="arch-tag">archived</span>' : '') + (warn ? '<span class="expiry-warn" title="Expiring soon"> &#9888;</span>' : '') + (low ? '<span style="color:var(--warning);font-size:10px;margin-left:4px" title="Low stock">\u25bc</span>' : '') +
         // The line under the name says what the ingredient IS (function
         // notes). Her reminder note lives in the quick look, one click away.
         (i.function ? '<div class="td-purpose" title="' + esc(i.function) + '">' + esc(i.function.length > 120 ? i.function.slice(0, 117) + '\u2026' : i.function) + '</div>' : '') + '</td>' +
@@ -2397,6 +2467,13 @@ function toggleQuickLook(id) {
   renderTable();
 }
 function openDetailsFromList(e, id) { e.stopPropagation(); viewIngredient(id); }
+
+function unarchiveFromList(e, id) {
+  e.stopPropagation();
+  var idx = ingredients.findIndex(function(i) { return i.id === id; });
+  if (idx > -1) delete ingredients[idx].archived;
+  saveData(); renderTable(); renderStats();
+}
 function openEditFromList(e, id) {
   e.stopPropagation();
   viewingId = id; editFromList = true;
@@ -2428,6 +2505,10 @@ function quickLookHtml(i) {
     '<div class="ql-actions">' +
       '<a onclick="openDetailsFromList(event,\'' + i.id + '\')">Full details \u2192</a>' +
       '<a onclick="openEditFromList(event,\'' + i.id + '\')">Edit</a>' +
+      // Restoring from the list, rather than opening the detail screen to do
+      // it. Archived rows are only on screen because they were asked for, and
+      // asking for them is nearly always a prelude to bringing one back.
+      (i.archived ? '<a onclick="unarchiveFromList(event,\'' + i.id + '\')">Unarchive</a>' : '') +
     '</div>' +
   '</div>';
 }
@@ -2570,6 +2651,7 @@ function viewIngredient(id) {
   viewingId = id;
   trackRecentlyViewed(id);
   showDetail();
+  syncArchiveUI(i);
 
   var lots = migrateLots(i);
   var lotBrands = [];
@@ -3055,15 +3137,127 @@ function saveIngredient(keepOpen) {
   if (editingId && viewingId === editingId) viewIngredient(editingId);
 }
 
+// Which formulations use this ingredient, and in which versions.
+//
+// Every variant is scanned, not just the active one. A line lives on a
+// variant; the top-level f.lines is only a mirror of whichever variant is
+// active, so checking that alone would miss an ingredient used by every
+// other version of the formula and report "used nowhere" about something
+// three versions depend on.
+function ingredientDependents(ingId) {
+  var forms = Store.getJSON('aerie-formulations-v1', []) || [];
+  var out = [];
+  forms.forEach(function(f) {
+    var hits = [];
+    var variants = (f.variants && f.variants.length) ? f.variants : [{ num: f.version || 1, lines: f.lines || [] }];
+    variants.forEach(function(v) {
+      var used = (v.lines || []).some(function(l) { return l.ingId === ingId; });
+      if (used) hits.push(v.label ? (v.label + ' (v' + (v.num || '?') + ')') : ('v' + (v.num || '?')));
+    });
+    if (hits.length) out.push({ name: f.name || '(unnamed)', archived: !!f.archived, versions: hits });
+  });
+  return out;
+}
+
+// "Lotion bar, Lip butter and 2 more"
+function ingNameList(items, max) {
+  var names = items.map(function(x) { return x.name; });
+  if (names.length <= max) return names.join(', ');
+  return names.slice(0, max).join(', ') + ' and ' + (names.length - max) + ' more';
+}
+
+function dependentSummary(dep) {
+  var vCount = dep.reduce(function(n, d) { return n + d.versions.length; }, 0);
+  return dep.length + ' formulation' + (dep.length === 1 ? '' : 's') +
+    (vCount > dep.length ? ' (' + vCount + ' versions)' : '') + ': ' + ingNameList(dep, 4);
+}
+
 function archiveCurrent() {
-  if (!confirm('Archive this ingredient? It will be hidden from the library but not deleted. You can restore it by importing a backup.')) return;
+  var ing = ingredients.find(function(i) { return i.id === viewingId; });
+  if (!ing) return;
+  var dep = ingredientDependents(viewingId);
+
+  var msg = 'Archive "' + (ing.name || 'this ingredient') + '"?\n\n' +
+    'It leaves the library list and stops appearing when you search for an ' +
+    'ingredient to add to a formula. Nothing is deleted, and you can bring it ' +
+    'back at any time with the Show archived button on the library screen.';
+
+  // Archiving is safe for formulations that already use it, because they
+  // resolve a line by id and do not care whether the ingredient is archived.
+  // Worth saying so explicitly: the obvious fear is that archiving breaks
+  // them, and that fear would otherwise push her toward deleting instead,
+  // which is the one action that does break them.
+  if (dep.length) {
+    msg += '\n\nStill used by ' + dependentSummary(dep) + '.\n' +
+      'Those keep working exactly as they do now. Archiving only hides it from ' +
+      'the library and from the add-ingredient search.';
+  }
+  if (!confirm(msg)) return;
+
   var idx = ingredients.findIndex(function(i) { return i.id === viewingId; });
   if (idx > -1) ingredients[idx].archived = true;
   saveData(); renderTable(); renderStats(); showList();
 }
 
+// Un-archiving needs no confirmation. It restores something and takes
+// nothing away, and a dialog in front of a harmless action teaches people to
+// click through dialogs.
+function unarchiveCurrent() {
+  var idx = ingredients.findIndex(function(i) { return i.id === viewingId; });
+  if (idx > -1) delete ingredients[idx].archived;
+  saveData(); renderTable(); renderStats();
+  if (viewingId) viewIngredient(viewingId);
+}
+
+function toggleArchiveCurrent() {
+  var ing = ingredients.find(function(i) { return i.id === viewingId; });
+  if (!ing) return;
+  if (ing.archived) unarchiveCurrent(); else archiveCurrent();
+}
+
+// Keeps the detail screen honest about which state the ingredient is in.
+function syncArchiveUI(ing) {
+  var btn = document.getElementById('d-archive-btn');
+  if (btn) {
+    btn.textContent = ing && ing.archived ? 'Unarchive' : 'Archive';
+    btn.className = 'btn' + (ing && ing.archived ? ' btn-primary' : '');
+  }
+  var ban = document.getElementById('d-arch-banner');
+  if (!ban) return;
+  if (!ing || !ing.archived) { ban.style.display = 'none'; return; }
+  var dep = ingredientDependents(ing.id);
+  ban.style.display = 'block';
+  ban.innerHTML = '<strong>Archived.</strong> Hidden from the library list and ' +
+    'from the search when adding an ingredient to a formula. ' +
+    (dep.length
+      ? 'Still used by ' + esc(dependentSummary(dep)) + ', and those are unaffected. '
+      : '') +
+    'Use Unarchive to put it back.';
+}
+
 function deleteCurrent() {
-  if (!confirm('Permanently delete this ingredient? This cannot be undone.')) return;
+  var ing = ingredients.find(function(i) { return i.id === viewingId; });
+  if (!ing) return;
+  var dep = ingredientDependents(viewingId);
+
+  var msg = 'Permanently delete "' + (ing.name || 'this ingredient') + '"? This cannot be undone.';
+
+  // The damage is stated before it happens, because it is invisible
+  // afterwards. A formulation line holds an ingredient id, so deleting the
+  // ingredient leaves the line pointing at nothing. The line still counts
+  // toward the percentage total, so the formula goes on reporting 100% while
+  // one of its rows is now marked as missing.
+  if (dep.length) {
+    var pct = dep.length === 1 ? 'that formula' : 'those formulas';
+    msg += '\n\nUsed by ' + dependentSummary(dep) + '.\n' +
+      'Deleting it does not remove those lines. Each one keeps its percentage ' +
+      'and starts showing as a missing ingredient, so ' + pct + ' will be short ' +
+      'by that amount until you replace it or delete the line.\n\n' +
+      'Archive instead if you only want it out of the way. Archiving keeps every ' +
+      'formula intact.';
+  }
+  if (!confirm(msg)) return;
+
   ingredients = ingredients.filter(function(i) { return i.id !== viewingId; });
   saveData(); renderStats(); showList();
 }
