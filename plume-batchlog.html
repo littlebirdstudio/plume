@@ -113,6 +113,13 @@ tbody tr:last-child td{border-bottom:none}
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .form-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
 .form-full{grid-column:1/-1}
+/* Final pH (added 2026-10-16) */
+.ph-final{display:grid;grid-template-columns:minmax(0,6em) 6.5em;gap:6px}
+.ph-final input,.ph-final select{min-width:0;width:100%;font-variant-numeric:tabular-nums}
+.ph-note{font-size:11px;color:var(--ink-lighter);line-height:1.5;display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}
+.ph-bad{border-color:var(--danger)!important;background:var(--danger-bg)!important}
+.ph-err{font-size:11px;color:var(--danger)}
+.yield-ph{margin-top:3px}
 
 /* ── Ingredient preview rows ── */
 .ing-preview-hdr{display:grid;grid-template-columns:1fr 90px 90px;gap:8px;padding:6px 10px;font-size:9px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-lighter)}
@@ -393,6 +400,17 @@ tbody tr:last-child td{border-bottom:none}
           <option value="4">4 weeks</option>
           <option value="6">6 weeks</option>
         </select>
+      </div>
+      <div class="field" id="d-ph-row" style="display:none">
+        <label>Final <span class="ph-word">pH</span></label>
+        <div class="ph-final">
+          <input type="text" inputmode="decimal" id="d-ph" placeholder="e.g. 5.3" aria-label="Final pH" oninput="onFinalPhInput()">
+          <select id="d-ph-method" aria-label="Measured with" onchange="onFinalPhInput()">
+            <option value="strip">strip</option><option value="meter">meter</option>
+          </select>
+        </div>
+        <div class="ph-note" id="d-ph-note"></div>
+        <div class="ph-err" id="d-ph-err" style="display:none"></div>
       </div>
       <div class="field form-full">
         <label>Batch name</label>
@@ -773,7 +791,9 @@ function rowHtml(b) {
   return '<tr onclick="openBatchDetail(\'' + b.id + '\')">' +
     '<td>' + fmtDate(b.date) + '</td>' +
     '<td>' + nameDisplay + '</td>' +
-    '<td>' + (b.actualYield || b.targetYield || '--') + 'g</td>' +
+    '<td>' + (b.actualYield || b.targetYield || '--') + 'g' +
+      (b.finalPh ? '<div class="yield-ph">' + Plume.phBadge(b.finalPh, b.finalPhMethod, batchPhTarget(b).min, batchPhTarget(b).max) + '</div>' : '') +
+    '</td>' +
     '<td>' + typeBadge + '</td>' +
     '<td>' + statusBadge + '</td>' +
     '<td>' + pkgLabel + '</td>' +
@@ -1091,7 +1111,9 @@ function printNewBatchSheet() {
     ings:         ings,
     batchSize:    yieldG,
     isSoap:       isSoapType(newFormula.type),
-    soapSettings: newFormula.soapSettings
+    soapSettings: newFormula.soapSettings,
+    phMin:        newFormula.phMin || '',
+    phMax:        newFormula.phMax || ''
   });
 }
 
@@ -1136,6 +1158,8 @@ function saveBatch() {
     batchType:         batchType,
     status:            status,
     notes:             notes,
+    phMin:             newFormula.phMin || '',
+    phMax:             newFormula.phMax || '',
     ingredientSnapshot: ingredientSnapshot,
     packagingRuns:     [],
     committed:         false,
@@ -1177,6 +1201,50 @@ function saveBatch() {
 // ── Batch detail ──
 var editingBatchId = null;
 
+// ── Final pH (added 2026-10-16) ──
+// The target this batch is compared with. A batch made since 2026-10-16
+// carries the target it was made against; an older one reads the
+// formula's current target, which is the best that history allows.
+function batchPhTarget(b) {
+  if (b && Object.prototype.hasOwnProperty.call(b, 'phMin')) return { min: b.phMin || '', max: b.phMax || '' };
+  var f = b && forms.find(function(x) { return x.id === b.formulaId; });
+  return { min: (f && f.phMin) || '', max: (f && f.phMax) || '' };
+}
+
+// pH only means something for a water-based product, so a balm or an oil
+// batch never shows the field. Judged from the formula's lines; if the
+// formula has since been deleted, from the batch's own ingredient snapshot.
+function batchShowsPh(b) {
+  if (!b || isSoapType(b.formulaType)) return false;
+  if (b.finalPh) return true;
+  var t = batchPhTarget(b);
+  if (t.min || t.max) return true;
+  var f = forms.find(function(x) { return x.id === b.formulaId; });
+  var lines = f ? (f.lines || []) : (b.ingredientSnapshot || []).map(function(s) { return { ingId: s.ingredientId }; });
+  return Plume.isAqueous(lines, ings);
+}
+
+function renderFinalPhNote() {
+  var b = editingBatchId ? findBatch(editingBatchId) : null;
+  var note = document.getElementById('d-ph-note');
+  if (!b || !note) return;
+  var t   = batchPhTarget(b);
+  var txt = Plume.phTargetText(t.min, t.max);
+  var val = document.getElementById('d-ph').value;
+  var badge = Plume.parsePh(val) ? Plume.phBadge(val, document.getElementById('d-ph-method').value, t.min, t.max) : '';
+  note.innerHTML = (txt ? '<span>Target ' + esc(txt) + '</span>' : '<span>No target set on the formula</span>') + badge;
+}
+
+function onFinalPhInput() {
+  var el  = document.getElementById('d-ph');
+  var bad = Plume.parsePh(el.value) === null;
+  el.classList.toggle('ph-bad', bad);
+  var pe = document.getElementById('d-ph-err');
+  pe.textContent = bad ? 'A pH is a number from 0 to 14, up to two decimals.' : '';
+  pe.style.display = bad ? '' : 'none';
+  renderFinalPhNote();
+}
+
 function openBatchDetail(id) {
   var b = findBatch(id);
   if (!b) { alert('Batch not found.'); return; }
@@ -1200,6 +1268,14 @@ function openBatchDetail(id) {
   document.getElementById('d-type-sel').value = b.batchType || 'production';
   document.getElementById('d-name').value     = b.batchName || '';
   document.getElementById('d-notes').value    = b.notes || '';
+
+  // Final pH: shown for a water-based batch, or one that already has a reading.
+  document.getElementById('d-ph').value        = b.finalPh || '';
+  document.getElementById('d-ph-method').value = b.finalPhMethod || 'strip';
+  document.getElementById('d-ph-err').style.display = 'none';
+  document.getElementById('d-ph').classList.remove('ph-bad');
+  document.getElementById('d-ph-row').style.display = batchShowsPh(b) ? '' : 'none';
+  renderFinalPhNote();
 
   // Cure row: visible only for soap
   var soap = isSoapType(b.formulaType);
@@ -1697,6 +1773,17 @@ function saveBatchEdits() {
   var cureWks = soap ? parseInt(document.getElementById('d-cure').value, 10) || 4 : null;
 
   if (!yieldG || yieldG <= 0) { alert('Yield must be greater than zero.'); return; }
+
+  var ph = Plume.parsePh(document.getElementById('d-ph').value);
+  if (ph === null) {
+    var pe = document.getElementById('d-ph-err');
+    pe.textContent = 'A pH is a number from 0 to 14, up to two decimals. Fix it to save.';
+    pe.style.display = '';
+    document.getElementById('d-ph').classList.add('ph-bad');
+    return;
+  }
+  if (ph) { b.finalPh = ph; b.finalPhMethod = document.getElementById('d-ph-method').value; }
+  else    { delete b.finalPh; delete b.finalPhMethod; }
 
   b.date        = date;
   b.actualYield = yieldG;

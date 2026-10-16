@@ -149,6 +149,22 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);m
 .mf input,.mf select,.mf textarea{font-family:'DM Sans',sans-serif;font-size:13px;padding:6px 8px;border:1px solid var(--cream-border);border-radius:3px;background:var(--white);color:var(--ink);width:100%;outline:none}
 .mf input:focus,.mf select:focus,.mf textarea:focus{border-color:var(--bark-light)}
 .mf textarea{resize:vertical;min-height:60px}
+/* pH target: two short inputs on one line (added 2026-10-16) */
+.ph-target{display:flex;align-items:center;gap:6px}
+.ph-target input{width:5.5em;font-variant-numeric:tabular-nums}
+.ph-target .ph-to{color:var(--ink-lighter);font-size:12px}
+.ph-hint{font-size:11px;color:var(--ink-lighter);margin-top:4px;line-height:1.5}
+.ph-bad{border-color:var(--danger)!important;background:var(--danger-bg)!important}
+.ph-err{font-size:11px;color:var(--danger);margin-top:4px}
+/* usage-log pH steps editor */
+.ph-step{display:grid;grid-template-columns:5.5em 6.5em minmax(0,1fr) auto;gap:6px;align-items:center;margin-bottom:6px}
+.ph-step input,.ph-step select{font-family:'DM Sans',sans-serif;font-size:13px;padding:6px 8px;border:1px solid var(--cream-border);border-radius:3px;background:var(--white);color:var(--ink);outline:none;min-width:0;width:100%}
+.ph-step input:focus,.ph-step select:focus{border-color:var(--bark-light)}
+.ph-step-x{background:none;border:none;color:var(--ink-lighter);font-size:16px;cursor:pointer;padding:0 4px;line-height:1}
+.ph-step-x:hover{color:var(--danger)}
+.ph-cols{display:grid;grid-template-columns:5.5em 6.5em minmax(0,1fr) auto;gap:6px;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-lighter);margin-bottom:4px}
+.use-ph{margin-top:6px}
+@media (max-width:520px){.ph-step,.ph-cols{grid-template-columns:4.5em 5.8em minmax(0,1fr) auto}}
 /* Each phase is a box in its own colour. The header is the top band of
    that box, so it sits flush — no radius of its own, no gap beneath it. */
 .phase-group{margin-bottom:1.25rem;border:2px solid var(--cream-border);border-radius:4px;overflow:hidden;background:var(--white)}
@@ -556,6 +572,16 @@ span.ing-name-btn{text-decoration:none}
                 <option value="approved">Approved</option><option value="retired">Retired</option>
               </select>
             </div>
+            <div class="mf meta-full" id="ph-target-row" style="display:none">
+              <label>Target <span class="ph-word">pH</span> <span class="mf-scope">this version</span></label>
+              <div class="ph-target">
+                <input type="text" inputmode="decimal" id="f-ph-min" placeholder="min" aria-label="Target pH minimum" oninput="markDirty();checkPhField(this)">
+                <span class="ph-to">to</span>
+                <input type="text" inputmode="decimal" id="f-ph-max" placeholder="max" aria-label="Target pH maximum" oninput="markDirty();checkPhField(this)">
+              </div>
+              <div class="ph-err" id="ph-target-err" style="display:none"></div>
+              <div class="ph-hint">Optional. Leave blank if you don't know it yet. Readings in the usage log and batches show as in or out of this range.</div>
+            </div>
             <div class="mf meta-full">
               <label>Intention / purpose <span class="mf-scope">all versions</span></label>
               <textarea id="f-notes" rows="2" placeholder="What is this formula for? Goals, target skin type, inspiration..." oninput="markDirty()"></textarea>
@@ -735,6 +761,14 @@ span.ing-name-btn{text-decoration:none}
     <div class="field"><label>Date made *</label><input type="date" id="ul-date"></div>
     <div class="field"><label>Batch size made (g)</label><input type="text" inputmode="decimal" id="ul-batch" placeholder="e.g. 100"></div>
     <div class="field"><label>Version</label><input type="text" id="ul-ver" readonly style="background:var(--cream-dark)"></div>
+    <div class="field" id="ul-ph-wrap" style="display:none">
+      <label><span class="ph-word">pH</span> readings <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--ink-lighter)" id="ul-ph-target"></span></label>
+      <div class="ph-cols" id="ul-ph-cols" style="display:none"><span class="ph-word">pH</span><span>By</span><span>Then added</span><span></span></div>
+      <div id="ul-ph-steps"></div>
+      <div><button type="button" class="btn btn-sm" onclick="addPhStep()">+ Add a reading</button></div>
+      <div class="ph-err" id="ul-ph-err" style="display:none"></div>
+      <datalist id="ph-adjusters"></datalist>
+    </div>
     <div class="field"><label>Outcome notes</label><textarea id="ul-notes" rows="4" placeholder="How did it turn out? Texture, scent, stability, feedback, what you would change..."></textarea></div>
     <div class="modal-foot">
       <button class="btn" onclick="closeModal('m-use')">Cancel</button>
@@ -1767,6 +1801,7 @@ function recalcSoap() {
 
 // ── Skincare rendering ────────────────────────────────
 function renderLines() {
+  updatePhUI();
   if (isSoap()) { renderSoapLines(); applyLockState(); return; }
   var phases  = ['water','oil','cool-down','active','other'];
   var phNames = { water:'Water phase', oil:'Oil phase', 'cool-down':'Cool-down phase', active:'Active phase', other:'Other' };
@@ -2304,6 +2339,8 @@ function blankVariant(num, label) {
     lines:         [],
     instructions:  '',
     batchSize:     '',
+    phMin:         '',
+    phMax:         '',
     addinsInTotal: false,
     soapSettings:  undefined,
     usageLog:      [],
@@ -2407,6 +2444,8 @@ function syncActive(f) {
   f.lines         = (av.lines || []).map(function(l) { return Object.assign({}, l); });
   f.status        = av.status || 'draft';
   f.instructions  = av.instructions || '';
+  f.phMin         = av.phMin || '';
+  f.phMax         = av.phMax || '';
   f.addinsInTotal = !!av.addinsInTotal;
   f.soapSettings  = av.soapSettings ? Object.assign({}, av.soapSettings) : undefined;
   f.version       = av.num || 1;
@@ -2419,6 +2458,10 @@ function readEditorState() {
     lines:         fLines.map(function(l) { return Object.assign({}, l); }),
     instructions:  document.getElementById('f-instruct').value,
     status:        document.getElementById('f-status').value,
+    // An entry that is not a pH reads as blank here, so a typo never
+    // saves; the field itself stays red until it is fixed (checkPhField).
+    phMin:         Plume.parsePh(document.getElementById('f-ph-min').value) || '',
+    phMax:         Plume.parsePh(document.getElementById('f-ph-max').value) || '',
     addinsInTotal: getAddinsInTotal(),
     batchSize:     document.getElementById('batch-sz').value || '',
     soapSettings:  isSoap() ? {
@@ -2488,6 +2531,8 @@ function diffStates(prev, next) {
 
   if ((prev.instructions || '') !== (next.instructions || '')) out.push('Method edited');
   if ((prev.status || '') !== (next.status || ''))             out.push('Status ' + (prev.status || 'draft') + ' \u2192 ' + (next.status || 'draft'));
+  var pt = Plume.phTargetText(prev.phMin, prev.phMax), nt = Plume.phTargetText(next.phMin, next.phMax);
+  if (pt !== nt) out.push(!pt ? 'Target pH set to ' + nt : !nt ? 'Target pH cleared (was ' + pt + ')' : 'Target pH ' + pt + ' \u2192 ' + nt);
   if (!!prev.addinsInTotal !== !!next.addinsInTotal)           out.push(next.addinsInTotal ? 'Add-ins now counted in total %' : 'Add-ins no longer counted in total %');
 
   var ps = JSON.stringify(prev.soapSettings || null);
@@ -2590,6 +2635,8 @@ function saveFormula(silent) {
       lines:         v.lines,
       instructions:  v.instructions,
       status:        v.status,
+      phMin:         v.phMin,
+      phMax:         v.phMax,
       addinsInTotal: v.addinsInTotal,
       soapSettings:  v.soapSettings,
       batchSize:     v.batchSize
@@ -2599,6 +2646,8 @@ function saveFormula(silent) {
     v.lines         = next.lines;
     v.instructions  = next.instructions;
     v.status        = next.status;
+    v.phMin         = next.phMin;
+    v.phMax         = next.phMax;
     v.addinsInTotal = next.addinsInTotal;
     v.batchSize     = next.batchSize;
     if (next.soapSettings) v.soapSettings = next.soapSettings;
@@ -2782,7 +2831,7 @@ function isLocked() {
 // Per-version controls. Formulation-level fields (name, type, intention)
 // are shared with every other version and stay editable; so does batch
 // size, which is a working parameter, not part of the formula.
-var LOCK_FIELD_IDS   = ['f-status', 'f-instruct', 'f-addins-in-total'];
+var LOCK_FIELD_IDS   = ['f-status', 'f-instruct', 'f-addins-in-total', 'f-ph-min', 'f-ph-max'];
 var LOCK_CONTAINERS  = ['#phase-groups', '.add-bar', '#sb-soap-lye'];
 
 function applyLockState() {
@@ -2927,6 +2976,10 @@ function loadVariantIntoEditor() {
   fLines = (v.lines || []).map(function(l) { return Object.assign({}, l); });
   document.getElementById('f-status').value   = v.status || 'draft';
   document.getElementById('f-instruct').value = v.instructions || '';
+  document.getElementById('f-ph-min').value = v.phMin || '';
+  document.getElementById('f-ph-max').value = v.phMax || '';
+  checkPhField(document.getElementById('f-ph-min'));
+  checkPhField(document.getElementById('f-ph-max'));
   document.getElementById('f-addins-in-total').checked = !!v.addinsInTotal;
   restoreSoapSettings({ soapSettings: v.soapSettings });
 
@@ -2995,6 +3048,8 @@ function confirmBranch() {
   if (src.status === 'approved') nv.status = 'draft';
   nv.lines         = state.lines;
   nv.instructions  = state.instructions;
+  nv.phMin         = state.phMin || '';
+  nv.phMax         = state.phMax || '';
   nv.addinsInTotal = state.addinsInTotal;
   nv.batchSize     = state.batchSize;
   nv.soapSettings  = state.soapSettings;
@@ -3197,6 +3252,7 @@ function revertTo(hid) {
   var nowState = readEditorState();
   var changes  = diffStates({
     lines: v.lines, instructions: v.instructions, status: v.status,
+    phMin: v.phMin, phMax: v.phMax,
     addinsInTotal: v.addinsInTotal, soapSettings: v.soapSettings, batchSize: v.batchSize
   }, nowState);
   if (changes.length) pushHistory(v, 'edit', changes, '', nowState);
@@ -3208,10 +3264,15 @@ function revertTo(hid) {
   v.addinsInTotal = !!sn.addinsInTotal;
   if (sn.soapSettings) v.soapSettings = Object.assign({}, sn.soapSettings);
   if (sn.batchSize)    v.batchSize    = sn.batchSize;
+  // Snapshots from before 2026-10-16 have no target field at all. Reverting
+  // to one must not read that absence as "no target" and wipe the current one.
+  if (Object.prototype.hasOwnProperty.call(sn, 'phMin')) v.phMin = sn.phMin || '';
+  if (Object.prototype.hasOwnProperty.call(sn, 'phMax')) v.phMax = sn.phMax || '';
   v.updatedAt = new Date().toISOString();
 
   pushHistory(v, 'revert', ['Reverted to the state from ' + ds], e.note || '', {
     lines: v.lines, instructions: v.instructions, status: v.status,
+    phMin: v.phMin, phMax: v.phMax,
     addinsInTotal: v.addinsInTotal, soapSettings: v.soapSettings, batchSize: v.batchSize
   });
 
@@ -3384,11 +3445,131 @@ function deleteFormula() {
   saveAll(); curId = null; curVid = null; goList();
 }
 
+// ── pH (added 2026-10-16) ─────────────────────────────
+// The target lives on the version; readings live in the usage log (the
+// steps of a test pour) and in Batchlog (a batch's final pH). Fields only
+// appear for a formula with a water-phase ingredient -- pH means nothing
+// in a balm -- or one that already carries a target.
+function phApplies() {
+  if (isSoap()) return false;
+  var v = curVar();
+  return Plume.isAqueous(fLines, ings) ||
+    !!(document.getElementById('f-ph-min').value || document.getElementById('f-ph-max').value) ||
+    !!(v && (v.phMin || v.phMax));
+}
+
+function updatePhUI() {
+  var row = document.getElementById('ph-target-row');
+  if (row) row.style.display = phApplies() ? '' : 'none';
+}
+
+// Marks a field that is not a pH, and says why, rather than dropping the
+// value silently at save.
+function checkPhField(el) {
+  if (!el) return;
+  var bad = Plume.parsePh(el.value) === null;
+  el.classList.toggle('ph-bad', bad);
+  if (el.id === 'f-ph-min' || el.id === 'f-ph-max') {
+    var a = document.getElementById('f-ph-min'), b = document.getElementById('f-ph-max');
+    var err = document.getElementById('ph-target-err');
+    var lo = Plume.phNum(a.value), hi = Plume.phNum(b.value);
+    var msg = '';
+    if (Plume.parsePh(a.value) === null || Plume.parsePh(b.value) === null) {
+      msg = 'A pH is a number from 0 to 14, up to two decimals. This will not save until it is one.';
+    } else if (lo !== null && hi !== null && lo > hi) {
+      msg = 'The minimum is above the maximum.';
+    }
+    err.textContent = msg;
+    err.style.display = msg ? '' : 'none';
+  }
+}
+
+// Every adjuster she has typed before, most-used first, offered as she
+// types. Free text by design: a few drops never move stock or cost.
+function phAdjusterList() {
+  var count = {};
+  forms.forEach(function(f) {
+    (f.variants || []).forEach(function(v) {
+      (v.usageLog || []).forEach(function(e) {
+        (e.ph || []).forEach(function(s) {
+          var a = s && s.add ? String(s.add).trim() : '';
+          if (a) count[a] = (count[a] || 0) + 1;
+        });
+      });
+    });
+  });
+  return Object.keys(count).sort(function(a, b) {
+    return (count[b] - count[a]) || a.toLowerCase().localeCompare(b.toLowerCase());
+  });
+}
+
+function resetPhSteps(v) {
+  var wrap = document.getElementById('ul-ph-wrap');
+  var show = phApplies();
+  wrap.style.display = show ? '' : 'none';
+  document.getElementById('ul-ph-steps').innerHTML = '';
+  document.getElementById('ul-ph-cols').style.display = 'none';
+  document.getElementById('ul-ph-err').style.display = 'none';
+  var t = Plume.phTargetText(v && v.phMin, v && v.phMax);
+  document.getElementById('ul-ph-target').textContent = t ? '\u00b7 target ' + t : '';
+  document.getElementById('ph-adjusters').innerHTML = phAdjusterList().map(function(a) {
+    return '<option value="' + esc(a) + '"></option>';
+  }).join('');
+}
+
+function addPhStep() {
+  var box = document.getElementById('ul-ph-steps');
+  // A new reading usually uses the same instrument as the one before it.
+  var prev = box.querySelector('.ph-step:last-child select');
+  var m = prev ? prev.value : 'strip';
+  var row = document.createElement('div');
+  row.className = 'ph-step';
+  row.innerHTML =
+    '<input type="text" inputmode="decimal" class="ph-v" placeholder="e.g. 5.5" aria-label="pH reading" oninput="checkPhField(this)">' +
+    '<select class="ph-m" aria-label="Measured with"><option value="strip">strip</option><option value="meter">meter</option></select>' +
+    '<input type="text" class="ph-a" list="ph-adjusters" placeholder="optional, e.g. 3 drops 50% citric" aria-label="Then added">' +
+    '<button type="button" class="ph-step-x" title="Remove this reading" onclick="this.parentNode.remove();syncPhCols()">\u00d7</button>';
+  row.querySelector('select').value = m;
+  box.appendChild(row);
+  syncPhCols();
+  row.querySelector('.ph-v').focus();
+}
+
+function syncPhCols() {
+  document.getElementById('ul-ph-cols').style.display =
+    document.querySelectorAll('#ul-ph-steps .ph-step').length ? '' : 'none';
+}
+
+// Returns the steps, [] when none were entered, or null when a reading is
+// not a pH (the entry is then not saved, and the message says why).
+function readPhSteps() {
+  var err = document.getElementById('ul-ph-err');
+  if (document.getElementById('ul-ph-wrap').style.display === 'none') return [];
+  var out = [], bad = false;
+  var rows = document.querySelectorAll('#ul-ph-steps .ph-step');
+  for (var i = 0; i < rows.length; i++) {
+    var raw = rows[i].querySelector('.ph-v').value;
+    var v   = Plume.parsePh(raw);
+    var add = rows[i].querySelector('.ph-a').value.trim();
+    if (v === null) { bad = true; rows[i].querySelector('.ph-v').classList.add('ph-bad'); continue; }
+    if (!v && !add) continue;
+    var st = { v: v, m: rows[i].querySelector('.ph-m').value };
+    if (add) st.add = add;
+    out.push(st);
+  }
+  err.textContent = bad ? 'A pH is a number from 0 to 14, up to two decimals. Fix the red reading to save.' : '';
+  err.style.display = bad ? '' : 'none';
+  return bad ? null : out;
+}
+
 // ── Usage log (per variant) ───────────────────────────
 function openUsage() {
   var v = curVar();
   if (!v) { alert('Open a version first.'); return; }
-  document.getElementById('ul-date').value  = new Date().toISOString().slice(0,10);
+  // Local date, not toISOString(): that is UTC, so an entry logged after
+  // 4pm in Alaska used to default to tomorrow.
+  document.getElementById('ul-date').value  = Plume.todayISO();
+  resetPhSteps(v);
   document.getElementById('ul-batch').value = document.getElementById('batch-sz').value || '';
   document.getElementById('ul-ver').value   = varTitle(v);
   document.getElementById('ul-notes').value = '';
@@ -3400,13 +3581,17 @@ function saveUseEntry() {
   if (!date) { alert('Please enter a date.'); return; }
   var v = curVar();
   if (!v) { closeModal('m-use'); return; }
-  v.usageLog = (v.usageLog || []).concat([{
+  var steps = readPhSteps();
+  if (steps === null) return;   // a reading that is not a pH; the form says which
+  var entry = {
     id:      newVid(),
     date:    date,
     batch:   document.getElementById('ul-batch').value,
     version: varTitle(v),
     notes:   document.getElementById('ul-notes').value.trim()
-  }]);
+  };
+  if (steps.length) entry.ph = steps;
+  v.usageLog = (v.usageLog || []).concat([entry]);
   saveAll(); closeModal('m-use'); renderUseLog(v);
 }
 
@@ -3431,6 +3616,9 @@ function renderUseLog(v) {
     html += '<span class="use-date">' + esc(d) + '</span>';
     html += '<span class="use-meta">' + (e.batch ? esc(e.batch) + 'g' : '') + '</span>';
     html += '<button class="use-del" onclick="delUseEntry(\'' + e.id + '\')">x</button></div>';
+    // The final reading is compared with the version's CURRENT target --
+    // the log is a working record for this version, not a historical one.
+    if (e.ph && e.ph.length) html += '<div class="use-ph">' + Plume.phStepsHtml(e.ph, v.phMin, v.phMax) + '</div>';
     if (e.notes) html += '<div class="use-notes">' + esc(e.notes) + '</div>';
     html += '</div>';
   });
@@ -3538,7 +3726,9 @@ function printFormula() {
     lines:        fLines,
     ings:         ings,
     batchSize:    parseFloat(document.getElementById('batch-sz').value) || 100,
-    isSoap:       isSoap()
+    isSoap:       isSoap(),
+    phMin:        Plume.parsePh(document.getElementById('f-ph-min').value) || '',
+    phMax:        Plume.parsePh(document.getElementById('f-ph-max').value) || ''
   };
 
   if (opts.isSoap) {

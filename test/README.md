@@ -12,7 +12,7 @@ From the repository root:
     npx playwright install chromium
     npm test
 
-`npm test` runs all eight suites and stops at the first failure. To run one:
+`npm test` runs all nine suites and stops at the first failure. To run one:
 
     node test/test-lock.js
 
@@ -42,6 +42,7 @@ version, run the suites, and commit the new lockfile together.
 | `test-ing-archive.js` | 47 | Archiving and un-archiving an ingredient; the delete guard naming which formulations break; an archived ingredient still resolving where used but gone from the add picker; a deleted ingredient rendering a marked row instead of vanishing |
 | `test-density.js` | 29 | Density resolution without a DOM: explicit beats reference beats category beats guess; the measured values; the categories that refuse to guess; and the stock arithmetic that now stops treating a litre of oil as a kilogram |
 | `test-search.js` | 18 | Search ordering: names starting with the query first, then a later word of the name, then INCI, then mid-word, then notes; checked in the Ingredients list and the Formulations dropdown |
+| `test-ph.js` | 75 | pH records: parsing and range checks; which formulas get pH (water phase only, never soap); the bench sheet block; the version target (validation, history, mirroring, new versions, approval lock); usage-log steps; a batch's final pH against the target it was made with |
 
 ## How they run
 
