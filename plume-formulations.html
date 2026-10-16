@@ -199,6 +199,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);m
 .ing-row.addin{border-style:dashed;border-color:var(--cream-border);background:var(--cream)}
 .ing-name-btn{background:none;border:none;cursor:pointer;font-weight:500;font-size:13px;color:var(--ink);padding:0;text-align:left;text-decoration:underline;text-decoration-color:var(--cream-border)}
 .ing-name-btn:hover{color:var(--bark)}
+/* The stub for a deleted ingredient reuses this class for layout, but it is
+   a span with no handler. Underlined it would read as a link that does
+   nothing, which looks like a bug rather than like missing data. */
+span.ing-name-btn{text-decoration:none}
 .ing-inci{font-size:11px;color:var(--ink-lighter);font-style:italic}
 .ing-inp{font-family:'DM Sans',sans-serif;font-size:13px;padding:5px 6px;border:1px solid var(--cream-border);border-radius:3px;background:var(--cream);color:var(--ink);width:100%;text-align:right;outline:none;cursor:text}
 .ing-inp:focus{border-color:var(--bark-light);background:var(--white)}
@@ -409,6 +413,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);m
 .soap-row{display:grid;grid-template-columns:1fr 84px 84px 90px 80px auto;gap:6px;align-items:center;padding:7px 10px;border-radius:4px;margin-bottom:4px;background:var(--white);border:1px solid var(--cream-border)}
 .soap-row:hover{border-color:var(--bark-light)}
 .soap-row.no-sap{border-color:var(--warning);background:var(--warning-bg)}
+/* A line whose ingredient no longer exists. Deliberately the loudest state in
+   the editor: it outranks the stock tints and the min/max warning, because
+   every one of those describes an ingredient that is at least still there. */
+.ing-row.ing-missing,
+.soap-row.ing-missing{border:1px dashed var(--warning)!important;background:var(--warning-bg)!important}
+.ing-row.ing-missing .ing-inci,
+.soap-row.ing-missing .ing-inci{display:none}
 
 /* ── Stock-on-hand indicator ── */
 /* Clay tint mirrors plume-ingredients.html so the visual vocabulary stays
@@ -1447,8 +1458,7 @@ function renderSoapLines() {
   var oilHtml = '';
   fLines.forEach(function(l, idx) {
     if (l.soapAddin) return;
-    var ing = ings.find(function(i) { return i.id === l.ingId; });
-    if (!ing) return;
+    var ing = resolveIng(l.ingId);
     var pct      = parseFloat(l.pct) || 0;
     var gFromPct = pct / 100 * bs;
     var sap      = ing.soap && ing.soap[lyeKey] ? ing.soap[lyeKey] : null;
@@ -1464,9 +1474,13 @@ function renderSoapLines() {
     var sg       = stockG(ing);
     var stockCls = sst === 'enough' ? ' has-stock' : (sst === 'partial' ? ' partial-stock' : '');
 
-    oilHtml += '<div class="soap-row' + (!sap && pct > 0 ? ' no-sap' : '') + stockCls + '">';
+    oilHtml += '<div class="soap-row' + (ing.missing ? ' ing-missing' : '') + (!sap && pct > 0 ? ' no-sap' : '') + stockCls + '">';
     oilHtml += '<div>';
-    oilHtml += '<button class="ing-name-btn" onclick="showIngDetail(\'' + ing.id + '\')">' + esc(ing.name) + '</button>';
+    oilHtml += ing.missing
+      ? '<span class="ing-name-btn" style="cursor:default;color:var(--warning)">' + esc(ing.name) + '</span>'
+      : '<button class="ing-name-btn" onclick="showIngDetail(\'' + ing.id + '\')">' + esc(ing.name) + '</button>';
+    if (ing.missing) oilHtml += '<div style="font-size:10px;color:var(--warning);margin-top:1px">' +
+      'Deleted from the library. Its ' + pct + '% still counts toward the total and toward the lye.</div>';
     if (sap) {
       oilHtml += '<div style="font-size:10px;color:var(--sage-dark);margin-top:1px">' +
         lyeLabel + ' SAP: ' + sap +
@@ -1499,8 +1513,7 @@ function renderSoapLines() {
       '(fragrance, colorants, exfoliants)</span></div>';
     fLines.forEach(function(l, idx) {
       if (!l.soapAddin) return;
-      var ing = ings.find(function(i) { return i.id === l.ingId; });
-      if (!ing) return;
+      var ing = resolveIng(l.ingId);
       var g      = parseFloat(l.gramsFixed) || 0;
       var pctPPO = totalOilG > 0 && g > 0 ? (g / totalOilG * 100).toFixed(2) + '% PPO' : '--';
       var cpg    = bestCpg(ing);
@@ -1508,8 +1521,10 @@ function renderSoapLines() {
       var sstA   = stockState(ing, g);
       var sgA    = stockG(ing);
       var stockClsA = sstA === 'enough' ? ' has-stock' : (sstA === 'partial' ? ' partial-stock' : '');
-      addinHtml += '<div class="soap-row addin' + stockClsA + '">';
-      addinHtml += '<div><button class="ing-name-btn" onclick="showIngDetail(\'' + ing.id + '\')">' + esc(ing.name) + '</button>' +
+      addinHtml += '<div class="soap-row addin' + (ing.missing ? ' ing-missing' : '') + stockClsA + '">';
+      addinHtml += '<div>' + (ing.missing
+        ? '<span class="ing-name-btn" style="cursor:default;color:var(--warning)">' + esc(ing.name) + '</span>'
+        : '<button class="ing-name-btn" onclick="showIngDetail(\'' + ing.id + '\')">' + esc(ing.name) + '</button>') +
         '<span class="addin-badge" style="margin-left:6px">add-in</span>';
       addinHtml += '<div class="ing-inci">' + esc(ing.inci) + '</div>';
       if (sstA === 'partial') addinHtml += '<div class="stock-note">' + Math.round(sgA) + 'g on hand &middot; need ' + g.toFixed(1) + 'g</div>';
@@ -1760,7 +1775,7 @@ function renderLines() {
   var addins = [];
   fLines.forEach(function(l, idx) {
     if (l.addin) { addins.push({ l:l, idx:idx }); return; }
-    var ing = ings.find(function(i) { return i.id === l.ingId; });
+    var ing = resolveIng(l.ingId);
     var ph  = effPhase(l, ing);
     if (!grouped[ph]) grouped[ph] = [];
     grouped[ph].push({ l:l, idx:idx, ing:ing });
@@ -1790,8 +1805,7 @@ function renderLines() {
       '<span class="pdot" style="background:var(--clay)"></span>Add-ins ' +
       '<span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:10px;margin-left:4px">(not counted in formula % unless toggled above)</span></div>';
     addins.forEach(function(r) {
-      var ing = ings.find(function(i) { return i.id === r.l.ingId; });
-      html += buildRow(r.l, r.idx, ing, bs, true);
+      html += buildRow(r.l, r.idx, resolveIng(r.l.ingId), bs, true);
     });
     html += '</div>';
   }
@@ -1809,8 +1823,25 @@ function renderLines() {
   applyLockState();
 }
 
+// A line outlives the ingredient it points at. Deleting an ingredient leaves
+// every formulation still holding its id, and the old behaviour was to drop
+// those rows: the line kept counting toward the percentage total while
+// vanishing from the screen, so a formula rendered 60% of its rows under a
+// header reading 100.00%. A bench sheet printed from that is simply wrong,
+// and nothing said so.
+//
+// Same family as the stray-phase-key bug above. A row that cannot be resolved
+// must still be shown, never swallowed. Resolving to a marked stub keeps the
+// line visible through every path that renders it.
+function resolveIng(id) {
+  var ing = ings.find(function (i) { return i.id === id; });
+  if (ing) return ing;
+  return { id: id, missing: true, name: 'Missing ingredient', inci: '',
+           phase: 'other', functionCategory: [], lots: [] };
+}
+
 function buildRow(l, idx, ing, bs, isAddin) {
-  if (!ing) return '';
+  if (!ing) ing = resolveIng(l && l.ingId);
   var pinned = !!l.pinned;
   var pct    = parseFloat(l.pct) || 0;
   var gf     = parseFloat(l.gramsFixed) || 0;
@@ -1833,7 +1864,7 @@ function buildRow(l, idx, ing, bs, isAddin) {
   var ePh    = effPhase(l, ing);
   var defPh  = normPhase(ing && ing.phase);
   var phOvr  = !isAddin && !!l.phase && l.phase !== defPh;
-  var row = '<div class="ing-row' + (warn?' warn':'') + (isAddin?' addin':'') + stockCls + '"' +
+  var row = '<div class="ing-row' + (ing.missing?' ing-missing':'') + (warn?' warn':'') + (isAddin?' addin':'') + stockCls + '"' +
     ' draggable="true"' +
     ' ondragstart="onLineDragStart(event,' + idx + ')"' +
     ' ondragend="onLineDragEnd(event)"' +
@@ -1842,7 +1873,13 @@ function buildRow(l, idx, ing, bs, isAddin) {
     ' ondrop="onLineDrop(event,' + idx + ')">';
   row += '<div>';
   row += '<div><span class="drag-handle" title="Drag to reorder within phase">&#8942;&#8942;</span>';
-  row += '<button class="ing-name-btn" onclick="showIngDetail(\'' + ing.id + '\')">' + esc(ing.name) + '</button>';
+  // No detail popup for a stub: there is nothing to show, and a dead button
+  // would read as a bug rather than as missing data.
+  if (ing.missing) {
+    row += '<span class="ing-name-btn" style="cursor:default;color:var(--warning)">' + esc(ing.name) + '</span>';
+  } else {
+    row += '<button class="ing-name-btn" onclick="showIngDetail(\'' + ing.id + '\')">' + esc(ing.name) + '</button>';
+  }
   if (ing.flag === 'yes') row += '<span style="font-size:10px;color:var(--warning);margin-left:4px">&#9679;</span>';
   if (pinned && !isAddin) row += '<span class="pinned-badge">pinned</span>';
   if (isAddin) row += '<span class="addin-badge">add-in</span>';
@@ -1855,6 +1892,11 @@ function buildRow(l, idx, ing, bs, isAddin) {
   }
   row += '</div>';
   row += '<div class="ing-inci">' + esc(ing.inci) + '</div>';
+  if (ing.missing) {
+    row += '<div class="warn-txt">This ingredient was deleted from the library. Its ' +
+      'percentage still counts toward the total, so the formula is short until you ' +
+      'replace it or remove the line.</div>';
+  }
   if (sst === 'partial') row += '<div class="stock-note">' + Math.round(sg) + 'g on hand &middot; need ' + gNum.toFixed(1) + 'g</div>';
   if (warn) row += '<div class="warn-txt">' + (over ? 'Over max (' + ing.max + '%) ' : '') + (under ? 'Under min (' + ing.min + '%)' : '') + '</div>';
   if (isAddin) {
