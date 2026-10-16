@@ -2358,21 +2358,37 @@ function syncArchiveBar() {
   // a search and then clearing the search leaves the whole library on screen
   // with archived mixed in, and that banner was the only thing that could
   // have said so.
-  var msg = showArchived
-    ? 'Showing ' + n + ' archived ingredient' + (n === 1 ? '' : 's') +
-      ' alongside the rest. They stay out of the add-ingredient search either way.'
-    : n + ' archived ingredient' + (n === 1 ? '' : 's') +
-      ' hidden from this list and from the add-ingredient search';
+  // Three states, because the archive behaves differently while searching.
+  var inResults = archivedInResults();
+  var searching = !!(document.getElementById('search').value || '').trim();
+  var msg, lit;
 
-  bar.style.background   = showArchived ? 'var(--cream-dark)' : 'var(--cream)';
-  bar.style.borderColor  = showArchived ? 'var(--bark-light)' : 'var(--cream-border)';
+  if (searching) {
+    lit = inResults > 0;
+    msg = inResults
+      ? 'Your search is also looking in the archive, and found ' + inResults +
+        ' archived ingredient' + (inResults === 1 ? '' : 's') + ', tagged below.'
+      : 'Searching the archive too. No archived ingredient matches this one, so it is safe to add as new.';
+  } else if (showArchived) {
+    lit = true;
+    msg = 'Showing ' + n + ' archived ingredient' + (n === 1 ? '' : 's') +
+          ' alongside the rest. They stay out of the add-ingredient search either way.';
+  } else {
+    lit = false;
+    msg = n + ' archived ingredient' + (n === 1 ? '' : 's') +
+          ' hidden while browsing. Searching still finds them.';
+  }
+
+  bar.style.background  = lit ? 'var(--cream-dark)' : 'var(--cream)';
+  bar.style.borderColor = lit ? 'var(--bark-light)' : 'var(--cream-border)';
   bar.innerHTML =
-    '<span style="font-size:12px;color:' + (showArchived ? 'var(--ink)' : 'var(--ink-lighter)') + '">' +
+    '<span style="font-size:12px;color:' + (lit ? 'var(--ink)' : 'var(--ink-lighter)') + '">' +
       esc(msg) +
     '</span>' +
-    '<button class="btn btn-sm" onclick="toggleShowArchivedIngs()">' +
-      (showArchived ? 'Hide archived' : 'Show ' + n + ' archived') +
-    '</button>';
+    (searching ? '' :
+      '<button class="btn btn-sm" onclick="toggleShowArchivedIngs()">' +
+        (showArchived ? 'Hide archived' : 'Show ' + n + ' archived') +
+      '</button>');
 }
 
 function toggleShowArchivedIngs() {
@@ -2380,17 +2396,16 @@ function toggleShowArchivedIngs() {
   renderTable();
 }
 
-// Archived ingredients the current search would have found, had they not been
-// archived. Runs only when the visible list came back empty, so the cost is
-// paid on the one screen where it buys something.
-function matchesArchived() {
+// How many archived ingredients the current search is surfacing. Used only
+// to word the banner; the rows themselves come through the normal filter.
+function archivedInResults() {
   var q = (document.getElementById('search').value || '').toLowerCase();
-  if (!q) return [];
+  if (!q) return 0;
   return ingredients.filter(function(i) {
     if (!i.archived) return false;
     var suppText = migrateLots(i).map(function(l) { return l.supplier || ''; }).join(' ').toLowerCase();
     return Plume.ingMatchRank(i, q) || suppText.indexOf(q) !== -1;
-  });
+  }).length;
 }
 
 // ── Table ─────────────────────────────────────────────
@@ -2400,7 +2415,19 @@ function renderTable() {
   var flag  = document.getElementById('filter-flag').value;
   var func  = document.getElementById('f-function-filter').value;
   var list  = ingredients.filter(function(i) {
-    if (i.archived && !showArchived) return false;
+    // Browsing and searching are different acts, so the archive answers to
+    // them differently.
+    //
+    // Browsing wants a short list, which is the whole reason to archive
+    // anything. But a search is naming a specific thing, and the archive
+    // exists precisely to hold ingredients not stocked but worth keeping.
+    // Answering "no results" for something sitting in it is how a duplicate
+    // gets created, which is worse than a longer list: now there are two
+    // records of one ingredient and the lots and costs are split across them.
+    //
+    // So a text query reaches the archive whether or not the toggle is on.
+    // The filters below do not, because picking "oil phase" is browsing.
+    if (i.archived && !showArchived && !q) return false;
     var lots     = migrateLots(i);
     var suppText = lots.map(function(l) { return l.supplier || ''; }).join(' ').toLowerCase();
     // Matches name, INCI, every function, the function notes and her purpose
@@ -2422,21 +2449,9 @@ function renderTable() {
   syncArchiveBar();
   var noActive = ingredients.filter(function(i) { return !i.archived; }).length === 0;
   if (!list.length) {
-    // "No results" is a lie when the thing searched for is sitting in the
-    // archive. Without this the only honest conclusion is that it was never
-    // added, which is how an archive quietly becomes a black hole.
-    var hidden = !showArchived ? matchesArchived() : [];
-    if (hidden.length) {
-      tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state">' +
-        '<p>Nothing active matches</p>' +
-        '<span>' + hidden.length + ' archived ingredient' + (hidden.length === 1 ? '' : 's') +
-        ' match' + (hidden.length === 1 ? 'es' : '') + ': ' +
-        esc(hidden.slice(0, 4).map(function(i) { return i.name; }).join(', ')) +
-        (hidden.length > 4 ? ' and ' + (hidden.length - 4) + ' more' : '') + '</span>' +
-        '<div style="margin-top:10px"><button class="btn btn-sm" onclick="toggleShowArchivedIngs()">Include archived</button></div>' +
-        '</div></td></tr>';
-      return;
-    }
+    // No "but it is in the archive" hint is needed any more: a search now
+    // returns archived matches directly, so reaching this really does mean
+    // nothing matches anywhere.
     tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><p>' + (noActive ? 'No ingredients yet' : (lowStockActive ? 'No low stock items' : (inStockActive ? 'No ingredients in stock' : 'No results'))) + '</p>' +
       '<span>' + (noActive ? 'Click &quot;+ New ingredient&quot; to get started, or use Quick add from Settings for a curated starter list' : (lowStockActive ? 'All stocked items are above their threshold' : (inStockActive ? 'Add lot quantities to ingredients you have on hand' : 'Try adjusting your search or filters'))) + '</span></div></td></tr>';
     return;

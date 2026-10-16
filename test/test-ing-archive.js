@@ -145,8 +145,10 @@ const SEED = `
 
     let bar = await page.evaluate("document.getElementById('ing-arch-bar').innerText");
     ok('the bar offers the archived count', /Show 1 archived/.test(bar), bar);
-    ok('and says where they are hidden from', /add-ingredient search/.test(bar), bar);
-    ok('while hidden, it says hidden', /hidden from this list/.test(bar), bar);
+    ok('while hidden, it says so', /hidden while browsing/.test(bar), bar);
+    // The promise that makes archiving safe to use freely: putting something
+    // away never makes it unfindable.
+    ok('and promises search will still find them', /Searching still finds them/.test(bar), bar);
 
     await page.evaluate('toggleShowArchivedIngs()');
     await page.waitForTimeout(200);
@@ -166,60 +168,65 @@ const SEED = `
     await page.close();
   }
 
-  console.log('\n4b. Searching for something archived says so');
+  console.log('\n4b. A search always reaches the archive');
   {
+    // The archive holds ingredients not stocked but worth keeping, so a
+    // search is exactly when you need to see them. Answering "no results"
+    // for something sitting in the archive is how a duplicate gets made,
+    // and then one ingredient has two records with the lots split between.
     const { page } = await open('ingredients');
-    // "Retired wax" is archived. With the toggle off the search finds nothing,
-    // and a bare "No results" would read as "you never added it".
+    const rows = () => page.evaluate("Array.from(document.querySelectorAll('#tbody .td-name')).map(function(e){return e.textContent;}).join('|')");
+
+    // Browsing: archived stays out of the way.
+    ok('while browsing, archived is hidden', !/Retired wax/.test(await rows()));
+
+    // Searching: it comes back, without touching the toggle.
     await page.evaluate("document.getElementById('search').value = 'retired'; renderTable();");
     await page.waitForTimeout(200);
-    let body = await page.evaluate("document.getElementById('tbody').innerText");
-    ok('it does not claim there are no results', !/^No results/m.test(body), body);
-    ok('it says how many archived ones match', /1 archived ingredient match/.test(body), body);
-    ok('and names it', /Retired wax/.test(body), body);
+    const found = await rows();
+    ok('a search finds an archived ingredient', /Retired wax/.test(found), found);
+    ok('and tags it so it is not mistaken for stocked', /archived/i.test(found), found);
+    ok('without the toggle having been touched',
+       (await page.evaluate('showArchived')) === false);
 
-    const btn = await page.evaluate("document.querySelector('#tbody button') ? document.querySelector('#tbody button').textContent : null");
-    ok('it offers a button to include them', btn === 'Include archived', btn);
-    await page.evaluate("document.querySelector('#tbody button').click()");
-    await page.waitForTimeout(200);
-    body = await page.evaluate("document.getElementById('tbody').innerText");
-    // The tag is uppercased by CSS text-transform, which innerText reflects.
-    ok('clicking it reveals the match', /Retired wax/.test(body) && /archived/i.test(body), body);
+    const bar = await page.evaluate("document.getElementById('ing-arch-bar').innerText");
+    ok('the banner says the archive was searched', /also looking in the archive/.test(bar), bar);
+    ok('and how many it found', /found 1 archived ingredient/.test(bar), bar);
+    ok('the toggle button is out of the way while searching',
+       (await page.evaluate("document.querySelector('#ing-arch-bar button')")) === null);
 
-    // A search that genuinely matches nothing must still say so plainly.
-    await page.evaluate("showArchived = false; document.getElementById('search').value = 'zzzznothing'; renderTable();");
+    // The case that prevents the duplicate: nothing matches anywhere, and
+    // the banner says so positively rather than leaving it ambiguous.
+    await page.evaluate("document.getElementById('search').value = 'zzzznothing'; renderTable();");
     await page.waitForTimeout(200);
-    body = await page.evaluate("document.getElementById('tbody').innerText");
-    ok('a real miss still reads as no results', /No results/.test(body), body);
+    const body = await page.evaluate("document.getElementById('tbody').innerText");
+    const bar2 = await page.evaluate("document.getElementById('ing-arch-bar').innerText");
+    ok('a genuine miss reads as no results', /No results/.test(body), body);
+    ok('and confirms the archive was checked too',
+       /No archived ingredient matches/.test(bar2), bar2);
+    ok('so it is safe to add as new', /safe to add as new/.test(bar2), bar2);
+
+    // Clearing the search returns to the browsing view.
+    await page.evaluate("document.getElementById('search').value = ''; renderTable();");
+    await page.waitForTimeout(200);
+    ok('clearing the search hides archived again', !/Retired wax/.test(await rows()));
+    const bar3 = await page.evaluate("document.getElementById('ing-arch-bar').innerText");
+    ok('and the banner says searching will still find them',
+       /Searching still finds them/.test(bar3), bar3);
     await page.close();
   }
 
-  console.log('\n4b-ii. Include archived outlives the search that offered it');
+  console.log('\n4b-ii. The browse toggle is still separate and still resets');
   {
-    // Turning the toggle on from a search hint and then clearing the search
-    // leaves the whole library on screen with archived mixed in. That is
-    // defensible for a global toggle, but only if the banner says so, since
-    // nothing else explains why the list suddenly grew.
     const { page } = await open('ingredients');
-    const rows = () => page.evaluate("document.querySelectorAll('#tbody tr').length");
-    const before = await rows();
-
-    await page.evaluate("document.getElementById('search').value='retired'; renderTable();");
+    const count = () => page.evaluate("document.querySelectorAll('#tbody tr').length");
+    const before = await count();
+    await page.evaluate('toggleShowArchivedIngs()');
     await page.waitForTimeout(150);
-    await page.evaluate("document.querySelector('#tbody button').click()");
-    await page.waitForTimeout(150);
-    await page.evaluate("document.getElementById('search').value=''; renderTable();");
-    await page.waitForTimeout(150);
-
-    const after = await rows();
-    ok('clearing the search leaves archived in the list', after > before, [before, after]);
-    const bar = await page.evaluate("document.getElementById('ing-arch-bar').innerText");
-    ok('and the banner explains why the list grew',
-       /Showing 1 archived/.test(bar) && !/hidden from this list/.test(bar), bar);
-
+    ok('the toggle still shows archived while browsing', (await count()) > before);
     await page.reload();
     await page.waitForTimeout(400);
-    ok('a reload returns to hiding them', (await rows()) === before, await rows());
+    ok('and a reload returns to hiding them', (await count()) === before, await count());
     await page.close();
   }
 
