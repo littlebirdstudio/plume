@@ -12,7 +12,7 @@ From the repository root:
     npx playwright install chromium
     npm test
 
-`npm test` runs all twelve suites and stops at the first failure. To run one:
+`npm test` runs all thirteen suites and stops at the first failure. To run one:
 
     node test/test-lock.js
 
@@ -44,8 +44,9 @@ version, run the suites, and commit the new lockfile together.
 | `test-search.js` | 18 | Search ordering: names starting with the query first, then a later word of the name, then INCI, then mid-word, then notes; checked in the Ingredients list and the Formulations dropdown |
 | `test-ph.js` | 75 | pH records: parsing and range checks; which formulas get pH (water phase only, never soap); the bench sheet block; the version target (validation, history, mirroring, new versions, approval lock); usage-log steps; a batch's final pH against the target it was made with |
 | `test-version.js` | 25 | One app version: no footer types its own, and every page (landing page included) shows core's version |
-| `test-starter.js` | 81 | Quick add: the by-type starter list (one entry per ingredient, grades kept apart, no borrowed prose, no stored SAP, former names recognised), search and chips, SAP from SoapCalc as oils are added, in-library marking, the removed buttons |
-| `test-lowdown.js` | 31 | Drafted lowdowns: every starter ingredient has one that fits; the Fill in lowdowns review (blank only, name or former name, never her own words or purpose notes); the draft tag, its keep tick, and editing as confirmation; Quick add brings drafts; melting point off the cheat sheet |
+| `test-starter.js` | 84 | Quick add: the by-type starter list (one entry per ingredient, grades kept apart, no borrowed prose, no stored SAP, former names recognised), search and chips, SAP from SoapCalc as oils are added, in-library marking, the removed buttons |
+| `test-lowdown.js` | 35 | Drafted lowdowns: every starter ingredient has one that fits; the Fill in lowdowns review (blank only, name or former name, never her own words or purpose notes); the draft tag, its keep tick, and editing as confirmation; Quick add brings drafts; melting point off the cheat sheet |
+| `test-dialogs.js` | 28 | In-page dialogs driven by real clicks and keys (danger focus, Escape, Enter, queue, escaping, focus return), plus a scan that fails if any browser pop-up returns to an app file |
 
 ## How they run
 

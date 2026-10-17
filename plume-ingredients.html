@@ -2607,6 +2607,7 @@ function setIngView(v) {
   ingView = (v === 'cheat' && typeof PlumeCheat !== 'undefined') ? 'cheat' : 'list';
   document.getElementById('list-mode').style.display  = ingView === 'list'  ? '' : 'none';
   document.getElementById('cheat-mode').style.display = ingView === 'cheat' ? '' : 'none';
+  document.body.classList.toggle('cs-wide', ingView === 'cheat');
   document.getElementById('vt-list').classList.toggle('on',  ingView === 'list');
   document.getElementById('vt-cheat').classList.toggle('on', ingView === 'cheat');
   Store.set('plume_ing_view', ingView);
@@ -2614,6 +2615,7 @@ function setIngView(v) {
 }
 
 function showList() {
+  document.body.classList.toggle('cs-wide', ingView === 'cheat');
   document.getElementById('list-view').style.display  = 'block';
   document.getElementById('detail-view').style.display = 'none';
   if (ingView === 'cheat') PlumeCheat.render(ingredients);
@@ -2660,6 +2662,7 @@ function renderRecentlyViewed() {
 
 // ── Detail view ───────────────────────────────────────
 function viewIngredient(id) {
+  document.body.classList.remove('cs-wide');   // the details page keeps its usual width
   var i = ingredients.find(function(x) { return x.id === id; });
   if (!i) return;
   viewingId = id;

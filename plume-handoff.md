@@ -1507,7 +1507,7 @@ What this means in practice:
 ### Tests live in the repo now, and CI runs them
 
 `package.json`, `.gitignore`, `package-lock.json` and a `test/` directory are
-committed. `npm test` runs thirteen suites, ~549 checks (`test-search.js`, `test-ph.js`, `test-version.js`, `test-starter.js`, `test-lowdown.js` and `test-dialogs.js` added session 17).
+committed. `npm test` runs thirteen suites, ~556 checks (`test-search.js`, `test-ph.js`, `test-version.js`, `test-starter.js`, `test-lowdown.js` and `test-dialogs.js` added session 17).
 `.github/workflows/tests.yml` runs the same on every pull request and on push
 to `main`.
 
@@ -2037,4 +2037,27 @@ form keeps the typing, leaving an edited product stays.
 **Older bug fixed on the way:** the delete-batch warning listed packaging as
 "NaN x undefined" because it read pre-session-8 top-level run fields; it now
 goes through `runComponents()`.
+
+### Session 18 (cont.) — Base / solvent, "inexpensive", cheat sheet fit
+
+- **New function category `Base / solvent`** (core `FUNCTION_CATEGORIES`,
+  after Humectant). Water, hydrosols and aloe juice/gel had no function that
+  fit and landed in "No function set" on the cheat sheet. Starter list
+  (v2.2) tags the 14 waters with it; hydrosols are co-tagged `Fragrance` (her
+  call). Cheat sheet columns for the group: Use %, Phase, Scent. Her own
+  library's waters are untouched; she ticks the chip in the editor.
+- **"cheap" reworded in the starter lowdowns** (41 lines): inexpensive /
+  less expensive / least expensive; marula rewritten. She had already
+  changed her own copies. Use "inexpensive" in anything written for her.
+- **Cheat sheet fits without side-scrolling** at 1024 to 1440 px with all
+  ten columns (substitutes included): 12px table text, tighter padding,
+  narrower lowdown/substitutes/reminder columns, and the page widens to
+  1440px while the cheat sheet shows (`body.cs-wide`, removed on the
+  details page). Tested at 1280px.
+- **Odd-one-out marking explained.** A value that differs from the group's
+  majority was drawn in the amber warning colour with no explanation, so it
+  read as a problem. Now bold and underlined in the bark colour, with a
+  tooltip and a line under the table: "Underlined values differ from most
+  others in this group, which is often the reason to choose one over
+  another."
 

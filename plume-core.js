@@ -964,7 +964,9 @@ function boot(cb) {
 // product-type lists. Adding an entry is free; renaming one strands every
 // ingredient that carries the old word.
 var FUNCTION_CATEGORIES = [
-  'Emollient', 'Humectant', 'Emulsifier', 'Preservative', 'Active',
+  // 'Base / solvent' added 2026-10-17: water, hydrosols and aloe juice had no
+  // function that fit and landed in "No function set" on the cheat sheet.
+  'Emollient', 'Humectant', 'Base / solvent', 'Emulsifier', 'Preservative', 'Active',
   'pH Adjuster', 'Thickener', 'Solubilizer', 'Surfactant', 'Exfoliant',
   'Essential oil', 'Fragrance', 'Colorant', 'Other'
 ];
