@@ -484,11 +484,17 @@ function renderPhotoStats() {
 // if the result is actually smaller, so re-running this is harmless.
 function optimisePhotos() {
   var withPhotos = items.filter(function(i) { return !!i.image; });
-  if (!withPhotos.length) { alert('There are no photos to shrink.'); return; }
-  var before = photoBytes().bytes;
-  if (!confirm('Re-save ' + withPhotos.length + ' photo' + (withPhotos.length === 1 ? '' : 's') +
-               ' at display size?\n\nEvery picture is kept. This cannot be undone, so export a backup first if you want one.')) return;
+  if (!withPhotos.length) { Plume.tell('There are no photos to shrink.'); return; }
+  // The dialog does not block: the re-encode runs from its onYes callback.
+  Plume.ask('Every picture is kept. This cannot be undone, so export a backup first if you want one.',
+    function () { runOptimisePhotos(withPhotos); },
+    { title: 'Re-save ' + withPhotos.length + ' photo' + (withPhotos.length === 1 ? '' : 's') + ' at display size?',
+      yes: 'Re-save', danger: true });
+}
 
+// The re-encode itself, run only after optimisePhotos gets a yes.
+function runOptimisePhotos(withPhotos) {
+  var before = photoBytes().bytes;
   var btn = document.getElementById('opt-photos-btn');
   var res = document.getElementById('opt-photos-result');
   if (btn) { btn.disabled = true; btn.textContent = 'Working...'; }
@@ -540,15 +546,20 @@ function importData(e) {
     try {
       var data = JSON.parse(ev.target.result);
       var arr = data.packaging || (Array.isArray(data) ? data : []);
-      if (!confirm('Import ' + arr.length + ' items? Duplicates by name will be skipped.')) return;
-      var ex = new Set(items.map(function(i) { return i.name.toLowerCase(); }));
-      var added = 0;
-      arr.forEach(function(item) {
-        if (!ex.has((item.name||'').toLowerCase())) { items.push(item); added++; }
-      });
-      saveData(); renderTable(); renderStats();
-      alert('Imported ' + added + ' items.');
-    } catch(err) { alert('Could not read file.'); }
+      // The dialog does not block, so the merge runs in its onYes callback,
+      // with its own try so a bad record still reports as before.
+      Plume.ask('Duplicates by name will be skipped.', function () {
+        try {
+          var ex = new Set(items.map(function(i) { return i.name.toLowerCase(); }));
+          var added = 0;
+          arr.forEach(function(item) {
+            if (!ex.has((item.name||'').toLowerCase())) { items.push(item); added++; }
+          });
+          saveData(); renderTable(); renderStats();
+          Plume.tell('Imported ' + added + ' items.');
+        } catch(err) { Plume.tell('Could not read file.'); }
+      }, { title: 'Import ' + arr.length + ' items?', yes: 'Import' });
+    } catch(err) { Plume.tell('Could not read file.'); }
   };
   reader.readAsText(file);
   document.getElementById('import-input').value = '';
@@ -642,7 +653,7 @@ var PHOTO_QUALITY = 0.72;
 
 function handleImageUpload(e) {
   var file = e.target.files[0]; if (!file) return;
-  if (file.size > 10 * 1024 * 1024) { alert('File too large (max 10MB).'); return; }
+  if (file.size > 10 * 1024 * 1024) { Plume.tell('File too large (max 10MB).'); return; }
   var reader = new FileReader();
   reader.onload = function(ev) {
     compressImage(ev.target.result, PHOTO_MAX_W, PHOTO_QUALITY, function(compressed) {
@@ -777,7 +788,7 @@ function toggleAdjForm() {
 function saveAdjustment() {
   var qty  = parseInt(document.getElementById('adj-qty').value, 10);
   var note = document.getElementById('adj-note').value.trim();
-  if (isNaN(qty) || qty === 0) { alert('Enter a non-zero quantity (use negative to subtract).'); return; }
+  if (isNaN(qty) || qty === 0) { Plume.tell('Enter a non-zero quantity (use negative to subtract).'); return; }
   pendingAdjustments.push({ qty: qty, note: note, date: new Date().toISOString().slice(0,10) });
   renderAdjLog();
   updateModalSummary();
@@ -891,7 +902,7 @@ function openEdit(id) {
 
 function saveItem() {
   var name = document.getElementById('f-name').value.trim();
-  if (!name) { alert('Item name is required.'); return; }
+  if (!name) { Plume.tell('Item name is required.'); return; }
   var purchases = getPurchaseRows();
   // Derive current cost/unit for backward compat with costing module
   var cpu = null;
@@ -925,9 +936,12 @@ function saveItem() {
 }
 
 function deleteItem() {
-  if (!confirm('Delete this item? This cannot be undone.')) return;
-  items = items.filter(function(i){ return i.id !== editingId; });
-  saveData(); renderTable(); renderStats(); closeModal('m-add');
+  // The dialog does not block: capture the id now, delete in onYes.
+  var id = editingId;
+  Plume.ask('This cannot be undone.', function () {
+    items = items.filter(function(i){ return i.id !== id; });
+    saveData(); renderTable(); renderStats(); closeModal('m-add');
+  }, { title: 'Delete this item?', yes: 'Delete', danger: true });
 }
 
 // Duplicate the currently-edited item as a new entry. Copies the "style"
