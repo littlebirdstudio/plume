@@ -274,7 +274,7 @@ function setQuery(q) {
 // Prints what is on screen, one group per page, for the bench.
 function print(ings) {
   var shown = applyFilter(buildGroups(ings));
-  if (!shown.length) { alert('Nothing to print.'); return; }
+  if (!shown.length) { Plume.tell('Nothing to print.'); return; }
   var used = usageMap();
   var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Ingredient cheat sheet</title><style>' +
     'body{font-family:Georgia,serif;color:#222;margin:32px;font-size:12px}' +
@@ -299,7 +299,7 @@ function print(ings) {
     }).join('') +
     '<scr' + 'ipt>window.onload=function(){window.print();};<\/scr' + 'ipt></body></html>';
   var w = window.open('', '_blank');
-  if (!w) { alert('The print window was blocked. Allow popups for this site and try again.'); return; }
+  if (!w) { Plume.tell('The print window was blocked. Allow popups for this site and try again.'); return; }
   w.document.write(html); w.document.close();
 }
 
