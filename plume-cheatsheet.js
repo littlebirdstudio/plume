@@ -130,8 +130,9 @@ function applyFilter(groups) {
   }).filter(function (g) { return g.rows.length; });
 }
 
-// Decide columns for one group: hide what cannot help choose, and find the
-// cells that stand out from the rest of their group.
+// Decide columns for one group: hide what cannot help choose.
+// (Values that differed from most of their group were once marked; Heide
+// found it added nothing and it came out on 2026-10-17.)
 function planGroup(g) {
   var offered = GROUP_COLS[g.name] || DEFAULT_COLS;
   var show = [], hidden = [];
@@ -140,7 +141,7 @@ function planGroup(g) {
     var vals = g.rows.map(function (i) { return col.get(i); });
     var known = vals.filter(function (v) { return norm(v); });
     if (!known.length) return;                        // no data at all: omit quietly
-    if (g.rows.length === 1) { show.push({ key: key, odd: {} }); return; }
+    if (g.rows.length === 1) { show.push({ key: key }); return; }
     var counts = {};
     known.forEach(function (v) { var k = norm(v); counts[k] = (counts[k] || 0) + 1; });
     var distinct = Object.keys(counts);
@@ -149,19 +150,8 @@ function planGroup(g) {
       // rows are blank, "the same for every one" would be false -- show the
       // column, and the blanks stay visible as gaps worth filling.
       if (known.length === g.rows.length) { hidden.push(col.label + ' (' + known[0] + ')'); return; }
-      show.push({ key: key, odd: {} }); return;
     }
-    // Highlight values that differ from a clear majority (at least two rows
-    // agreeing). With no majority every value differs, so nothing is singled out.
-    var mode = distinct.sort(function (a, b) { return counts[b] - counts[a]; })[0];
-    var odd = {};
-    if (counts[mode] >= 2) {
-      g.rows.forEach(function (i) {
-        var k = norm(col.get(i));
-        if (k && k !== mode) odd[i.id] = true;
-      });
-    }
-    show.push({ key: key, odd: odd });
+    show.push({ key: key });
   });
   return { show: show, hidden: hidden };
 }
@@ -209,7 +199,7 @@ function tableHtml(g, used, forPrint) {
       // text is allowed to wrap.
       var cell = v ? (String(v).length <= 14 ? '<span style="white-space:nowrap">' + clip(v, 60) + '</span>' : clip(v, 60))
                    : '<span class="cs-blank">\u2014</span>';
-      h += '<td>' + (c.odd[i.id] ? '<span class="cs-odd" title="Differs from most others in this group">' + cell + '</span>' : cell) + '</td>';
+      h += '<td>' + cell + '</td>';
     });
     // On screen, the two notes are click-to-type (noteEditHtml lives in the
     // Ingredients page); clicking them edits, clicking elsewhere in the row
@@ -226,11 +216,6 @@ function tableHtml(g, used, forPrint) {
     h += '</tr>';
   });
   h += '</tbody></table></div>';
-  // The marking needs saying in words; without this it read as a warning.
-  var anyOdd = plan.show.some(function (c) { return Object.keys(c.odd).length; });
-  if (anyOdd) {
-    h += '<div class="cs-hidden"><span class="cs-odd">Underlined</span> values differ from most others in this group, which is often the reason to choose one over another.</div>';
-  }
   if (plan.hidden.length) {
     h += '<div class="cs-hidden">Not shown \u2014 the same for every one: ' + esc(plan.hidden.join(' \u00b7 ')) + '</div>';
   }
@@ -296,7 +281,7 @@ function print(ings) {
     // comparison columns (Use %, pH...) share the rest.
     '.cs-name{width:13%}.cs-choose{width:21%}.cs-subs{width:10%}.cs-purpose{width:17%;white-space:pre-wrap}' +
     '.cs-num{width:6%;text-align:right}.cs-used{width:11%}' +
-    '.cs-odd{font-weight:700;text-decoration:underline}.cs-blank{color:#bbb}.cs-hidden{color:#888;font-size:10px;margin-top:6px}' +
+    '.cs-blank{color:#bbb}.cs-hidden{color:#888;font-size:10px;margin-top:6px}' +
     '.cs-table-wrap{overflow:visible}</style></head><body>' +
     '<h1>Ingredient cheat sheet</h1><div class="meta">Printed ' + esc(Plume.fmtDate(Plume.todayISO())) +
     (state.q ? ' \u00b7 search: \u201c' + esc(state.q) + '\u201d' : '') + '</div>' +
@@ -343,13 +328,11 @@ function print(ings) {
     '.cs-subs{min-width:100px;width:140px}.cs-purpose{min-width:120px;width:170px;color:var(--ink-light)}.cs-purpose .note-edit{max-width:170px;overflow-wrap:anywhere}' +
     '.cs-num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;min-width:52px;padding-left:12px !important}' +
     '.cs-used{min-width:100px;font-size:11.5px}' +
-    // The cheat sheet uses more of the screen than the list does.
-    'body.cs-wide .app-body{max-width:1440px}' +
+    // The cheat sheet uses a little more of the screen than the list does
+    // (1100px). 1440 looked clunky; 1260 still fits substitutes (2026-10-17).
+    'body.cs-wide .app-body{max-width:1260px}' +
     '.used-link{color:var(--bark-dark);text-decoration:none;border-bottom:1px dotted var(--bark-light)}.used-link:hover{border-bottom-style:solid}' +
     '.cs-blank{color:var(--ink-lighter);opacity:.6}' +
-    // Marks a value that differs from most of its group. Neutral on purpose:
-    // the old amber warning colour made it look like a problem.
-    '.cs-odd{font-weight:600;color:var(--bark-dark);border-bottom:2px solid var(--bark-light);padding-bottom:1px}' +
     '.cs-hidden{font-size:11px;color:var(--ink-lighter);margin-top:6px}' +
     '.cs-empty{color:var(--ink-lighter);padding:2rem 0;font-size:13px}' +
     '.view-toggle{display:inline-flex;border:1px solid var(--cream-border);border-radius:6px;overflow:hidden;margin-left:auto}' +

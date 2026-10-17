@@ -96,13 +96,13 @@
 
   /* ── Header ── */
   .app-header {
-    background: var(--bark-dark);
-    color: var(--cream);
+    background: var(--hdr-bg,var(--bark-dark));
+    color: var(--hdr-fg,var(--cream));
     padding: 1.25rem 2rem;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    border-bottom: 2px solid var(--bark);
+    border-bottom: 2px solid var(--hdr-line,var(--bark));
   }
   .app-brand { display: flex; flex-direction: column; gap: 1px; }
   .app-brand-name {
@@ -110,14 +110,14 @@
     font-size: 26px;
     font-weight: 300;
     letter-spacing: 0.12em;
-    color: var(--cream);
+    color: var(--hdr-fg,var(--cream));
     line-height: 1;
   }
   .app-brand-sub {
     font-size: 10px;
     letter-spacing: 0.25em;
     text-transform: uppercase;
-    color: var(--bark-light);
+    color: var(--hdr-sub,var(--bark-light));
     font-weight: 300;
   }
   .header-actions { display: flex; gap: 8px; align-items: center; }
@@ -153,7 +153,7 @@
   .btn-ghost {
     background: transparent;
     border-color: rgba(253,252,250,0.3);
-    color: var(--cream);
+    color: var(--hdr-fg,var(--cream));
     font-size: 12px;
   }
   .btn-ghost:hover { background: rgba(253,252,250,0.1); }
@@ -294,7 +294,7 @@
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } /* end with …, not a clean chop */
   /* In the banner (dark background) the function notes read in the header's
      light text colour, not the page's dark ink. */
-  .detail-card-header .detail-purpose { color: var(--cream); opacity: .9; border-left-color: var(--bark-light); }
+  .detail-card-header .detail-purpose { color: var(--hdr-fg,var(--cream)); opacity: .9; border-left-color: var(--hdr-sub,var(--bark-light)); }
   .detail-purpose { font-size: 13px; color: var(--ink); margin-top: 8px; padding-left: 10px;
     border-left: 2px solid var(--bark-light); max-width: 520px; }
   .fcat-grid { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -917,8 +917,8 @@
     margin-bottom: 1rem;
   }
   .detail-card-header {
-    background: var(--bark-dark);
-    color: var(--cream);
+    background: var(--hdr-bg,var(--bark-dark));
+    color: var(--hdr-fg,var(--cream));
     padding: 1.5rem 1.75rem;
     display: flex;
     justify-content: space-between;
@@ -928,12 +928,12 @@
     font-family: 'Cormorant Garamond', serif;
     font-size: 28px;
     font-weight: 300;
-    color: var(--cream);
+    color: var(--hdr-fg,var(--cream));
     line-height: 1.2;
   }
   .detail-ing-inci {
     font-size: 13px;
-    color: var(--bark-light);
+    color: var(--hdr-sub,var(--bark-light));
     font-style: italic;
     margin-top: 4px;
   }
