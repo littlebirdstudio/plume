@@ -3,6 +3,7 @@
 // library marked chooseWhenDraft, shown as a "draft" tag until she keeps the
 // line (the tick) or changes it. Her own lowdowns, and her purpose notes, are
 // never touched.
+const fs = require('fs');
 const path = require('path');
 const { chromium } = require('playwright');
 const { ROOT, previewUrl } = require('./helpers');
@@ -14,6 +15,9 @@ function ok(label, cond, got) {
 }
 
 const Starter = require(path.join(ROOT, 'plume-starter.js'));
+
+console.log('\n0. Melting point is off the cheat sheet');
+ok('no melting point column offered', !/meltingPoint|Melting point'/.test(fs.readFileSync(path.join(ROOT, 'plume-cheatsheet.js'), 'utf8').replace(/\/\/.*$/gm, '')));
 
 console.log('\n1. The starter list carries lowdowns');
 {

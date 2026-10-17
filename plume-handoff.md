@@ -92,7 +92,7 @@ Core defines globals with the names modules already use, so **converting a modul
 **A module may override an alias by defining its own function** — this is the intended escape hatch. `plume-ingredients.html` keeps a local `openModal` because it snapshots form state to detect unsaved edits. Share the common case; keep the exception local.
 
 ### Versioning
-`Plume.VERSION` is displayed at the bottom of every converted module's Settings → Storage panel, alongside the active driver name. **Bump it on every core change.** Browsers cache `.js` far more stubbornly than they re-fetch a replaced HTML file, so "is core loaded, and is it the one I just uploaded?" must be answerable by looking. Current: **v1.10** (v1.8 added INCI blend splitting; v1.9 added density resolution; v1.10 ranked search results, best match first; v1.11 added pH records; v1.12 made it the one app version, shown in every footer; v1.13 rebuilt Quick add).
+`Plume.VERSION` is displayed at the bottom of every converted module's Settings → Storage panel, alongside the active driver name. **Bump it on every core change.** Browsers cache `.js` far more stubbornly than they re-fetch a replaced HTML file, so "is core loaded, and is it the one I just uploaded?" must be answerable by looking. Current: **v1.10** (v1.8 added INCI blend splitting; v1.9 added density resolution; v1.10 ranked search results, best match first; v1.11 added pH records; v1.12 made it the one app version, shown in every footer; v1.13 rebuilt Quick add; v1.14 drafted lowdowns).
 
 ### Upload order matters
 `plume-core.js` **first**, then the HTML. A module that arrives before core shows the missing-core banner until core lands. Core alone breaks nothing.
@@ -1348,14 +1348,7 @@ improvements in Formulations as a result of this session's changes and wants
 to pick those up in a fresh chat. Ask her for the list.
 
 ### Immediate — session 15 carry-over
-- **Pre-fill `chooseWhen` drafts** (agreed, not started). She exports a backup
-  from Ingredients Settings and uploads it; research each ingredient she owns
-  and draft its line. Needs a draft marker so she can tell drafts from lines
-  she has confirmed — not yet designed. **The route planned here (the
-  reference import) no longer exists: it was removed in session 17.** Needs
-  its own small import or review step instead, ideally modelled on the SAP
-  review (shows every proposed line, applies on confirmation, never adds new
-  ingredients). Never touch `purpose`.
+- ~~Pre-fill `chooseWhen` drafts~~ — **built session 17**; see "Drafted lowdowns" in the session 17 notes.
 - **Column tuning.** She expects "a few passes" to nail down the per-group
   columns. `GROUP_COLS` in `plume-cheatsheet.js` is the one place to change.
 - **Cheat sheet step 6** — the product-type view derived from her own
@@ -1514,7 +1507,7 @@ What this means in practice:
 ### Tests live in the repo now, and CI runs them
 
 `package.json`, `.gitignore`, `package-lock.json` and a `test/` directory are
-committed. `npm test` runs eleven suites, ~486 checks (`test-search.js`, `test-ph.js`, `test-version.js` and `test-starter.js` added session 17).
+committed. `npm test` runs twelve suites, ~521 checks (`test-search.js`, `test-ph.js`, `test-version.js`, `test-starter.js` and `test-lowdown.js` added session 17).
 `.github/workflows/tests.yml` runs the same on every pull request and on push
 to `main`.
 
@@ -1531,6 +1524,7 @@ to `main`.
 | `test-ph.js` | pH: version target, usage-log steps, batch final pH, bench sheet |
 | `test-version.js` | Every footer shows core's version; none types its own |
 | `test-starter.js` | Quick add: merged starter list, SAP from SoapCalc at add time, in-library marking |
+| `test-lowdown.js` | Drafted lowdowns: the review, the draft tag and its keep tick, editing as confirmation |
 
 **Playwright is pinned to an exact version (1.56.0), deliberately.** Each
 release expects one specific Chromium build; a mismatch fails with "Executable
@@ -1940,3 +1934,50 @@ Adding an ingredient means adding an item with a listed type; a test fails on
 an unknown type. The build was one-off; edit the file directly.
 
 New suite `test-starter.js` (77 checks).
+
+### Session 17 (cont.) — Drafted lowdowns (core v1.14, plume-starter.js v2.1)
+
+**Her choices:** drafts live in the starter list AND fill her library (no
+file uploading); a draft becomes hers by editing it or clicking its tick.
+
+- **Every starter ingredient (262) has a `chooseWhen`** ("The lowdown"):
+  strengths and catches vs similar ingredients, 100 to 183 characters. Drafted
+  by six parallel research agents by type, from established formulation
+  knowledge, with trade-name products (emulsifiers, preservatives, gels)
+  checked against manufacturer or supplier pages; then read in full and
+  tidied to one style. Six are low confidence and named in the file header
+  (Mafura butter, Gum tragacanth, Lemon peel hydrosol, Yucca liquid extract,
+  Lady's mantle, Mullein). No therapeutic claims; vitamin E, EDTA and
+  ethylhexylglycerin say plainly they are not preservatives; Preservative Eco
+  is identified as the Geogard ECT blend (her failed mist).
+- **`chooseWhenDraft: true`** marks a drafted line on an ingredient. Shown as
+  a quiet dashed "draft" tag with a ✓ wherever the lowdown is
+  click-to-type (quick look, details, cheat sheet); "(draft)" in cheat sheet
+  print and the Formulations popup; a tag beside the label in the edit
+  form. **The tick keeps the line as is. Changing the text (click-to-type or
+  the form) makes it hers. Clearing removes both. An unrelated form save keeps
+  it a draft** (the form merges into the record, so the flag survives unless
+  the text changed).
+- **Settings → "Fill in lowdowns"** review: lists her non-archived
+  ingredients with a blank lowdown that match a starter item by name or
+  former name (`aka`), each with its proposed line and a tick (all on);
+  applies only ticked rows, re-checks blank at apply time, never touches
+  `purpose`. **Quick add** also brings the lowdown, as a draft.
+- **Corrections found while drafting:** Quick add's carrier "Carrot seed oil"
+  had been folded into "Carrot seed essential oil" in the earlier merge
+  (same INCI, different products); split back into two. Three trade-name
+  INCIs that had been cut off at "(and)" completed from supplier pages
+  (Sapogel Q, Sucragel AOF Bio, Symbiosolv Clear Plus MB); Horsetail and
+  Orris INCIs completed; Kelp's "INCI" (a sentence) now says it varies by
+  species. Function lines cleaned for Vegetal, Rosemary essential oil (no
+  longer "antioxidant"; that is the extract) and Actifcol (marketing claims
+  removed; note Lotioncrafter says the Actifcol NAME needs a Lipotec
+  trademark agreement before use in marketing).
+- **Filing:** new type **pH adjusters** (citric acid, arginine); SurfPro CF
+  to emulsifiers (it is an oil gel, not a cleanser); rosemary CO2 to
+  antioxidants; cetyl esters and myristyl myristate to waxes; aloe powder
+  beside the other aloes ("Waters, aloe and hydrosols"); "Botanicals,
+  extracts and glycerites"; "Powders, starches and salts"; "Infused oils".
+- **Cheat sheet:** melting point column removed (her call; it did not help
+  choose between emollients).
+
