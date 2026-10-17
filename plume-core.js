@@ -848,7 +848,8 @@ function stampVersion() {
 var dlgQueue = [], dlgOpen = null;
 
 function dlgParas(msg) {
-  return String(msg == null ? '' : msg).split(/\n{2,}/).map(function (p) {
+  if (msg == null || !String(msg).trim()) return '';   // a title-only question
+  return String(msg).split(/\n{2,}/).map(function (p) {
     return '<p>' + esc(p).replace(/\n/g, '<br>') + '</p>';
   }).join('');
 }

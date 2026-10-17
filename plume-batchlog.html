@@ -2282,7 +2282,14 @@ function deleteBatch() {
     }
     if (runs.length) {
       var pkgTotals = {};
-      runs.forEach(function(r) { pkgTotals[r.packagingName] = (pkgTotals[r.packagingName] || 0) + r.quantity; });
+      // Runs hold several components since session 8; reading the old
+      // top-level fields showed "NaN x undefined" here.
+      runs.forEach(function(r) {
+        runComponents(r).forEach(function(c) {
+          var n = c.packagingName || '(unknown)';
+          pkgTotals[n] = (pkgTotals[n] || 0) + (parseInt(c.quantity, 10) || 0);
+        });
+      });
       msg += '  ' + Object.keys(pkgTotals).map(function(n) { return pkgTotals[n] + ' x ' + n; }).join('\n  ') + '\n';
     }
     msg += '\n';

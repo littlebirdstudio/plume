@@ -92,7 +92,7 @@ Core defines globals with the names modules already use, so **converting a modul
 **A module may override an alias by defining its own function** — this is the intended escape hatch. `plume-ingredients.html` keeps a local `openModal` because it snapshots form state to detect unsaved edits. Share the common case; keep the exception local.
 
 ### Versioning
-`Plume.VERSION` is displayed at the bottom of every converted module's Settings → Storage panel, alongside the active driver name. **Bump it on every core change.** Browsers cache `.js` far more stubbornly than they re-fetch a replaced HTML file, so "is core loaded, and is it the one I just uploaded?" must be answerable by looking. Current: **v1.10** (v1.8 added INCI blend splitting; v1.9 added density resolution; v1.10 ranked search results, best match first; v1.11 added pH records; v1.12 made it the one app version, shown in every footer; v1.13 rebuilt Quick add; v1.14 drafted lowdowns).
+`Plume.VERSION` is displayed at the bottom of every converted module's Settings → Storage panel, alongside the active driver name. **Bump it on every core change.** Browsers cache `.js` far more stubbornly than they re-fetch a replaced HTML file, so "is core loaded, and is it the one I just uploaded?" must be answerable by looking. Current: **v1.10** (v1.8 added INCI blend splitting; v1.9 added density resolution; v1.10 ranked search results, best match first; v1.11 added pH records; v1.12 made it the one app version, shown in every footer; v1.13 rebuilt Quick add; v1.14 drafted lowdowns; v1.15 replaced the browser pop-ups with in-page dialogs).
 
 ### Upload order matters
 `plume-core.js` **first**, then the HTML. A module that arrives before core shows the missing-core banner until core lands. Core alone breaks nothing.
@@ -1507,7 +1507,7 @@ What this means in practice:
 ### Tests live in the repo now, and CI runs them
 
 `package.json`, `.gitignore`, `package-lock.json` and a `test/` directory are
-committed. `npm test` runs twelve suites, ~521 checks (`test-search.js`, `test-ph.js`, `test-version.js`, `test-starter.js` and `test-lowdown.js` added session 17).
+committed. `npm test` runs thirteen suites, ~549 checks (`test-search.js`, `test-ph.js`, `test-version.js`, `test-starter.js`, `test-lowdown.js` and `test-dialogs.js` added session 17).
 `.github/workflows/tests.yml` runs the same on every pull request and on push
 to `main`.
 
@@ -1525,6 +1525,7 @@ to `main`.
 | `test-version.js` | Every footer shows core's version; none types its own |
 | `test-starter.js` | Quick add: merged starter list, SAP from SoapCalc at add time, in-library marking |
 | `test-lowdown.js` | Drafted lowdowns: the review, the draft tag and its keep tick, editing as confirmation |
+| `test-dialogs.js` | The in-page dialog driven by real clicks and keys, plus a scan that fails if any `alert`/`confirm`/`prompt` call returns to an app file |
 
 **Playwright is pinned to an exact version (1.56.0), deliberately.** Each
 release expects one specific Chromium build; a mismatch fails with "Executable
@@ -1980,4 +1981,60 @@ file uploading); a draft becomes hers by editing it or clicking its tick.
   extracts and glycerites"; "Powders, starches and salts"; "Infused oils".
 - **Cheat sheet:** melting point column removed (her call; it did not help
   choose between emollients).
+
+### Session 18 (17 October 2026) — In-page dialogs replace browser pop-ups (core v1.15)
+
+**Why (her call, from the backlog):** `alert`/`confirm`/`prompt` are blocked
+silently in a sandboxed frame, so in an artifact preview, and in any demo of
+the sellable version embedded in a web page, every delete, warning and
+import did nothing. They also cannot hold more than a line of plain text.
+
+**Core:** `Plume.tell(message, opts)`, `Plume.ask(message, onYes, opts)`,
+`Plume.askValue(message, value, onOk, opts)`. Escaped plain text (blank line
+= paragraph), one dialog at a time with a queue, Escape cancels, focus kept
+inside and returned after, a backdrop click cancels a question but never
+dismisses a notice. `danger: true` makes the button red AND puts focus on
+Cancel so a stray Enter cannot delete. Styles are injected by core above
+every module's own modals (z-index 5000).
+
+**THE RULE for any future code: these do not block.** Everything that used
+to run after `if (!confirm()) return;` lives in the `onYes` callback; a
+function that returned a confirm's answer takes a callback instead (see
+Batchlog's `decommitBatch(silent, done)` and `reverseBatchCommit`). Capture
+ids before asking and re-check them in the callback (`if (editingBatchId !==
+id) return`). Never call `alert`/`confirm`/`prompt` again: `test-dialogs.js`
+scans every app file and fails if one appears.
+
+**Testing:** core calls `window.PLUME_TEST_DIALOGS(kind, message, opts,
+value)` if a test defines it, answering synchronously. `trackDialogs(page,
+into)` in `test/helpers.js` installs it (AWAIT it before `goto`; the
+Packaging conversion found the race when it was not awaited), answers yes or
+the default value, and records "title + message" in the same array the suites
+used to fill from `page.on('dialog')`. Answer no with
+`window.PLUME_TEST_ANSWER = false`.
+
+**How it was done:** five agents, one per module, each in its own git
+worktree under `/home/claude/wt/` on its own branch, working from a written
+guide; their commits were reviewed and cherry-picked. 96 calls converted
+(Formulations 19, Costing 20, Batchlog 17, Ingredients + cheat sheet 16,
+Packaging 9; core 2). Restructured flows: Costing `goList` / new
+`leaveEditor`, `duplicateProduct` / new `makeDuplicate` (save question, then
+open question, strictly in order); Formulations `onStatusChange` (no puts
+the status select back) / new `applyStatus`, `revertTo` / new `doRevert`,
+`makeBatchFromFormula` / new `openBatchlogFor`; Batchlog `decommitBatch`
+(callback) / new `reverseBatchCommit`, `deleteBatch`; Ingredients
+`duplicateLotRow` (either answer adds the row; only "Make it active" sets the
+flag) and the backdrop unsaved-changes guard; Packaging `optimisePhotos` /
+new `runOptimisePhotos`. Imports: each callback has its own try/catch, since
+the outer one no longer covers code that runs after the answer.
+
+**Verified beyond the suites:** a real-click script (no test hook) answered
+"no" in every module: retire puts the status back, delete keeps the formula,
+duplicate "Stay here" stays, batch delete leaves batch and stock untouched
+(and "yes" returns lot and bottle stock), discarding a changed ingredient
+form keeps the typing, leaving an edited product stays.
+
+**Older bug fixed on the way:** the delete-batch warning listed packaging as
+"NaN x undefined" because it read pre-session-8 top-level run fields; it now
+goes through `runComponents()`.
 
