@@ -58,7 +58,7 @@ const PRODUCTS = [
   async function session(seed) {
     const page = await browser.newPage();
     const dialogs = [];
-    trackDialogs(page, dialogs);
+    await trackDialogs(page, dialogs);
     await page.goto(URL);
     await page.waitForTimeout(400);
     // Base library first, then whatever extra the case needs, then one reload

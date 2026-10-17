@@ -51,7 +51,7 @@ const SEED = `
   async function open(module, seed) {
     const page = await browser.newPage();
     const dialogs = [];
-    trackDialogs(page, dialogs);
+    await trackDialogs(page, dialogs);
     await page.goto(previewUrl(module));
     await page.waitForTimeout(300);
     await page.evaluate(seed === undefined ? SEED : seed);

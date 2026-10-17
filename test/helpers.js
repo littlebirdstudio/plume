@@ -51,8 +51,14 @@ function previewUrl(module) {
 // one's text, title first, into `into` -- the same array shape the suites
 // used to fill from page.on('dialog'). To answer "no" or type a value, set
 // window.PLUME_TEST_ANSWER in the page (false, or a string).
-function trackDialogs(page, into) {
-  page.addInitScript(() => {
+// Returns a promise: AWAIT it before page.goto, or the first load can run
+// before the hook is installed and a real dialog would sit unanswered.
+async function trackDialogs(page, into) {
+  page.on('console', (m) => {
+    const t = m.text();
+    if (into && t.indexOf('PLUME_DIALOG ') === 0) into.push(JSON.parse(t.slice(13)));
+  });
+  await page.addInitScript(() => {
     window.PLUME_TEST_DIALOGS = function (kind, message, opts, value) {
       var text = (opts && opts.title ? opts.title + '\n\n' : '') + message;
       console.log('PLUME_DIALOG ' + JSON.stringify(text));
@@ -60,10 +66,6 @@ function trackDialogs(page, into) {
       if (kind === 'value') return a === undefined ? value : a;
       return a === undefined ? true : a;
     };
-  });
-  page.on('console', (m) => {
-    const t = m.text();
-    if (into && t.indexOf('PLUME_DIALOG ') === 0) into.push(JSON.parse(t.slice(13)));
   });
   return into;
 }

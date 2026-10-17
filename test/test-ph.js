@@ -151,7 +151,7 @@ const BATCHES = [
     const page = await browser.newPage();
     const errors = [];
     page.on('pageerror', e => errors.push(String(e)));
-    trackDialogs(page, []);
+    await trackDialogs(page, []);
     await page.goto(previewUrl(module));
     await page.waitForTimeout(300);
     await page.evaluate(SEED);

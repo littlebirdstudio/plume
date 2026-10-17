@@ -80,7 +80,7 @@ const NA_ORDER = ['Natural vitamin E', 'Hemp seed oil', 'Niacinamide', 'Activate
     localStorage.setItem('aerie-batches-v1', '[]');`;
   async function open(module) {
     const page = await browser.newPage();
-    trackDialogs(page, []);
+    await trackDialogs(page, []);
     await page.goto(previewUrl(module));
     await page.waitForTimeout(300);
     await page.evaluate(SEED);

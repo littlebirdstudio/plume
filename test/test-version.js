@@ -38,7 +38,7 @@ PAGES.forEach(p => {
     const page = await browser.newPage();
     const errors = [];
     page.on('pageerror', e => errors.push(String(e)));
-    trackDialogs(page, []);
+    await trackDialogs(page, []);
     await page.goto(previewUrl(mod));
     await page.waitForTimeout(400);
     const txt = await page.evaluate("Array.from(document.querySelectorAll('.plume-version')).map(function(e){return e.textContent;})");

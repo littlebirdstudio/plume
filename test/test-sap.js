@@ -251,7 +251,7 @@ const FA_MW = {
   async function open() {
     const page = await browser.newPage();
     const dialogs = [];
-    trackDialogs(page, dialogs);
+    await trackDialogs(page, dialogs);
     await page.goto(previewUrl('ingredients'));
     await page.waitForTimeout(300);
     await page.evaluate(SEED);
@@ -399,7 +399,7 @@ const FA_MW = {
   console.log('\n6. A library already correct offers nothing to do');
   {
     const page = await browser.newPage();
-    trackDialogs(page, []);
+    await trackDialogs(page, []);
     await page.goto(previewUrl('ingredients'));
     await page.waitForTimeout(300);
     await page.evaluate(`localStorage.setItem('aerie-ingredients-v2', JSON.stringify([

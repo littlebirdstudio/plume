@@ -91,7 +91,7 @@ ok('most oils, butters and waxes are covered', oils.filter(i => Sap.lookup(i.nam
     const page = await browser.newPage();
     const errors = [];
     page.on('pageerror', e => errors.push(String(e)));
-    trackDialogs(page, []);
+    await trackDialogs(page, []);
     await page.goto(previewUrl('ingredients'));
     await page.waitForTimeout(300);
     await page.evaluate(`localStorage.setItem('aerie-ingredients-v2', ${JSON.stringify(JSON.stringify(LIB))});`);

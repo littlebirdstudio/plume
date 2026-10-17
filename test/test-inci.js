@@ -101,7 +101,7 @@ const SEED = `
   const browser = await chromium.launch();
   async function open(module) {
     const page = await browser.newPage();
-    trackDialogs(page, []);
+    await trackDialogs(page, []);
     await page.goto(previewUrl(module));
     await page.waitForTimeout(300);
     await page.evaluate(SEED);

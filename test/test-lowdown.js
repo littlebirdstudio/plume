@@ -53,7 +53,7 @@ console.log('\n1. The starter list carries lowdowns');
     const errors = [];
     const dialogs = [];
     page.on('pageerror', e => errors.push(String(e)));
-    trackDialogs(page, dialogs);
+    await trackDialogs(page, dialogs);
     await page.goto(previewUrl('ingredients'));
     await page.waitForTimeout(300);
     await page.evaluate(`localStorage.setItem('aerie-ingredients-v2', ${JSON.stringify(JSON.stringify(lib || LIB))});`);
