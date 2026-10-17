@@ -320,6 +320,15 @@
     border-radius: 4px; border: 1px dashed transparent; white-space: pre-wrap; }
   .note-edit:hover { border-color: var(--cream-border); background: var(--white); }
   .note-edit .ph { color: var(--ink-lighter); font-style: italic; }
+  /* Drafted lowdown (2026-10-16): Plume wrote it; she confirms with the tick
+     or by editing it. Quiet, so a column of drafts does not shout. */
+  .draft-tag { display: inline-flex; align-items: center; gap: 3px; margin-left: 6px; vertical-align: 1px;
+    font-size: 9.5px; letter-spacing: 0.06em; text-transform: uppercase; font-style: normal;
+    color: var(--ink-lighter); border: 1px dashed var(--cream-border); border-radius: 3px; padding: 0 2px 0 5px; white-space: nowrap; }
+  .draft-ok { border: none; background: none; cursor: pointer; color: var(--sage-dark, var(--ink-light)); font-size: 12px;
+    line-height: 1; padding: 1px 3px; border-radius: 2px; }
+  .draft-ok:hover, .draft-ok:focus-visible { background: var(--sage-light, var(--cream-dark)); outline: none; }
+  .note-edit.is-draft > .note-text { color: var(--ink-light); }
   .note-edit textarea { width: 100%; font: inherit; font-size: 13px; color: var(--ink); border: 1px solid var(--bark-light);
     border-radius: 4px; padding: 5px 7px; background: var(--white); resize: vertical; outline: none; box-sizing: border-box; }
   .note-saved { font-size: 10px; color: var(--success); margin-left: 6px; }
@@ -1293,7 +1302,7 @@
         <input type="text" id="f-function2" placeholder="e.g. also antioxidant, brightening">
       </div>
       <div class="field form-full">
-        <label>The lowdown <span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:10px">— strengths and catches, compared with similar ingredients</span></label>
+        <label>The lowdown <span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:10px">— strengths and catches, compared with similar ingredients</span> <span class="draft-tag" id="f-choose-draft" style="display:none" title="Drafted by Plume. Changing the text makes it yours.">draft</span></label>
         <input type="text" id="f-choose" maxlength="200" placeholder="e.g. natural-leaning, broad-spectrum — but a strong smell that shows in mists">
       </div>
       <div class="field form-full">
@@ -1527,6 +1536,25 @@
   </div>
 </div>
 
+<!-- Lowdown review modal (2026-10-16) -->
+<div class="modal-overlay" id="modal-lowdown">
+  <div class="modal" style="max-width:720px">
+    <div class="modal-header">
+      <div class="modal-title">Fill in lowdowns</div>
+      <button class="modal-close" onclick="closeModal('modal-lowdown')">×</button>
+    </div>
+    <div style="font-size:13px;color:var(--ink-light);margin-bottom:0.75rem;line-height:1.5">Drafted lines for your ingredients that have no lowdown yet, matched by name to the starter list. Untick any you don't want. Each one arrives marked <span class="draft-tag" style="margin-left:0">draft</span> until you tick it or edit it.</div>
+    <div id="lowdown-review-body" style="max-height:420px;overflow-y:auto"></div>
+    <div class="seeder-footer">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <button class="btn btn-sm" onclick="lowdownToggleAll()">Select / clear all</button>
+        <span style="font-size:12px;color:var(--ink-light)" id="lowdown-count">0 selected</span>
+      </div>
+      <button class="btn btn-sage" id="lowdown-apply-btn" onclick="applyLowdowns()">Add selected</button>
+    </div>
+  </div>
+</div>
+
 <!-- Settings & maintenance modal -->
 <div class="modal-overlay" id="modal-settings">
   <div class="modal" style="max-width:560px">
@@ -1555,6 +1583,14 @@
         <button class="btn btn-sm" onclick="closeModal('modal-settings'); openSeeder();">Open…</button>
       </div>
 
+
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--cream-border);gap:16px">
+        <div style="flex:1">
+          <div style="font-size:14px;color:var(--ink);margin-bottom:3px">Fill in lowdowns</div>
+          <div style="font-size:12px;color:var(--ink-lighter);line-height:1.4">Offers a drafted lowdown for each of your ingredients that has none, from the starter list. Shows every line first. Drafts are marked until you keep or edit them; lowdowns you have written are never touched.</div>
+        </div>
+        <button class="btn btn-sm" onclick="closeModal('modal-settings'); openLowdownReview();">Review&hellip;</button>
+      </div>
 
       <div style="font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-lighter);margin-top:20px;margin-bottom:10px">Maintenance utilities</div>
 
@@ -2475,12 +2511,36 @@ var NOTE_PLACEHOLDERS = {
 function notePlaceholder(field, compact) {
   return compact ? '<span class="ph cs-blank">\u2014</span>' : '<span class="ph">' + NOTE_PLACEHOLDERS[field] + '</span>';
 }
-function noteEditHtml(i, field, compact) {
+// A lowdown Plume drafted (from the starter list) carries chooseWhenDraft
+// until she makes it hers: the tick confirms it as is; editing the text
+// confirms it too; clearing it removes both.
+function isDraftNote(i, field) {
+  return field === 'chooseWhen' && !!i.chooseWhenDraft && !!i.chooseWhen;
+}
+function draftTagHtml(i) {
+  return '<span class="draft-tag" title="Drafted by Plume. Tick to keep it as yours, or click the text to change it.">draft' +
+    '<button type="button" class="draft-ok" aria-label="Keep this lowdown" title="Keep it" ' +
+    'onclick="confirmDraft(event,\'' + i.id + '\')">\u2713</button></span>';
+}
+function noteBodyHtml(i, field, compact) {
   var v = i[field] || '';
+  if (!v) return notePlaceholder(field, compact);
+  return '<span class="note-text">' + esc(v) + '</span>' + (isDraftNote(i, field) ? draftTagHtml(i) : '');
+}
+function noteEditHtml(i, field, compact) {
   var tip = field === 'purpose' ? 'Click to edit \u2014 Enter for a new line, click away to save' : 'Click to edit';
-  return '<div class="note-edit" data-id="' + i.id + '" data-field="' + field + '"' + (compact ? ' data-compact="1"' : '') +
+  return '<div class="note-edit' + (isDraftNote(i, field) ? ' is-draft' : '') + '" data-id="' + i.id + '" data-field="' + field + '"' +
+    (compact ? ' data-compact="1"' : '') +
     ' title="' + tip + '" onclick="startNoteEdit(event,this)">' +
-    (v ? esc(v) : notePlaceholder(field, compact)) + '</div>';
+    noteBodyHtml(i, field, compact) + '</div>';
+}
+function confirmDraft(e, id) {
+  if (e) { e.stopPropagation(); e.preventDefault(); }
+  var ing = ingredients.find(function (x) { return x.id === id; });
+  if (!ing || !ing.chooseWhenDraft) return;
+  delete ing.chooseWhenDraft;
+  if (!saveData()) { ing.chooseWhenDraft = true; refreshNoteViews(ing); return; }
+  refreshNoteViews(ing, 'chooseWhen');
 }
 function startNoteEdit(e, el) {
   if (e) e.stopPropagation();
@@ -2511,6 +2571,8 @@ function commitNote(ing, field, value, cancelled) {
   var changed = !cancelled && v !== (ing[field] || '');
   if (changed) {
     if (v) ing[field] = v; else delete ing[field];
+    // Changing a drafted lowdown makes it hers.
+    if (field === 'chooseWhen') delete ing.chooseWhenDraft;
     if (!saveData()) { refreshNoteViews(ing); return; }
   }
   refreshNoteViews(ing, changed ? field : null);
@@ -2521,8 +2583,8 @@ function refreshNoteViews(ing, savedField) {
   var els = document.querySelectorAll('.note-edit[data-id="' + ing.id + '"]');
   for (var k = 0; k < els.length; k++) {
     var el = els[k], f = el.getAttribute('data-field');
-    var v = ing[f] || '';
-    el.innerHTML = (v ? esc(v) : notePlaceholder(f, el.getAttribute('data-compact') === '1')) +
+    el.classList.toggle('is-draft', isDraftNote(ing, f));
+    el.innerHTML = noteBodyHtml(ing, f, el.getAttribute('data-compact') === '1') +
       (f === savedField ? '<span class="note-saved">Saved</span>' : '');
   }
   if (savedField) setTimeout(function () {
@@ -2931,6 +2993,7 @@ function editCurrent() {
   document.getElementById('f-max').value      = i.max      || '';
   document.getElementById('f-purpose').value = i.purpose || '';
   document.getElementById('f-choose').value  = i.chooseWhen || '';
+  document.getElementById('f-choose-draft').style.display = isDraftNote(i, 'chooseWhen') ? '' : 'none';
   renderFuncChips(Plume.funcCats(i));
   document.getElementById('f-function-notes').value    = i.function  || '';
   document.getElementById('f-function2').value         = i.function2 || '';
@@ -3064,7 +3127,14 @@ function saveIngredient(keepOpen) {
 
   if (editingId) {
     var idx = ingredients.findIndex(function(i) { return i.id === editingId; });
-    if (idx > -1) ingredients[idx] = Object.assign({}, ingredients[idx], data);
+    if (idx > -1) {
+      var before = ingredients[idx];
+      ingredients[idx] = Object.assign({}, before, data);
+      // A drafted lowdown stays a draft through an unrelated form save; a
+      // changed or cleared one is hers now.
+      if (before.chooseWhenDraft && (data.chooseWhen || '') !== (before.chooseWhen || '')) delete ingredients[idx].chooseWhenDraft;
+      if (!ingredients[idx].chooseWhen) delete ingredients[idx].chooseWhenDraft;
+    }
   } else {
     data.id      = Date.now().toString() + Math.random().toString(36).slice(2,6);
     data.created = new Date().toISOString();
@@ -4175,10 +4245,88 @@ function starterToIngredient(item) {
   } else if (fa) {
     ing.soap = { fa: fa };
   }
+  // A lowdown from the starter list is Plume's draft until she confirms it.
+  if (ing.chooseWhen) ing.chooseWhenDraft = true;
   ing.lots    = [];
   ing.id      = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   ing.created = new Date().toISOString();
   return ing;
+}
+
+// ── Lowdown review (2026-10-16) ───────────────────────
+// Offers the starter list's drafted lowdown to each of her ingredients that
+// has none. Matched by name or former name (the same keys Quick add uses).
+// Only blank lowdowns; never 'purpose'; nothing applied without a tick.
+var lowdownPlan = [];
+function buildLowdownPlan() {
+  var byKey = {};
+  SEEDER_ITEMS.forEach(function (it) {
+    if (!it.chooseWhen) return;
+    [it.name].concat(it.aka || []).forEach(function (n) {
+      var k = seederNameKey(n);
+      if (k && !byKey[k]) byKey[k] = it;
+    });
+  });
+  var plan = [];
+  ingredients.forEach(function (ing) {
+    if (ing.archived || (ing.chooseWhen && String(ing.chooseWhen).trim())) return;
+    var it = byKey[seederNameKey(ing.name)];
+    if (it) plan.push({ ing: ing, line: it.chooseWhen, from: it.name });
+  });
+  plan.sort(function (a, b) { return a.ing.name.toLowerCase().localeCompare(b.ing.name.toLowerCase()); });
+  return plan;
+}
+function openLowdownReview() {
+  lowdownPlan = buildLowdownPlan();
+  var body = document.getElementById('lowdown-review-body');
+  if (!lowdownPlan.length) {
+    body.innerHTML = '<div style="padding:16px 0;font-size:14px;color:var(--ink)">Nothing to fill in.</div>' +
+      '<div style="font-size:12px;color:var(--ink-lighter);line-height:1.5">Every ingredient that matches the starter list already has a lowdown, or the starter list has none for it.</div>';
+  } else {
+    body.innerHTML = lowdownPlan.map(function (p, k) {
+      var id = 'ld-' + k;
+      return '<label class="seeder-item" for="' + id + '" style="align-items:flex-start">' +
+        '<input type="checkbox" id="' + id + '" data-k="' + k + '" checked onchange="updateLowdownCount()" style="margin-top:3px">' +
+        '<div class="seeder-item-info">' +
+          '<div class="seeder-item-name">' + esc(p.ing.name) +
+            (seederNameKey(p.from) !== seederNameKey(p.ing.name) ? ' <span style="font-weight:400;font-size:11px;color:var(--ink-lighter)">(as ' + esc(p.from) + ')</span>' : '') + '</div>' +
+          '<div style="font-size:12.5px;color:var(--ink-light);line-height:1.45;margin-top:2px">' + esc(p.line) + '</div>' +
+        '</div></label>';
+    }).join('');
+  }
+  var btn = document.getElementById('lowdown-apply-btn');
+  btn.disabled = !lowdownPlan.length;
+  btn.style.opacity = lowdownPlan.length ? '' : '0.5';
+  updateLowdownCount();
+  openModal('modal-lowdown');
+}
+function updateLowdownCount() {
+  var n = document.querySelectorAll('#lowdown-review-body input:checked').length;
+  document.getElementById('lowdown-count').textContent = n + ' selected';
+  document.getElementById('lowdown-apply-btn').textContent = n ? 'Add ' + n + ' lowdown' + (n === 1 ? '' : 's') : 'Add selected';
+}
+function lowdownToggleAll() {
+  var boxes = document.querySelectorAll('#lowdown-review-body input');
+  var any = Array.from(boxes).some(function (c) { return !c.checked; });
+  boxes.forEach(function (c) { c.checked = any; });
+  updateLowdownCount();
+}
+function applyLowdowns() {
+  var n = 0;
+  document.querySelectorAll('#lowdown-review-body input:checked').forEach(function (cb) {
+    var p = lowdownPlan[parseInt(cb.getAttribute('data-k'), 10)];
+    // Re-check at apply time: a lowdown typed meanwhile is never overwritten.
+    if (!p || (p.ing.chooseWhen && String(p.ing.chooseWhen).trim())) return;
+    p.ing.chooseWhen = p.line;
+    p.ing.chooseWhenDraft = true;
+    n++;
+  });
+  if (n && !saveData()) return;
+  lowdownPlan = [];
+  closeModal('modal-lowdown');
+  renderTable();
+  if (ingView === 'cheat' && typeof PlumeCheat !== 'undefined') PlumeCheat.render(ingredients);
+  alert(n ? 'Added ' + n + ' drafted lowdown' + (n === 1 ? '' : 's') + '. Each is marked "draft" until you keep or edit it.' : 'Nothing was added.');
 }
 
 // Saves once at the end. It used to save after every ingredient with a

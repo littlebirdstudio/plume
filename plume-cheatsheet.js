@@ -40,7 +40,6 @@ var COLS = {
   restr:  { label: 'Restrictions',   get: function (i) { return i.restrictions || ''; } },
   absorb: { label: 'Absorption',     get: function (i) { return i.absorptionRate || ''; } },
   shelf:  { label: 'Shelf life',     get: function (i) { return i.oxidationStability || ''; } },
-  melt:   { label: 'Melting point',  get: function (i) { return i.meltingPoint || ''; } },
   dermal: { label: 'Dermal limit',   get: function (i) { return i.dermalLimits || ''; } },
   scent:  { label: 'Scent',          get: function (i) { return i.scent || ''; } }
 };
@@ -52,7 +51,9 @@ var GROUP_COLS = {
   'Thickener': TEXTURE, 'Emulsifier': TEXTURE, 'Solubilizer': TEXTURE, 'Surfactant': TEXTURE,
   'Active': TEXTURE,
   'Preservative': ['use', 'phase', 'ph', 'restr'],
-  'Emollient': ['use', 'absorb', 'shelf', 'melt'],
+  // Melting point removed 2026-10-16 at Heide's request: it did not help
+  // choose between emollients.
+  'Emollient': ['use', 'absorb', 'shelf'],
   'Essential oil': ['use', 'dermal', 'scent'],
   'Fragrance': ['use', 'dermal', 'scent']
 };
@@ -214,7 +215,7 @@ function tableHtml(g, used, forPrint) {
     // opens the ingredient. On paper they are plain text.
     var editable = !forPrint && typeof noteEditHtml === 'function';
     h += '<td class="cs-choose">' + (editable ? noteEditHtml(i, 'chooseWhen', true) :
-      (i.chooseWhen ? esc(i.chooseWhen) : '<span class="cs-blank">\u2014</span>')) + '</td>';
+      (i.chooseWhen ? esc(i.chooseWhen) + (i.chooseWhenDraft ? ' <span class="cs-blank">(draft)</span>' : '') : '<span class="cs-blank">\u2014</span>')) + '</td>';
     if (hasSubs) h += '<td class="cs-subs">' + (i.substitution ? esc(i.substitution) : '<span class="cs-blank">\u2014</span>') + '</td>';
     h += '<td class="cs-purpose">' + (editable ? noteEditHtml(i, 'purpose', true) :
       (i.purpose ? esc(i.purpose) : '<span class="cs-blank">\u2014</span>')) + '</td>';

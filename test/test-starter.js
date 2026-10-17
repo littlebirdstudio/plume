@@ -59,6 +59,13 @@ ok('short factual fields survive', !!(byName('Shea butter') || {}).meltingPoint 
 ok('Red clay is its own item, not folded into kaolin', !!byName('Red clay'));
 ok('high-oleic sunflower does not inherit "unstable"', !(byName('Sunflower oil (high oleic)') || {}).oxidationStability);
 ok('Tapioca starch carries the starch INCI', (byName('Tapioca starch') || {}).inci === 'Tapioca Starch');
+ok('carrot seed carrier oil and essential oil are two entries',
+   byName('Carrot seed oil') && byName('Carrot seed oil').type === 'Carrier oils' &&
+   byName('Carrot seed essential oil') && byName('Carrot seed essential oil').type === 'Essential oils');
+ok('pH adjusters have their own type', (byName('Citric acid') || {}).type === 'pH adjusters' && (byName('Arginine') || {}).type === 'pH adjusters');
+ok('rosemary CO2 extract sits with the antioxidants', /antioxidants/.test((byName('Rosemary CO2 extract') || {}).type));
+ok('no INCI is left cut off mid-list', items.every(i => !/(\(and\)|\bor)\s*$/.test(i.inci)),
+   items.filter(i => /(\(and\)|\bor)\s*$/.test(i.inci)).map(i => i.name + ': ' + i.inci));
 ok('directory brand names are properly cased',
    !!byName('Sucragel AOF Bio') && !!byName('Spectrastat G2 Natural (MB)') && !!byName('SCS (sodium coco sulfate)'));
 
