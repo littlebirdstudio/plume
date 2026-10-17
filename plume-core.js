@@ -36,7 +36,7 @@ var Plume = (function () {
 // (v0.4 / v0.5 / v0.6 across five modules). BUMP IT IN EVERY PULL REQUEST,
 // core change or not: it is how "is this the update I just merged?" is
 // answered by looking, and browsers cache .js files stubbornly.
-var VERSION = '1.15';
+var VERSION = '1.16';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -662,13 +662,15 @@ function renderStorage() {
   }
   html += '<div style="font-size:11px;color:var(--ink-lighter);line-height:1.5;margin-top:10px">';
   html += 'All Plume modules share one browser storage budget of about 5MB, which browsers do not allow to be raised.<br>' +
-          '<span style="opacity:0.75">plume-core.js v' + VERSION + ' &middot; storage: ' + Store.driverName() + '</span></div>';
+          '<span style="opacity:0.75">plume-core.js v' + VERSION + ' &middot; storage: ' + Store.driverName() + '</span></div>' +
+          '<div id="plume-app-status" style="font-size:11px;color:var(--ink-lighter);line-height:1.6;margin-top:8px"></div>';
   if (r.rows.length) {
     html += '<button class="plume-link-btn" onclick="Plume.toggleStorDrill()">What is using the room?</button>';
     html += '<div id="stor-drill"></div>';
   }
   el.innerHTML = html;
   if (storDrillOpen) renderStorDrill();
+  setTimeout(renderAppStatus, 0);
 }
 
 function toggleStorDrill() { storDrillOpen = !storDrillOpen; renderStorage(); }
@@ -940,6 +942,135 @@ function askValue(message, value, onOk, opts) {
   dlgShow({ kind: 'value', message: message, value: value, opts: opts, done: function (v) {
     if (v === null) { if (opts.onCancel) opts.onCancel(); } else if (onOk) onOk(v);
   } });
+}
+
+// ══ Installable app / offline (2026-10-17) ════════════
+// sw.js keeps a saved copy of the app files (network first; see its header)
+// and manifest.webmanifest makes Plume installable from Chrome. Registration
+// only happens over http(s): a file:// page or a sandboxed preview cannot
+// register a service worker, and Plume carries on normally without one.
+var installPrompt = null;
+
+function isInstalled() {
+  if (typeof window === 'undefined') return false;
+  if (window.PLUME_TEST_STANDALONE) return true;   // test hook, like PLUME_TEST_DIALOGS
+  try {
+    return !!(window.matchMedia && (window.matchMedia('(display-mode: standalone)').matches ||
+                                    window.matchMedia('(display-mode: window-controls-overlay)').matches)) ||
+           window.navigator.standalone === true;
+  } catch (e) { return false; }
+}
+
+function registerAppWorker() {
+  try {
+    if (!('serviceWorker' in navigator)) return;
+    if (!/^https?:$/.test(location.protocol)) return;
+    navigator.serviceWorker.register('sw.js').catch(function () { /* runs fine without it */ });
+  } catch (e) { /* sandboxed frame: no service worker, no problem */ }
+}
+
+// Chrome offers to install when it thinks the app qualifies; keep the offer
+// so an "Install Plume" button can use it. Chrome's own install icon in the
+// address bar keeps working either way.
+function watchInstallOffer() {
+  window.addEventListener('beforeinstallprompt', function (e) {
+    e.preventDefault();
+    installPrompt = e;
+    showInstallButtons(true);
+  });
+  window.addEventListener('appinstalled', function () {
+    installPrompt = null;
+    showInstallButtons(false);
+  });
+}
+function showInstallButtons(on) {
+  var els = document.querySelectorAll('.plume-install');
+  for (var i = 0; i < els.length; i++) els[i].hidden = !on || isInstalled();
+}
+function install() {
+  if (!installPrompt) {
+    tell('In Chrome, use the install icon at the right of the address bar, or the menu (three dots) then "Cast, save and share" then "Install page as app".',
+         { title: 'Install Plume as an app' });
+    return;
+  }
+  installPrompt.prompt();
+  installPrompt.userChoice.then(function () { installPrompt = null; showInstallButtons(false); });
+}
+
+// In the installed app, moving between modules stays in the one window, like
+// sections of an app. In a browser tab, links keep their old behaviour (each
+// module in its own named tab). Bonus: each page then loads fresh from
+// storage, so one module can never save over another's newer data.
+function keepLinksInWindow() {
+  if (!isInstalled()) return;
+  document.addEventListener('click', function (e) {
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    var a = e.target && e.target.closest ? e.target.closest('a[target]') : null;
+    if (!a || !a.href) return;
+    var u;
+    try { u = new URL(a.href, location.href); } catch (err) { return; }
+    var here = location.pathname.replace(/[^\/]*$/, '');
+    if (u.origin !== location.origin || u.pathname.indexOf(here) !== 0) return;
+    if (!/(\.html|\/)$/.test(u.pathname)) return;
+    e.preventDefault();
+    location.href = u.href;
+  }, true);
+}
+
+// Opens another Plume page: same window in the app, a new tab in a browser.
+function openPage(url) {
+  if (isInstalled()) { location.href = url; return; }
+  window.open(url, '_blank', 'noopener');
+}
+
+// Settings -> Storage -> "Clear the saved app copy". Removes only the saved
+// app files and the service worker; her data (localStorage) is untouched.
+function resetAppCache() {
+  ask('This removes the saved copy of Plume\'s files and reloads from the site. Your ingredients, formulations, batches and products are not touched.',
+    function () {
+      var jobs = [];
+      try {
+        if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
+          jobs.push(navigator.serviceWorker.getRegistrations().then(function (rs) {
+            return Promise.all(rs.map(function (r) { return r.unregister(); }));
+          }));
+        }
+        if (window.caches && caches.keys) {
+          jobs.push(caches.keys().then(function (ks) {
+            return Promise.all(ks.filter(function (k) { return k.indexOf('plume-') === 0; })
+              .map(function (k) { return caches.delete(k); }));
+          }));
+        }
+      } catch (e) {}
+      Promise.all(jobs).then(function () { location.reload(); }, function () { location.reload(); });
+    }, { title: 'Clear the saved app copy?', yes: 'Clear and reload' });
+}
+
+// One line for Settings -> Storage: how Plume is running and whether the
+// offline copy is ready. Filled in after the panel renders (it is async).
+function renderAppStatus() {
+  var el = document.getElementById('plume-app-status');
+  if (!el) return;
+  var mode = isInstalled() ? 'Running as an installed app.' : 'Running in a browser tab.';
+  var set = function (offline) {
+    el.innerHTML = esc(mode) + ' ' + esc(offline) +
+      ' <button class="plume-link-btn" onclick="Plume.resetAppCache()">Clear the saved app copy</button>' +
+      (isInstalled() ? '' : ' <button class="plume-link-btn plume-install" hidden onclick="Plume.install()">Install as an app</button>');
+    showInstallButtons(!!installPrompt);
+  };
+  if (!window.caches || !caches.open || !/^https?:$/.test(location.protocol)) { set('Offline copy: not available here.'); return; }
+  caches.open('plume-app-v1').then(function (c) { return c.keys(); }).then(function (keys) {
+    set(keys.length ? 'Offline copy: ready.' : 'Offline copy: being saved.');
+  }, function () { set('Offline copy: not available here.'); });
+}
+
+// Start-up for every page that loads core, the landing page included.
+// (Guarded so the test suites that run core in a bare sandbox still load it.)
+if (typeof window !== 'undefined' && typeof window.addEventListener === 'function' &&
+    typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+  watchInstallOffer();
+  keepLinksInWindow();
+  window.addEventListener('load', registerAppWorker);
 }
 
 // ══ Boot ══════════════════════════════════════════════
@@ -1553,6 +1684,7 @@ return {
   FUNCTION_CATEGORIES: FUNCTION_CATEGORIES, funcCats: funcCats, ingMatchRank: ingMatchRank,
   PRODUCT_TYPES: PRODUCT_TYPES, isSoapType: isSoapType, fillTypeSelect: fillTypeSelect,
   buildSheet: buildSheet, openSheet: openSheet, stampVersion: stampVersion,
+  isInstalled: isInstalled, install: install, openPage: openPage, resetAppCache: resetAppCache,
   tell: tell, ask: ask, askValue: askValue,
   parsePh: parsePh, phNum: phNum, phRange: phRange, phTargetText: phTargetText,
   isAqueous: isAqueous, phBadge: phBadge, phStepsHtml: phStepsHtml, phFinal: phFinal,

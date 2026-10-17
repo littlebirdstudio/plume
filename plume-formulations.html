@@ -496,6 +496,10 @@ span.ing-name-btn{text-decoration:none}
 .palette-swatch-label { font-size:11px; color:var(--ink-light); text-align:center; letter-spacing:0.02em; }
 .palette-swatch.active .palette-swatch-label { color:var(--ink); font-weight:600; }
 </style>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#404834">
+<link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 </head>
 <body>
 <header class="app-header">
@@ -3758,7 +3762,8 @@ function openBatchlogFor(f) {
   if (!isNaN(bs) && bs > 0) hash += '&y=' + bs;
   // Open batchlog with the formula id (and optional batch size) in the hash
   var url = 'plume-batchlog.html' + hash;
-  window.open(url, '_blank', 'noopener');
+  // Same window in the installed app, a new tab in a browser.
+  Plume.openPage(url);
 }
 
 function printFormula() {
