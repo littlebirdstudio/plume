@@ -54,6 +54,7 @@ var GROUP_COLS = {
   // Melting point removed 2026-10-16 at Heide's request: it did not help
   // choose between emollients.
   'Emollient': ['use', 'absorb', 'shelf'],
+  'Base / solvent': ['use', 'phase', 'scent'],   // waters differ mostly by scent
   'Essential oil': ['use', 'dermal', 'scent'],
   'Fragrance': ['use', 'dermal', 'scent']
 };
@@ -208,7 +209,7 @@ function tableHtml(g, used, forPrint) {
       // text is allowed to wrap.
       var cell = v ? (String(v).length <= 14 ? '<span style="white-space:nowrap">' + clip(v, 60) + '</span>' : clip(v, 60))
                    : '<span class="cs-blank">\u2014</span>';
-      h += '<td>' + (c.odd[i.id] ? '<span class="cs-odd">' + cell + '</span>' : cell) + '</td>';
+      h += '<td>' + (c.odd[i.id] ? '<span class="cs-odd" title="Differs from most others in this group">' + cell + '</span>' : cell) + '</td>';
     });
     // On screen, the two notes are click-to-type (noteEditHtml lives in the
     // Ingredients page); clicking them edits, clicking elsewhere in the row
@@ -225,6 +226,11 @@ function tableHtml(g, used, forPrint) {
     h += '</tr>';
   });
   h += '</tbody></table></div>';
+  // The marking needs saying in words; without this it read as a warning.
+  var anyOdd = plan.show.some(function (c) { return Object.keys(c.odd).length; });
+  if (anyOdd) {
+    h += '<div class="cs-hidden"><span class="cs-odd">Underlined</span> values differ from most others in this group, which is often the reason to choose one over another.</div>';
+  }
   if (plan.hidden.length) {
     h += '<div class="cs-hidden">Not shown \u2014 the same for every one: ' + esc(plan.hidden.join(' \u00b7 ')) + '</div>';
   }
@@ -274,7 +280,7 @@ function setQuery(q) {
 // Prints what is on screen, one group per page, for the bench.
 function print(ings) {
   var shown = applyFilter(buildGroups(ings));
-  if (!shown.length) { alert('Nothing to print.'); return; }
+  if (!shown.length) { Plume.tell('Nothing to print.'); return; }
   var used = usageMap();
   var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Ingredient cheat sheet</title><style>' +
     'body{font-family:Georgia,serif;color:#222;margin:32px;font-size:12px}' +
@@ -299,7 +305,7 @@ function print(ings) {
     }).join('') +
     '<scr' + 'ipt>window.onload=function(){window.print();};<\/scr' + 'ipt></body></html>';
   var w = window.open('', '_blank');
-  if (!w) { alert('The print window was blocked. Allow popups for this site and try again.'); return; }
+  if (!w) { Plume.tell('The print window was blocked. Allow popups for this site and try again.'); return; }
   w.document.write(html); w.document.close();
 }
 
@@ -320,22 +326,30 @@ function print(ings) {
     // The Ingredients page sets table-layout:fixed on every table (columns
     // share the width evenly -- right for its list). A comparison chart needs
     // columns sized to their content, so it switches back to auto layout.
-    '.cs-table{width:100%;border-collapse:collapse;font-size:13px;background:var(--white);border:1px solid var(--cream-border);border-radius:6px;table-layout:auto}' +
-    '.cs-table th{text-align:left;font-weight:400;font-size:11px;color:var(--ink-lighter);padding:8px 10px;border-bottom:1px solid var(--cream-border);vertical-align:bottom;line-height:1.3}' +
+    '.cs-table{width:100%;border-collapse:collapse;font-size:12px;line-height:1.45;background:var(--white);border:1px solid var(--cream-border);border-radius:6px;table-layout:auto}' +
+    '.cs-table th{text-align:left;font-weight:400;font-size:10.5px;color:var(--ink-lighter);padding:7px 8px;border-bottom:1px solid var(--cream-border);vertical-align:bottom;line-height:1.3}' +
     '.cs-table th.cs-choose{color:var(--bark-dark);font-weight:500}' +
     // The Ingredients page styles every td as one line cut off with an
     // ellipsis (right for its list, wrong here) -- undo that for the chart.
-    '.cs-table td{padding:9px 10px;border-top:1px solid var(--cream-dark);vertical-align:top;color:var(--ink);white-space:normal;overflow:visible;text-overflow:clip}' +
+    '.cs-table td{padding:7px 8px;border-top:1px solid var(--cream-dark);vertical-align:top;color:var(--ink);white-space:normal;overflow:visible;text-overflow:clip}' +
     '.cs-table tbody tr.has-stock td{background:var(--clay-light)}.cs-table tbody tr.has-stock:hover td{background:var(--clay-hover)}' +
     '.cs-table tbody tr{cursor:pointer}.cs-table tbody tr:hover td{background:var(--cream)}' +
-    '.cs-table th.cs-name{width:150px}.cs-name b{font-weight:500;color:var(--bark-dark)}' +
+    '.cs-table th.cs-name{width:130px}.cs-name b{font-weight:500;color:var(--bark-dark)}' +
+    '.cs-table td .note-edit{font-size:12px}' +
     '.cs-table td{overflow-wrap:break-word}.cs-table td .note-edit{margin-top:-2px}' +
-    '.cs-choose{min-width:180px;width:260px}.cs-choose .note-edit{max-width:260px;white-space:pre-wrap;overflow-wrap:anywhere}.cs-subs{min-width:120px}.cs-purpose{min-width:150px;width:220px;color:var(--ink-light)}.cs-purpose .note-edit{max-width:220px;overflow-wrap:anywhere}' +
-    '.cs-num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;min-width:64px;padding-left:16px !important}' +
-    '.cs-used{min-width:130px;font-size:12px}' +
+    // Widths sized (2026-10-17) so a group with substitutes and four
+    // comparison columns fits without side-scrolling on a laptop screen.
+    '.cs-choose{min-width:160px;width:230px}.cs-choose .note-edit{max-width:230px;white-space:pre-wrap;overflow-wrap:anywhere}' +
+    '.cs-subs{min-width:100px;width:140px}.cs-purpose{min-width:120px;width:170px;color:var(--ink-light)}.cs-purpose .note-edit{max-width:170px;overflow-wrap:anywhere}' +
+    '.cs-num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;min-width:52px;padding-left:12px !important}' +
+    '.cs-used{min-width:100px;font-size:11.5px}' +
+    // The cheat sheet uses more of the screen than the list does.
+    'body.cs-wide .app-body{max-width:1440px}' +
     '.used-link{color:var(--bark-dark);text-decoration:none;border-bottom:1px dotted var(--bark-light)}.used-link:hover{border-bottom-style:solid}' +
     '.cs-blank{color:var(--ink-lighter);opacity:.6}' +
-    '.cs-odd{background:var(--warning-bg);color:var(--warning);padding:1px 6px;border-radius:4px}' +
+    // Marks a value that differs from most of its group. Neutral on purpose:
+    // the old amber warning colour made it look like a problem.
+    '.cs-odd{font-weight:600;color:var(--bark-dark);border-bottom:2px solid var(--bark-light);padding-bottom:1px}' +
     '.cs-hidden{font-size:11px;color:var(--ink-lighter);margin-top:6px}' +
     '.cs-empty{color:var(--ink-lighter);padding:2rem 0;font-size:13px}' +
     '.view-toggle{display:inline-flex;border:1px solid var(--cream-border);border-radius:6px;overflow:hidden;margin-left:auto}' +

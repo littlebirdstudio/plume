@@ -8,7 +8,7 @@
 const fs = require('fs');
 const path = require('path');
 const { chromium } = require('playwright');
-const { ROOT, TMP, previewUrl } = require('./helpers');
+const { ROOT, TMP, previewUrl, trackDialogs } = require('./helpers');
 
 let pass = 0, fail = 0;
 function ok(label, cond, got) {
@@ -38,7 +38,7 @@ PAGES.forEach(p => {
     const page = await browser.newPage();
     const errors = [];
     page.on('pageerror', e => errors.push(String(e)));
-    page.on('dialog', d => d.accept());
+    await trackDialogs(page, []);
     await page.goto(previewUrl(mod));
     await page.waitForTimeout(400);
     const txt = await page.evaluate("Array.from(document.querySelectorAll('.plume-version')).map(function(e){return e.textContent;})");

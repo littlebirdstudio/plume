@@ -7,7 +7,7 @@
 const fs = require('fs');
 const path = require('path');
 const { chromium } = require('playwright');
-const { ROOT, previewUrl } = require('./helpers');
+const { ROOT, previewUrl, trackDialogs } = require('./helpers');
 
 let pass = 0, fail = 0;
 function ok(label, cond, got) {
@@ -66,6 +66,10 @@ ok('pH adjusters have their own type', (byName('Citric acid') || {}).type === 'p
 ok('rosemary CO2 extract sits with the antioxidants', /antioxidants/.test((byName('Rosemary CO2 extract') || {}).type));
 ok('no INCI is left cut off mid-list', items.every(i => !/(\(and\)|\bor)\s*$/.test(i.inci)),
    items.filter(i => /(\(and\)|\bor)\s*$/.test(i.inci)).map(i => i.name + ': ' + i.inci));
+ok('waters are tagged Base / solvent', ['Distilled water', 'Rose hydrosol', 'Aloe vera juice'].every(n => (byName(n).functionCategory || []).indexOf('Base / solvent') !== -1));
+ok('hydrosols are co-tagged Fragrance (her call)', items.filter(i => /hydrosol/i.test(i.name)).every(i => (i.functionCategory || []).indexOf('Fragrance') !== -1));
+ok('lowdowns say inexpensive, not cheap', items.every(i => !/\bcheap/i.test(i.chooseWhen || '')),
+   items.filter(i => /\bcheap/i.test(i.chooseWhen || '')).map(i => i.name));
 ok('directory brand names are properly cased',
    !!byName('Sucragel AOF Bio') && !!byName('Spectrastat G2 Natural (MB)') && !!byName('SCS (sodium coco sulfate)'));
 
@@ -91,7 +95,7 @@ ok('most oils, butters and waxes are covered', oils.filter(i => Sap.lookup(i.nam
     const page = await browser.newPage();
     const errors = [];
     page.on('pageerror', e => errors.push(String(e)));
-    page.on('dialog', d => d.accept());
+    await trackDialogs(page, []);
     await page.goto(previewUrl('ingredients'));
     await page.waitForTimeout(300);
     await page.evaluate(`localStorage.setItem('aerie-ingredients-v2', ${JSON.stringify(JSON.stringify(LIB))});`);

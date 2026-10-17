@@ -36,7 +36,7 @@ var Plume = (function () {
 // (v0.4 / v0.5 / v0.6 across five modules). BUMP IT IN EVERY PULL REQUEST,
 // core change or not: it is how "is this the update I just merged?" is
 // answered by looking, and browsers cache .js files stubbornly.
-var VERSION = '1.14';
+var VERSION = '1.15';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -752,9 +752,9 @@ function noteSaveFailed() {
   renderStorBanner();
   if (!storAlerted) {
     storAlerted = true;
-    alert('Your changes could NOT be saved — browser storage is full.\n\n' +
-          'Nothing you do from here will be saved until space is freed. Use the red banner at the ' +
-          'top to download a backup first, then see Settings for what is taking up room.');
+    tell('Nothing you do from here will be saved until space is freed. Use the red banner at the ' +
+         'top to download a backup first, then see Settings for what is taking up room.',
+         { title: 'Your changes could not be saved: browser storage is full' });
   }
 }
 function noteSaveOk() { storFailed = false; }
@@ -786,7 +786,21 @@ function injectStyles() {
   '.ph-arrow{color:var(--ink-lighter);font-size:11px}' +
   '.ph-next{display:inline-flex;align-items:center;gap:6px}' +
   // Labels are uppercased across Plume; pH must keep its own case.
-  '.ph-word{text-transform:none!important;letter-spacing:0.02em}';
+  '.ph-word{text-transform:none!important;letter-spacing:0.02em}' +
+  // In-page dialogs. Above every module's own modals (theirs top out near 1000).
+  '.plume-dlg-ov{position:fixed;inset:0;background:rgba(30,32,26,0.42);z-index:5000;display:flex;align-items:center;justify-content:center;padding:16px}' +
+  '.plume-dlg{background:var(--white,#fff);color:var(--ink,#222);border:1px solid var(--cream-border,#ccc);border-radius:6px;' +
+    'box-shadow:0 10px 36px rgba(0,0,0,0.22);width:100%;max-width:440px;max-height:calc(100vh - 32px);overflow:auto;padding:20px 22px 16px;font-family:\'DM Sans\',sans-serif}' +
+  '.plume-dlg-title{font-family:\'Cormorant Garamond\',Georgia,serif;font-size:21px;color:var(--bark-dark,#333);margin-bottom:8px;line-height:1.25}' +
+  '.plume-dlg-msg{font-size:13.5px;line-height:1.55;color:var(--ink,#222)}' +
+  '.plume-dlg-msg p{margin:0 0 10px}.plume-dlg-msg p:last-child{margin-bottom:0}' +
+  '.plume-dlg-input{width:100%;box-sizing:border-box;margin-top:12px;font:inherit;font-size:14px;padding:8px 10px;border:1px solid var(--cream-border,#ccc);border-radius:3px;background:var(--white,#fff);color:var(--ink,#222)}' +
+  '.plume-dlg-input:focus{outline:none;border-color:var(--bark-light,#888)}' +
+  '.plume-dlg-btns{display:flex;justify-content:flex-end;gap:8px;margin-top:18px;flex-wrap:wrap}' +
+  '.plume-dlg-btns button{font-family:inherit;font-size:13px;padding:7px 14px;border-radius:3px;cursor:pointer;border:1px solid var(--cream-border,#ccc);background:var(--white,#fff);color:var(--ink,#222)}' +
+  '.plume-dlg-btns .plume-dlg-yes{background:var(--bark,#555);border-color:var(--bark,#555);color:var(--white,#fff)}' +
+  '.plume-dlg-btns .plume-dlg-yes.danger{background:var(--danger,#a03020);border-color:var(--danger,#a03020)}' +
+  '.plume-dlg-btns button:focus-visible{outline:2px solid var(--bark-light,#888);outline-offset:2px}';
   var st = document.createElement('style');
   st.id = 'plume-core-css';
   st.appendChild(document.createTextNode(css));
@@ -804,6 +818,128 @@ function stampVersion() {
   }
   var els = document.querySelectorAll('.plume-version');
   for (var i = 0; i < els.length; i++) els[i].textContent = 'v' + VERSION;
+}
+
+// ══ In-page dialogs (2026-10-17) ═══════════════════════
+// Replace the browser's alert(), confirm() and prompt(). Those are blocked
+// silently in a sandboxed frame (the artifact previews, and any demo of the
+// sellable version embedded in a web page), so an action behind one simply
+// did nothing there. They also cannot hold more than a line of plain text.
+//
+//   Plume.tell(message, opts)              alert:   opts.title, opts.ok, opts.onClose
+//   Plume.ask(message, onYes, opts)        confirm: opts.title, opts.yes, opts.no,
+//                                                   opts.danger, opts.onNo
+//   Plume.askValue(message, value, onOk, opts)  prompt: onOk(text); opts.onCancel
+//
+// THEY DO NOT BLOCK. confirm() stopped the script until answered; these
+// return at once and call back later. Code that ran after `if (!confirm())
+// return;` must move into the onYes callback, and a function that returned
+// confirm()'s answer must take a callback instead.
+//
+// Messages are plain text: escaped, a blank line starts a new paragraph,
+// a single newline is a line break. One dialog shows at a time; others
+// queue behind it. Escape cancels; Enter confirms unless opts.danger, where
+// Cancel holds the focus so a stray Enter cannot delete anything.
+//
+// TEST HOOK: if window.PLUME_TEST_DIALOGS is a function, it is called with
+// (kind, message, opts) and its return value answers at once, synchronously:
+// true/false for ask, a string (or null) for askValue. The test suites use
+// it to read and answer dialogs. Nothing in the app sets it.
+var dlgQueue = [], dlgOpen = null;
+
+function dlgParas(msg) {
+  if (msg == null || !String(msg).trim()) return '';   // a title-only question
+  return String(msg).split(/\n{2,}/).map(function (p) {
+    return '<p>' + esc(p).replace(/\n/g, '<br>') + '</p>';
+  }).join('');
+}
+
+function dlgShow(d) {
+  var hook = (typeof window !== 'undefined') && window.PLUME_TEST_DIALOGS;
+  if (typeof hook === 'function') {
+    var r = hook(d.kind, d.message, d.opts || {}, d.value);
+    if (d.kind === 'value') d.done(r === null || r === undefined || r === false ? null : String(r));
+    else d.done(d.kind === 'tell' ? true : !!r);
+    return;
+  }
+  dlgQueue.push(d);
+  if (!dlgOpen) dlgNext();
+}
+
+function dlgNext() {
+  var d = dlgQueue.shift();
+  if (!d) { dlgOpen = null; return; }
+  dlgOpen = d;
+  var o = d.opts || {};
+  d.returnFocus = document.activeElement;
+  var wrap = document.createElement('div');
+  wrap.className = 'plume-dlg-ov';
+  var isAsk = d.kind !== 'tell';
+  wrap.innerHTML =
+    '<div class="plume-dlg" role="' + (isAsk ? 'alertdialog' : 'dialog') + '" aria-modal="true" aria-labelledby="plume-dlg-t" aria-describedby="plume-dlg-m">' +
+      (o.title ? '<div class="plume-dlg-title" id="plume-dlg-t">' + esc(o.title) + '</div>' : '<span id="plume-dlg-t" hidden>Plume</span>') +
+      '<div class="plume-dlg-msg" id="plume-dlg-m">' + dlgParas(d.message) + '</div>' +
+      (d.kind === 'value' ? '<input type="text" class="plume-dlg-input" value="' + esc(d.value == null ? '' : d.value) + '"' +
+        (o.inputmode ? ' inputmode="' + esc(o.inputmode) + '"' : '') + '>' : '') +
+      '<div class="plume-dlg-btns">' +
+        (isAsk ? '<button type="button" class="plume-dlg-no">' + esc(o.no || 'Cancel') + '</button>' : '') +
+        '<button type="button" class="plume-dlg-yes' + (o.danger ? ' danger' : '') + '">' +
+          esc(isAsk ? (o.yes || 'OK') : (o.ok || 'OK')) + '</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(wrap);
+  var yes = wrap.querySelector('.plume-dlg-yes'), no = wrap.querySelector('.plume-dlg-no');
+  var input = wrap.querySelector('.plume-dlg-input');
+  var finish = function (ok) {
+    if (wrap.parentNode) wrap.parentNode.removeChild(wrap);
+    document.removeEventListener('keydown', onKey, true);
+    try { if (d.returnFocus && d.returnFocus.focus) d.returnFocus.focus(); } catch (e) {}
+    var val = input ? input.value : null;
+    dlgOpen = null;
+    if (d.kind === 'value') d.done(ok ? val : null);
+    else d.done(d.kind === 'tell' ? true : ok);
+    if (!dlgOpen) dlgNext();
+  };
+  var onKey = function (e) {
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); finish(false); }
+    else if (e.key === 'Enter' && document.activeElement !== no && !(o.danger && !input)) { e.preventDefault(); e.stopPropagation(); finish(true); }
+    else if (e.key === 'Tab') {   // keep focus inside the dialog
+      var f = Array.prototype.slice.call(wrap.querySelectorAll('button, input'));
+      var i = f.indexOf(document.activeElement);
+      e.preventDefault();
+      f[(i + (e.shiftKey ? -1 : 1) + f.length) % f.length].focus();
+    }
+  };
+  yes.onclick = function () { finish(true); };
+  if (no) no.onclick = function () { finish(false); };
+  // A click on the backdrop cancels a question but not a notice, so a
+  // mis-click cannot lose a message she has not read.
+  wrap.onclick = function (e) { if (e.target === wrap && isAsk) finish(false); };
+  document.addEventListener('keydown', onKey, true);
+  setTimeout(function () {
+    if (input) { input.focus(); input.select(); }
+    else if (o.danger && no) no.focus();
+    else yes.focus();
+  }, 0);
+}
+
+function tell(message, opts) {
+  opts = opts || {};
+  dlgShow({ kind: 'tell', message: message, opts: opts, done: function () { if (opts.onClose) opts.onClose(); } });
+}
+
+function ask(message, onYes, opts) {
+  opts = opts || {};
+  dlgShow({ kind: 'ask', message: message, opts: opts, done: function (ok) {
+    if (ok) { if (onYes) onYes(); } else if (opts.onNo) opts.onNo();
+  } });
+}
+
+function askValue(message, value, onOk, opts) {
+  opts = opts || {};
+  dlgShow({ kind: 'value', message: message, value: value, opts: opts, done: function (v) {
+    if (v === null) { if (opts.onCancel) opts.onCancel(); } else if (onOk) onOk(v);
+  } });
 }
 
 // ══ Boot ══════════════════════════════════════════════
@@ -828,7 +964,9 @@ function boot(cb) {
 // product-type lists. Adding an entry is free; renaming one strands every
 // ingredient that carries the old word.
 var FUNCTION_CATEGORIES = [
-  'Emollient', 'Humectant', 'Emulsifier', 'Preservative', 'Active',
+  // 'Base / solvent' added 2026-10-17: water, hydrosols and aloe juice had no
+  // function that fit and landed in "No function set" on the cheat sheet.
+  'Emollient', 'Humectant', 'Base / solvent', 'Emulsifier', 'Preservative', 'Active',
   'pH Adjuster', 'Thickener', 'Solubilizer', 'Surfactant', 'Exfoliant',
   'Essential oil', 'Fragrance', 'Colorant', 'Other'
 ];
@@ -1332,7 +1470,7 @@ function buildSheet(o) {
 function openSheet(o) {
   var win = window.open('', '_blank');
   if (!win) {
-    alert('The print sheet was blocked by a popup blocker. Allow popups for this site and try again.');
+    tell('Allow pop-ups for this site in your browser, then try again.', { title: 'The print sheet was blocked' });
     return null;
   }
   win.document.write(buildSheet(o));
@@ -1415,6 +1553,7 @@ return {
   FUNCTION_CATEGORIES: FUNCTION_CATEGORIES, funcCats: funcCats, ingMatchRank: ingMatchRank,
   PRODUCT_TYPES: PRODUCT_TYPES, isSoapType: isSoapType, fillTypeSelect: fillTypeSelect,
   buildSheet: buildSheet, openSheet: openSheet, stampVersion: stampVersion,
+  tell: tell, ask: ask, askValue: askValue,
   parsePh: parsePh, phNum: phNum, phRange: phRange, phTargetText: phTargetText,
   isAqueous: isAqueous, phBadge: phBadge, phStepsHtml: phStepsHtml, phFinal: phFinal,
   boot: boot

@@ -568,16 +568,20 @@ function importData(e) {
     try {
       var data = JSON.parse(ev.target.result);
       var arr  = data.batches || (Array.isArray(data) ? data : []);
-      if (!confirm('Import ' + arr.length + ' batches? Duplicates by id will be skipped.')) return;
-      var existing = {};
-      batches.forEach(function(b) { existing[b.id] = true; });
-      var added = 0;
-      arr.forEach(function(b) { if (!existing[b.id]) { batches.push(b); added++; } });
-      saveBatches();
-      renderStats();
-      renderList();
-      alert('Imported ' + added + ' batches.');
-    } catch(err) { alert('Could not read file.'); }
+      // The answer arrives later, so the import runs in the callback (with its own catch).
+      Plume.ask('Duplicates by id will be skipped.', function() {
+        try {
+          var existing = {};
+          batches.forEach(function(b) { existing[b.id] = true; });
+          var added = 0;
+          arr.forEach(function(b) { if (!existing[b.id]) { batches.push(b); added++; } });
+          saveBatches();
+          renderStats();
+          renderList();
+          Plume.tell('Imported ' + added + ' batches.');
+        } catch(err) { Plume.tell('Could not read file.'); }
+      }, { title: 'Import ' + arr.length + ' batches?', yes: 'Import' });
+    } catch(err) { Plume.tell('Could not read file.'); }
   };
   reader.readAsText(file);
   e.target.value = '';
@@ -1079,9 +1083,9 @@ function onPreviewAmt(idx, v) {
 // cannot drift. Deliberately does NOT save the batch first -- printing is a
 // read, and she may print, adjust the yield, and print again.
 function printNewBatchSheet() {
-  if (!newFormula) { alert('Pick a formula first.'); return; }
+  if (!newFormula) { Plume.tell('Pick a formula first.'); return; }
   var yieldG = parseFloat(document.getElementById('f-yield').value);
-  if (isNaN(yieldG) || yieldG <= 0) { alert('Enter a yield first.'); return; }
+  if (isNaN(yieldG) || yieldG <= 0) { Plume.tell('Enter a yield first.'); return; }
 
   // newFormula is the top-level formulation, whose fields mirror the ACTIVE
   // variant -- which is the one batches use. So this prints the version
@@ -1118,9 +1122,9 @@ function printNewBatchSheet() {
 }
 
 function saveBatch() {
-  if (!newFormula) { alert('Please pick a formula.'); return; }
+  if (!newFormula) { Plume.tell('Please pick a formula.'); return; }
   var yieldG = parseFloat(document.getElementById('f-yield').value);
-  if (!yieldG || yieldG <= 0) { alert('Please enter a yield in grams.'); return; }
+  if (!yieldG || yieldG <= 0) { Plume.tell('Please enter a yield in grams.'); return; }
   var date = document.getElementById('f-date').value || todayISO();
   var batchType = document.getElementById('f-type-sel').value;
   var batchName = document.getElementById('f-name').value.trim();
@@ -1247,7 +1251,7 @@ function onFinalPhInput() {
 
 function openBatchDetail(id) {
   var b = findBatch(id);
-  if (!b) { alert('Batch not found.'); return; }
+  if (!b) { Plume.tell('Batch not found.'); return; }
   editingBatchId = id;
 
   // Title + header meta
@@ -1623,7 +1627,7 @@ function pendingRunCommit() {
     return c.packagingId && q > 0;
   });
   if (!rows.length) {
-    alert('Add at least one packaging component with a quantity.');
+    Plume.tell('Add at least one packaging component with a quantity.');
     return;
   }
   // Aggregate per-packaging across rows (in case user added the same item twice)
@@ -1649,7 +1653,7 @@ function pendingRunCommit() {
       msg += '  ' + s.name + ': need ' + s.need + ', have ' + s.have + '\n';
     });
     msg += '\nUpdate packaging stock in the Packaging library, then try again.';
-    alert(msg);
+    Plume.tell(msg, { title: 'Not enough packaging stock' });
     return;
   }
   // Build the run record (multi-component shape)
@@ -1725,38 +1729,40 @@ function deletePackagingRun(runId) {
     var nm = (pkg && pkg.name) || c.packagingName || '(unknown)';
     return '  ' + c.quantity + ' x ' + nm;
   });
-  var msg = 'Delete this packaging run from ' + fmtDate(run.date) + '?';
+  var title = 'Delete this packaging run from ' + fmtDate(run.date) + '?';
+  var msg = '';
   if (run.committed && lines.length) {
-    msg += '\n\nThis will return to packaging stock:\n' + lines.join('\n');
+    msg += 'This will return to packaging stock:\n' + lines.join('\n');
   }
-  if (!confirm(msg)) return;
-
-  // If committed, reverse every component's adjustment on its packaging item
-  if (run.committed) {
-    var touched = {};  // packagingIds we need to savePackaging() for
-    comps.forEach(function(c) {
-      var pkg = null;
-      for (var j = 0; j < pkgs.length; j++) if (pkgs[j].id === c.packagingId) { pkg = pkgs[j]; break; }
-      if (!pkg) return;
-      if (!pkg.adjustments) return;
-      pkg.adjustments = pkg.adjustments.filter(function(a) {
-        return !(a.batchId === b.id && a.runId === run.id);
+  // The answer arrives later, so the reversal and removal run in the callback.
+  Plume.ask(msg, function() {
+    // If committed, reverse every component's adjustment on its packaging item
+    if (run.committed) {
+      var touched = {};  // packagingIds we need to savePackaging() for
+      comps.forEach(function(c) {
+        var pkg = null;
+        for (var j = 0; j < pkgs.length; j++) if (pkgs[j].id === c.packagingId) { pkg = pkgs[j]; break; }
+        if (!pkg) return;
+        if (!pkg.adjustments) return;
+        pkg.adjustments = pkg.adjustments.filter(function(a) {
+          return !(a.batchId === b.id && a.runId === run.id);
+        });
+        touched[c.packagingId] = true;
       });
-      touched[c.packagingId] = true;
-    });
-    if (Object.keys(touched).length) savePackaging();
-    // Remove every component from packagingDraws receipt
-    if (b.packagingDraws) {
-      b.packagingDraws = b.packagingDraws.filter(function(d) { return d.runId !== run.id; });
+      if (Object.keys(touched).length) savePackaging();
+      // Remove every component from packagingDraws receipt
+      if (b.packagingDraws) {
+        b.packagingDraws = b.packagingDraws.filter(function(d) { return d.runId !== run.id; });
+      }
     }
-  }
 
-  b.packagingRuns = b.packagingRuns.filter(function(r) { return r.id !== runId; });
-  b.updatedAt = new Date().toISOString();
-  saveBatches();
-  renderPackagingRuns(b);
-  renderList();
-  populatePackagingPicker();
+    b.packagingRuns = b.packagingRuns.filter(function(r) { return r.id !== runId; });
+    b.updatedAt = new Date().toISOString();
+    saveBatches();
+    renderPackagingRuns(b);
+    renderList();
+    populatePackagingPicker();
+  }, { title: title, yes: 'Delete', danger: true });
 }
 
 function saveBatchEdits() {
@@ -1772,7 +1778,7 @@ function saveBatchEdits() {
   var soap    = isSoapType(b.formulaType);
   var cureWks = soap ? parseInt(document.getElementById('d-cure').value, 10) || 4 : null;
 
-  if (!yieldG || yieldG <= 0) { alert('Yield must be greater than zero.'); return; }
+  if (!yieldG || yieldG <= 0) { Plume.tell('Yield must be greater than zero.'); return; }
 
   var ph = Plume.parsePh(document.getElementById('d-ph').value);
   if (ph === null) {
@@ -1828,21 +1834,23 @@ function markBatchReady() {
   var b = findBatch(editingBatchId);
   if (!b) return;
   if (b.status !== 'curing') return;
-  if (!confirm('Mark this batch as ready? This will move it out of the curing list.')) return;
-  b.status    = 'ready';
-  b.readyDate = todayISO();
-  b.updatedAt = new Date().toISOString();
-  saveBatches();
-  // Update detail UI in place
-  document.getElementById('d-mark-ready-btn').style.display = 'none';
-  // Refresh header meta
-  var metaParts = [];
-  if (b.formulaName) metaParts.push('<span><strong>' + esc(b.formulaName) + '</strong></span>');
-  metaParts.push('<span>' + fmtDate(b.date) + '</span>');
-  metaParts.push('<span>Ready</span>');
-  document.getElementById('d-meta').innerHTML = metaParts.join('');
-  renderStats();
-  renderList();
+  // The answer arrives later, so the status change runs in the callback.
+  Plume.ask('This will move it out of the curing list.', function() {
+    b.status    = 'ready';
+    b.readyDate = todayISO();
+    b.updatedAt = new Date().toISOString();
+    saveBatches();
+    // Update detail UI in place
+    document.getElementById('d-mark-ready-btn').style.display = 'none';
+    // Refresh header meta
+    var metaParts = [];
+    if (b.formulaName) metaParts.push('<span><strong>' + esc(b.formulaName) + '</strong></span>');
+    metaParts.push('<span>' + fmtDate(b.date) + '</span>');
+    metaParts.push('<span>Ready</span>');
+    document.getElementById('d-meta').innerHTML = metaParts.join('');
+    renderStats();
+    renderList();
+  }, { title: 'Mark this batch as ready?', yes: 'Mark ready' });
 }
 
 // ─────────────────────────────────────────────────────────────────────
@@ -2104,7 +2112,7 @@ function commitBatch() {
   if (!editingBatchId) return;
   var b = findBatch(editingBatchId);
   if (!b) return;
-  if (b.committed) { alert('This batch is already committed.'); return; }
+  if (b.committed) { Plume.tell('This batch is already committed.'); return; }
   var result = applyCommitToBatch(b);
   if (!result.ok) {
     var box = document.getElementById('d-commit-msg');
@@ -2133,24 +2141,49 @@ function showCommitBlocked(missing, shortages, pkgPlan) {
 // the originating lots, resurrecting depleted ones (with original received
 // date + a 'resurrected' flag). Falls back to a ghost lot if the original
 // lot was deleted.
-function decommitBatch(silent) {
-  if (!editingBatchId) return;
+//
+// The question is answered later, so instead of returning whether it went
+// ahead this calls done(true) once the reversal is written, or done(false)
+// when nothing was done. With silent it does not ask and finishes (and calls
+// done) before returning. Nothing is written when the answer is no.
+function decommitBatch(silent, done) {
+  var finish = function(ok) { if (typeof done === 'function') done(ok); return ok; };
+  if (!editingBatchId) return finish(false);
   var b = findBatch(editingBatchId);
-  if (!b) return;
+  if (!b) return finish(false);
   if (!b.committed) {
-    if (!silent) alert('This batch is not committed.');
-    return false;
+    if (!silent) Plume.tell('This batch is not committed.');
+    return finish(false);
   }
 
-  if (!silent) {
-    var summary = 'Decommit "' + (b.batchName || b.formulaName) + '"?\n\n';
-    summary += 'This returns all drawn quantities to their original lots ' +
-      '(resurrecting depleted ones). Lots that were deleted since commit ' +
-      'will get a small "reversal" lot added to the ingredient with a note.\n\n';
-    summary += 'The batch itself stays -- only the inventory side unwinds.';
-    if (!confirm(summary)) return false;
+  if (silent) {
+    reverseBatchCommit(b);
+    return finish(true);
   }
 
+  var summary = 'This returns all drawn quantities to their original lots ' +
+    '(resurrecting depleted ones). Lots that were deleted since commit ' +
+    'will get a small "reversal" lot added to the ingredient with a note.\n\n';
+  summary += 'The batch itself stays -- only the inventory side unwinds.';
+  var id = b.id;
+  Plume.ask(summary, function() {
+    // Re-check on the answer: still the same open batch, still committed.
+    if (editingBatchId !== id || findBatch(id) !== b || !b.committed) { finish(false); return; }
+    reverseBatchCommit(b);
+    openBatchDetail(editingBatchId);
+    renderList();
+    finish(true);
+  }, {
+    title: 'Decommit "' + (b.batchName || b.formulaName) + '"?',
+    yes:   'Decommit',
+    onNo:  function() { finish(false); }
+  });
+}
+
+// The write side of a decommit, split out of decommitBatch so it can run
+// after the question is answered: returns the batch's drawn ingredient and
+// packaging stock to its sources, clears the receipt, and saves all three.
+function reverseBatchCommit(b) {
   // Reverse ingredient draws
   (b.lotDraws || []).forEach(function(d) {
     var ing = findIng(d.ingredientId);
@@ -2223,12 +2256,6 @@ function decommitBatch(silent) {
   saveIngredients();
   savePackaging();
   saveBatches();
-
-  if (!silent) {
-    openBatchDetail(editingBatchId);
-    renderList();
-  }
-  return true;
 }
 
 function deleteBatch() {
@@ -2237,7 +2264,7 @@ function deleteBatch() {
   if (!b) return;
 
   var runs = b.packagingRuns || [];
-  var msg = 'Delete this batch?\n\n';
+  var msg = '';
   msg += '  ' + (b.batchName || b.formulaName || '(unnamed)') + '\n';
   msg += '  ' + (b.actualYield || b.targetYield || 0) + 'g, ' + fmtDate(b.date) + '\n\n';
   if (b.committed) {
@@ -2255,7 +2282,14 @@ function deleteBatch() {
     }
     if (runs.length) {
       var pkgTotals = {};
-      runs.forEach(function(r) { pkgTotals[r.packagingName] = (pkgTotals[r.packagingName] || 0) + r.quantity; });
+      // Runs hold several components since session 8; reading the old
+      // top-level fields showed "NaN x undefined" here.
+      runs.forEach(function(r) {
+        runComponents(r).forEach(function(c) {
+          var n = c.packagingName || '(unknown)';
+          pkgTotals[n] = (pkgTotals[n] || 0) + (parseInt(c.quantity, 10) || 0);
+        });
+      });
       msg += '  ' + Object.keys(pkgTotals).map(function(n) { return pkgTotals[n] + ' x ' + n; }).join('\n  ') + '\n';
     }
     msg += '\n';
@@ -2264,19 +2298,24 @@ function deleteBatch() {
   }
   msg += 'This cannot be undone.';
 
-  if (!confirm(msg)) return;
-
-  // Silent decommit: returns ingredient + packaging stock to its sources
-  if (b.committed) {
-    decommitBatch(true);
-  }
-
-  batches = batches.filter(function(x) { return x.id !== editingBatchId; });
-  saveBatches();
-  editingBatchId = null;
-  closeModal('m-detail');
-  renderStats();
-  renderList();
+  var id = b.id;
+  // The answer arrives later, so the reversal and the delete run in the callback.
+  Plume.ask(msg, function() {
+    // Re-check on the answer: the same batch must still be the open one.
+    if (editingBatchId !== id || findBatch(id) !== b) return;
+    var removeBatch = function() {
+      batches = batches.filter(function(x) { return x.id !== id; });
+      saveBatches();
+      editingBatchId = null;
+      closeModal('m-detail');
+      renderStats();
+      renderList();
+    };
+    // Silent decommit: returns ingredient + packaging stock to its sources.
+    // Silent does not ask, so done runs before decommitBatch returns.
+    if (b.committed) decommitBatch(true, removeBatch);
+    else removeBatch();
+  }, { title: 'Delete this batch?', yes: 'Delete', danger: true });
 }
 
 // ── Modal helpers ──

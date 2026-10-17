@@ -9,7 +9,7 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 const { chromium } = require('playwright');
-const { ROOT, previewUrl } = require('./helpers');
+const { ROOT, previewUrl, trackDialogs } = require('./helpers');
 
 let pass = 0, fail = 0;
 function ok(label, cond, got) {
@@ -80,7 +80,7 @@ const NA_ORDER = ['Natural vitamin E', 'Hemp seed oil', 'Niacinamide', 'Activate
     localStorage.setItem('aerie-batches-v1', '[]');`;
   async function open(module) {
     const page = await browser.newPage();
-    page.on('dialog', d => d.accept());
+    await trackDialogs(page, []);
     await page.goto(previewUrl(module));
     await page.waitForTimeout(300);
     await page.evaluate(SEED);

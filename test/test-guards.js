@@ -3,7 +3,7 @@
 // whole point of these changes is what the dialog says.
 const { chromium } = require('playwright');
 
-const { previewUrl } = require('./helpers');
+const { previewUrl, trackDialogs } = require('./helpers');
 const URL = previewUrl('formulations');
 let pass = 0, fail = 0;
 function ok(label, cond, got) {
@@ -58,7 +58,7 @@ const PRODUCTS = [
   async function session(seed) {
     const page = await browser.newPage();
     const dialogs = [];
-    page.on('dialog', async (d) => { dialogs.push(d.message()); await d.accept(); });
+    await trackDialogs(page, dialogs);
     await page.goto(URL);
     await page.waitForTimeout(400);
     // Base library first, then whatever extra the case needs, then one reload

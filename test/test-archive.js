@@ -2,7 +2,7 @@
 // Runs the real pages in headless Chromium against shared storage, so the
 // Costing and Batchlog pickers are exercised the way they actually load.
 const { chromium } = require('playwright');
-const { previewUrl } = require('./helpers');
+const { previewUrl, trackDialogs } = require('./helpers');
 
 let pass = 0, fail = 0;
 function ok(label, cond, got) {
@@ -51,7 +51,7 @@ const SEED = `
   async function open(module, seed) {
     const page = await browser.newPage();
     const dialogs = [];
-    page.on('dialog', async (d) => { dialogs.push(d.message()); await d.accept(); });
+    await trackDialogs(page, dialogs);
     await page.goto(previewUrl(module));
     await page.waitForTimeout(300);
     await page.evaluate(seed === undefined ? SEED : seed);

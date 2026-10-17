@@ -6,7 +6,7 @@
 const fs = require('fs');
 const path = require('path');
 const { chromium } = require('playwright');
-const { ROOT, previewUrl } = require('./helpers');
+const { ROOT, previewUrl, trackDialogs } = require('./helpers');
 
 let pass = 0, fail = 0;
 function ok(label, cond, got) {
@@ -53,7 +53,7 @@ console.log('\n1. The starter list carries lowdowns');
     const errors = [];
     const dialogs = [];
     page.on('pageerror', e => errors.push(String(e)));
-    page.on('dialog', d => { dialogs.push(d.message()); d.accept(); });
+    await trackDialogs(page, dialogs);
     await page.goto(previewUrl('ingredients'));
     await page.waitForTimeout(300);
     await page.evaluate(`localStorage.setItem('aerie-ingredients-v2', ${JSON.stringify(JSON.stringify(lib || LIB))});`);
@@ -161,6 +161,31 @@ console.log('\n1. The starter list carries lowdowns');
     const argan = (await stored(page)).find(i => i.name === 'Argan oil');
     ok('the starter lowdown arrives', argan && argan.chooseWhen === starterLine('Argan oil'), argan && argan.chooseWhen);
     ok('marked as a draft', argan && argan.chooseWhenDraft === true);
+    await page.close();
+  }
+
+  console.log('\n6. The cheat sheet fits, and explains its highlighting');
+  {
+    const T = (id, name, min, max, phase, ph, heat, subs) => ({ id, name, inci: name, phase, functionCategory: ['Thickener'],
+      min, max, optimalPh: ph, heatStability: heat, substitution: subs, lots: [],
+      chooseWhen: 'a lowdown long enough to wrap over a few lines so the column takes its full share of the width', purpose: 'a note of my own' });
+    const lib = [T('a', 'Xanthan gum', '0.1', '1', 'water', '3-12', 'Good', 'Sclerotium gum, Solagum AX'),
+                 T('b', 'Sclerotium gum', '0.5', '2', 'water', '3-12', 'Good', 'Xanthan gum'),
+                 T('c', 'Carbomer (Carbopol)', '0.1', '1', 'water', '5-10', 'Good', 'Sodium polyacrylate'),
+                 T('d', 'Cetyl alcohol', '1', '5', 'oil', '3-12', 'Excellent', 'Cetearyl alcohol')];
+    const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+    await trackDialogs(page, []);
+    await page.goto(previewUrl('ingredients'));
+    await page.waitForTimeout(300);
+    await page.evaluate(`localStorage.setItem('aerie-ingredients-v2', ${JSON.stringify(JSON.stringify(lib))});`);
+    await page.reload(); await page.waitForTimeout(500);
+    await page.evaluate("setIngView('cheat')"); await page.waitForTimeout(300);
+    const m = await page.evaluate("(function(){var w=document.querySelector('.cs-table-wrap');return {s:w.scrollWidth,c:w.clientWidth,cols:document.querySelectorAll('.cs-table th').length};})()");
+    ok('ten columns including substitutes fit a 1280px screen without side-scrolling', m.cols === 10 && m.s <= m.c, m);
+    ok('the highlighting is explained under the table', /differ from most others in this group/.test(await page.evaluate("document.getElementById('cs-body').innerText")));
+    ok('highlighted values carry a tooltip', await page.evaluate("!!document.querySelector('.cs-odd[title]')"));
+    await page.evaluate("viewIngredient('a')");
+    ok('the details page goes back to its usual width', await page.evaluate("!document.body.classList.contains('cs-wide')"));
     await page.close();
   }
 

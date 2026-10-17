@@ -1749,26 +1749,31 @@ function importData(e) {
       var ingData  = Array.isArray(data) ? data : (data.ingredients || []);
       var suppData = Array.isArray(data) ? [] : (data.suppliers || []);
       if (!Array.isArray(ingData)) throw new Error('Invalid format');
-      if (!confirm('Import ' + ingData.length + ' ingredients and ' + suppData.length + ' suppliers? Duplicates will be skipped.')) return;
-      var existingIng = new Set(ingredients.map(function(i) { return i.name.toLowerCase(); }));
-      var addedIng = 0;
-      ingData.forEach(function(item) {
-        if (!existingIng.has((item.name||'').toLowerCase())) {
-          item.id = item.id || (Date.now().toString() + Math.random().toString(36).slice(2,6));
-          ingredients.push(item); addedIng++;
-        }
-      });
-      var existingSupp = new Set(suppliers.map(function(s) { return s.name.toLowerCase(); }));
-      var addedSupp = 0;
-      suppData.forEach(function(s) {
-        if (!existingSupp.has((s.name||'').toLowerCase())) {
-          s.id = s.id || (Date.now().toString() + Math.random().toString(36).slice(2,6));
-          suppliers.push(s); addedSupp++;
-        }
-      });
-      saveData(); saveSuppliers(); renderTable(); renderStats();
-      alert('Imported ' + addedIng + ' ingredients and ' + addedSupp + ' suppliers.');
-    } catch(err) { alert('Could not read file. Make sure it is a valid Plume backup JSON.'); }
+      // The import runs in the answer's callback (the dialog does not block),
+      // with its own try so a bad record still gets the same message.
+      Plume.ask('Duplicates will be skipped.', function () {
+        try {
+          var existingIng = new Set(ingredients.map(function(i) { return i.name.toLowerCase(); }));
+          var addedIng = 0;
+          ingData.forEach(function(item) {
+            if (!existingIng.has((item.name||'').toLowerCase())) {
+              item.id = item.id || (Date.now().toString() + Math.random().toString(36).slice(2,6));
+              ingredients.push(item); addedIng++;
+            }
+          });
+          var existingSupp = new Set(suppliers.map(function(s) { return s.name.toLowerCase(); }));
+          var addedSupp = 0;
+          suppData.forEach(function(s) {
+            if (!existingSupp.has((s.name||'').toLowerCase())) {
+              s.id = s.id || (Date.now().toString() + Math.random().toString(36).slice(2,6));
+              suppliers.push(s); addedSupp++;
+            }
+          });
+          saveData(); saveSuppliers(); renderTable(); renderStats();
+          Plume.tell('Imported ' + addedIng + ' ingredients and ' + addedSupp + ' suppliers.', { title: 'Import complete' });
+        } catch(err2) { Plume.tell('Could not read file. Make sure it is a valid Plume backup JSON.'); }
+      }, { title: 'Import ' + ingData.length + ' ingredients and ' + suppData.length + ' suppliers?', yes: 'Import' });
+    } catch(err) { Plume.tell('Could not read file. Make sure it is a valid Plume backup JSON.'); }
   };
   reader.readAsText(file);
   document.getElementById('import-file-input').value = '';
@@ -2187,7 +2192,7 @@ function sapClearTable(items) {
 
 function openSapReview() {
   if (typeof PlumeSap === 'undefined') {
-    alert('The SAP reference data file did not load. Check that plume-sapdata.js sits beside this page.');
+    Plume.tell('The SAP reference data file did not load. Check that plume-sapdata.js sits beside this page.');
     return;
   }
   sapPlan = buildSapPlan();
@@ -2258,7 +2263,7 @@ function applySapRefresh() {
   saveData();
   renderTable();
   closeModal('modal-sap');
-  alert('Updated SAP data on ' + n + ' ingredient' + (n === 1 ? '' : 's') + '.');
+  Plume.tell('Updated SAP data on ' + n + ' ingredient' + (n === 1 ? '' : 's') + '.');
 }
 
 // ── INCI normalising ─────────────────────────────
@@ -2602,6 +2607,7 @@ function setIngView(v) {
   ingView = (v === 'cheat' && typeof PlumeCheat !== 'undefined') ? 'cheat' : 'list';
   document.getElementById('list-mode').style.display  = ingView === 'list'  ? '' : 'none';
   document.getElementById('cheat-mode').style.display = ingView === 'cheat' ? '' : 'none';
+  document.body.classList.toggle('cs-wide', ingView === 'cheat');
   document.getElementById('vt-list').classList.toggle('on',  ingView === 'list');
   document.getElementById('vt-cheat').classList.toggle('on', ingView === 'cheat');
   Store.set('plume_ing_view', ingView);
@@ -2609,6 +2615,7 @@ function setIngView(v) {
 }
 
 function showList() {
+  document.body.classList.toggle('cs-wide', ingView === 'cheat');
   document.getElementById('list-view').style.display  = 'block';
   document.getElementById('detail-view').style.display = 'none';
   if (ingView === 'cheat') PlumeCheat.render(ingredients);
@@ -2655,6 +2662,7 @@ function renderRecentlyViewed() {
 
 // ── Detail view ───────────────────────────────────────
 function viewIngredient(id) {
+  document.body.classList.remove('cs-wide');   // the details page keeps its usual width
   var i = ingredients.find(function(x) { return x.id === id; });
   if (!i) return;
   viewingId = id;
@@ -3040,7 +3048,7 @@ function editCurrent() {
 function saveIngredient(keepOpen) {
   var name = document.getElementById('f-name').value.trim();
   var inci = document.getElementById('f-inci').value.trim();
-  if (!name || !inci) { alert('Common name and INCI name are required.'); return; }
+  if (!name || !inci) { Plume.tell('Common name and INCI name are required.'); return; }
   var data = {
     name:     name,
     inci:     inci,
@@ -3204,8 +3212,8 @@ function archiveCurrent() {
   if (!ing) return;
   var dep = ingredientDependents(viewingId);
 
-  var msg = 'Archive "' + (ing.name || 'this ingredient') + '"?\n\n' +
-    'It leaves the library list and stops appearing when you search for an ' +
+  var title = 'Archive "' + (ing.name || 'this ingredient') + '"?';
+  var msg = 'It leaves the library list and stops appearing when you search for an ' +
     'ingredient to add to a formula. Nothing is deleted, and you can bring it ' +
     'back at any time with the Show archived button on the library screen.';
 
@@ -3219,11 +3227,14 @@ function archiveCurrent() {
       'Those keep working exactly as they do now. Archiving only hides it from ' +
       'the library and from the add-ingredient search.';
   }
-  if (!confirm(msg)) return;
-
-  var idx = ingredients.findIndex(function(i) { return i.id === viewingId; });
-  if (idx > -1) ingredients[idx].archived = true;
-  saveData(); renderTable(); renderStats(); showList();
+  // Runs on the answer (the dialog does not block); the id is fixed now so a
+  // change of viewingId meanwhile cannot archive a different ingredient.
+  var archId = viewingId;
+  Plume.ask(msg, function () {
+    var idx = ingredients.findIndex(function(i) { return i.id === archId; });
+    if (idx > -1) ingredients[idx].archived = true;
+    saveData(); renderTable(); renderStats(); showList();
+  }, { title: title, yes: 'Archive' });
 }
 
 // Un-archiving needs no confirmation. It restores something and takes
@@ -3267,7 +3278,8 @@ function deleteCurrent() {
   if (!ing) return;
   var dep = ingredientDependents(viewingId);
 
-  var msg = 'Permanently delete "' + (ing.name || 'this ingredient') + '"? This cannot be undone.';
+  var title = 'Permanently delete "' + (ing.name || 'this ingredient') + '"?';
+  var msg = 'This cannot be undone.';
 
   // The damage is stated before it happens, because it is invisible
   // afterwards. A formulation line holds an ingredient id, so deleting the
@@ -3283,10 +3295,13 @@ function deleteCurrent() {
       'Archive instead if you only want it out of the way. Archiving keeps every ' +
       'formula intact.';
   }
-  if (!confirm(msg)) return;
-
-  ingredients = ingredients.filter(function(i) { return i.id !== viewingId; });
-  saveData(); renderStats(); showList();
+  // Runs on the answer (the dialog does not block); the id is fixed now so a
+  // change of viewingId meanwhile cannot delete a different ingredient.
+  var delId = viewingId;
+  Plume.ask(msg, function () {
+    ingredients = ingredients.filter(function(i) { return i.id !== delId; });
+    saveData(); renderStats(); showList();
+  }, { title: title, yes: 'Delete', danger: true });
 }
 
 // ── Lot rows ──────────────────────────────────────────
@@ -3497,19 +3512,24 @@ function duplicateLotRow(sourceId) {
 
   // Set-active-on-save: offer to make this new lot the active one for costing.
   // Common pattern: user is recording a fresh reorder of an ingredient and
-  // wants the new shipment to drive prices going forward. We ask via confirm
-  // so the choice is explicit; the flag is consumed by saveIngredient.
-  // (No confirm if the new row would be the ONLY purchased lot — auto-active
+  // wants the new shipment to drive prices going forward. We ask so the
+  // choice is explicit; the flag is consumed by saveIngredient.
+  // (No question if the new row would be the ONLY purchased lot — auto-active
   // logic in saveIngredient handles that case for free.)
   var purchasedRowsCount = Array.from(document.querySelectorAll('#lots-container .lot-row'))
     .filter(function(row) {
       var cb = row.querySelector('[data-field="referenceOnly"]');
       return !(cb && cb.checked);
     }).length;
+  // The row is added once she answers (the dialog does not block): either
+  // answer adds it, and only "Make it active" flags it for promotion.
   if (purchasedRowsCount >= 1) {
-    if (confirm('Make this new lot the active one for costing?\n\nClick OK if you\u2019re recording a fresh reorder and want prices to use this lot going forward. Click Cancel to keep the current active lot.')) {
+    Plume.ask('Choose Make it active if you\u2019re recording a fresh reorder and want prices to use this lot going forward. Choose Keep current lot to keep the current active lot.', function () {
       lot._setActiveOnSave = true;
-    }
+      addLotRow(lot);
+    }, { title: 'Make this new lot the active one for costing?', yes: 'Make it active', no: 'Keep current lot',
+         onNo: function () { addLotRow(lot); } });
+    return;
   }
   addLotRow(lot);
 }
@@ -3960,7 +3980,7 @@ function renderSupplierList() {
 
 function saveSupplier() {
   var name = document.getElementById('sf-name').value.trim();
-  if (!name) { alert('Supplier name is required.'); return; }
+  if (!name) { Plume.tell('Supplier name is required.'); return; }
   var data = {
     name:    name,
     webLink: document.getElementById('sf-web').value.trim(),
@@ -3999,11 +4019,13 @@ function cancelSupplierEdit() {
 }
 
 function deleteSupplier(id) {
-  if (!confirm('Remove this supplier from your database?')) return;
-  suppliers = suppliers.filter(function(s) { return s.id !== id; });
-  saveSuppliers();
-  renderSupplierList();
-  renderStats();
+  // Removal runs on the answer (the dialog does not block).
+  Plume.ask('', function () {
+    suppliers = suppliers.filter(function(s) { return s.id !== id; });
+    saveSuppliers();
+    renderSupplierList();
+    renderStats();
+  }, { title: 'Remove this supplier from your database?', yes: 'Remove', danger: true });
 }
 
 // ── Modal helpers ─────────────────────────────────────
@@ -4030,9 +4052,14 @@ document.querySelectorAll('.modal-overlay').forEach(function(el) {
     if (e.target !== el) { mouseDownOnBackdrop = false; return; }
     if (!mouseDownOnBackdrop) return; // started inside a field — ignore
     mouseDownOnBackdrop = false;
-    // For the add/edit modal, confirm before discarding unsaved edits.
+    // For the add/edit modal, ask before discarding unsaved edits. The
+    // dialog does not block, so the close happens in its yes callback; on
+    // no the modal simply stays open.
     if (el.id === 'modal-add' && isEditFormDirty()) {
-      if (!confirm('Discard unsaved changes to this ingredient?')) return;
+      Plume.ask('Your changes since opening this ingredient will be lost.', function () {
+        el.classList.remove('open');
+      }, { title: 'Discard unsaved changes to this ingredient?', yes: 'Discard', no: 'Keep editing', danger: true });
+      return;
     }
     el.classList.remove('open');
   });
@@ -4326,7 +4353,7 @@ function applyLowdowns() {
   closeModal('modal-lowdown');
   renderTable();
   if (ingView === 'cheat' && typeof PlumeCheat !== 'undefined') PlumeCheat.render(ingredients);
-  alert(n ? 'Added ' + n + ' drafted lowdown' + (n === 1 ? '' : 's') + '. Each is marked "draft" until you keep or edit it.' : 'Nothing was added.');
+  Plume.tell(n ? 'Added ' + n + ' drafted lowdown' + (n === 1 ? '' : 's') + '. Each is marked "draft" until you keep or edit it.' : 'Nothing was added.');
 }
 
 // Saves once at the end. It used to save after every ingredient with a
@@ -4334,7 +4361,7 @@ function applyLowdowns() {
 // hundreds of saves of an ever-growing library.
 function seederAdd() {
   var picked = Array.from(seederPicked);
-  if (!picked.length) { alert('Select at least one ingredient.'); return; }
+  if (!picked.length) { Plume.tell('Select at least one ingredient.'); return; }
   var status = document.getElementById('seeder-status');
   document.getElementById('seeder-progress').style.display = 'block';
 
