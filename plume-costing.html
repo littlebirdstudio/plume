@@ -19,7 +19,7 @@
 body { font-family:'DM Sans',sans-serif; font-weight:300; background:var(--cream); color:var(--ink); min-height:100vh; line-height:1.5; }
 
 /* ── Header ── */
-.app-hdr { background:var(--bark-dark); color:var(--cream); padding:14px 22px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
+.app-hdr { background:var(--hdr-bg,var(--bark-dark)); color:var(--hdr-fg,var(--cream)); padding:14px 22px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
 .brand { font-family:'Cormorant Garamond',serif; font-size:22px; font-weight:400; letter-spacing:0.02em; }
 .brand-sub { font-size:11px; letter-spacing:0.18em; text-transform:uppercase; opacity:0.7; margin-top:2px; }
 .hdr-actions { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
@@ -29,7 +29,7 @@ body { font-family:'DM Sans',sans-serif; font-weight:300; background:var(--cream
 .btn:hover { background:var(--cream-dark); }
 .btn-primary { background:var(--bark); color:var(--cream); border-color:var(--bark); }
 .btn-primary:hover { background:var(--bark-dark); }
-.btn-ghost { background:transparent; border-color:rgba(253,252,250,0.3); color:var(--cream); }
+.btn-ghost { background:transparent; border-color:rgba(253,252,250,0.3); color:var(--hdr-fg,var(--cream)); }
 .btn-ghost:hover { background:rgba(253,252,250,0.1); }
 .btn-sage { background:var(--sage); color:var(--cream); border-color:var(--sage); }
 .btn-sage:hover { background:var(--sage-dark); }

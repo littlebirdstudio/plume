@@ -2129,3 +2129,57 @@ server, proves every file is saved, a changed file shows on the next load, a
 slow file falls back after about 4 seconds, every page opens with the server
 stopped, installed-mode links stay in the window, and clearing the saved copy
 leaves localStorage and other caches alone. 14 suites, 597 checks.
+
+### Session 18 (cont.) — Dark mode; cheat sheet marking removed (core v1.17)
+
+**Cheat sheet.** The odd-one-out marking (bold underline plus a legend) came
+out: Heide found it added nothing. `planGroup` no longer computes `odd`. The
+page width while the cheat sheet shows went from 1440px to 1260px (the list
+is 1100px); her words: the expansion "looks clunky", so somewhere in the
+middle. Ten columns with substitutes still fit at 1280px (test-lowdown).
+
+**Dark mode: one setting, every palette.** Settings in every module now
+starts with Light / Dark / Match my computer (default: Match my computer).
+The choice is global, kept on the device in localStorage as `plume-theme`
+(not in Store, so every page, the landing page included, applies it as core
+loads, before data). Palettes stay per module, as she decided earlier; dark
+mode gives each one a dark version.
+
+**No hand-drawn dark palettes.** `Plume.darkValue(name, value)` turns each
+colour variable dark by the ROLE its name implies, keeping its hue:
+`--cream` page background (near-black), `--white` surfaces, `--cream-dark`
+quiet fills, `--cream-border`, `--ink*` light text, `--bark-light` a mid
+accent; then by suffix: `-dark`/`-fg` light text, `-light`/`-bg` deep tints,
+`-wash`, `-hover`, `-edge`, `-border`; everything else is an accent kept
+bright enough to read; `--warning`/`--danger` brighter still, since they
+sit on their own tints. Non-colours and rgba values are left alone.
+`applyTheme()` reads the page's own `:root` variables from its stylesheet
+(`rootVars()`), overlays the module palette, and sets the dark values as
+inline properties on `<html>`, plus `data-theme="dark"` and
+`color-scheme: dark`. So the categorical colours each module defines (phase
+colours and washes, packaging types, quality bars, dots) get dark versions
+without being listed. A new colour variable just needs a name that says its
+role. Back to light removes everything dark mode set and reapplies the
+palette.
+
+**Inverse areas get their own variables.** The header, nav and the
+ingredient detail card header are dark-on-light inverted (bark-dark
+background, cream text), which a role rule cannot serve. They now use
+`var(--hdr-bg, var(--bark-dark))`, `--hdr-fg`, `--hdr-sub`, `--hdr-line`;
+these are set only in dark mode (a deep tint of the palette's main colour),
+so light mode is unchanged. Ghost buttons (header only) use `--hdr-fg`.
+
+**Also:** the installed app's title bar follows (`meta theme-color`);
+printing switches to light for the print (beforeprint/afterprint); other
+open windows follow a change (storage event); Match my computer follows the
+computer live; the landing page logo is inverted and screened onto the dark
+page; the storage banners use the warning/danger variables. Print windows
+(bench sheet, cheat sheet print, barcodes) keep their own light styles.
+
+**Tests:** new `test-theme.js` (37): role rules; every palette meets
+contrast in dark (text 7:1 on surfaces, quiet text 4.5:1, button text,
+tints, warnings); the setting, Match my computer, other windows, printing,
+the landing page; and a sweep that fails if any visible text in the main
+views of every module is under 3.5:1 against what is behind it. 15 suites,
+635 checks. Light mode's own contrast was not changed and has more low
+spots than dark (small uppercase labels in `--ink-lighter`); not asked for.

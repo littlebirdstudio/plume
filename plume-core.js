@@ -36,7 +36,7 @@ var Plume = (function () {
 // (v0.4 / v0.5 / v0.6 across five modules). BUMP IT IN EVERY PULL REQUEST,
 // core change or not: it is how "is this the update I just merged?" is
 // answered by looking, and browsers cache .js files stubbornly.
-var VERSION = '1.16';
+var VERSION = '1.17';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -568,13 +568,11 @@ var MODULE_NAME     = 'module';
 function setModule(name) { MODULE_NAME = String(name || 'module'); }
 function paletteKey()    { return 'plume-palette-' + MODULE_NAME; }
 
+// The palette is set as inline custom properties on <html>. In dark mode
+// applyTheme() sets a dark version of the same palette instead.
 function applyPalette(name) {
-  var p = PALETTES[name];
-  if (!p) { p = PALETTES[DEFAULT_PALETTE]; name = DEFAULT_PALETTE; }
-  var root = document.documentElement;
-  for (var k in p.vars) {
-    if (Object.prototype.hasOwnProperty.call(p.vars, k)) root.style.setProperty(k, p.vars[k]);
-  }
+  currentPalette = PALETTES[name] ? name : DEFAULT_PALETTE;
+  applyTheme();
 }
 
 function savePaletteChoice(name) { Store.set(paletteKey(), name); }
@@ -589,9 +587,13 @@ function selectPalette(name) {
 function renderPaletteSwatches() {
   var container = document.getElementById('palette-swatches');
   if (!container) return;
+  renderThemeChoice(container);
   var current = loadPaletteChoice();
+  var dark = isDark();
   container.innerHTML = Object.keys(PALETTES).map(function (name) {
-    var p = PALETTES[name], v = p.vars, isActive = (name === current);
+    var p = PALETTES[name], isActive = (name === current);
+    // In dark mode the swatches show the dark version she would get.
+    var v = dark ? darkenVars(p.vars) : p.vars;
     return '<button type="button" class="palette-swatch' + (isActive ? ' active' : '') +
       '" onclick="selectPalette(\'' + name + '\')" title="' + esc(p.label) + '">' +
       '<div class="palette-swatch-stripes">' +
@@ -606,6 +608,200 @@ function renderPaletteSwatches() {
   }).join('');
 }
 
+// ══ Light and dark (2026-10-17) ═══════════════════════
+// One choice for the whole app, kept on this device: 'light', 'dark' or
+// 'auto' (match the computer; the default). It sits in localStorage directly,
+// not in Store, so every page, the landing page included, can apply it the
+// moment core loads, before any data is read.
+//
+// HOW DARK IS MADE. There are no hand-drawn dark palettes. darkVars() turns
+// each colour variable into its dark counterpart by its ROLE, read from its
+// name, keeping its hue: the page background and surfaces go near-black,
+// text goes near-white, pale tints (-light, -bg, -wash) become deep tints,
+// strong shades used for text (-dark, -fg) become light ones, outlines
+// (-border, -edge) sit in between, and accents are kept bright enough to
+// read. So every module palette has a dark version, and so do the
+// categorical colours a page defines in its own :root (phase colours,
+// packaging types, quality bars) without being listed here.
+//
+// Inverse places (the header: dark background, cream text) get their own
+// variables, --hdr-bg / --hdr-fg / --hdr-sub / --hdr-line, set only in dark
+// mode; the modules use them with their light colours as the fallback.
+//
+// Printing always uses the light colours (beforeprint / afterprint).
+var THEME_KEY = 'plume-theme';
+var currentPalette = null;   // null on pages without palettes (landing page)
+var themeSet = {};           // properties applyTheme set, removed on the next pass
+var printing = false;
+
+function themeChoice() {
+  try {
+    var v = window.localStorage.getItem(THEME_KEY);
+    return (v === 'light' || v === 'dark') ? v : 'auto';
+  } catch (e) { return 'auto'; }
+}
+function prefersDark() {
+  try { return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches); }
+  catch (e) { return false; }
+}
+function isDark() {
+  if (printing) return false;
+  var c = themeChoice();
+  return c === 'dark' || (c === 'auto' && prefersDark());
+}
+function setTheme(v) {
+  try { window.localStorage.setItem(THEME_KEY, v); } catch (e) {}
+  applyTheme();
+  renderPaletteSwatches();
+}
+
+// Colour arithmetic, small and local. Accepts #rgb, #rrggbb, rgb(), rgba().
+function parseColor(str) {
+  var s = String(str || '').trim(), m;
+  if ((m = /^#([0-9a-f]{3})$/i.exec(s))) {
+    return { r: parseInt(m[1][0] + m[1][0], 16), g: parseInt(m[1][1] + m[1][1], 16), b: parseInt(m[1][2] + m[1][2], 16), a: 1 };
+  }
+  if ((m = /^#([0-9a-f]{6})$/i.exec(s))) {
+    return { r: parseInt(m[1].slice(0, 2), 16), g: parseInt(m[1].slice(2, 4), 16), b: parseInt(m[1].slice(4, 6), 16), a: 1 };
+  }
+  if ((m = /^rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*(?:,\s*([\d.]+)\s*)?\)$/i.exec(s))) {
+    return { r: +m[1], g: +m[2], b: +m[3], a: m[4] === undefined ? 1 : +m[4] };
+  }
+  return null;
+}
+function toHsl(c) {
+  var r = c.r / 255, g = c.g / 255, b = c.b / 255;
+  var max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 2, h = 0, s = 0;
+  if (max !== min) {
+    var d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    h = max === r ? (g - b) / d + (g < b ? 6 : 0) : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    h /= 6;
+  }
+  return { h: h, s: s, l: l };
+}
+function hslHex(h, s, l) {
+  function f(n) {
+    var k = (n + h * 12) % 12, a = s * Math.min(l, 1 - l);
+    var v = l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+    var x = Math.round(v * 255).toString(16);
+    return x.length < 2 ? '0' + x : x;
+  }
+  return '#' + f(0) + f(8) + f(4);
+}
+
+// The dark counterpart of one variable, or null to leave it alone (not a
+// colour, or a colour with transparency, which already works on dark).
+function darkValue(name, value) {
+  var c = parseColor(value);
+  if (!c || c.a < 1) return null;
+  var x = toHsl(c), h = x.h, s = x.s, l = x.l;
+  var cap = function (n) { return Math.min(s, n); };
+  switch (name) {
+    case '--cream':        return hslHex(h, cap(0.14), 0.11);   // page background
+    case '--white':        return hslHex(h, cap(0.12), 0.15);   // cards, modals, inputs
+    case '--cream-dark':   return hslHex(h, cap(0.12), 0.20);   // quiet fills, hover
+    case '--cream-border': return hslHex(h, cap(0.12), 0.29);
+    case '--ink':          return hslHex(h, cap(0.12), 0.90);
+    case '--ink-light':    return hslHex(h, cap(0.12), 0.74);
+    case '--ink-lighter':  return hslHex(h, cap(0.12), 0.64);
+    case '--bark-light':   return hslHex(h, cap(0.30), 0.53);   // a mid accent (outlines, subtitles), not a pale tint
+    case '--success':      return hslHex(h, cap(0.40), 0.74);   // text colour
+    case '--warning':
+    case '--danger':       return hslHex(h, cap(0.55), 0.70);   // text on their own tint
+  }
+  if (/-(dark|fg)$/.test(name))  return hslHex(h, cap(0.45), 0.80);
+  if (/-wash$/.test(name))       return hslHex(h, cap(0.30), 0.17);
+  if (/-hover$/.test(name))      return hslHex(h, cap(0.24), 0.235);
+  if (/-(light|bg)$/.test(name)) return hslHex(h, cap(0.22), 0.195);
+  if (/-edge$/.test(name))       return hslHex(h, cap(0.40), 0.50);
+  if (/-border$/.test(name))     return hslHex(h, cap(0.30), 0.34);
+  // Accents, dots, chart colours: keep the hue, bright enough to read.
+  return hslHex(h, cap(0.50), Math.max(0.60, Math.min(l, 0.68)));
+}
+function darkenVars(vars) {
+  var out = {};
+  for (var k in vars) {
+    if (!Object.prototype.hasOwnProperty.call(vars, k)) continue;
+    var d = darkValue(k, vars[k]);
+    if (d) out[k] = d;
+  }
+  return out;
+}
+
+// Colour variables a page defines in its own stylesheet :root.
+function rootVars() {
+  var out = {};
+  try {
+    var sheets = document.styleSheets;
+    for (var i = 0; i < sheets.length; i++) {
+      var rules;
+      try { rules = sheets[i].cssRules; } catch (e) { continue; }   // a cross-origin sheet (fonts)
+      if (!rules) continue;
+      for (var j = 0; j < rules.length; j++) {
+        var r = rules[j];
+        if (!r.style || !r.selectorText || !/(^|,)\s*:root\s*($|,)/.test(r.selectorText)) continue;
+        for (var n = 0; n < r.style.length; n++) {
+          var prop = r.style[n];
+          if (prop.indexOf('--') === 0) out[prop] = r.style.getPropertyValue(prop).trim();
+        }
+      }
+    }
+  } catch (e) {}
+  return out;
+}
+
+function applyTheme() {
+  if (typeof document === 'undefined' || !document.documentElement) return;
+  var root = document.documentElement;
+  for (var k in themeSet) if (Object.prototype.hasOwnProperty.call(themeSet, k)) root.style.removeProperty(k);
+  themeSet = {};
+  var pal = currentPalette ? PALETTES[currentPalette].vars : null;
+  var dark = isDark();
+  var setVar = function (name, v) { root.style.setProperty(name, v); themeSet[name] = true; };
+  if (dark) {
+    var src = rootVars(), name;
+    if (pal) for (name in pal) if (Object.prototype.hasOwnProperty.call(pal, name)) src[name] = pal[name];
+    var d = darkenVars(src);
+    for (name in d) if (Object.prototype.hasOwnProperty.call(d, name)) setVar(name, d[name]);
+    // The header: a deep tint of the palette's main colour, light text.
+    var b = parseColor(src['--bark-dark'] || src['--bark'] || '#404834');
+    var hb = b ? toHsl(b) : { h: 0.22, s: 0.15 };
+    setVar('--hdr-bg', hslHex(hb.h, Math.min(hb.s, 0.22), 0.17));
+    setVar('--hdr-fg', hslHex(hb.h, Math.min(hb.s, 0.12), 0.92));
+    setVar('--hdr-sub', hslHex(hb.h, Math.min(hb.s, 0.20), 0.62));
+    setVar('--hdr-line', hslHex(hb.h, Math.min(hb.s, 0.22), 0.27));
+    root.setAttribute('data-theme', 'dark');
+    root.style.colorScheme = 'dark';
+  } else {
+    if (pal) for (var p in pal) if (Object.prototype.hasOwnProperty.call(pal, p)) root.style.setProperty(p, pal[p]);
+    root.removeAttribute('data-theme');
+    root.style.colorScheme = '';
+  }
+  // The installed app's title bar follows along.
+  var meta = document.querySelector && document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', dark ? root.style.getPropertyValue('--hdr-bg') : '#404834');
+}
+
+// Light / Dark / Match my computer, drawn above the palette swatches in
+// every module's Settings (so no module needed its own markup).
+function renderThemeChoice(container) {
+  var host = container.parentNode;
+  if (!host || !host.parentNode) return;
+  var el = document.getElementById('plume-theme-choice');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'plume-theme-choice';
+    host.parentNode.insertBefore(el, host);
+  }
+  var c = themeChoice();
+  var opt = function (v, label) {
+    return '<button type="button" class="plume-theme-opt' + (c === v ? ' on' : '') + '" onclick="Plume.setTheme(\'' + v + '\')">' + label + '</button>';
+  };
+  el.innerHTML = '<div class="plume-theme-row">' + opt('light', 'Light') + opt('dark', 'Dark') + opt('auto', 'Match my computer') + '</div>' +
+    '<div class="plume-theme-note">Light or dark applies to every module on this device. The palette below is just for this module.</div>';
+}
+
 // ══ Storage reporting ═════════════════════════════════
 // Enumerates what is actually in storage rather than checking a list of
 // expected key names. A hardcoded list silently misreports the moment a
@@ -613,7 +809,7 @@ function renderPaletteSwatches() {
 // inside an unlabelled "Other" bucket.
 function storLabel(k) {
   if (KEY_LABELS[k]) return KEY_LABELS[k];
-  if (k.indexOf('plume-palette-') === 0 || k.indexOf('plume-pricing-') === 0) return null;
+  if (k.indexOf('plume-palette-') === 0 || k.indexOf('plume-pricing-') === 0 || k === THEME_KEY) return null;
   return k;
 }
 
@@ -767,8 +963,14 @@ function injectStyles() {
   if (document.getElementById('plume-core-css')) return;
   var css =
   '.stor-banner{border-radius:6px;padding:12px 14px;margin-bottom:16px;font-size:12.5px;line-height:1.55;display:flex;gap:10px;align-items:flex-start}' +
-  '.stor-banner.warn{background:#FBF3E7;border:1px solid #E0C9A0;color:#6B5433}' +
-  '.stor-banner.crit{background:#F9E9E4;border:1px solid #D9A695;color:#7A3F2C}' +
+  '.stor-banner.warn{background:var(--warning-bg,#FBF3E7);border:1px solid var(--warning-border,#E0C9A0);color:var(--warning,#6B5433)}' +
+  '.stor-banner.crit{background:var(--danger-bg,#F9E9E4);border:1px solid var(--danger-border,#D9A695);color:var(--danger,#7A3F2C)}' +
+  // Light / Dark / Match my computer, in Settings.
+  '.plume-theme-row{display:inline-flex;border:1px solid var(--cream-border);border-radius:6px;overflow:hidden;margin:2px 0 8px}' +
+  '.plume-theme-opt{font-family:inherit;font-size:12px;padding:6px 14px;border:none;border-right:1px solid var(--cream-border);background:var(--white);color:var(--ink-light);cursor:pointer}' +
+  '.plume-theme-opt:last-child{border-right:none}.plume-theme-opt:hover{color:var(--ink)}' +
+  '.plume-theme-opt.on{background:var(--cream-dark);color:var(--bark-dark);font-weight:500}' +
+  '.plume-theme-note{font-size:12px;color:var(--ink-lighter);line-height:1.4;margin-bottom:6px}' +
   '.stor-banner b{font-weight:600}' +
   '.stor-banner .sb-x{margin-left:auto;background:none;border:none;font-size:16px;line-height:1;color:inherit;opacity:0.5;cursor:pointer;padding:0 2px;flex-shrink:0}' +
   '.stor-banner .sb-x:hover{opacity:1}' +
@@ -1070,6 +1272,19 @@ if (typeof window !== 'undefined' && typeof window.addEventListener === 'functio
     typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
   watchInstallOffer();
   keepLinksInWindow();
+  // Dark mode as early as possible (before data loads, so no light flash),
+  // and kept in step with the computer, other open windows, and printing.
+  applyTheme();
+  try {
+    var mq = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
+    if (mq) {
+      var onScheme = function () { if (themeChoice() === 'auto') { applyTheme(); renderPaletteSwatches(); } };
+      if (mq.addEventListener) mq.addEventListener('change', onScheme); else if (mq.addListener) mq.addListener(onScheme);
+    }
+  } catch (e) {}
+  window.addEventListener('storage', function (e) { if (e.key === THEME_KEY) { applyTheme(); renderPaletteSwatches(); } });
+  window.addEventListener('beforeprint', function () { printing = true; applyTheme(); });
+  window.addEventListener('afterprint', function () { printing = false; applyTheme(); });
   window.addEventListener('load', registerAppWorker);
 }
 
@@ -1685,6 +1900,7 @@ return {
   PRODUCT_TYPES: PRODUCT_TYPES, isSoapType: isSoapType, fillTypeSelect: fillTypeSelect,
   buildSheet: buildSheet, openSheet: openSheet, stampVersion: stampVersion,
   isInstalled: isInstalled, install: install, openPage: openPage, resetAppCache: resetAppCache,
+  setTheme: setTheme, isDark: isDark, themeChoice: themeChoice, darkValue: darkValue, applyTheme: applyTheme,
   tell: tell, ask: ask, askValue: askValue,
   parsePh: parsePh, phNum: phNum, phRange: phRange, phTargetText: phTargetText,
   isAqueous: isAqueous, phBadge: phBadge, phStepsHtml: phStepsHtml, phFinal: phFinal,

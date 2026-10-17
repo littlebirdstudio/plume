@@ -44,6 +44,10 @@ body {
   padding: 3rem 1.5rem 1.5rem;
 }
 
+/* Dark mode (plume-core.js sets data-theme and the dark colours). The logo
+   is black line art on white: invert it, then screen it onto the page so its
+   white square disappears and the lines read light. */
+html[data-theme="dark"] .hero-logo { filter: invert(1) hue-rotate(180deg); mix-blend-mode: screen; }
 .install-btn {
   display: block; margin: 0 auto 28px; padding: 9px 20px;
   font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 400; letter-spacing: 0.03em;
