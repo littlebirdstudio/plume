@@ -3,7 +3,7 @@
 const fs = require('fs');
 const { chromium } = require('playwright');
 const path = require('path');
-const { ROOT, previewUrl } = require('./helpers');
+const { ROOT, previewUrl, trackDialogs } = require('./helpers');
 
 let pass = 0, fail = 0;
 function ok(label, cond, got) {
@@ -101,7 +101,7 @@ const SEED = `
   const browser = await chromium.launch();
   async function open(module) {
     const page = await browser.newPage();
-    page.on('dialog', async d => { await d.accept(); });
+    trackDialogs(page, []);
     await page.goto(previewUrl(module));
     await page.waitForTimeout(300);
     await page.evaluate(SEED);

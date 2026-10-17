@@ -6,7 +6,7 @@
 const fs = require('fs');
 const path = require('path');
 const { chromium } = require('playwright');
-const { ROOT, previewUrl } = require('./helpers');
+const { ROOT, previewUrl, trackDialogs } = require('./helpers');
 
 let pass = 0, fail = 0;
 function ok(label, cond, got) {
@@ -53,7 +53,7 @@ console.log('\n1. The starter list carries lowdowns');
     const errors = [];
     const dialogs = [];
     page.on('pageerror', e => errors.push(String(e)));
-    page.on('dialog', d => { dialogs.push(d.message()); d.accept(); });
+    trackDialogs(page, dialogs);
     await page.goto(previewUrl('ingredients'));
     await page.waitForTimeout(300);
     await page.evaluate(`localStorage.setItem('aerie-ingredients-v2', ${JSON.stringify(JSON.stringify(lib || LIB))});`);

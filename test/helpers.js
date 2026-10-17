@@ -44,4 +44,28 @@ function previewUrl(module) {
   return 'file://' + buildPreview(module);
 }
 
-module.exports = { ROOT, TMP, buildPreview, previewUrl };
+// Plume's in-page dialogs (Plume.tell / ask / askValue) replaced the
+// browser's alert/confirm/prompt on 2026-10-17. Call this right after
+// browser.newPage(), before goto: it installs core's test hook on every
+// load, answers every dialog (yes, or the default value), and pushes each
+// one's text, title first, into `into` -- the same array shape the suites
+// used to fill from page.on('dialog'). To answer "no" or type a value, set
+// window.PLUME_TEST_ANSWER in the page (false, or a string).
+function trackDialogs(page, into) {
+  page.addInitScript(() => {
+    window.PLUME_TEST_DIALOGS = function (kind, message, opts, value) {
+      var text = (opts && opts.title ? opts.title + '\n\n' : '') + message;
+      console.log('PLUME_DIALOG ' + JSON.stringify(text));
+      var a = window.PLUME_TEST_ANSWER;
+      if (kind === 'value') return a === undefined ? value : a;
+      return a === undefined ? true : a;
+    };
+  });
+  page.on('console', (m) => {
+    const t = m.text();
+    if (into && t.indexOf('PLUME_DIALOG ') === 0) into.push(JSON.parse(t.slice(13)));
+  });
+  return into;
+}
+
+module.exports = { ROOT, TMP, buildPreview, previewUrl, trackDialogs };

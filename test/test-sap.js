@@ -7,7 +7,7 @@
 // the review is which bucket each oil lands in and, above all, that applying
 // it never destroys data the reference has nothing to say about.
 const { chromium } = require('playwright');
-const { previewUrl, ROOT } = require('./helpers');
+const { previewUrl, ROOT, trackDialogs } = require('./helpers');
 const path = require('path');
 
 let pass = 0, fail = 0;
@@ -251,7 +251,7 @@ const FA_MW = {
   async function open() {
     const page = await browser.newPage();
     const dialogs = [];
-    page.on('dialog', async (d) => { dialogs.push(d.message()); await d.accept(); });
+    trackDialogs(page, dialogs);
     await page.goto(previewUrl('ingredients'));
     await page.waitForTimeout(300);
     await page.evaluate(SEED);
@@ -399,7 +399,7 @@ const FA_MW = {
   console.log('\n6. A library already correct offers nothing to do');
   {
     const page = await browser.newPage();
-    page.on('dialog', async (d) => { await d.accept(); });
+    trackDialogs(page, []);
     await page.goto(previewUrl('ingredients'));
     await page.waitForTimeout(300);
     await page.evaluate(`localStorage.setItem('aerie-ingredients-v2', JSON.stringify([
