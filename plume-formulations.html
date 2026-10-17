@@ -922,16 +922,21 @@ function importData(e) {
     try {
       var data = JSON.parse(ev.target.result);
       var arr = data.formulations || (Array.isArray(data) ? data : []);
-      if (!confirm('Import ' + arr.length + ' formulations? Duplicates by name will be skipped.')) return;
-      var ex = new Set(forms.map(function(f) { return f.name.toLowerCase(); }));
-      var added = 0;
-      arr.forEach(function(f) { if (!ex.has((f.name||'').toLowerCase())) { forms.push(f); added++; } });
-      // A backup taken before versions became tabs has no variants -- run it
-      // through the same migration as on-disk data so it opens correctly.
-      migrateAll();
-      saveAll(); renderCards();
-      alert('Imported ' + added + ' formulations.');
-    } catch(err) { alert('Could not read file.'); }
+      // The merge runs in the dialog's callback, after the answer; it keeps
+      // its own catch so a bad record still reports instead of failing silently.
+      Plume.ask('Duplicates by name will be skipped.', function() {
+        try {
+          var ex = new Set(forms.map(function(f) { return f.name.toLowerCase(); }));
+          var added = 0;
+          arr.forEach(function(f) { if (!ex.has((f.name||'').toLowerCase())) { forms.push(f); added++; } });
+          // A backup taken before versions became tabs has no variants -- run it
+          // through the same migration as on-disk data so it opens correctly.
+          migrateAll();
+          saveAll(); renderCards();
+          Plume.tell('Imported ' + added + ' formulations.');
+        } catch(err2) { Plume.tell('Could not read file.'); }
+      }, { title: 'Import ' + arr.length + ' formulations?', yes: 'Import' });
+    } catch(err) { Plume.tell('Could not read file.'); }
   };
   reader.readAsText(file);
   e.target.value = '';
@@ -1367,7 +1372,7 @@ function newFormula() {
 
 function createFormula() {
   var name = document.getElementById('new-name').value.trim();
-  if (!name) { alert('Please enter a formula name.'); return; }
+  if (!name) { Plume.tell('Please enter a formula name.'); return; }
   var t = document.getElementById('new-type').value;
   var isSoapType = Plume.isSoapType(t);
 
@@ -2008,11 +2013,14 @@ function onDrops(idx, v, dpg) {
 }
 function editDpg(idx) {
   var cur = fLines[idx].dropsPerG || 20;
-  var v   = prompt('Drops per gram for this ingredient:\n(Common: EOs approx 20, thicker oils approx 15, water-thin approx 25)', cur);
-  if (v === null) return;
-  var n = parseFloat(v);
-  if (isNaN(n) || n <= 0) { alert('Please enter a positive number.'); return; }
-  fLines[idx].dropsPerG = n; markDirty(); renderLines(); recalc();
+  // The answer arrives in a callback; the line is re-checked there in case
+  // the editor was reloaded in the meantime.
+  Plume.askValue('Drops per gram for this ingredient:\n(Common: EOs approx 20, thicker oils approx 15, water-thin approx 25)', String(cur), function(v) {
+    var n = parseFloat(v);
+    if (isNaN(n) || n <= 0) { Plume.tell('Please enter a positive number.'); return; }
+    if (!fLines[idx]) return;
+    fLines[idx].dropsPerG = n; markDirty(); renderLines(); recalc();
+  }, { title: 'Drops per gram', inputmode: 'decimal' });
 }
 
 function updateGramsDisplay(idx, val) {
@@ -2781,26 +2789,38 @@ function onStatusChange(sel) {
       return x.vid !== v.vid && x.status !== 'retired';
     });
     if (!live.length) {
-      alert('This is the only version left that is not retired.\n\n' +
-            'Retire it and the formulation would have nothing to cost or batch from. ' +
-            'Archive the whole formulation instead.');
+      Plume.tell('Retire it and the formulation would have nothing to cost or batch from. ' +
+            'Archive the whole formulation instead.',
+            { title: 'This is the only version left that is not retired.' });
       sel.value = v.status || 'draft';
       return;
     }
     if (f.activeVariantId === v.vid) {
-      if (!confirm('Retire "' + varTitle(v) + '"?\n\n' +
-                   'It is the version costing and batches use, so ' + varTitle(live[0]) +
+      // The handover and the status change wait for the answer; No puts the
+      // select back. Captured so a later change to live[] cannot alter the heir.
+      var heir = live[0];
+      Plume.ask('It is the version costing and batches use, so ' + varTitle(heir) +
                    ' will take over that role.\n\n' +
                    'The version is kept — it just leaves the tab strip. ' +
-                   'You can bring it back at any time.')) {
-        sel.value = v.status || 'draft';
-        return;
-      }
-      f.activeVariantId = live[0].vid;
-      syncActive(f);
+                   'You can bring it back at any time.', function() {
+        f.activeVariantId = heir.vid;
+        syncActive(f);
+        applyStatus(sel, v);
+      }, {
+        title: 'Retire "' + varTitle(v) + '"?',
+        yes: 'Retire',
+        onNo: function() { sel.value = v.status || 'draft'; }
+      });
+      return;
     }
   }
 
+  applyStatus(sel, v);
+}
+
+// Split out of onStatusChange so the retire handover can run it after the
+// dialog's answer arrives.
+function applyStatus(sel, v) {
   markDirty();
   // The tab strip depends on status, so it has to redraw.
   v.status = sel.value;
@@ -3036,7 +3056,7 @@ function confirmBranch() {
   var f = curForm(), src = curVar();
   if (!f || !src) { closeModal('m-branch'); return; }
   var name = document.getElementById('m-branch-name').value.trim();
-  if (!name) { alert('Please give this version a short name.'); return; }
+  if (!name) { Plume.tell('Please give this version a short name.'); return; }
   var why  = document.getElementById('m-branch-why').value.trim();
 
   // Capture what's on screen so the branch includes in-progress edits
@@ -3112,15 +3132,18 @@ function deleteVariant(vid) {
     }
   }
 
-  if (!confirm('Delete "' + varTitle(v) + '" permanently?' + extra + '\n\nThis cannot be undone.')) return;
-
-  f.variants = f.variants.filter(function(x) { return x.vid !== vid; });
-  if (f.activeVariantId === vid) f.activeVariantId = f.variants[0].vid;
-  syncActive(f);
-  saveAll();
-  curVid = f.variants[0].vid;
-  dirty  = false;
-  loadVariantIntoEditor();
+  // The delete runs in the callback once the answer arrives. extra starts
+  // with a blank line; strip it so the message does not open with a gap.
+  Plume.ask((extra ? extra.replace(/^\n\n/, '') + '\n\n' : '') + 'This cannot be undone.', function() {
+    f.variants = f.variants.filter(function(x) { return x.vid !== vid; });
+    if (!f.variants.length) return;
+    if (f.activeVariantId === vid) f.activeVariantId = f.variants[0].vid;
+    syncActive(f);
+    saveAll();
+    curVid = f.variants[0].vid;
+    dirty  = false;
+    loadVariantIntoEditor();
+  }, { title: 'Delete "' + varTitle(v) + '" permanently?', yes: 'Delete', danger: true });
 }
 
 // ── Change history (per variant) ──────────────────────
@@ -3248,8 +3271,15 @@ function revertTo(hid) {
   if (!e || !e.snap) return;
   var d  = new Date(e.at);
   var ds = isNaN(d.getTime()) ? 'that point' : d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
-  if (!confirm('Bring back this version\'s state from ' + ds + '?\n\nNothing is erased \u2014 your current state is logged first, and the revert is recorded as its own entry.')) return;
+  // The revert itself runs in doRevert once the answer arrives.
+  Plume.ask('Nothing is erased \u2014 your current state is logged first, and the revert is recorded as its own entry.', function() {
+    doRevert(f, v, e, ds);
+  }, { title: 'Bring back this version\'s state from ' + ds + '?', yes: 'Revert' });
+}
 
+// Split out of revertTo so it can run after the dialog answers. Reads the
+// editor at that moment, so the logged "current state" is what is on screen.
+function doRevert(f, v, e, ds) {
   // Log where we are now, so the revert itself is undoable
   var nowState = readEditorState();
   var changes  = diffStates({
@@ -3321,11 +3351,15 @@ function duplicateFormula() {
 
   forms.push(copy);
   saveAll();
-  if (confirm('Duplicated as "' + copy.name + '".\n\nOpen the copy now?')) {
-    openFormula(copy.id);
-  } else {
-    renderCards();
-  }
+  // The copy is already saved; the answer only picks where to go next.
+  var copyId = copy.id;
+  Plume.ask('Open the copy now?', function() {
+    openFormula(copyId);
+  }, {
+    title: 'Duplicated as "' + copy.name + '".',
+    yes: 'Open the copy', no: 'Stay here',
+    onNo: function() { renderCards(); }
+  });
 }
 
 // ── Archiving a formulation ───────────────────────────
@@ -3345,8 +3379,7 @@ function toggleArchiveFormula() {
   }
 
   var dep = formulaDependents(f.id);
-  var msg = 'Archive "' + (f.name || 'this formulation') + '"?\n\n' +
-    'It disappears from the formulation list and stops being offered when ' +
+  var msg = 'It disappears from the formulation list and stops being offered when ' +
     'starting a batch or a product.';
   if (dep.products.length || dep.batches.length) {
     msg += '\n\nEverything already using it keeps working: ' +
@@ -3356,12 +3389,13 @@ function toggleArchiveFormula() {
       ' still cost and label exactly as before.';
   }
   msg += '\n\nYou can bring it back at any time.';
-  if (!confirm(msg)) return;
-
-  f.archived = true;
-  if (dirty) saveFormula(true);
-  saveAll();
-  syncArchiveUI();
+  // Archiving waits for the answer, so it runs in the callback.
+  Plume.ask(msg, function() {
+    f.archived = true;
+    if (dirty) saveFormula(true);
+    saveAll();
+    syncArchiveUI();
+  }, { title: 'Archive "' + (f.name || 'this formulation') + '"?', yes: 'Archive' });
 }
 
 // Button label and banner follow the formulation's state.
@@ -3413,7 +3447,9 @@ function deleteFormula() {
   if (!f) return;
   var n = f ? (f.variants || []).length : 0;
 
-  var msg = 'Permanently delete "' + (f.name || 'this formulation') + '"?';
+  // The question is the dialog title; msg collects the paragraphs below it.
+  var title = 'Permanently delete "' + (f.name || 'this formulation') + '"?';
+  var msg = '';
   if (n > 1) msg += '\n\nAll ' + n + ' versions will be deleted.';
 
   var dep = formulaDependents(f.id);
@@ -3442,9 +3478,13 @@ function deleteFormula() {
   }
 
   msg += '\n\nThis cannot be undone.';
-  if (!confirm(msg)) return;
-  forms = forms.filter(function(x) { return x.id !== curId; });
-  saveAll(); curId = null; curVid = null; goList();
+  // The delete runs in the callback; it uses the id captured now rather
+  // than curId, which is what this dialog was about.
+  var fid = f.id;
+  Plume.ask(msg.replace(/^\n\n/, ''), function() {
+    forms = forms.filter(function(x) { return x.id !== fid; });
+    saveAll(); curId = null; curVid = null; goList();
+  }, { title: title, yes: 'Delete', danger: true });
 }
 
 // ── pH (added 2026-10-16) ─────────────────────────────
@@ -3567,7 +3607,7 @@ function readPhSteps() {
 // ── Usage log (per variant) ───────────────────────────
 function openUsage() {
   var v = curVar();
-  if (!v) { alert('Open a version first.'); return; }
+  if (!v) { Plume.tell('Open a version first.'); return; }
   // Local date, not toISOString(): that is UTC, so an entry logged after
   // 4pm in Alaska used to default to tomorrow.
   document.getElementById('ul-date').value  = Plume.todayISO();
@@ -3580,7 +3620,7 @@ function openUsage() {
 
 function saveUseEntry() {
   var date = document.getElementById('ul-date').value;
-  if (!date) { alert('Please enter a date.'); return; }
+  if (!date) { Plume.tell('Please enter a date.'); return; }
   var v = curVar();
   if (!v) { closeModal('m-use'); return; }
   var steps = readPhSteps();
@@ -3628,11 +3668,13 @@ function renderUseLog(v) {
 }
 
 function delUseEntry(eid) {
-  if (!confirm('Remove this log entry?')) return;
-  var v = curVar();
-  if (!v) return;
-  v.usageLog = (v.usageLog || []).filter(function(e) { return e.id !== eid; });
-  saveAll(); renderUseLog(v);
+  // The removal runs in the callback once the answer arrives.
+  Plume.ask('This cannot be undone.', function() {
+    var v = curVar();
+    if (!v) return;
+    v.usageLog = (v.usageLog || []).filter(function(e) { return e.id !== eid; });
+    saveAll(); renderUseLog(v);
+  }, { title: 'Remove this log entry?', yes: 'Remove', danger: true });
 }
 
 // ── Ingredient detail popup ───────────────────────────
@@ -3691,16 +3733,25 @@ function showIngDetail(ingId) {
 // edits, prompt to save first -- otherwise batchlog would read a stale copy.
 function makeBatchFromFormula() {
   var f = curForm();
-  if (!f) { alert('Save the formula before making a batch from it.'); return; }
+  if (!f) { Plume.tell('Save the formula before making a batch from it.'); return; }
   if (dirty) saveFormula(true);
   // Batchlog reads the formulation's top-level lines, which mirror the
   // version in use. If you're looking at a different one, say so rather
-  // than quietly making the wrong thing.
+  // than quietly making the wrong thing. Opening Batchlog waits for the
+  // answer, so it lives in openBatchlogFor.
   var v = curVar();
   if (v && v.vid !== f.activeVariantId) {
     var av = activeVar(f);
-    if (!confirm('You are viewing "' + varTitle(v) + '", but batches use "' + varTitle(av) + '".\n\nMake a batch of "' + varTitle(av) + '"?\n\n(To batch this one instead, cancel and press "Use this version" first.)')) return;
+    Plume.ask('You are viewing "' + varTitle(v) + '", but batches use "' + varTitle(av) + '".\n\n(To batch this one instead, cancel and press "Use this version" first.)', function() {
+      openBatchlogFor(f);
+    }, { title: 'Make a batch of "' + varTitle(av) + '"?', yes: 'Make batch' });
+    return;
   }
+  openBatchlogFor(f);
+}
+
+// Split out of makeBatchFromFormula so it can run after the dialog answers.
+function openBatchlogFor(f) {
   // Read current batch size to seed the batchlog yield field
   var bs = parseFloat(document.getElementById('batch-sz').value);
   var hash = '#new=' + encodeURIComponent(f.id);
