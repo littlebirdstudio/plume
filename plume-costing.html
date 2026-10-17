@@ -1360,7 +1360,7 @@ function bcRefreshCard() {
 // ── Printing ──
 function bcOpenPrintWindow(title, css, body) {
   var win = window.open('', '_blank');
-  if (!win) { alert('Your browser blocked the print window. Allow pop-ups for this site and try again.'); return; }
+  if (!win) { Plume.tell('Your browser blocked the print window. Allow pop-ups for this site and try again.'); return; }
   win.document.write('<!DOCTYPE html><html><head><title>' + esc(title) +
     '</title><style>' + css + '</style></head><body>' + body +
     '<scr' + 'ipt>window.onload=function(){window.print();};<\/scr' + 'ipt></body></html>');
@@ -1389,7 +1389,7 @@ function bcPrint() {
 // roll feed correctly.
 function bcPrintRoll() {
   var e = bcSingle();
-  if (!e.code) { alert('Enter a code first.'); return; }
+  if (!e.code) { Plume.tell('Enter a code first.'); return; }
   var s      = bcSettings();
   var copies = Math.max(1, Math.min(500, parseInt(document.getElementById('bc-copies').value, 10) || 1));
   var svg    = bcSvg(e.code, e.fmt, s.drawW, s.barH, s.show, e.caption);
@@ -1411,7 +1411,7 @@ function bcPrintRoll() {
 // stock with cut guides.
 function bcPrintSheet() {
   var e = bcSingle();
-  if (!e.code) { alert('Enter a code first.'); return; }
+  if (!e.code) { Plume.tell('Enter a code first.'); return; }
   var s = bcSheetSettings();
   var css = '@page { size: ' + BC_SHEET_PAGE_W + 'in ' + BC_SHEET_PAGE_H + 'in; margin: 0; }' +
     bcGridCss();
@@ -1421,7 +1421,7 @@ function bcPrintSheet() {
 // One page holding every code in a grid, each with its caption.
 function bcPrintCard() {
   var entries = bcParseCardList();
-  if (!entries.length) { alert('Add at least one code.'); return; }
+  if (!entries.length) { Plume.tell('Add at least one code.'); return; }
   var s = bcCardSettings();
   var css = '@page { size: ' + s.pw + 'in ' + s.ph + 'in; margin: 0; }' + bcGridCss();
   bcOpenPrintWindow('Multiple item scan card', css, bcCardHtml(entries, s));
@@ -1453,7 +1453,7 @@ function bcDownloadDims() {
 
 function bcDownloadSvg() {
   var e = bcSingle();
-  if (!e.code) { alert('Enter a code first.'); return; }
+  if (!e.code) { Plume.tell('Enter a code first.'); return; }
   var d = bcDownloadDims();
   var svg = bcSvg(e.code, e.fmt, d.drawW, d.barH, d.show, e.caption);
   var blob = new Blob([svg], { type: 'image/svg+xml' });
@@ -1466,7 +1466,7 @@ function bcDownloadSvg() {
 // and for placing into Canva.
 function bcDownloadPng() {
   var e = bcSingle();
-  if (!e.code) { alert('Enter a code first.'); return; }
+  if (!e.code) { Plume.tell('Enter a code first.'); return; }
   var d = bcDownloadDims();
   var svg = bcSvg(e.code, e.fmt, d.drawW, d.barH, d.show, e.caption);
   var hIn = bcHeightIn(d.barH, d.show, e.caption);
@@ -1486,12 +1486,12 @@ function bcDownloadPng() {
     try {
       bcTriggerDownload(cv.toDataURL('image/png'), bcFilename(e.code, 'png'));
     } catch (err) {
-      alert('PNG export failed in this browser. Use Download SVG instead.');
+      Plume.tell('PNG export failed in this browser. Use Download SVG instead.');
     }
   };
   img.onerror = function() {
     URL.revokeObjectURL(url);
-    alert('PNG export failed in this browser. Use Download SVG instead.');
+    Plume.tell('PNG export failed in this browser. Use Download SVG instead.');
   };
   img.src = url;
 }
@@ -1675,15 +1675,17 @@ function importData(e) {
     try {
       var data = JSON.parse(ev.target.result);
       var arr  = data.products || (Array.isArray(data) ? data : []);
-      if (!confirm('Import ' + arr.length + ' products? Duplicates by id will be skipped.')) return;
-      var existing = {};
-      products.forEach(function(p) { existing[p.id] = true; });
-      var added = 0;
-      arr.forEach(function(p) { if (!existing[p.id]) { products.push(p); added++; } });
-      saveProducts();
-      renderList();
-      alert('Imported ' + added + ' new product' + (added === 1 ? '' : 's') + '.');
-    } catch(err) { alert('Could not parse file: ' + err.message); }
+      // The import runs in the dialog's callback, after she answers.
+      Plume.ask('Duplicates by id will be skipped.', function() {
+        var existing = {};
+        products.forEach(function(p) { existing[p.id] = true; });
+        var added = 0;
+        arr.forEach(function(p) { if (!existing[p.id]) { products.push(p); added++; } });
+        saveProducts();
+        renderList();
+        Plume.tell('Imported ' + added + ' new product' + (added === 1 ? '' : 's') + '.');
+      }, { title: 'Import ' + arr.length + ' products?', yes: 'Import' });
+    } catch(err) { Plume.tell('Could not parse file: ' + err.message); }
   };
   reader.readAsText(file);
   e.target.value = '';
@@ -1983,7 +1985,7 @@ function openNewProduct() {
 function createProduct() {
   var name = document.getElementById('n-name').value.trim();
   var fid  = document.getElementById('n-formula').value;
-  if (!name) { alert('Please give the product a name.'); return; }
+  if (!name) { Plume.tell('Please give the product a name.'); return; }
   var p = {
     id:                uid(),
     name:              name,
@@ -2014,7 +2016,7 @@ function createProduct() {
 
 function openProduct(id) {
   var p = findProduct(id);
-  if (!p) { alert('Product not found.'); return; }
+  if (!p) { Plume.tell('Product not found.'); return; }
   curId = id;
   dirty = false;
 
@@ -2064,9 +2066,17 @@ function openProduct(id) {
 }
 
 function goList() {
+  // The unsaved-changes question answers later, so leaving happens in
+  // leaveEditor(), called at once when clean or on "Leave" when dirty.
   if (dirty) {
-    if (!confirm('You have unsaved changes. Leave anyway?')) return;
+    Plume.ask('You have unsaved changes. Leave anyway?', leaveEditor,
+      { title: 'Leave without saving?', yes: 'Leave', danger: true });
+    return;
   }
+  leaveEditor();
+}
+
+function leaveEditor() {
   document.getElementById('view-list').style.display = '';
   document.getElementById('view-editor').style.display = 'none';
   curId = null; dirty = false;
@@ -2118,20 +2128,34 @@ function saveAndClose() {
 function deleteProduct() {
   if (!curId) return;
   var p = findProduct(curId); if (!p) return;
-  if (!confirm('Permanently delete "' + (p.name || 'this product') + '"? This cannot be undone.')) return;
-  products = products.filter(function(x) { return x.id !== curId; });
-  saveProducts();
-  curId = null; dirty = false;
-  goList();
+  // Capture the id now: the delete runs later, in the dialog's callback.
+  var pid = p.id;
+  Plume.ask('Permanently delete "' + (p.name || 'this product') + '"? This cannot be undone.', function() {
+    products = products.filter(function(x) { return x.id !== pid; });
+    saveProducts();
+    curId = null; dirty = false;
+    goList();
+  }, { title: 'Delete this product?', yes: 'Delete', danger: true });
 }
 
 function duplicateProduct() {
   if (!curId) return;
+  // The save-first question answers later, so the copy is made in
+  // makeDuplicate(), called at once when clean or on "Save and duplicate".
   if (dirty) {
-    if (!confirm('You have unsaved changes. Save first so the duplicate has your latest edits?')) return;
-    saveProduct();
+    var sid = curId;
+    Plume.ask('You have unsaved changes. Save first so the duplicate has your latest edits?', function() {
+      if (curId !== sid) return;   // she left the product meanwhile
+      saveProduct();
+      makeDuplicate(sid);
+    }, { title: 'Save before duplicating?', yes: 'Save and duplicate' });
+    return;
   }
-  var src = findProduct(curId); if (!src) return;
+  makeDuplicate(curId);
+}
+
+function makeDuplicate(srcId) {
+  var src = findProduct(srcId); if (!src) return;
   var copy = {
     id:                uid(),
     name:              (src.name || 'Product') + ' (copy)',
@@ -2156,11 +2180,10 @@ function duplicateProduct() {
   };
   products.push(copy);
   saveProducts();
-  if (confirm('Duplicated as "' + copy.name + '".\n\nOpen the copy now?')) {
-    openProduct(copy.id);
-  } else {
-    renderList();
-  }
+  var copyId = copy.id;
+  Plume.ask('Duplicated as "' + copy.name + '".\n\nOpen the copy now?', function() {
+    openProduct(copyId);
+  }, { title: 'Duplicate made', yes: 'Open the copy', no: 'Stay here', onNo: renderList });
 }
 
 function onFormulaChange() {
@@ -2678,7 +2701,7 @@ function fallbackCopy(text) {
   document.body.appendChild(ta);
   ta.select();
   try { document.execCommand('copy'); toast('Copied to clipboard'); }
-  catch(e) { alert('Could not copy. Select the label preview and copy manually.'); }
+  catch(e) { Plume.tell('Could not copy. Select the label preview and copy manually.'); }
   document.body.removeChild(ta);
 }
 
@@ -2739,7 +2762,7 @@ function addRun() {
   var units = parseInt(document.getElementById('run-units').value, 10);
   var batchId = document.getElementById('run-batch').value;
   var notes = document.getElementById('run-notes').value.trim();
-  if (!units || units <= 0) { alert('Enter a positive number of units.'); return; }
+  if (!units || units <= 0) { Plume.tell('Enter a positive number of units.'); return; }
   if (!p.productionRuns) p.productionRuns = [];
   p.productionRuns.push({
     id:      uid(),
@@ -2766,11 +2789,13 @@ function deleteRun(rid) {
   var run = null;
   for (var i = 0; i < p.productionRuns.length; i++) if (p.productionRuns[i].id === rid) { run = p.productionRuns[i]; break; }
   if (!run) return;
-  if (!confirm('Delete this production run? (' + run.units + ' units on ' + fmtDate(run.date) + ')')) return;
-  p.productionRuns = p.productionRuns.filter(function(r) { return r.id !== rid; });
-  p.updatedAt = new Date().toISOString();
-  saveProducts();
-  renderRuns(p);
+  // The delete runs later, in the dialog's callback; p and rid are locals.
+  Plume.ask('Delete this production run? (' + run.units + ' units on ' + fmtDate(run.date) + ')', function() {
+    p.productionRuns = (p.productionRuns || []).filter(function(r) { return r.id !== rid; });
+    p.updatedAt = new Date().toISOString();
+    saveProducts();
+    if (curId === p.id) renderRuns(p);
+  }, { title: 'Delete this run?', yes: 'Delete', danger: true });
 }
 
 // ──────────────────────────────────────────────────────────────────────
