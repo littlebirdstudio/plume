@@ -36,7 +36,7 @@ var Plume = (function () {
 // (v0.4 / v0.5 / v0.6 across five modules). BUMP IT IN EVERY PULL REQUEST,
 // core change or not: it is how "is this the update I just merged?" is
 // answered by looking, and browsers cache .js files stubbornly.
-var VERSION = '1.13';
+var VERSION = '1.14';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
