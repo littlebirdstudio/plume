@@ -2061,3 +2061,71 @@ goes through `runComponents()`.
   others in this group, which is often the reason to choose one over
   another."
 
+
+### Session 18 (cont.) — Installable app and offline copy (core v1.16)
+
+Heide asked for a more app-like feel; we landed on a PWA, and offline use is
+what a sellable package will be. Her own Plume logo is the icon for now; a
+generic name and icon will be needed before it is sold.
+
+**New files:** `manifest.webmanifest` (name, `start_url ./index.html`,
+`scope ./`, standalone, cream background, olive `#404834` theme), `sw.js`
+(the service worker), `icons/` (192, 512, maskable 512 with the badge inside
+the safe zone, 32px favicon, 180px apple-touch-icon). Every page's head links
+the manifest, theme colour, favicon and apple-touch-icon.
+
+**The service worker is network first, on purpose.** Online, every app file
+comes fresh from the site and refreshes the saved copy; the saved copy is
+used only when the network fails or takes over 4 seconds (`FRESH_TIMEOUT`).
+That is what solved the backlog's blocker: the "push to GitHub, reload, see
+the change" loop is unchanged, with no "new version available" notice to
+build. Cache-first would open a fraction faster and make every update one
+load late. Fonts are kept in their own cache, cache-first. The worker never
+touches localStorage; her data lives where it always did, same origin, so
+installing moved nothing.
+
+**Rule: every file the app loads must be in `APP_FILES` in sw.js.**
+test-pwa.js fails if a page references a local file missing from the list,
+or if a listed file does not exist. The cache name only changes if the
+caching scheme itself changes.
+
+**Core (v1.16):** `registerAppWorker()` on window load, http(s) only (file://
+previews and sandboxed artifacts carry on without it); `Plume.isInstalled()`
+(display-mode standalone or window-controls-overlay, iOS `navigator.standalone`,
+test hook `window.PLUME_TEST_STANDALONE`); `Plume.install()` uses the saved
+`beforeinstallprompt` and shows any `.plume-install` button (landing page has
+one, hidden until Chrome offers; otherwise a dialog explains Chrome's own
+install icon); `Plume.openPage(url)` (same window when installed, new tab in a
+browser), used by Formulations `openBatchlogFor`; `Plume.resetAppCache()`
+(asks, unregisters the worker, deletes `plume-` caches only, reloads). The
+start-up hooks are guarded so the sandbox suites that run core without a DOM
+still load it.
+
+**One window when installed.** In the installed app, module links (which carry
+named targets like `target="plume-formulations"`) are turned into same-window
+navigation by a capture-phase click handler, so the app does not sprout a
+window per module. In a browser tab, links behave exactly as before. Side
+benefit: each module loads fresh from storage on arrival. Print sheets still
+open their own window, which is right for printing.
+
+**Settings -> Storage** gains a status line: "Running as an installed app" or
+"in a browser tab", "Offline copy: ready / being saved / not available here",
+a "Clear the saved app copy" link, and an install link when Chrome offers.
+
+**To install:** in Chrome on the published site, the install icon at the
+right of the address bar, or the landing page's "Install Plume as an app"
+button when it shows. Uninstalling from Chrome may offer to clear site data:
+leave that unticked, or the library goes with it (export first regardless).
+None of this can be seen in an artifact preview, since previews are
+sandboxed and cannot register a service worker.
+
+**Regenerating the icons** (for the sellable logo): render the source SVG in
+Playwright on a white square and screenshot at 512, 192, 180 and 32 px; for
+the maskable icon draw the logo at 400 px centred on a 512 px white square so
+nothing important falls outside the circle Android crops to.
+
+**Tests:** new `test-pwa.js` (41 checks) serves the real repo from a Node http
+server, proves every file is saved, a changed file shows on the next load, a
+slow file falls back after about 4 seconds, every page opens with the server
+stopped, installed-mode links stay in the window, and clearing the saved copy
+leaves localStorage and other caches alone. 14 suites, 597 checks.

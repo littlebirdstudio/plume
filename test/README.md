@@ -38,8 +38,8 @@ version, run the suites, and commit the new lockfile together.
 | `test-guards.js` | 21 | What the delete confirmations say — which products break, which batches survive, which version inherits the in-use role |
 | `test-archive.js` | 32 | Archived formulations leaving the list and the pickers while staying resolvable for products that already use them; retired versions leaving the tab strip |
 | `test-inci.js` | 29 | Splitting blend INCI strings; merging a shared component once; the merge note; common-name mode left alone |
-| `test-sap.js` | 65 | The SAP reference data and the review that applies it: the KOH/NaOH ratio on every row, profiles predicting their own SAP, name lookup surviving the INCI collisions, and applying changes without destroying anything |
-| `test-ing-archive.js` | 47 | Archiving and un-archiving an ingredient; the delete guard naming which formulations break; an archived ingredient still resolving where used but gone from the add picker; a deleted ingredient rendering a marked row instead of vanishing |
+| `test-sap.js` | 78 | The SAP reference data and the review that applies it: the KOH/NaOH ratio on every row, profiles predicting their own SAP, name lookup surviving the INCI collisions, and applying changes without destroying anything |
+| `test-ing-archive.js` | 69 | Archiving and un-archiving an ingredient; the delete guard naming which formulations break; an archived ingredient still resolving where used but gone from the add picker; a deleted ingredient rendering a marked row instead of vanishing |
 | `test-density.js` | 29 | Density resolution without a DOM: explicit beats reference beats category beats guess; the measured values; the categories that refuse to guess; and the stock arithmetic that now stops treating a litre of oil as a kilogram |
 | `test-search.js` | 18 | Search ordering: names starting with the query first, then a later word of the name, then INCI, then mid-word, then notes; checked in the Ingredients list and the Formulations dropdown |
 | `test-ph.js` | 75 | pH records: parsing and range checks; which formulas get pH (water phase only, never soap); the bench sheet block; the version target (validation, history, mirroring, new versions, approval lock); usage-log steps; a batch's final pH against the target it was made with |
@@ -47,12 +47,15 @@ version, run the suites, and commit the new lockfile together.
 | `test-starter.js` | 84 | Quick add: the by-type starter list (one entry per ingredient, grades kept apart, no borrowed prose, no stored SAP, former names recognised), search and chips, SAP from SoapCalc as oils are added, in-library marking, the removed buttons |
 | `test-lowdown.js` | 35 | Drafted lowdowns: every starter ingredient has one that fits; the Fill in lowdowns review (blank only, name or former name, never her own words or purpose notes); the draft tag, its keep tick, and editing as confirmation; Quick add brings drafts; melting point off the cheat sheet |
 | `test-dialogs.js` | 28 | In-page dialogs driven by real clicks and keys (danger focus, Escape, Enter, queue, escaping, focus return), plus a scan that fails if any browser pop-up returns to an app file |
+| `test-pwa.js` | 41 | Installable app and offline copy: manifest, icon sizes and page tags; every file a page loads is in the service worker's `APP_FILES`; served over a local http server, the worker saves every file, a site change shows on the next load (network first), a slow network falls back after about 4 seconds, every page opens with the server stopped, installed-mode links stay in the window, Settings shows the status, and clearing the saved copy leaves data alone |
 
 ## How they run
 
 `test-lock.js` uses jsdom. The others drive headless Chromium through
 Playwright, because they assert on things jsdom does not model: a disabled
 input's computed style, a native `confirm()` dialog's text, a rendered row.
+`test-pwa.js` serves the real files from a small Node http server instead of a
+preview, since a service worker cannot register on `file://`.
 `test-sap.js` is split: the data checks are plain Node against
 `plume-sapdata.js`, and only the review UI needs a browser.
 

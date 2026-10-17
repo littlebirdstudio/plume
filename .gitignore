@@ -9,4 +9,6 @@ test/tmp/
 
 # Local scratch
 *.png
+# ...except the app icons, which ship (sw.js and the manifest list them).
+!icons/*.png
 .DS_Store

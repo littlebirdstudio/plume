@@ -44,6 +44,14 @@ body {
   padding: 3rem 1.5rem 1.5rem;
 }
 
+.install-btn {
+  display: block; margin: 0 auto 28px; padding: 9px 20px;
+  font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 400; letter-spacing: 0.03em;
+  color: var(--sage-dark); background: var(--white);
+  border: 1px solid var(--cream-border); border-radius: 999px; cursor: pointer;
+}
+.install-btn:hover { border-color: var(--sage); color: var(--ink); }
+.install-btn[hidden] { display: none; }
 .hero-logo {
   display: block;
   margin: 0 auto;
@@ -159,6 +167,10 @@ body {
   .hero { padding: 2rem 1.5rem 1rem; }
 }
 </style>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#404834">
+<link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 </head>
 <body>
 
@@ -239,11 +251,14 @@ body {
 
 </main>
 
+<!-- Shown only when Chrome offers to install (core's beforeinstallprompt). -->
+<button class="install-btn plume-install" hidden onclick="Plume.install()">Install Plume as an app</button>
+
 <footer class="app-footer">
   Plume by Little Bird Studio &nbsp;·&nbsp; <span class="plume-version"></span> &nbsp;·&nbsp; Made with <span class="heart">♡</span> for small formulators
 </footer>
 
-<!-- Only to stamp the version: this page needs nothing else from core. -->
+<!-- To stamp the version, register the offline copy and offer the install. -->
 <script src="plume-core.js"></script>
 <script>if (typeof Plume !== 'undefined') Plume.stampVersion();</script>
 
