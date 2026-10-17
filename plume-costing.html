@@ -2130,12 +2130,12 @@ function deleteProduct() {
   var p = findProduct(curId); if (!p) return;
   // Capture the id now: the delete runs later, in the dialog's callback.
   var pid = p.id;
-  Plume.ask('Permanently delete "' + (p.name || 'this product') + '"? This cannot be undone.', function() {
+  Plume.ask('This cannot be undone.', function() {
     products = products.filter(function(x) { return x.id !== pid; });
     saveProducts();
     curId = null; dirty = false;
     goList();
-  }, { title: 'Delete this product?', yes: 'Delete', danger: true });
+  }, { title: 'Permanently delete "' + (p.name || 'this product') + '"?', yes: 'Delete', danger: true });
 }
 
 function duplicateProduct() {
