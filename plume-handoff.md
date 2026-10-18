@@ -2183,3 +2183,74 @@ the landing page; and a sweep that fails if any visible text in the main
 views of every module is under 3.5:1 against what is behind it. 15 suites,
 635 checks. Light mode's own contrast was not changed and has more low
 spots than dark (small uppercase labels in `--ink-lighter`); not asked for.
+
+### Session 19 (18 October 2026) — App-style redesign, Ingredients first; one palette (core v1.18)
+
+**Why.** Heide felt the app looked "homemade" and pointed to Notion as the
+feel she wanted. A preview artifact (Proposed vs Today, with a palette
+switcher) went through several rounds before anything was built. Her calls:
+keep the in-stock row tint (more useful than a dot) but keep the amber
+"running low" dot; heavier lines between rows; a livelier palette; ONE
+palette for the whole app (she had split them per module so she could tell
+which screen was open, but the sidebar now does that); no peach or sand
+tints across everything; a more colourful, distinct hover in the sidebar.
+Ingredients is the pilot. The other modules follow one at a time, each
+checked with her.
+
+**One palette.** The twelve old palettes are gone. New set: `finch`
+(default; terracotta accent `#B9492F`, sage in-stock tint `#EDF2EA`),
+`garden`, `lagoon`, `plum`, and `sage-green` kept as "Sage (classic)".
+Pages are near-neutral (no warm sand). The palette key is now
+`plume-palette` for every module (`paletteKey()`); the old per-module keys
+are simply ignored. Variable roles are unchanged, so dark mode and the
+modules not yet converted keep working: `--white` main surface, `--cream`
+sidebar and page, `--cream-dark` hover, `--cream-border` lines, `--bark`
+accent, `--bark-dark` headings, `--clay-light`/`--clay-hover` the in-stock
+tint. Modules not yet converted show the new colours under their old
+headers until their turn.
+
+**The shell (core).** `Plume.shell({module})` injects a fixed sidebar
+(`aside#ps-side`): workspace name linking to the landing page, a collapse
+button (remembered in `plume-side-collapsed`), the five modules with live
+counts (archived left out) and the current one marked (`.on`,
+`aria-current`), a Library section with Suppliers (calls `openSuppliers()`
+when the page has it, else links to `plume-ingredients.html#suppliers`),
+and Settings (`openSettings()`). Module links keep `target="plume-<key>"`
+so each module still opens in its own window, which she wants for side by
+side work. `Plume.refreshShell()` updates counts. Below 760px the sidebar
+becomes a bar along the top. `Plume.icon(name)` returns inline SVG (module
+icons match the landing page drawings). `Plume.peek.open(html, {label,
+actions, onClose})` / `.close()` / `.isOpen()` is a 480px slide-in panel
+with a scrim; Escape closes it unless a dialog is open. Overflow menus:
+a `[data-ps-menu]` button followed by a `.ps-menu`, one delegated handler.
+Shared CSS classes, all `ps-`: page head (`ps-page-head`, `ps-title`,
+`ps-summary`), toolbar (`ps-toolbar`, `ps-tab`, `ps-tools`, `ps-search`,
+`ps-btn-primary`, `ps-icon-btn`), chips (`ps-chips`, `ps-chip`, `.on`),
+table (`ps-table`, `has-stock`, `sel`, `ps-num`, `ps-sub`), tags
+(`ps-tag`, with phase variants). `BRAND` holds the name shown in the
+sidebar, ready for the Formula Finch rename.
+
+**Ingredients.** The dark header is gone. Page head with icon, title and a
+one-line summary (replaces the stat cards); List / Cheat sheet tabs, search,
+New, and a ⋯ menu (quick add from the starter list, export, import). Filters
+are chips: phase, function (a select styled as a chip), In stock, Running
+low, Restricted; the old selects stay hidden so the filter code is
+unchanged. Rows: name over INCI, phase tag, function tags, use range,
+price per gram, stock last. Quick look moved from in place under the row to
+the slide-in panel (same toggle rules: the same id closes, another id
+switches). The details page got a light header in the page-title type in
+place of the dark banner. IDs the tests depend on were kept (`#search`,
+`#tbody`, `tr[data-ing]`, `.td-name`, `.ql-actions a`, `#in-stock-btn`,
+`#low-stock-btn`, the stock cell last).
+
+**Tests.** New `test-shell.js` (36): core exports and palette set, no sand
+pages, the sidebar (modules, counts, current, own windows, Settings,
+collapse remembered), summary, chips, menu, the panel (open, switch,
+Escape, scrim, open full page), phone width. test-lowdown now checks the
+cheat sheet's 1260px cap rather than its rendered width (a 1280px screen
+minus the sidebar has less room; the ten columns still fit). test-theme:
+Finch is the default, the palette reaches other modules. 16 suites.
+
+**Next:** Formulations (the most complex), then Packaging, Products &
+Costing, Batches, one per PR, each previewed with Heide. The landing page
+could take the palette later.

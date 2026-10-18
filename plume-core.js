@@ -19,10 +19,9 @@
      Plume.setModule('formulations');          <- names the palette key
      Plume.boot(function () { loadAll(); });   <- hydrate, then render
 
-   WHAT STAYS PER-MODULE
-   The palette *choice* is stored per module ('plume-palette-formulations',
-   'plume-palette-packaging', ...), so each page still remembers its own
-   colour scheme. Only the code that draws and applies them is shared.
+   PALETTE
+   One palette for the whole app ('plume-palette'), chosen in any module's
+   Settings. (Until 2026-10-18 each module kept its own.)
 
    ES5 only. No build step. No dependencies.
    ═══════════════════════════════════════════════════════════════════ */
@@ -36,7 +35,7 @@ var Plume = (function () {
 // (v0.4 / v0.5 / v0.6 across five modules). BUMP IT IN EVERY PULL REQUEST,
 // core change or not: it is how "is this the update I just merged?" is
 // answered by looking, and browsers cache .js files stubbornly.
-var VERSION = '1.17';
+var VERSION = '1.18';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -451,98 +450,50 @@ function stockState(ing, needG) {
 }
 
 // ══ Palettes ══════════════════════════════════════════
+// One palette for the whole app (decided 2026-10-18; it used to be per
+// module). Variable roles: --white is the main surface, --cream the sidebar
+// and page, --bark the accent (buttons, highlights), --bark-dark headings and
+// the old module headers, --clay-light the in-stock row tint. Heide asked
+// for clean whites and in-stock tints from the palette's own family, never
+// peach or sand across everything.
 var PALETTES = {
-  'coastal': { label:'Coastal', family:'blue', vars: {
-    '--cream':'#F4F6F8','--cream-dark':'#E7ECF1','--cream-border':'#C9D3DC','--white':'#FCFDFE',
-    '--bark':'#506880','--bark-light':'#7A92A8','--bark-dark':'#2E4256',
-    '--sage':'#6E8C8A','--sage-light':'#E2EBEA','--sage-dark':'#3F5856','--sage-border':'#B8CACA',
-    '--clay':'#C9A074','--clay-light':'#F2E8DA','--clay-dark':'#8A6432','--clay-hover':'#EBD9BE',
-    '--ink':'#1F2A36','--ink-light':'#5A6776','--ink-lighter':'#8E99A6',
+  'finch': { label:'Finch', family:'red', vars: {
+    '--cream':'#F5F5F3','--cream-dark':'#ECEBE8','--cream-border':'#DDDBD6','--white':'#FFFFFF',
+    '--bark':'#B9492F','--bark-light':'#D3826D','--bark-dark':'#3B2B24',
+    '--sage':'#6F8A68','--sage-light':'#EBF1E8','--sage-dark':'#3F5A3A','--sage-border':'#C3D2BE',
+    '--clay':'#C76B52','--clay-light':'#EDF2EA','--clay-dark':'#8E3F2A','--clay-hover':'#E1E9DC',
+    '--ink':'#26221F','--ink-light':'#5D5752','--ink-lighter':'#8C8580',
     '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
-    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#3F5856'
+    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8', '--success':'#3F5A3A'
   }},
-  'indigo': { label:'Indigo', family:'blue', vars: {
-    '--cream':'#F1F1F6','--cream-dark':'#E4E4EC','--cream-border':'#C6C6D4','--white':'#FBFBFD',
-    '--bark':'#3E4768','--bark-light':'#6970A0','--bark-dark':'#1F2546',
-    '--sage':'#7480A0','--sage-light':'#E5E8F0','--sage-dark':'#454E68','--sage-border':'#BFC5D4',
-    '--clay':'#A88BB8','--clay-light':'#EDE2F2','--clay-dark':'#6E527C','--clay-hover':'#E0CFE8',
-    '--ink':'#1A1D2E','--ink-light':'#525870','--ink-lighter':'#8A8FA4',
+  'garden': { label:'Garden', family:'green', vars: {
+    '--cream':'#F3F6F2','--cream-dark':'#E8EEE6','--cream-border':'#D3DDCF','--white':'#FFFFFF',
+    '--bark':'#3E7A4E','--bark-light':'#7FA889','--bark-dark':'#213A28',
+    '--sage':'#5E8F6A','--sage-light':'#E6F1E8','--sage-dark':'#2F5A3A','--sage-border':'#BCD5C2',
+    '--clay':'#C47A55','--clay-light':'#E9F3E7','--clay-dark':'#7A4A2C','--clay-hover':'#DCEBD8',
+    '--ink':'#1D2A1F','--ink-light':'#4A5E4C','--ink-lighter':'#7C8F7D',
     '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
-    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#454E68'
+    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8', '--success':'#2F5A3A'
   }},
-  'mist': { label:'Mist', family:'blue', vars: {
-    '--cream':'#F2F4F4','--cream-dark':'#E5E9E9','--cream-border':'#CAD2D2','--white':'#FBFCFC',
-    '--bark':'#5C7274','--bark-light':'#869A9C','--bark-dark':'#34484A',
-    '--sage':'#6E9290','--sage-light':'#E2EDEC','--sage-dark':'#3F5C5A','--sage-border':'#BAD0CE',
-    '--clay':'#C29A8A','--clay-light':'#F0E4DE','--clay-dark':'#82584A','--clay-hover':'#E7D3C9',
-    '--ink':'#222B2E','--ink-light':'#5C696C','--ink-lighter':'#909A9D',
+  'lagoon': { label:'Lagoon', family:'blue', vars: {
+    '--cream':'#F1F6F6','--cream-dark':'#E4EDED','--cream-border':'#CCDCDC','--white':'#FFFFFF',
+    '--bark':'#2C7A78','--bark-light':'#6FA9A7','--bark-dark':'#173B3A',
+    '--sage':'#4F8F86','--sage-light':'#E2F1EF','--sage-dark':'#2A5A54','--sage-border':'#B6D6D2',
+    '--clay':'#C4845A','--clay-light':'#E5F2F1','--clay-dark':'#7A4E2C','--clay-hover':'#D7EAE9',
+    '--ink':'#1A2B2D','--ink-light':'#485F62','--ink-lighter':'#7B9194',
     '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
-    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#3F5C5A'
+    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8', '--success':'#2A5A54'
   }},
-  'blush': { label:'Blush', family:'pink', vars: {
-    '--cream':'#F9F2F1','--cream-dark':'#F0E4E2','--cream-border':'#DCC8C6','--white':'#FEFBFB',
-    '--bark':'#8A5868','--bark-light':'#AE7E8C','--bark-dark':'#5A3240',
-    '--sage':'#8A8898','--sage-light':'#ECE9EE','--sage-dark':'#52505E','--sage-border':'#CFCCD6',
-    '--clay':'#D08C82','--clay-light':'#F5E2DE','--clay-dark':'#92524A','--clay-hover':'#EDCEC7',
-    '--ink':'#2C2024','--ink-light':'#6D5860','--ink-lighter':'#A08A91',
+  'plum': { label:'Plum', family:'purple', vars: {
+    '--cream':'#F7F3F5','--cream-dark':'#EEE6EA','--cream-border':'#DDCED5','--white':'#FFFFFF',
+    '--bark':'#8A3F63','--bark-light':'#B57A96','--bark-dark':'#3E1B2C',
+    '--sage':'#8A7A90','--sage-light':'#EFEAF1','--sage-dark':'#4E4256','--sage-border':'#D2C8D6',
+    '--clay':'#B0607E','--clay-light':'#F4E9EF','--clay-dark':'#7A3550','--clay-hover':'#ECDBE4',
+    '--ink':'#2A1E24','--ink-light':'#634F59','--ink-lighter':'#95808A',
     '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
-    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#52505E'
+    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8', '--success':'#3F5A3A'
   }},
-  'petal': { label:'Petal', family:'pink', vars: {
-    '--cream':'#FAF3EE','--cream-dark':'#F2E5DC','--cream-border':'#DCC8B9','--white':'#FEFCFA',
-    '--bark':'#A0584C','--bark-light':'#C68074','--bark-dark':'#6E2E22',
-    '--sage':'#8C8478','--sage-light':'#EDE8E1','--sage-dark':'#544D43','--sage-border':'#CCC5BA',
-    '--clay':'#E89A82','--clay-light':'#FAE3D8','--clay-dark':'#A85A40','--clay-hover':'#F4CFBE',
-    '--ink':'#2E2018','--ink-light':'#705A4E','--ink-lighter':'#A28B7E',
-    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
-    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#544D43'
-  }},
-  'mulberry': { label:'Mulberry', family:'pink', vars: {
-    '--cream':'#F4EDEF','--cream-dark':'#E8DCDF','--cream-border':'#CDB8BE','--white':'#FBF8F9',
-    '--bark':'#7A3E5A','--bark-light':'#9E6480','--bark-dark':'#4E1A30',
-    '--sage':'#857482','--sage-light':'#E7E0E4','--sage-dark':'#4E424B','--sage-border':'#C5B8BF',
-    '--clay':'#B07088','--clay-light':'#EBD8DE','--clay-dark':'#783E50','--clay-hover':'#DEBFC8',
-    '--ink':'#26181E','--ink-light':'#5E4E55','--ink-lighter':'#94808A',
-    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
-    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#4E424B'
-  }},
-  'lavender': { label:'Lavender', family:'purple', vars: {
-    '--cream':'#F5F3F7','--cream-dark':'#EAE5EF','--cream-border':'#D0C8DA','--white':'#FCFBFD',
-    '--bark':'#6E5C8A','--bark-light':'#928AAE','--bark-dark':'#3F3258',
-    '--sage':'#8C8AA0','--sage-light':'#EAE8EE','--sage-dark':'#54526A','--sage-border':'#CECCDA',
-    '--clay':'#B89AC4','--clay-light':'#EEE2F1','--clay-dark':'#7C5A8A','--clay-hover':'#E0CDEA',
-    '--ink':'#221E2E','--ink-light':'#5E5670','--ink-lighter':'#928CA4',
-    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
-    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#54526A'
-  }},
-  'slate': { label:'Slate', family:'purple', vars: {
-    '--cream':'#F1F2F5','--cream-dark':'#E4E6EC','--cream-border':'#C6CBD4','--white':'#FBFBFD',
-    '--bark':'#525C72','--bark-light':'#7C8598','--bark-dark':'#2E3648',
-    '--sage':'#76808E','--sage-light':'#E5E8EC','--sage-dark':'#444C58','--sage-border':'#C2C8D0',
-    '--clay':'#A88AA0','--clay-light':'#ECE2E8','--clay-dark':'#6E5468','--clay-hover':'#DCCBD6',
-    '--ink':'#1E222C','--ink-light':'#555C6C','--ink-lighter':'#8C92A0',
-    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
-    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#444C58'
-  }},
-  'wisteria': { label:'Wisteria', family:'purple', vars: {
-    '--cream':'#F4F2F4','--cream-dark':'#E8E5E9','--cream-border':'#CCC4D0','--white':'#FBFAFC',
-    '--bark':'#7A6A8C','--bark-light':'#9E8FAE','--bark-dark':'#4A3A5C',
-    '--sage':'#84927E','--sage-light':'#E5EAE2','--sage-dark':'#4E5A48','--sage-border':'#BDC8B8',
-    '--clay':'#AE8AB8','--clay-light':'#E8DCE8','--clay-dark':'#724E7C','--clay-hover':'#D8C2DC',
-    '--ink':'#24202C','--ink-light':'#5E566C','--ink-lighter':'#928BA0',
-    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
-    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#4E5A48'
-  }},
-  'forest': { label:'Forest', family:'green', vars: {
-    '--cream':'#F2F4F0','--cream-dark':'#E4E8DE','--cream-border':'#C5CDBE','--white':'#FBFCFA',
-    '--bark':'#4E6A4A','--bark-light':'#789078','--bark-dark':'#2A3E28',
-    '--sage':'#6A8A60','--sage-light':'#E0EAD8','--sage-dark':'#3E5638','--sage-border':'#B5C8AC',
-    '--clay':'#B88858','--clay-light':'#ECDDC8','--clay-dark':'#7A5430','--clay-hover':'#E0CAA8',
-    '--ink':'#1E281C','--ink-light':'#56624E','--ink-lighter':'#8A9282',
-    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
-    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#3E5638'
-  }},
-  'sage-green': { label:'Sage', family:'green', vars: {
+  'sage-green': { label:'Sage (classic)', family:'green', vars: {
     '--cream':'#F4F5F1','--cream-dark':'#E7E9E2','--cream-border':'#C9CEC0','--white':'#FBFCFA',
     '--bark':'#6E7A5E','--bark-light':'#929E84','--bark-dark':'#404834',
     '--sage':'#869A78','--sage-light':'#E8EDE0','--sage-dark':'#4E5C40','--sage-border':'#C2CCB4',
@@ -550,23 +501,14 @@ var PALETTES = {
     '--ink':'#23271E','--ink-light':'#5C624E','--ink-lighter':'#8E9482',
     '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
     '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#4E5C40'
-  }},
-  'eucalyptus': { label:'Eucalyptus', family:'green', vars: {
-    '--cream':'#F1F4F2','--cream-dark':'#E4E9E5','--cream-border':'#C5CFC8','--white':'#FBFCFB',
-    '--bark':'#5E7872','--bark-light':'#8AA09A','--bark-dark':'#324842',
-    '--sage':'#7AA098','--sage-light':'#E0EDE7','--sage-dark':'#436258','--sage-border':'#B6CDC4',
-    '--clay':'#A8B8A0','--clay-light':'#E2EAE0','--clay-dark':'#688070','--clay-hover':'#CFD8C8',
-    '--ink':'#1E2A26','--ink-light':'#566A62','--ink-lighter':'#8C9A92',
-    '--warning':'#B07020','--warning-bg':'#FDF3E3','--warning-border':'#E8D0A0',
-    '--danger':'#A03020','--danger-bg':'#FCE8E4','--danger-border':'#E8C0B8','--success':'#436258'
   }}
 };
 
-var DEFAULT_PALETTE = 'sage-green';
+var DEFAULT_PALETTE = 'finch';
 var MODULE_NAME     = 'module';
 
 function setModule(name) { MODULE_NAME = String(name || 'module'); }
-function paletteKey()    { return 'plume-palette-' + MODULE_NAME; }
+function paletteKey()    { return 'plume-palette'; }   // one key for every module
 
 // The palette is set as inline custom properties on <html>. In dark mode
 // applyTheme() sets a dark version of the same palette instead.
@@ -799,7 +741,187 @@ function renderThemeChoice(container) {
     return '<button type="button" class="plume-theme-opt' + (c === v ? ' on' : '') + '" onclick="Plume.setTheme(\'' + v + '\')">' + label + '</button>';
   };
   el.innerHTML = '<div class="plume-theme-row">' + opt('light', 'Light') + opt('dark', 'Dark') + opt('auto', 'Match my computer') + '</div>' +
-    '<div class="plume-theme-note">Light or dark applies to every module on this device. The palette below is just for this module.</div>';
+    '<div class="plume-theme-note">Light or dark applies to every module on this device, and so does the palette below.</div>';
+}
+
+// ══ App shell (2026-10-18 redesign) ═══════════════════
+// The Notion-style frame Heide chose from a preview: a sidebar for moving
+// between modules (icons, counts, a clear "you are here"), a page title with
+// a one-line summary, one toolbar for actions, filter chips, a light list,
+// and a panel that slides in from the right for a quick look.
+//
+// Modules move over one at a time. A module opts in by calling
+// Plume.shell({ module: 'ingredients' }) after boot; until then it keeps its
+// old header. All of it is styled from the palette variables, so palettes
+// and dark mode carry over untouched.
+//
+// BRAND is the only place the app's name lives for the shell, so the
+// eventual rename to Formula Finch is one edit here.
+var BRAND = { name: 'Plume', sub: 'Little Bird Studio', mark: 'P' };
+
+function countOf(key, keep) {
+  var list = Store.getJSON ? Store.getJSON(key, []) : [];
+  if (!Array.isArray(list)) return null;
+  return keep ? list.filter(keep).length : list.length;
+}
+var notArchived = function (x) { return x && !x.archived; };
+var SHELL_MODULES = [
+  { key: 'ingredients',  label: 'Ingredients',        href: 'plume-ingredients.html',  icon: 'ingredients',
+    count: function () { return countOf('aerie-ingredients-v2', notArchived); } },
+  { key: 'formulations', label: 'Formulations',       href: 'plume-formulations.html', icon: 'formulations',
+    count: function () { return countOf('aerie-formulations-v1', notArchived); } },
+  { key: 'packaging',    label: 'Packaging',          href: 'plume-packaging.html',    icon: 'packaging',
+    count: function () { return countOf('aerie-packaging-v2', notArchived); } },
+  { key: 'costing',      label: 'Products & Costing', href: 'plume-costing.html',      icon: 'costing',
+    count: function () { return countOf('plume-products-v1', notArchived); } },
+  { key: 'batchlog',     label: 'Batches',            href: 'plume-batchlog.html',     icon: 'batches',
+    count: function () { return countOf('aerie-batches-v1'); } }
+];
+
+// Line icons. The five module icons are the landing page's drawings.
+var ICONS = {
+  ingredients:  ['0 0 48 48', '<path d="M24 42 L24 14"/><path d="M24 22 C 18 22, 14 18, 14 12 C 20 12, 24 16, 24 22 Z"/><path d="M24 30 C 30 30, 34 26, 34 20 C 28 20, 24 24, 24 30 Z"/><path d="M24 36 C 18 36, 14 32, 14 26 C 20 26, 24 30, 24 36 Z"/>'],
+  formulations: ['0 0 48 48', '<path d="M10 22 L 38 22 L 34 38 Q 24 42, 14 38 Z"/><path d="M14 22 Q 24 18, 34 22"/><path d="M28 22 L 36 8"/><circle cx="36" cy="8" r="2.5"/>'],
+  packaging:    ['0 0 48 48', '<path d="M20 8 L 28 8 L 28 14 L 32 18 L 32 40 Q 24 43, 16 40 L 16 18 L 20 14 Z"/><path d="M19 26 L 29 26"/>'],
+  costing:      ['0 0 48 48', '<path d="M24 10 L 24 38"/><path d="M16 38 L 32 38"/><path d="M10 18 L 24 14 L 38 18"/><path d="M6 26 Q 10 18, 14 26 Q 10 30, 6 26 Z"/><path d="M34 26 Q 38 18, 42 26 Q 38 30, 34 26 Z"/>'],
+  batches:      ['0 0 48 48', '<path d="M10 28 L 10 42 L 22 42 L 22 28"/><path d="M12 24 L 20 24 L 20 28 L 12 28 Z"/><path d="M26 14 L 26 28 L 38 28 L 38 14"/><path d="M28 10 L 36 10 L 36 14 L 28 14 Z"/><path d="M26 30 L 38 30 L 38 42 L 26 42 Z"/>'],
+  suppliers:    ['0 0 24 24', '<path d="M3 21h18"/><path d="M5 21V8l7-4 7 4v13"/><path d="M9 21v-6h6v6"/>'],
+  settings:     ['0 0 24 24', '<circle cx="12" cy="12" r="3"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6"/>'],
+  search:       ['0 0 24 24', '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>'],
+  plus:         ['0 0 24 24', '<path d="M12 5v14M5 12h14"/>'],
+  more:         ['0 0 24 24', '<circle cx="5" cy="12" r="1.3" fill="currentColor"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/><circle cx="19" cy="12" r="1.3" fill="currentColor"/>'],
+  close:        ['0 0 24 24', '<path d="M6 6l12 12M18 6 6 18"/>'],
+  download:     ['0 0 24 24', '<path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 21h16"/>'],
+  upload:       ['0 0 24 24', '<path d="M12 15V3M7 8l5-5 5 5"/><path d="M4 21h16"/>'],
+  print:        ['0 0 24 24', '<path d="M6 9V3h12v6"/><rect x="4" y="9" width="16" height="8" rx="2"/><path d="M7 14h10v7H7z"/>'],
+  sparkle:      ['0 0 24 24', '<path d="M12 3v5M12 16v5M3 12h5M16 12h5M6 6l3 3M15 15l3 3M18 6l-3 3M9 15l-3 3"/>'],
+  collapse:     ['0 0 24 24', '<path d="M15 6l-6 6 6 6"/><path d="M4 4v16"/>'],
+  expand:       ['0 0 24 24', '<path d="M9 6l6 6-6 6"/><path d="M20 4v16"/>'],
+  external:     ['0 0 24 24', '<path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>']
+};
+function icon(name, cls) {
+  var d = ICONS[name]; if (!d) return '';
+  return '<svg class="ps-i' + (cls ? ' ' + cls : '') + '" viewBox="' + d[0] + '" aria-hidden="true">' + d[1] + '</svg>';
+}
+
+var shellOpts = null;
+function sideCollapsed() { try { return window.localStorage.getItem('plume-side-collapsed') === '1'; } catch (e) { return false; } }
+function setSideCollapsed(on) {
+  try { window.localStorage.setItem('plume-side-collapsed', on ? '1' : '0'); } catch (e) {}
+  document.body.classList.toggle('ps-collapsed', !!on);
+}
+
+function shell(opts) {
+  shellOpts = opts || {};
+  var old = document.getElementById('ps-side');
+  if (old) old.parentNode.removeChild(old);
+  var nav = SHELL_MODULES.map(function (m) {
+    var on = m.key === shellOpts.module;
+    return '<a class="ps-nav' + (on ? ' on' : '') + '" href="' + m.href + '" target="plume-' + m.key + '"' +
+      (on ? ' aria-current="page"' : '') + ' title="' + esc(m.label) + '">' + icon(m.icon) +
+      '<span class="ps-nav-label">' + esc(m.label) + '</span><span class="ps-ct" data-ct="' + m.key + '"></span></a>';
+  }).join('');
+  var hasSuppliers = typeof window.openSuppliers === 'function';
+  var html =
+    '<aside class="ps-side" id="ps-side" aria-label="Modules">' +
+      '<div class="ps-ws">' +
+        '<a class="ps-ws-link" href="index.html" title="Home">' +
+          '<span class="ps-ws-mark">' + esc(BRAND.mark) + '</span>' +
+          '<span class="ps-ws-text"><span class="ps-ws-name">' + esc(BRAND.name) + '</span><span class="ps-ws-sub">' + esc(BRAND.sub) + '</span></span>' +
+        '</a>' +
+        '<button type="button" class="ps-icon-btn ps-collapse" onclick="Plume.toggleSide()" title="Collapse or expand the sidebar" aria-label="Collapse or expand the sidebar">' + icon('collapse', 'ps-when-open') + icon('expand', 'ps-when-closed') + '</button>' +
+      '</div>' +
+      '<nav class="ps-nav-list">' + nav + '</nav>' +
+      '<div class="ps-nav-h">Library</div>' +
+      (hasSuppliers
+        ? '<button type="button" class="ps-nav" onclick="openSuppliers()" title="Suppliers">' + icon('suppliers') + '<span class="ps-nav-label">Suppliers</span><span class="ps-ct" data-ct="suppliers"></span></button>'
+        : '<a class="ps-nav" href="plume-ingredients.html#suppliers" target="plume-ingredients" title="Suppliers">' + icon('suppliers') + '<span class="ps-nav-label">Suppliers</span><span class="ps-ct" data-ct="suppliers"></span></a>') +
+      '<div class="ps-grow"></div>' +
+      '<button type="button" class="ps-nav" onclick="if (typeof openSettings === \'function\') openSettings()" title="Settings">' + icon('settings') + '<span class="ps-nav-label">Settings</span></button>' +
+    '</aside>';
+  document.body.insertAdjacentHTML('afterbegin', html);
+  document.body.classList.add('ps-shell');
+  document.body.classList.toggle('ps-collapsed', sideCollapsed());
+  refreshShell();
+}
+function toggleSide() { setSideCollapsed(!document.body.classList.contains('ps-collapsed')); }
+
+// Counts in the sidebar. Modules call this after a save that changes one.
+function refreshShell() {
+  if (!shellOpts) return;
+  var set = function (key, n) {
+    var el = document.querySelector('.ps-ct[data-ct="' + key + '"]');
+    if (el) el.textContent = (n === null || n === undefined) ? '' : String(n);
+  };
+  SHELL_MODULES.forEach(function (m) { set(m.key, m.count()); });
+  set('suppliers', countOf('aerie-suppliers-v1'));
+}
+
+// The slide-in panel. One per page, created on first use. open() replaces
+// what is showing; close() runs the onClose given to the last open().
+var peekOnClose = null;
+function peekEls() {
+  var p = document.getElementById('ps-peek');
+  if (p) return p;
+  document.body.insertAdjacentHTML('beforeend',
+    '<div class="ps-scrim" id="ps-scrim" onclick="Plume.peek.close()"></div>' +
+    '<aside class="ps-peek" id="ps-peek" aria-hidden="true" role="dialog" aria-modal="false" aria-label="Details">' +
+      '<div class="ps-peek-top"><button type="button" class="ps-icon-btn" onclick="Plume.peek.close()" aria-label="Close">' + icon('close') + '</button>' +
+      '<span class="ps-peek-label" id="ps-peek-label"></span><span class="ps-grow"></span><span id="ps-peek-actions"></span></div>' +
+      '<div class="ps-peek-body" id="ps-peek-body"></div>' +
+    '</aside>');
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && peekIsOpen() && !document.querySelector('.plume-dlg-ov') && !anyModalOpen()) closePeek();
+  });
+  return document.getElementById('ps-peek');
+}
+function anyModalOpen() {
+  var m = document.querySelectorAll('.modal-overlay.open, .modal-ov.open, .drawer-overlay.open');
+  return m.length > 0;
+}
+function peekIsOpen() { var p = document.getElementById('ps-peek'); return !!(p && p.classList.contains('open')); }
+function openPeek(html, opts) {
+  opts = opts || {};
+  var p = peekEls();
+  document.getElementById('ps-peek-label').textContent = opts.label || '';
+  document.getElementById('ps-peek-actions').innerHTML = opts.actions || '';
+  document.getElementById('ps-peek-body').innerHTML = html;
+  peekOnClose = opts.onClose || null;
+  p.classList.add('open'); p.setAttribute('aria-hidden', 'false');
+  document.getElementById('ps-scrim').classList.add('open');
+}
+function closePeek() {
+  var p = document.getElementById('ps-peek');
+  if (!p) return;
+  var cb = peekOnClose; peekOnClose = null;
+  p.classList.remove('open'); p.setAttribute('aria-hidden', 'true');
+  document.getElementById('ps-scrim').classList.remove('open');
+  document.getElementById('ps-peek-body').innerHTML = '';
+  if (cb) cb();
+}
+
+// Overflow menus: <div class="ps-menu-wrap"><button data-ps-menu>...</button>
+// <div class="ps-menu">...</div></div>. One delegated handler for all.
+if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+  document.addEventListener('click', function (e) {
+    var t = e.target && e.target.closest ? e.target : null;
+    if (!t) return;
+    var btn = t.closest('[data-ps-menu]');
+    var openMenus = document.querySelectorAll('.ps-menu.open');
+    for (var i = 0; i < openMenus.length; i++) {
+      if (!btn || openMenus[i] !== btn.parentNode.querySelector('.ps-menu')) {
+        openMenus[i].classList.remove('open');
+        var b = openMenus[i].parentNode.querySelector('[data-ps-menu]');
+        if (b) b.setAttribute('aria-expanded', 'false');
+      }
+    }
+    if (btn) {
+      var m = btn.parentNode.querySelector('.ps-menu');
+      var on = !m.classList.contains('open');
+      m.classList.toggle('open', on);
+      btn.setAttribute('aria-expanded', on ? 'true' : 'false');
+    }
+  });
 }
 
 // ══ Storage reporting ═════════════════════════════════
@@ -809,7 +931,7 @@ function renderThemeChoice(container) {
 // inside an unlabelled "Other" bucket.
 function storLabel(k) {
   if (KEY_LABELS[k]) return KEY_LABELS[k];
-  if (k.indexOf('plume-palette-') === 0 || k.indexOf('plume-pricing-') === 0 || k === THEME_KEY) return null;
+  if (k.indexOf('plume-palette') === 0 || k.indexOf('plume-pricing-') === 0 || k === THEME_KEY || k === 'plume-side-collapsed') return null;
   return k;
 }
 
@@ -1005,6 +1127,122 @@ function injectStyles() {
   '.plume-dlg-btns .plume-dlg-yes{background:var(--bark,#555);border-color:var(--bark,#555);color:var(--white,#fff)}' +
   '.plume-dlg-btns .plume-dlg-yes.danger{background:var(--danger,#a03020);border-color:var(--danger,#a03020)}' +
   '.plume-dlg-btns button:focus-visible{outline:2px solid var(--bark-light,#888);outline-offset:2px}';
+  // The app shell's styles (see the App shell section).
+  css += '/* ── App shell (2026-10-18). Main surface --white, sidebar --cream,' +
+    '   accent --bark, in-stock tint --clay-light. ── */' +
+    'body.ps-shell{background:var(--white);padding-left:236px;transition:padding-left .18s ease}' +
+    'body.ps-shell.ps-collapsed{padding-left:60px}' +
+    '.ps-i{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex:none}' +
+    'svg.ps-i[viewBox="0 0 48 48"]{stroke-width:2.6}' +
+    ".ps-side{position:fixed;top:0;left:0;bottom:0;width:236px;background:var(--cream);border-right:1px solid var(--cream-border);padding:14px 10px;display:flex;flex-direction:column;gap:2px;overflow-y:auto;z-index:50;transition:width .18s ease;font-family:'DM Sans',sans-serif}" +
+    '.ps-collapsed .ps-side{width:60px}' +
+    '.ps-ws{display:flex;align-items:center;gap:4px;padding:2px 2px 14px 6px}' +
+    '.ps-ws-link{display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--ink);min-width:0;flex:1}' +
+    ".ps-ws-mark{width:28px;height:28px;border-radius:8px;background:var(--bark);color:var(--white);display:grid;place-items:center;font:500 18px/1 'Cormorant Garamond',Georgia,serif;flex:none}" +
+    '.ps-ws-text{display:flex;flex-direction:column;min-width:0}' +
+    ".ps-ws-name{font:500 21px/1.05 'Cormorant Garamond',Georgia,serif;letter-spacing:.04em;white-space:nowrap}" +
+    '.ps-ws-sub{font-size:11px;color:var(--ink-lighter);white-space:nowrap}' +
+    '.ps-nav-list{display:flex;flex-direction:column;gap:2px}' +
+    '.ps-nav{display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:7px;color:var(--ink-light);text-decoration:none;font:inherit;font-size:14px;border:0;background:none;width:100%;text-align:left;cursor:pointer;transition:background .12s,color .12s;white-space:nowrap}' +
+    '.ps-nav .ps-i{transition:color .12s}' +
+    '.ps-nav:hover{background:color-mix(in srgb,var(--bark) 8%,transparent);color:var(--ink)}' +
+    '.ps-nav:hover .ps-i{color:var(--bark)}' +
+    '.ps-nav.on{background:color-mix(in srgb,var(--bark) 21%,transparent);color:var(--ink);font-weight:600}' +
+    '.ps-nav.on:hover{background:color-mix(in srgb,var(--bark) 24%,transparent)}' +
+    '.ps-nav.on .ps-i{color:var(--bark)}' +
+    '.ps-ct{margin-left:auto;font-size:12px;color:var(--ink-lighter);font-variant-numeric:tabular-nums;font-weight:400}' +
+    '.ps-nav.on .ps-ct{color:var(--bark);font-weight:600}' +
+    '.ps-nav-h{font-size:11.5px;font-weight:500;color:var(--ink-lighter);padding:16px 8px 4px;white-space:nowrap}' +
+    '.ps-grow{flex:1}' +
+    '.ps-collapse{margin-left:auto;opacity:.55}' +
+    '.ps-collapse:hover{opacity:1}' +
+    '.ps-when-closed{display:none}' +
+    '.ps-collapsed .ps-when-open{display:none}.ps-collapsed .ps-when-closed{display:block}' +
+    '.ps-collapsed .ps-ws-text,.ps-collapsed .ps-nav-label,.ps-collapsed .ps-ct,.ps-collapsed .ps-nav-h{display:none}' +
+    '.ps-collapsed .ps-ws{flex-direction:column;gap:8px;padding:2px 0 14px}' +
+    '.ps-collapsed .ps-ws-link{flex:none}' +
+    '.ps-collapsed .ps-collapse{margin:0}' +
+    '.ps-collapsed .ps-nav{justify-content:center;padding:8px 0}' +
+    '.ps-collapsed .ps-nav-h{display:block;height:12px;padding:0}' +
+    '' +
+    '.ps-page-head{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:4px}' +
+    '.ps-title{display:flex;align-items:center;gap:12px}' +
+    '.ps-title-icon{width:40px;height:40px;border-radius:10px;background:color-mix(in srgb,var(--bark) 13%,var(--white));color:var(--bark);display:grid;place-items:center;flex:none}' +
+    '.ps-title-icon .ps-i{width:26px;height:26px}' +
+    ".ps-title h1{margin:0;font-family:'DM Sans',sans-serif;font-size:30px;font-weight:600;letter-spacing:-.01em;line-height:1.15;color:var(--ink)}" +
+    '.ps-summary{color:var(--ink-lighter);font-size:13.5px;margin-top:6px;display:flex;gap:14px;flex-wrap:wrap}' +
+    '.ps-summary b{color:var(--ink-light);font-weight:600;font-variant-numeric:tabular-nums}' +
+    '' +
+    '.ps-toolbar{display:flex;align-items:center;gap:8px;margin-top:20px;border-bottom:1px solid var(--cream-border);flex-wrap:wrap}' +
+    '.ps-tab{font:inherit;font-size:14px;background:none;border:0;padding:8px 2px;margin-right:14px;color:var(--ink-lighter);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}' +
+    '.ps-tab:hover{color:var(--ink-light)}' +
+    '.ps-tab.on{color:var(--ink);border-bottom-color:var(--ink);font-weight:500}' +
+    '.ps-tools{margin-left:auto;display:flex;gap:6px;align-items:center;padding-bottom:6px}' +
+    '.ps-search{display:flex;align-items:center;gap:6px;border-radius:7px;padding:0 8px;color:var(--ink-lighter);transition:background .12s}' +
+    '.ps-search:focus-within,.ps-search:hover{background:var(--cream-dark)}' +
+    '.ps-search input{border:0;background:transparent;outline:none;color:var(--ink);font:inherit;font-size:14px;width:220px;padding:6px 0;box-shadow:none}' +
+    '.ps-btn-primary{font:inherit;font-size:13.5px;border:0;background:var(--bark);color:var(--white);border-radius:7px;padding:6px 12px;font-weight:500;cursor:pointer;display:inline-flex;gap:6px;align-items:center;white-space:nowrap}' +
+    '.ps-btn-primary:hover{filter:brightness(1.07)}' +
+    '.ps-btn-primary .ps-i{width:16px;height:16px}' +
+    '.ps-icon-btn{border:0;background:none;border-radius:7px;padding:6px;color:var(--ink-light);cursor:pointer;display:inline-grid;place-items:center;font:inherit}' +
+    '.ps-icon-btn:hover{background:var(--cream-dark);color:var(--ink)}' +
+    '.ps-shell :focus-visible{outline:2px solid var(--bark);outline-offset:2px}' +
+    '.ps-menu-wrap{position:relative}' +
+    '.ps-menu{position:absolute;right:0;top:calc(100% + 4px);background:var(--white);border:1px solid var(--cream-border);border-radius:9px;box-shadow:0 12px 40px rgba(20,20,15,.14),0 2px 6px rgba(20,20,15,.06);padding:5px;min-width:220px;white-space:nowrap;z-index:60;opacity:0;transform:translateY(-4px) scale(.98);pointer-events:none;transition:opacity .12s,transform .12s}' +
+    '.ps-menu.open{opacity:1;transform:none;pointer-events:auto}' +
+    '.ps-menu button{display:flex;gap:10px;align-items:center;width:100%;border:0;background:none;padding:7px 9px;border-radius:6px;cursor:pointer;text-align:left;color:var(--ink-light);font:inherit;font-size:13.5px}' +
+    '.ps-menu button:hover{background:var(--cream-dark);color:var(--ink)}' +
+    '.ps-menu hr{border:0;border-top:1px solid var(--cream-border);margin:4px 2px}' +
+    '' +
+    '.ps-chips{display:flex;gap:6px;margin:12px 0 8px;flex-wrap:wrap;align-items:center}' +
+    '.ps-chip{font:inherit;font-size:13px;border:1px solid var(--cream-border);background:transparent;border-radius:999px;padding:3px 11px;color:var(--ink-light);cursor:pointer;display:inline-flex;gap:6px;align-items:center;white-space:nowrap;transition:background .12s}' +
+    '.ps-chip:hover{background:var(--cream-dark)}' +
+    '.ps-chip.on,.ps-chip.active{background:var(--ink);color:var(--white);border-color:var(--ink)}' +
+    'select.ps-chip{appearance:auto;padding-right:6px}' +
+    'select.ps-chip.on{background:var(--ink);color:var(--white)}' +
+    '.ps-dot{width:7px;height:7px;border-radius:50%;display:inline-block;flex:none}' +
+    '.ps-swatch{width:11px;height:11px;border-radius:3px;display:inline-block;background:var(--clay-light);box-shadow:inset 0 0 0 1px var(--clay-hover);flex:none}' +
+    '.ps-chip-sep{width:1px;height:18px;background:var(--cream-border);margin:0 2px}' +
+    '' +
+    '.ps-table-wrap{overflow-x:auto}' +
+    'table.ps-table{width:100%;border-collapse:collapse;table-layout:auto;border:0;background:transparent}' +
+    '.ps-table th{text-align:left;font-weight:500;font-size:12.5px;color:var(--ink-lighter);padding:9px 10px;border-bottom:1.5px solid var(--cream-border);white-space:nowrap;letter-spacing:0;text-transform:none;background:transparent}' +
+    '.ps-table td{padding:10px 10px;border-bottom:1px solid var(--cream-border);vertical-align:middle;white-space:normal;overflow:visible;text-overflow:clip;color:var(--ink);font-size:14px}' +
+    '.ps-table tbody tr{cursor:pointer;transition:background .1s}' +
+    '.ps-table tbody tr:hover td{background:var(--cream-dark)}' +
+    '.ps-table tbody tr.has-stock td{background:var(--clay-light)}' +
+    '.ps-table tbody tr.has-stock:hover td,.ps-table tbody tr.has-stock.sel td{background:var(--clay-hover)}' +
+    '.ps-table tbody tr.sel td{background:var(--cream-dark)}' +
+    '.ps-table .ps-num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}' +
+    '.ps-name{font-weight:500}' +
+    '.ps-sub{font-size:12.5px;color:var(--ink-lighter);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:320px}' +
+    '.ps-muted{color:var(--ink-lighter)}' +
+    '.ps-tag{display:inline-block;font-size:12px;padding:1px 8px;border-radius:5px;margin:1px 4px 1px 0;white-space:nowrap;background:color-mix(in srgb,var(--ink) 8%,transparent);color:var(--ink-light);line-height:1.6}' +
+    '.ps-tag.ph-water{background:var(--ph-water-bg,#E4EEF8);color:var(--ph-water-fg,#2A5C8A)}' +
+    '.ps-tag.ph-oil{background:var(--ph-oil-bg,#F5ECD8);color:var(--ph-oil-fg,#7A4E10)}' +
+    '.ps-tag.ph-cool-down{background:var(--ph-cool-down-bg,#E4F0EA);color:var(--ph-cool-down-fg,#2A5C40)}' +
+    '.ps-tag.ph-active{background:var(--ph-active-bg,#EDE8F8);color:var(--ph-active-fg,#4A3A8A)}' +
+    '.ps-stock{display:inline-flex;gap:7px;align-items:center;white-space:nowrap;font-variant-numeric:tabular-nums}' +
+    '' +
+    '.ps-scrim{position:fixed;inset:0;background:rgba(20,22,17,.18);opacity:0;pointer-events:none;transition:opacity .2s;z-index:90}' +
+    '.ps-scrim.open{opacity:1;pointer-events:auto}' +
+    ".ps-peek{position:fixed;top:0;right:0;bottom:0;width:min(480px,100%);background:var(--white);box-shadow:0 12px 40px rgba(20,20,15,.18),0 2px 6px rgba(20,20,15,.06);z-index:91;transform:translateX(102%);transition:transform .24s cubic-bezier(.2,.8,.2,1);display:flex;flex-direction:column;font-family:'DM Sans',sans-serif;color:var(--ink)}" +
+    '.ps-peek.open{transform:none}' +
+    '.ps-peek-top{display:flex;gap:6px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--cream-border);color:var(--ink-lighter);font-size:13px}' +
+    '.ps-peek-body{padding:22px 26px 30px;overflow-y:auto;flex:1}' +
+    '.ps-link-btn{font:inherit;font-size:13px;border:1px solid var(--cream-border);background:transparent;border-radius:7px;padding:5px 11px;cursor:pointer;color:var(--ink-light);display:inline-flex;gap:6px;align-items:center;white-space:nowrap}' +
+    '.ps-link-btn:hover{background:var(--cream-dark);color:var(--ink)}' +
+    '' +
+    '@media (max-width:760px){' +
+    '  body.ps-shell,body.ps-shell.ps-collapsed{padding-left:0}' +
+    '  .ps-side,.ps-collapsed .ps-side{position:sticky;top:0;width:auto;height:auto;flex-direction:row;align-items:center;overflow-x:auto;padding:8px 12px;border-right:0;border-bottom:1px solid var(--cream-border);gap:4px}' +
+    '  .ps-ws{padding:0 6px 0 0}.ps-collapse,.ps-ws-sub,.ps-nav-h,.ps-grow,.ps-ct{display:none!important}' +
+    '  .ps-nav-list{flex-direction:row;gap:4px}' +
+    '  .ps-nav{width:auto}' +
+    '  .ps-collapsed .ps-nav-label,.ps-collapsed .ps-ws-text{display:inline}' +
+    '  .ps-search input{width:130px}' +
+    '}' +
+    '@media (prefers-reduced-motion:reduce){.ps-side,.ps-peek,.ps-scrim,.ps-menu,.ps-nav,body.ps-shell{transition:none}}';
   var st = document.createElement('style');
   st.id = 'plume-core-css';
   st.appendChild(document.createTextNode(css));
@@ -1899,6 +2137,8 @@ return {
   FUNCTION_CATEGORIES: FUNCTION_CATEGORIES, funcCats: funcCats, ingMatchRank: ingMatchRank,
   PRODUCT_TYPES: PRODUCT_TYPES, isSoapType: isSoapType, fillTypeSelect: fillTypeSelect,
   buildSheet: buildSheet, openSheet: openSheet, stampVersion: stampVersion,
+  shell: shell, refreshShell: refreshShell, toggleSide: toggleSide, icon: icon, BRAND: BRAND,
+  peek: { open: openPeek, close: closePeek, isOpen: peekIsOpen },
   isInstalled: isInstalled, install: install, openPage: openPage, resetAppCache: resetAppCache,
   setTheme: setTheme, isDark: isDark, themeChoice: themeChoice, darkValue: darkValue, applyTheme: applyTheme,
   tell: tell, ask: ask, askValue: askValue,

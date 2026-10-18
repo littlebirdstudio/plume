@@ -110,14 +110,14 @@ console.log('\n2. Every palette stays readable in dark');
     await page.waitForTimeout(200);
     const opts = await page.evaluate("Array.from(document.querySelectorAll('#plume-theme-choice .plume-theme-opt')).map(function(b){return b.textContent + (b.classList.contains('on') ? '*' : '');})");
     ok('Settings offers Light / Dark / Match my computer, with Dark marked', JSON.stringify(opts) === '["Light","Dark*","Match my computer"]', opts);
-    ok('and says it covers every module while the palette is per module',
-       /every module/.test(await page.evaluate("document.getElementById('plume-theme-choice').innerText")));
+    ok('and says it covers every module, and so does the palette',
+       /every module[\s\S]*palette/.test(await page.evaluate("document.getElementById('plume-theme-choice').innerText")));
     await page.click('#plume-theme-choice .plume-theme-opt:first-child');
     await page.waitForTimeout(150);
     ok('choosing Light turns it light at once', !(await isDarkAttr(page)) && (await bodyLum(page)) > 0.7, await bodyLum(page));
     ok('the choice is saved for every page', (await page.evaluate("localStorage.getItem('plume-theme')")) === 'light');
     const pal = await page.evaluate("getComputedStyle(document.documentElement).getPropertyValue('--cream').trim().toUpperCase()");
-    ok('light brings back the module palette exactly', pal === '#F4F5F1', pal);   // Sage, the default
+    ok('light brings back the module palette exactly', pal === '#F5F5F3', pal);   // Finch, the default since 2026-10-18
     ok('the header colours are gone in light', await page.evaluate("getComputedStyle(document.documentElement).getPropertyValue('--hdr-bg').trim() === ''"));
     await ctx.close();
   }
@@ -139,13 +139,16 @@ console.log('\n2. Every palette stays readable in dark');
   {
     const { ctx, page } = await open('ingredients', 'dark');
     const c1 = await page.evaluate("getComputedStyle(document.documentElement).getPropertyValue('--bark').trim()");
-    await page.evaluate("selectPalette('coastal')");
+    await page.evaluate("selectPalette('lagoon')");
     const c2 = await page.evaluate("getComputedStyle(document.documentElement).getPropertyValue('--bark').trim()");
     ok('changing palette in dark gives that palette\'s dark version', c1 !== c2 && (await isDarkAttr(page)), [c1, c2]);
     const other = await ctx.newPage();
-    await other.goto(previewUrl('ingredients'));
+    await other.goto(previewUrl('formulations'));
     await other.waitForTimeout(300);
     ok('another open window starts dark too', await isDarkAttr(other));
+    ok('one palette for the whole app: other modules pick it up',
+       (await page.evaluate("localStorage.getItem('plume-palette')")) === 'lagoon' &&
+       (await other.evaluate("getComputedStyle(document.documentElement).getPropertyValue('--bark').trim()")) === c2);
     await page.evaluate("Plume.setTheme('light')");
     await other.waitForTimeout(300);
     ok('and turns light when the choice changes in the first one', !(await isDarkAttr(other)));
