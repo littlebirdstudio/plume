@@ -184,8 +184,10 @@ console.log('\n1. The starter list carries lowdowns');
     ok('ten columns including substitutes fit a 1280px screen without side-scrolling', m.cols === 10 && m.s <= m.c, m);
     ok('no values are singled out (Heide found it added nothing)', await page.evaluate("!document.querySelector('.cs-odd')") &&
        !/differ from most others/.test(await page.evaluate("document.getElementById('cs-body').innerText")));
-    const bw = await page.evaluate("document.querySelector('.app-body').getBoundingClientRect().width");
-    ok('the page widens to 1260px for the cheat sheet, between the old 1100 and 1440', bw === 1260, bw);
+    // Since the sidebar (2026-10-18) a 1280px screen has less room than
+    // 1260px, so the check is on the cap the cheat sheet sets.
+    const bw = await page.evaluate("getComputedStyle(document.querySelector('.app-body')).maxWidth");
+    ok('the page widens to 1260px for the cheat sheet, between the old 1100 and 1440', bw === '1260px', bw);
     await page.evaluate("viewIngredient('a')");
     ok('the details page goes back to its usual width', await page.evaluate("!document.body.classList.contains('cs-wide')"));
     await page.close();

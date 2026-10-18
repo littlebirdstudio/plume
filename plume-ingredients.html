@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Plume - — Ingredients Library</title>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
   /* ──────────────────────────────────────────────────────────────
@@ -93,6 +93,30 @@
     font-size: 14px;
     line-height: 1.6;
   }
+
+  /* Inside the app shell (2026-10-18): the content sits on the white main
+     surface beside the sidebar. */
+  body.ps-shell .app-body { max-width: 1180px; padding: 28px clamp(16px, 4vw, 48px) 48px; }
+  body.ps-shell .app-footer { background: transparent; }
+  .ps-table tbody tr:last-child td { border-bottom: 1px solid var(--cream-border); }
+  .ps-table .td-name { color: var(--ink); }
+  .ps-table .arch-tag { font-size: 10px; text-transform: none; letter-spacing: 0; border-radius: 4px; }
+  body.ps-shell #cheat-mode { padding-top: 14px; }
+  body.ps-shell .cs-search { border-radius: 8px; }
+  body.ps-shell .cs-chip.on { background: var(--ink); border-color: var(--ink); color: var(--white); }
+  body.ps-shell .cs-group-hdr { color: var(--ink); letter-spacing: .1em; }
+  /* Details page inside the shell: a light header in the same type as the
+     page titles, instead of the old dark banner. */
+  body.ps-shell .detail-card { border-radius: 10px; }
+  body.ps-shell .detail-card-header { background: var(--white); color: var(--ink);
+    border-bottom: 1.5px solid var(--cream-border); padding: 1.6rem 1.75rem 1.4rem; }
+  body.ps-shell .detail-ing-name { font-family: 'DM Sans', sans-serif; font-size: 28px; font-weight: 600;
+    letter-spacing: -0.01em; color: var(--ink); }
+  body.ps-shell .detail-ing-inci { color: var(--ink-light); }
+  body.ps-shell .detail-card-header .detail-purpose { color: var(--ink); opacity: 1; border-left-color: var(--bark); }
+  body.ps-shell .detail-card-header .d-brand { color: var(--bark) !important; }
+  body.ps-shell .detail-field label, body.ps-shell .detail-section-title { font-size: 10px; letter-spacing: .1em; }
+  body.ps-shell .back-link { color: var(--ink-light); }
 
   /* ── Header ── */
   .app-header {
@@ -298,23 +322,20 @@
   .detail-purpose { font-size: 13px; color: var(--ink); margin-top: 8px; padding-left: 10px;
     border-left: 2px solid var(--bark-light); max-width: 520px; }
   .fcat-grid { display: flex; flex-wrap: wrap; gap: 6px; }
-  /* Quick look: the row that opens in place under an ingredient in the list. */
-  #tbody tr.ql-open td { background: var(--cream-dark); }
-  #tbody tr.ql-row { cursor: default; }
-  #tbody tr.ql-row > td { background: var(--cream); padding: 0; border-top: none;
-    white-space: normal; overflow: visible; text-overflow: clip; } /* undo the list's one-line cells */
-  .ql { display: grid; grid-template-columns: 2fr 1fr; gap: 18px 28px; padding: 14px 18px 16px; }
-  .ql-k { font-size: 10px; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-lighter); margin: 0 0 3px; }
-  .ql-block + .ql-block { margin-top: 12px; }
-  .ql-pills { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 6px; }
-  .ql-pill { font-size: 11px; background: var(--white); border: 1px solid var(--cream-border); color: var(--bark-dark); padding: 2px 9px; border-radius: 20px; }
-  .ql-side { display: grid; grid-template-columns: auto 1fr; gap: 7px 14px; align-content: start; font-size: 13px; }
-  .ql-side .ql-k { margin: 0; align-self: baseline; }
-  .ql-side > div:not(.ql-k) { color: var(--ink); align-self: baseline; }
-  .ql-side .ql-wide { grid-column: 1 / -1; }
-  .ql-actions { grid-column: 1 / -1; display: flex; gap: 14px; justify-content: flex-end; border-top: 1px solid var(--cream-border); padding-top: 10px; }
-  .ql-actions a { font-size: 12px; color: var(--bark-dark); cursor: pointer; text-decoration: none; }
-  .ql-actions a:hover { text-decoration: underline; }
+  /* Quick look: opens in the slide-in panel (Plume.peek) since the
+     2026-10-18 redesign; before that it opened in place under the row. */
+  .ql-title { margin: 0; font-size: 24px; font-weight: 600; line-height: 1.2; color: var(--ink); text-wrap: balance; font-family: 'DM Sans', sans-serif; }
+  .ql-inci { font-size: 13px; color: var(--ink-lighter); margin-top: 4px; }
+  .ql-fn { font-size: 13.5px; color: var(--ink-light); margin-top: 10px; line-height: 1.5; }
+  .ql-props { display: grid; grid-template-columns: 110px 1fr; gap: 9px 12px; margin: 18px 0; font-size: 13.5px; }
+  .ql-props dt { color: var(--ink-lighter); }
+  .ql-props dd { margin: 0; color: var(--ink); min-width: 0; }
+  .ql-warn { font-size: 13px; color: var(--warning); background: var(--warning-bg); border-radius: 7px; padding: 8px 12px; margin-bottom: 14px; }
+  .ql-k { font-size: 12px; font-weight: 500; color: var(--ink-lighter); margin: 0 0 4px; }
+  .ql-block { background: var(--cream); border-radius: 9px; padding: 11px 14px; }
+  .ql-block + .ql-block { margin-top: 10px; }
+  .ql-actions { display: flex; gap: 8px; margin-top: 20px; flex-wrap: wrap; }
+  .ql-actions a { text-decoration: none; cursor: pointer; }
   /* Click-to-type notes: used in the quick look, the details page and the cheat sheet. */
   .note-edit { cursor: text; font-size: 13px; color: var(--ink); min-height: 20px; padding: 2px 4px; margin: 0 -4px;
     border-radius: 4px; border: 1px dashed transparent; white-space: pre-wrap; }
@@ -332,7 +353,6 @@
   .note-edit textarea { width: 100%; font: inherit; font-size: 13px; color: var(--ink); border: 1px solid var(--bark-light);
     border-radius: 4px; padding: 5px 7px; background: var(--white); resize: vertical; outline: none; box-sizing: border-box; }
   .note-saved { font-size: 10px; color: var(--success); margin-left: 6px; }
-  @media (max-width: 700px) { .ql { grid-template-columns: 1fr; } }
   .fcat-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12px;
     padding: 4px 10px; border: 1px solid var(--cream-border); border-radius: 20px;
     cursor: pointer; user-select: none; color: var(--ink-light); background: var(--white);
@@ -1150,41 +1170,37 @@
 </head>
 <body>
 
-<header class="app-header">
-  <div class="app-brand">
-    <div class="app-brand-name">Plume</div>
-    <div class="app-brand-sub">by Little Bird Studio · Ingredients Library</div>
-  </div>
-  <div class="header-actions">
-    <a href="plume-formulations.html" target="plume-formulations" class="btn btn-ghost">Formulations</a>
-    <a href="plume-packaging.html" target="plume-packaging" class="btn btn-ghost">Packaging</a>
-    <a href="plume-costing.html" target="plume-costing" class="btn btn-ghost">Products &amp; Costing</a>
-    <a href="plume-batchlog.html" target="plume-batchlog" class="btn btn-ghost">Batches</a>
-    <span style="width:1px;height:20px;background:rgba(253,252,250,0.2);margin:0 4px"></span>
-    <button class="btn btn-ghost" onclick="openSuppliers()">Suppliers</button>
-    <button class="btn btn-ghost" onclick="exportData()">Export backup</button>
-    <button class="btn btn-ghost" onclick="document.getElementById('import-file-input').click()">Import</button>
-    <input type="file" id="import-file-input" accept=".json" style="display:none" onchange="importData(event)">
-    <button class="btn btn-ghost" onclick="openSettings()" title="Settings &amp; maintenance">⚙ Settings</button>
-  </div>
-</header>
+<!-- The sidebar (Plume.shell) replaces the old header: modules, Suppliers and
+     Settings are there; Export and Import are in the toolbar's ⋯ menu. -->
+<input type="file" id="import-file-input" accept=".json" style="display:none" onchange="importData(event)">
 
 <div class="app-body">
   <div id="stor-banner-slot"></div>
 
   <!-- Main list view -->
   <div id="list-view">
-    <div class="stats-row" style="grid-template-columns:1fr 1fr">
-      <div class="stat-card"><div class="stat-label">Total ingredients</div><div class="stat-value" id="s-total">0</div></div>
-      <div class="stat-card"><div class="stat-label">Suppliers</div><div class="stat-value" id="s-suppliers">0</div></div>
+    <div class="ps-page-head">
+      <div>
+        <div class="ps-title"><span class="ps-title-icon" id="ing-title-icon"></span><h1>Ingredients</h1></div>
+        <div class="ps-summary" id="ing-summary"></div>
+      </div>
     </div>
 
-    <div style="display:flex; align-items:center; gap:14px; margin:0 0 1rem">
-      <div style="font-family:'Cormorant Garamond',serif; font-size:22px; font-weight:300; color:var(--bark-dark)">Ingredients</div>
-      <button class="btn btn-primary btn-sm" onclick="openAdd()">+ New ingredient</button>
-      <div class="view-toggle">
-        <button id="vt-list" class="on" onclick="setIngView('list')">List</button>
-        <button id="vt-cheat" onclick="setIngView('cheat')">Cheat sheet</button>
+    <div class="ps-toolbar">
+      <button type="button" class="ps-tab on" id="vt-list" onclick="setIngView('list')">List</button>
+      <button type="button" class="ps-tab" id="vt-cheat" onclick="setIngView('cheat')">Cheat sheet</button>
+      <div class="ps-tools">
+        <label class="ps-search" id="ing-search-wrap"><span id="ing-search-icon"></span><input type="search" id="search" placeholder="Search ingredients" aria-label="Search name, INCI, function, purpose or supplier" title="Searches name, INCI, function, purpose and supplier" oninput="renderTable()"></label>
+        <button type="button" class="ps-btn-primary" id="ing-new-btn" onclick="openAdd()"><span id="ing-new-icon"></span>New</button>
+        <div class="ps-menu-wrap">
+          <button type="button" class="ps-icon-btn" data-ps-menu aria-label="More actions" aria-expanded="false" id="ing-more-btn"></button>
+          <div class="ps-menu" role="menu" id="ing-more-menu">
+            <button type="button" onclick="openSeeder()" data-icon="sparkle">Quick add from the starter list</button>
+            <hr>
+            <button type="button" onclick="exportData()" data-icon="download">Export backup</button>
+            <button type="button" onclick="document.getElementById('import-file-input').click()" data-icon="upload">Import</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1198,24 +1214,19 @@
     </div>
 
     <div id="list-mode">
-    <div class="toolbar">
-      <div class="toolbar-left">
-        <input class="search-input" type="text" id="search" placeholder="Search name, INCI, function, purpose, or supplier…" oninput="renderTable()">
-        <select class="filter" id="f-function-filter" onchange="renderTable()"><option value="">All functions</option></select>
-        <select class="filter" id="filter-phase" onchange="renderTable()">
-          <option value="">All phases</option>
-          <option value="water">Water</option>
-          <option value="oil">Oil</option>
-          <option value="cool-down">Cool-down</option>
-          <option value="add-in">Add-in</option>
-        </select>
-        <select class="filter" id="filter-flag" onchange="renderTable()">
-          <option value="">All ingredients</option>
-          <option value="yes">Restricted only</option>
-        </select>
-        <button class="btn btn-sm btn-in-stock" id="in-stock-btn" onclick="toggleInStock()" title="Show only ingredients you have on hand">&#9679; In stock</button>
-        <button class="btn btn-sm btn-low-stock" id="low-stock-btn" onclick="toggleLowStock()">&#9888; Low stock</button>
-      </div>
+    <!-- Filter chips. The phase and restricted chips drive the two hidden
+         selects underneath, so renderTable() reads them exactly as before. -->
+    <div class="ps-chips" id="ing-chips">
+      <span id="phase-chips"></span>
+      <select class="ps-chip" id="f-function-filter" onchange="this.classList.toggle('on', !!this.value); renderTable()" aria-label="Function"><option value="">Function: all</option></select>
+      <span class="ps-chip-sep"></span>
+      <button type="button" class="ps-chip" id="in-stock-btn" onclick="toggleInStock()" title="Show only ingredients you have on hand"><span class="ps-swatch"></span>In stock</button>
+      <button type="button" class="ps-chip" id="low-stock-btn" onclick="toggleLowStock()" title="Below the low-stock level you set"><span class="ps-dot" style="background:var(--warning)"></span>Running low</button>
+      <button type="button" class="ps-chip" id="restricted-chip" onclick="toggleRestrictedChip()" title="Ingredients marked restricted">Restricted</button>
+      <select id="filter-phase" hidden onchange="renderTable()">
+        <option value="">All phases</option><option value="water">Water</option><option value="oil">Oil</option><option value="cool-down">Cool-down</option><option value="add-in">Add-in</option>
+      </select>
+      <select id="filter-flag" hidden onchange="renderTable()"><option value="">All ingredients</option><option value="yes">Restricted only</option></select>
     </div>
 
     <!-- Recently viewed -->
@@ -1227,16 +1238,16 @@
     <!-- Only rendered when something is archived; see syncArchiveBar(). -->
     <div id="ing-arch-bar" style="display:none;align-items:center;justify-content:space-between;gap:12px;padding:8px 12px;margin-bottom:10px;border:1px solid var(--cream-border);border-radius:4px;background:var(--cream)"></div>
 
-    <div class="table-wrap">
-      <table>
+    <div class="ps-table-wrap">
+      <table class="ps-table" id="ing-table">
         <thead>
           <tr>
-            <th style="width:24%">Common name</th>
-            <th style="width:24%">INCI name</th>
-            <th style="width:9%">Phase</th>
-            <th style="width:18%">Functions</th>
-            <th style="width:9%">Price/g</th>
-            <th style="width:9%">Stock</th>
+            <th>Name</th>
+            <th>Phase</th>
+            <th>Function</th>
+            <th>Use</th>
+            <th class="ps-num">Price / g</th>
+            <th>Stock</th>
           </tr>
         </thead>
         <tbody id="tbody">
@@ -1570,7 +1581,7 @@
       <div style="font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-lighter);margin-bottom:10px">Appearance</div>
 
       <div style="padding:8px 0 18px;border-bottom:1px solid var(--cream-border)">
-        <div style="font-size:12px;color:var(--ink-lighter);line-height:1.4;margin-bottom:12px">Choose a color palette for this module. Phase badges and quality bars stay consistent across all palettes.</div>
+        <div style="font-size:12px;color:var(--ink-lighter);line-height:1.4;margin-bottom:12px">Choose the color palette for the whole app.</div>
         <div id="palette-swatches" class="palette-swatch-grid"></div>
       </div>
       <div style="font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-lighter);margin-bottom:10px;border-top:1px solid var(--cream-border);padding-top:16px">Storage</div>
@@ -2282,14 +2293,53 @@ function normaliseInci(s) {
 }
 
 // ── Stats ─────────────────────────────────────────────
+// The one-line summary under the title (it replaced the two stat boxes in
+// the 2026-10-18 redesign), plus the sidebar counts.
 function renderStats() {
   var active = ingredients.filter(function(i) { return !i.archived; });
-  document.getElementById('s-total').textContent = active.length;
   var sup = new Set();
   active.forEach(function(i) {
     migrateLots(i).forEach(function(l) { if (l.supplier && l.supplier.trim()) sup.add(l.supplier.trim()); });
   });
-  document.getElementById('s-suppliers').textContent = sup.size;
+  var inStock = active.filter(hasStock).length;
+  var low = active.filter(isLowStock).length;
+  var el = document.getElementById('ing-summary');
+  if (el) el.innerHTML =
+    '<span><b id="s-total">' + active.length + '</b> ingredient' + (active.length === 1 ? '' : 's') + '</span>' +
+    '<span><b>' + inStock + '</b> in stock</span>' +
+    (low ? '<span><b>' + low + '</b> running low</span>' : '') +
+    '<span><b id="s-suppliers">' + sup.size + '</b> supplier' + (sup.size === 1 ? '' : 's') + ' used</span>';
+  if (Plume.refreshShell) Plume.refreshShell();
+}
+
+// Phase chips: they set the hidden #filter-phase select, so the filter logic
+// in renderTable() is unchanged. Clicking the active chip clears it.
+var PHASE_CHIPS = [
+  { v: 'oil', label: 'Oil phase', dot: 'var(--ph-oil-fg,#7A4E10)' },
+  { v: 'water', label: 'Water phase', dot: 'var(--ph-water-fg,#2A5C8A)' },
+  { v: 'cool-down', label: 'Cool-down', dot: 'var(--ph-cool-down-fg,#2A5C40)' },
+  { v: 'add-in', label: 'Add-in', dot: 'var(--ink-lighter)' }
+];
+function renderPhaseChips() {
+  var cur = document.getElementById('filter-phase').value;
+  document.getElementById('phase-chips').innerHTML =
+    '<button type="button" class="ps-chip' + (cur ? '' : ' on') + '" onclick="setPhaseChip(\'\')">All</button> ' +
+    PHASE_CHIPS.map(function (c) {
+      return '<button type="button" class="ps-chip' + (cur === c.v ? ' on' : '') + '" onclick="setPhaseChip(\'' + c.v + '\')">' +
+        '<span class="ps-dot" style="background:' + c.dot + '"></span>' + c.label + '</button>';
+    }).join(' ');
+}
+function setPhaseChip(v) {
+  var sel = document.getElementById('filter-phase');
+  sel.value = (sel.value === v) ? '' : v;
+  renderPhaseChips();
+  renderTable();
+}
+function toggleRestrictedChip() {
+  var sel = document.getElementById('filter-flag');
+  sel.value = sel.value === 'yes' ? '' : 'yes';
+  document.getElementById('restricted-chip').classList.toggle('on', sel.value === 'yes');
+  renderTable();
 }
 
 // ── Archived ingredients ──────────────────────────────
@@ -2419,27 +2469,33 @@ function renderTable() {
       '<span>' + (noActive ? 'Click &quot;+ New ingredient&quot; to get started, or use Quick add from Settings for a curated starter list' : (lowStockActive ? 'All stocked items are above their threshold' : (inStockActive ? 'Add lot quantities to ingredients you have on hand' : 'Try adjusting your search or filters'))) + '</span></div></td></tr>';
     return;
   }
+  var PH = { water: 'Water', oil: 'Oil', 'cool-down': 'Cool-down', 'add-in': 'Add-in' };
   tbody.innerHTML = list.map(function(i) {
     var lots = migrateLots(i);
     var cost = activeCost(i);
-    var supp = primarySupplier(i);
     var warn = isExpiring(lots);
     var low  = isLowStock(i);
     var inStock = hasStock(i);
-    var stockHtml = formatStockDisplay(i);
-    var qlOpen = qlOpenId === i.id;
-    return '<tr data-ing="' + i.id + '" class="' + (inStock ? 'has-stock' : '') + (qlOpen ? ' ql-open' : '') + (i.archived ? ' row-archived' : '') + '" onclick="toggleQuickLook(\'' + i.id + '\')" title="Click for a quick look">' +
-      '<td class="td-name">' + i.name + (i.archived ? '<span class="arch-tag">archived</span>' : '') + (warn ? '<span class="expiry-warn" title="Expiring soon"> &#9888;</span>' : '') + (low ? '<span style="color:var(--warning);font-size:10px;margin-left:4px" title="Low stock">\u25bc</span>' : '') +
-        // The line under the name says what the ingredient IS (function
-        // notes). Her reminder note lives in the quick look, one click away.
-        (i.function ? '<div class="td-purpose" title="' + esc(i.function) + '">' + esc(i.function.length > 120 ? i.function.slice(0, 117) + '\u2026' : i.function) + '</div>' : '') + '</td>' +
-      '<td class="td-inci">' + i.inci + '</td>' +
-      '<td><span class="phase-badge ' + phaseClass(i.phase) + '">' + i.phase + '</span></td>' +
-      '<td style="color:var(--ink-light)">' + (Plume.funcCats(i).join(', ') || '\u2014') + '</td>' +
-      '<td style="font-variant-numeric:tabular-nums">' + (cost !== null ? '$' + cost.toFixed(4) : '\u2014') + '</td>' +
-      '<td style="font-size:12px;color:' + (low ? 'var(--warning)' : 'var(--ink-light)') + '">' + stockHtml + '</td>' +
-      '</tr>' +
-      (qlOpen ? '<tr class="ql-row"><td colspan="6">' + quickLookHtml(i) + '</td></tr>' : '');
+    var cats = Plume.funcCats(i);
+    var sel = qlOpenId === i.id;
+    // In stock: a tinted row (kept from the old list at her request). Running
+    // low: an amber dot by the amount. Nothing on hand: plain row, "None".
+    var stockCell = inStock
+      ? '<span class="ps-stock">' + (low ? '<span class="ps-dot" style="background:var(--warning)" title="Running low"></span>' : '') +
+          formatStockDisplay(i) + (low ? ' <span class="ps-muted">\u00b7 low</span>' : '') + '</span>'
+      : '<span class="ps-muted">' + (calcTotalStockG(i) === null ? '\u2014' : 'None') + '</span>';
+    return '<tr data-ing="' + i.id + '" class="' + (inStock ? 'has-stock' : '') + (sel ? ' sel' : '') + (i.archived ? ' row-archived' : '') + '" onclick="toggleQuickLook(\'' + i.id + '\')" title="Click for a quick look">' +
+      '<td class="td-name">' + esc(i.name) + (i.archived ? '<span class="arch-tag">archived</span>' : '') +
+        (warn ? '<span class="expiry-warn" title="A lot expires soon"> &#9888;</span>' : '') +
+        // INCI under the name (the redesign). Her function notes moved to the
+        // quick look panel, one click away.
+        (i.inci ? '<div class="ps-sub" title="' + esc(i.inci) + '">' + esc(i.inci) + '</div>' : '') + '</td>' +
+      '<td>' + (i.phase ? '<span class="ps-tag ' + phaseClass(i.phase) + '">' + esc(PH[i.phase] || i.phase) + '</span>' : '<span class="ps-muted">\u2014</span>') + '</td>' +
+      '<td>' + (cats.length ? cats.map(function (c) { return '<span class="ps-tag">' + esc(c) + '</span>'; }).join('') : '<span class="ps-muted">\u2014</span>') + '</td>' +
+      '<td class="ps-muted" style="white-space:nowrap">' + (i.min || i.max ? esc((i.min || '0') + '\u2013' + (i.max || '100')) + '%' : '\u2014') + '</td>' +
+      '<td class="ps-num">' + (cost !== null ? '$' + cost.toFixed(4) : '<span class="ps-muted">\u2014</span>') + '</td>' +
+      '<td>' + stockCell + '</td>' +
+      '</tr>';
   }).join('');
 }
 
@@ -2454,17 +2510,36 @@ function renderTable() {
 var qlOpenId = null;
 var editFromList = false;
 
+// The quick look now opens in the slide-in panel (2026-10-18 redesign)
+// instead of under the row, so the list stays put. Same content, same
+// click-to-type notes; clicking the same row again closes it.
 function toggleQuickLook(id) {
-  qlOpenId = (qlOpenId === id) ? null : id;
+  if (qlOpenId === id) { Plume.peek.close(); return; }
+  var i = ingredients.find(function (x) { return x.id === id; });
+  if (!i) return;
+  qlOpenId = id;
+  Plume.peek.open(quickLookHtml(i), {
+    label: 'Ingredients',
+    actions: '<button type="button" class="ps-link-btn" onclick="openDetailsFromList(event,\'' + id + '\')">Open full page</button>',
+    onClose: function () { qlOpenId = null; renderTable(); }
+  });
   renderTable();
 }
-function openDetailsFromList(e, id) { e.stopPropagation(); viewIngredient(id); }
+// After a save or a delete, keep the panel showing the current record.
+function refreshQuickLook() {
+  if (!qlOpenId || !Plume.peek.isOpen()) return;
+  var i = ingredients.find(function (x) { return x.id === qlOpenId; });
+  if (!i) { Plume.peek.close(); return; }
+  var body = document.getElementById('ps-peek-body');
+  if (body) body.innerHTML = quickLookHtml(i);
+}
+function openDetailsFromList(e, id) { e.stopPropagation(); if (Plume.peek.isOpen()) Plume.peek.close(); viewIngredient(id); }
 
 function unarchiveFromList(e, id) {
   e.stopPropagation();
   var idx = ingredients.findIndex(function(i) { return i.id === id; });
   if (idx > -1) delete ingredients[idx].archived;
-  saveData(); renderTable(); renderStats();
+  saveData(); renderTable(); renderStats(); refreshQuickLook();
 }
 function openEditFromList(e, id) {
   e.stopPropagation();
@@ -2477,30 +2552,32 @@ function quickLookHtml(i) {
   var stock = formatStockDisplay(i);
   var used = (typeof PlumeCheat !== 'undefined' && PlumeCheat.usageMap) ? (PlumeCheat.usageMap()[i.id] || []) : [];
   var PH = { water: 'Water', oil: 'Oil', 'cool-down': 'Cool-down', 'add-in': 'Add-in' };
+  var cost = activeCost(i);
+  var lot = getActiveLot(i);
   return '<div class="ql" onclick="event.stopPropagation()">' +
-    '<div>' +
-      '<div class="ql-block">' +
-        (cats.length ? '<div class="ql-pills">' + cats.map(function (c) { return '<span class="ql-pill">' + esc(c) + '</span>'; }).join('') + '</div>' : '') +
-        '<div style="font-size:13px;color:var(--ink-light)">' + (i.function ? esc(i.function) : '<span style="color:var(--ink-lighter)">No function notes</span>') + '</div>' +
-      '</div>' +
-      '<div class="ql-block"><div class="ql-k">The lowdown</div>' + noteEditHtml(i, 'chooseWhen') + '</div>' +
-      (i.substitution ? '<div class="ql-block"><div class="ql-k">Substitutes</div><div style="font-size:13px">' + esc(i.substitution) + '</div></div>' : '') +
-      '<div class="ql-block"><div class="ql-k">What I had in mind</div>' + noteEditHtml(i, 'purpose') + '</div>' +
-    '</div>' +
-    '<div class="ql-side">' +
-      '<div class="ql-k">Use %</div><div>' + (i.min || i.max ? (i.min || '0') + '\u2013' + (i.max || '100') + '%' : '\u2014') + '</div>' +
-      '<div class="ql-k">Phase</div><div>' + esc(PH[i.phase] || i.phase || '\u2014') + '</div>' +
-      '<div class="ql-k">On hand</div><div>' + (stock || '\u2014') + '</div>' +
-      '<div class="ql-k">Used in</div><div>' + (typeof PlumeCheat !== 'undefined' ? PlumeCheat.usedInHtml(used, 4) : '\u2014') + '</div>' +
-      (i.flag === 'yes' ? '<div class="ql-wide" style="color:var(--warning)">Restricted' + (i.restrictions ? ' \u2014 ' + esc(i.restrictions) : '') + '</div>' : '') +
-    '</div>' +
+    '<h2 class="ql-title">' + esc(i.name) + (i.archived ? ' <span class="arch-tag">archived</span>' : '') + '</h2>' +
+    (i.inci ? '<div class="ql-inci">' + esc(i.inci) + '</div>' : '') +
+    (i.function ? '<div class="ql-fn">' + esc(i.function) + '</div>' : '') +
+    '<dl class="ql-props">' +
+      '<dt>Phase</dt><dd>' + (i.phase ? '<span class="ps-tag ' + phaseClass(i.phase) + '">' + esc(PH[i.phase] || i.phase) + '</span>' : '\u2014') + '</dd>' +
+      '<dt>Function</dt><dd>' + (cats.length ? cats.map(function (c) { return '<span class="ps-tag">' + esc(c) + '</span>'; }).join('') : '\u2014') + '</dd>' +
+      '<dt>Use rate</dt><dd>' + (i.min || i.max ? esc((i.min || '0') + '\u2013' + (i.max || '100')) + '%' : '\u2014') + '</dd>' +
+      '<dt>Price / g</dt><dd>' + (cost !== null ? '$' + cost.toFixed(4) : '\u2014') + '</dd>' +
+      '<dt>On hand</dt><dd>' + (hasStock(i) ? stock + (isLowStock(i) ? ' <span style="color:var(--warning)">\u00b7 running low</span>' : '') : '<span class="ps-muted">None</span>') + '</dd>' +
+      (lot ? '<dt>Active lot</dt><dd>' + esc([lot.supplier, lot.purchaseDate ? 'bought ' + formatDateShort(lot.purchaseDate) : ''].filter(Boolean).join(' \u00b7 ') || 'Set') + '</dd>' : '') +
+      '<dt>Used in</dt><dd>' + (typeof PlumeCheat !== 'undefined' ? PlumeCheat.usedInHtml(used, 4) : '\u2014') + '</dd>' +
+    '</dl>' +
+    (i.flag === 'yes' ? '<div class="ql-warn">Restricted' + (i.restrictions ? ' \u2014 ' + esc(i.restrictions) : '') + '</div>' : '') +
+    '<div class="ql-block"><div class="ql-k">The lowdown</div>' + noteEditHtml(i, 'chooseWhen') + '</div>' +
+    (i.substitution ? '<div class="ql-block"><div class="ql-k">Substitutes</div><div style="font-size:13.5px">' + esc(i.substitution) + '</div></div>' : '') +
+    '<div class="ql-block"><div class="ql-k">What I had in mind</div>' + noteEditHtml(i, 'purpose') + '</div>' +
     '<div class="ql-actions">' +
-      '<a onclick="openDetailsFromList(event,\'' + i.id + '\')">Full details \u2192</a>' +
-      '<a onclick="openEditFromList(event,\'' + i.id + '\')">Edit</a>' +
+      '<a class="ps-btn-primary" onclick="openEditFromList(event,\'' + i.id + '\')">Edit</a>' +
+      '<a class="ps-link-btn" onclick="openDetailsFromList(event,\'' + i.id + '\')">Full details \u2192</a>' +
       // Restoring from the list, rather than opening the detail screen to do
       // it. Archived rows are only on screen because they were asked for, and
       // asking for them is nearly always a prelude to bringing one back.
-      (i.archived ? '<a onclick="unarchiveFromList(event,\'' + i.id + '\')">Unarchive</a>' : '') +
+      (i.archived ? '<a class="ps-link-btn" onclick="unarchiveFromList(event,\'' + i.id + '\')">Unarchive</a>' : '') +
     '</div>' +
   '</div>';
 }
@@ -2614,6 +2691,9 @@ function setIngView(v) {
   document.body.classList.toggle('cs-wide', ingView === 'cheat');
   document.getElementById('vt-list').classList.toggle('on',  ingView === 'list');
   document.getElementById('vt-cheat').classList.toggle('on', ingView === 'cheat');
+  // The toolbar search belongs to the list; the cheat sheet has its own.
+  var sw = document.getElementById('ing-search-wrap');
+  if (sw) sw.style.display = ingView === 'list' ? '' : 'none';
   Store.set('plume_ing_view', ingView);
   if (ingView === 'cheat') PlumeCheat.render(ingredients);
 }
@@ -2685,7 +2765,7 @@ function viewIngredient(id) {
   document.getElementById('d-header').innerHTML =
     '<div>' +
       '<div class="detail-ing-name">' + i.name + '</div>' +
-      (headerBrand ? '<div style="font-size:12px;color:var(--bark-light);margin-top:2px;letter-spacing:0.06em;text-transform:uppercase">' + headerBrand + '</div>' : '') +
+      (headerBrand ? '<div class="d-brand" style="font-size:12px;color:var(--bark-light);margin-top:2px;letter-spacing:0.06em;text-transform:uppercase">' + headerBrand + '</div>' : '') +
       '<div class="detail-ing-inci">' + i.inci + '</div>' +
       (i.function ? '<div class="detail-purpose">' + esc(i.function) + '</div>' : '') +
     '</div>' +
@@ -2952,7 +3032,7 @@ function fillFunctionFilter() {
   var el = document.getElementById('f-function-filter');
   if (!el) return;
   var cur = el.value;
-  el.innerHTML = '<option value="">All functions</option>' +
+  el.innerHTML = '<option value="">Function: all</option>' +
     Plume.FUNCTION_CATEGORIES.map(function (c) {
       return '<option value="' + esc(c) + '">' + esc(c) + '</option>';
     }).join('');
@@ -4413,9 +4493,20 @@ if (typeof Plume === 'undefined') {
 } else {
   Plume.setModule('ingredients');
   Plume.boot(function () {
+    // The 2026-10-18 shell: sidebar, icons in the title and toolbar.
+    Plume.shell({ module: 'ingredients' });
+    document.getElementById('ing-title-icon').innerHTML = Plume.icon('ingredients');
+    document.getElementById('ing-search-icon').innerHTML = Plume.icon('search');
+    document.getElementById('ing-new-icon').innerHTML = Plume.icon('plus');
+    document.getElementById('ing-more-btn').innerHTML = Plume.icon('more');
+    var mi = document.querySelectorAll('#ing-more-menu [data-icon]');
+    for (var k = 0; k < mi.length; k++) mi[k].insertAdjacentHTML('afterbegin', Plume.icon(mi[k].getAttribute('data-icon')));
+    renderPhaseChips();
     fillFunctionFilter();
     loadData();
     if (Store.get('plume_ing_view') === 'cheat') setIngView('cheat');
+    // Other modules' sidebars link Suppliers here.
+    if (location.hash === '#suppliers') openSuppliers();
   });
 }
 </script>
