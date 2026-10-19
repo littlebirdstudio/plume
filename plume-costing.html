@@ -48,35 +48,6 @@ main { max-width:1240px; margin:0 auto; padding:24px 22px 60px; }
 .filter-pill:hover { background:var(--cream-dark); }
 .filter-pill.active { background:var(--bark); color:var(--cream); border-color:var(--bark); }
 
-/* ── List view ── */
-.list-section { background:var(--white); border:1px solid var(--cream-border); border-radius:5px; overflow:hidden; }
-.group-hdr { background:var(--cream-dark); padding:8px 14px; font-size:11px; font-weight:500; letter-spacing:0.12em; text-transform:uppercase; color:var(--ink-light); border-bottom:1px solid var(--cream-border); }
-.prod-row { display:grid; grid-template-columns:1fr 1fr 80px 90px 90px 80px 90px 80px; gap:12px; padding:11px 14px; border-bottom:1px solid var(--cream-dark); cursor:pointer; transition:background 0.1s; align-items:center; font-size:13px; }
-.prod-row:hover { background:var(--cream); }
-.prod-row:last-child { border-bottom:none; }
-.prod-row.dragging { opacity:0.4; }
-.prod-row.drag-over-top { box-shadow:inset 0 2px 0 0 var(--clay); }
-.prod-row.drag-over-bottom { box-shadow:inset 0 -2px 0 0 var(--clay); }
-.prod-name-cell { display:flex; align-items:flex-start; gap:7px; }
-.prod-drag { color:var(--ink-lighter); cursor:grab; user-select:none; font-size:14px; line-height:1.3; letter-spacing:-2px; flex-shrink:0; padding-top:1px; }
-.prod-drag:hover { color:var(--ink-light); }
-.prod-drag:active { cursor:grabbing; }
-.prod-name { font-weight:500; color:var(--ink); }
-.prod-sku { color:var(--ink-lighter); font-size:11px; font-family:'DM Sans',sans-serif; }
-.prod-formula { color:var(--ink-light); font-size:12px; }
-.prod-formula-meta { color:var(--ink-lighter); font-size:11px; display:block; margin-top:2px; }
-.prod-num { text-align:right; font-variant-numeric:tabular-nums; color:var(--ink); }
-.status-pill { display:inline-block; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:500; letter-spacing:0.06em; text-transform:uppercase; }
-.status-draft { background:var(--cream-dark); color:var(--ink-light); }
-.status-active { background:var(--sage-light); color:var(--sage-dark); }
-.status-discontinued { background:var(--clay-light); color:var(--clay-dark); }
-.list-hdr-row { display:grid; grid-template-columns:1fr 1fr 80px 90px 90px 80px 90px 80px; gap:12px; padding:9px 14px; background:var(--cream); border-bottom:1px solid var(--cream-border); font-size:10px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-light); align-items:center; }
-.list-hdr-row > .hr { text-align:right; }
-.empty-state { padding:40px 20px; text-align:center; color:var(--ink-lighter); font-size:13px; font-style:italic; }
-.margin-pos { color:var(--sage-dark); }
-.margin-neg { color:var(--danger); }
-.margin-low { color:var(--warning); }
-
 /* ── Editor view ── */
 .editor { background:var(--white); border:1px solid var(--cream-border); border-radius:5px; padding:22px; }
 .ed-hdr { display:flex; gap:14px; align-items:flex-start; margin-bottom:18px; padding-bottom:16px; border-bottom:1px solid var(--cream-dark); }
@@ -212,13 +183,198 @@ main { max-width:1240px; margin:0 auto; padding:24px 22px 60px; }
 /* ── Footer ── */
 .app-footer { text-align:center; padding:2rem; margin-top:3rem; font-size:11px; color:var(--ink-lighter); border-top:1px solid var(--cream-border); letter-spacing:0.06em; }
 
-@media (max-width:900px) {
-  .prod-row, .list-hdr-row { grid-template-columns:1fr 70px 70px 60px; gap:8px; }
-  /* Hide Formula (2), Units made (3), Retail (5), Wholesale (7); keep Name+SKU (1), Unit cost (4), Margin (6), Status (8) */
-  .prod-row > :nth-child(2), .prod-row > :nth-child(3), .prod-row > :nth-child(5), .prod-row > :nth-child(7),
-  .list-hdr-row > :nth-child(2), .list-hdr-row > :nth-child(3), .list-hdr-row > :nth-child(5), .list-hdr-row > :nth-child(7) { display:none; }
-  .form-grid, .form-grid-3 { grid-template-columns:1fr; }
+
+/* ══ App shell (2026-10-19) ══════════════════════════════════════════
+   As previewed with Heide ("Products & Costing Redesign", version 4).
+   The list nests product type > formulation > products; type bars use
+   the palette's main colour (--bark) with white lettering, formulation
+   bars a light tint of it, so both follow a palette change. The editor
+   is two columns: what you change on the left, cost, prices and margins
+   pinned on the right. */
+[hidden] { display: none !important; }
+body.ps-shell { font-family: 'DM Sans', sans-serif; font-weight: 400; }
+body.ps-shell .app-body { max-width: 1240px; margin: 0; padding: 28px clamp(16px, 4vw, 48px) 48px; }
+body.ps-shell .app-footer { background: transparent; }
+body.ps-shell .btn { border-radius: 7px; letter-spacing: 0; font-size: 13px; }
+body.ps-shell .btn-sm { font-size: 12px; }
+body.ps-shell .modal { border-radius: 12px; }
+body.ps-shell .modal-title { font-family: 'DM Sans', sans-serif; font-size: 18px; font-weight: 600; }
+body.ps-shell .field label { font-size: 12px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--ink-light); }
+body.ps-shell .field input, body.ps-shell .field select, body.ps-shell .field textarea { border-radius: 7px; font-size: 14px; padding: 6px 9px; }
+body.ps-shell .field input:focus, body.ps-shell .field select:focus, body.ps-shell .field textarea:focus { border-color: var(--bark); }
+
+/* List */
+.pl-search { margin: 2px 0 10px; }
+.pl-search .ps-search { background: var(--cream); max-width: 440px; padding: 0 10px; }
+.pl-search .ps-search:hover, .pl-search .ps-search:focus-within { background: var(--cream-dark); }
+.pl-search .ps-search input { width: 100%; }
+.pl-wrap { overflow-x: auto; }
+.pl-table { width: 100%; border-collapse: collapse; }
+.pl-table th:first-child { padding-left: 44px; }
+.ps-chips .ct { opacity: .7; }
+.pl-table .grp-type td { background: none; padding: 22px 0 4px; border-bottom: 0; cursor: pointer; }
+.pl-table tbody .grp-type:first-child td { padding-top: 12px; }
+.ps-table tbody tr.grp-type:hover td, .ps-table tbody tr.grp-sub:hover td { background: none; }
+.type-bar { display: flex; align-items: center; gap: 10px; background: var(--bark); border-radius: 9px; padding: 9px 14px; font-size: 15px; font-weight: 600; color: var(--white); }
+.type-bar .ps-i { width: 18px; height: 18px; color: var(--white); opacity: .9; }
+.type-bar .ct { font-weight: 400; font-size: 12.5px; color: var(--white); opacity: .85; }
+.type-bar .chev { margin-left: auto; display: inline-flex; transition: transform .15s; }
+.grp-type.closed .chev { transform: rotate(-90deg); }
+.grp-type:hover .type-bar { filter: brightness(1.1); }
+.pl-table .grp-sub td { background: none; padding: 10px 0 2px 22px; border-bottom: 0; cursor: default; }
+.sub-h { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600; color: var(--bark-dark); background: color-mix(in srgb, var(--bark) 13%, var(--white)); border-radius: 7px; padding: 6px 12px; }
+.sub-h .ps-i { width: 16px; height: 16px; color: var(--bark); }
+.sub-h a { font-weight: 400; font-size: 12.5px; color: var(--ink-light); text-decoration: none; margin-left: auto; white-space: nowrap; }
+.sub-h a:hover { color: var(--ink); text-decoration: underline; }
+.pl-table tbody tr.prod-row td { border-bottom: 1.5px solid var(--cream-border); }
+.pl-table tr.prod-row.l2 td:first-child { padding-left: 22px; }
+.prod-name-cell { display: flex; align-items: flex-start; gap: 6px; }
+.prod-drag { color: var(--ink-lighter); cursor: grab; user-select: none; letter-spacing: -2px; line-height: 1.4; padding: 0 4px 0 6px; opacity: 0; }
+.prod-row:hover .prod-drag, .prod-drag:focus { opacity: 1; }
+.prod-drag:active { cursor: grabbing; }
+.prod-row.dragging td { opacity: .4; }
+.prod-row.drag-over-top td { box-shadow: inset 0 2px 0 0 var(--bark); }
+.prod-row.drag-over-bottom td { box-shadow: inset 0 -2px 0 0 var(--bark); }
+.prod-row.dim td { color: var(--ink-lighter); }
+.cost-flag { color: var(--warning); font-size: 11px; margin-left: 3px; }
+.st { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 5px; line-height: 1.6; white-space: nowrap; }
+.st-active { background: var(--sage-light); color: var(--sage-dark); }
+.st-draft { background: color-mix(in srgb, var(--ink) 8%, transparent); color: var(--ink-light); }
+.st-discontinued { background: transparent; color: var(--ink-lighter); box-shadow: inset 0 0 0 1px var(--cream-border); }
+.margin-pos { color: var(--sage-dark); font-weight: 500; }
+.margin-neg { color: var(--danger); font-weight: 500; }
+.margin-low { color: var(--warning); font-weight: 500; }
+.empty-state { padding: 40px 20px; text-align: center; color: var(--ink-lighter); font-size: 14px; }
+
+/* Editor top bar, as Formulations */
+.fe-top { display: flex; align-items: center; gap: 8px; margin: -8px 0 16px; min-height: 34px; flex-wrap: wrap; }
+.fe-crumb { display: flex; align-items: center; gap: 6px; color: var(--ink-lighter); font-size: 13.5px; min-width: 0; }
+.fe-crumb button { font: inherit; border: 0; background: none; padding: 3px 6px; margin-left: -6px; border-radius: 6px; color: var(--ink-light); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.fe-crumb button:hover { background: var(--cream-dark); color: var(--ink); }
+.fe-crumb .ps-i { width: 16px; height: 16px; }
+.fe-crumb .cur { color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 40vw; }
+.fe-saved { font-size: 12.5px; color: var(--ink-lighter); display: inline-flex; gap: 5px; align-items: center; margin-right: 4px; }
+.fe-saved .ps-i { width: 14px; height: 14px; }
+
+/* Colour block: name, label weight line, the identity fields */
+.ps-page-head.fe-head { align-items: flex-start; flex-wrap: nowrap; gap: 14px; }
+.fe-head .ps-title-icon { margin-top: 2px; }
+.fe-head-body { flex: 1; min-width: 0; }
+.fe-name { width: 100%; border: 0; outline: none; background: transparent; padding: 0 4px; margin: 0 0 0 -4px; font-family: 'DM Sans', sans-serif; font-size: 30px; font-weight: 600; letter-spacing: -.01em; line-height: 1.2; color: var(--ink); border-radius: 6px; }
+.fe-intent { display: block; width: 100%; border: 0; outline: none; background: transparent; padding: 2px 4px; margin: 4px 0 0 -4px; color: var(--ink-light); font-family: 'DM Sans', sans-serif; font-size: 14.5px; border-radius: 6px; }
+.fe-name:hover, .fe-intent:hover, .fe-name:focus, .fe-intent:focus { background: color-mix(in srgb, var(--white) 65%, transparent); }
+.fe-name::placeholder, .fe-intent::placeholder { color: var(--ink-lighter); }
+.fe-meta { display: flex; flex-wrap: wrap; gap: 8px 22px; margin-top: 12px; align-items: flex-end; }
+.fe-mf { display: flex; flex-direction: column; gap: 3px; }
+.fe-mf > label, .fe-mf > .lbl { font-size: 11.5px; color: var(--ink-light); line-height: 1.4; }
+.fe-mf input, .fe-mf select { font-family: 'DM Sans', sans-serif; font-size: 13.5px; background: var(--white); color: var(--ink); border: 1px solid var(--cream-border); border-radius: 7px; padding: 4px 8px; outline: none; }
+.fe-mf input { width: 140px; }
+.fe-mf input:focus, .fe-mf select:focus { border-color: var(--bark); }
+.kind-seg { display: inline-flex; border: 1px solid var(--cream-border); border-radius: 7px; overflow: hidden; background: var(--white); }
+.kind-seg button { font: inherit; font-size: 13px; border: 0; background: none; color: var(--ink-light); padding: 4px 10px; cursor: pointer; }
+.kind-seg button + button { border-left: 1px solid var(--cream-border); }
+.kind-seg button.on { background: var(--ink); color: var(--white); }
+
+/* Body: two columns */
+.ed-layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 32px; margin-top: 22px; }
+.ed-main { min-width: 0; display: flex; flex-direction: column; gap: 26px; }
+.ed-side { display: flex; flex-direction: column; gap: 14px; position: sticky; top: 16px; align-self: start; min-width: 0; }
+.sec-h { display: flex; align-items: baseline; gap: 10px; margin: 0 0 8px; flex-wrap: wrap; }
+.sec-h h2 { font-size: 15px; font-weight: 600; margin: 0; }
+.sec-h .ps-muted { font-size: 12.5px; }
+.fieldrow { display: flex; flex-wrap: wrap; gap: 14px; }
+.fieldrow .field { margin: 0; min-width: 0; }
+.fieldrow .field.grow { flex: 1 1 240px; }
+.fieldrow .field.num input { width: 140px; }
+.form-hint { font-size: 12px; color: var(--ink-lighter); margin-top: 6px; }
+
+/* Packaging and component rows */
+.rows { border: 1.5px solid var(--cream-border); border-radius: 10px; background: var(--white); overflow: hidden; }
+.pkg-recipe-hdr, .comp-recipe-hdr { padding: 7px 12px; font-size: 12px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--ink-lighter); background: var(--cream); border-bottom: 1px solid var(--cream-border); }
+.pkg-recipe-row, .comp-recipe-row { padding: 8px 12px; border-bottom: 1px solid var(--cream-border); font-size: 14px; }
+.pkg-recipe-row:last-of-type, .comp-recipe-row:last-of-type { border-bottom: 1px solid var(--cream-border); }
+.pkg-recipe-row input, .pkg-recipe-row select, .comp-recipe-row input, .comp-recipe-row select { border-radius: 7px; font-size: 14px; }
+.pkg-recipe-row .pkg-unit-cost, .comp-recipe-row .comp-cost { font-size: 13.5px; color: var(--ink); }
+.rows .empty-row { padding: 10px 12px; font-size: 13px; color: var(--ink-lighter); border-bottom: 1px solid var(--cream-border); }
+.add-row { display: flex; padding: 6px 8px; }
+.add-row button { font: inherit; font-size: 13px; border: 0; background: none; color: var(--ink-light); padding: 4px 8px; border-radius: 6px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
+.add-row button:hover { background: var(--cream-dark); color: var(--ink); }
+.add-row .ps-i { width: 15px; height: 15px; }
+
+/* Right column cards */
+.card { background: var(--white); border: 1.5px solid var(--cream-border); border-radius: 11px; padding: 12px 16px 14px; }
+.card-h { font-size: 12.5px; color: var(--ink-lighter); margin-bottom: 6px; display: flex; justify-content: space-between; gap: 8px; }
+.big { font-size: 28px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.2; color: var(--ink); }
+.cl { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; padding: 4px 0; color: var(--ink-light); border-top: 1px solid var(--cream-dark); font-variant-numeric: tabular-nums; }
+.cl-list { margin-top: 8px; }
+.cl-list .cl:first-child { border-top: 0; }
+.cl > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+.cl .sub { display: block; font-size: 11.5px; color: var(--ink-lighter); }
+.cl b { color: var(--ink); font-weight: 500; white-space: nowrap; }
+.warn-line { font-size: 12px; color: var(--warning); background: var(--warning-bg); border-radius: 7px; padding: 6px 9px; margin-top: 8px; line-height: 1.45; }
+.warn-line a { color: inherit; }
+.price-row { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--cream-dark); }
+.price-row:first-of-type { border-top: 0; padding-top: 2px; }
+.price-row label { font-size: 12px; color: var(--ink-light); grid-column: 1 / -1; }
+.money { display: flex; align-items: center; gap: 4px; font-size: 18px; font-weight: 600; color: var(--ink); }
+.money input { width: 96px; font-family: 'DM Sans', sans-serif; font-size: 18px; font-weight: 600; border: 0; border-bottom: 1.5px solid var(--cream-border); background: transparent; color: var(--ink); padding: 1px 2px; outline: none; font-variant-numeric: tabular-nums; }
+.money input:focus { border-bottom-color: var(--bark); }
+.marg { text-align: right; font-size: 12.5px; color: var(--ink-lighter); line-height: 1.35; font-variant-numeric: tabular-nums; }
+.marg b { font-size: 15px; }
+.pricing-helper { background: transparent; border: 0; padding: 0; margin: 0; }
+.ph-custom-row { grid-template-columns: 1fr auto auto; gap: 8px; padding: 0 0 10px; }
+.ph-custom-row input { width: 64px; border-radius: 6px; font-size: 13.5px; padding: 3px 6px; }
+.ph-custom-row .ph-custom-result { font-size: 14.5px; font-weight: 600; min-width: 0; }
+.ph-grid { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+.ph-cell { background: transparent; border-radius: 8px; padding: 7px 6px 5px; }
+.ph-cell-mult { font-size: 11.5px; letter-spacing: 0; text-transform: none; }
+.ph-cell-price { font-size: 15px; font-weight: 600; }
+.ph-cell-actions button { font-size: 11.5px; border-radius: 6px; padding: 2px 6px; }
+.ph-empty { padding: 6px 0; font-style: normal; text-align: left; font-size: 12.5px; }
+
+/* Label / Production runs / Notes tabs */
+.ed-tabs .ps-toolbar { margin-top: 0; }
+.et-ct { color: var(--ink-lighter); font-weight: 400; margin-left: 5px; font-size: 13px; }
+.et-ct:empty { display: none; }
+.ed-pane { padding-top: 12px; }
+.lbl-modes { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 10px; }
+.lbl-modes .ps-chip input { position: absolute; opacity: 0; pointer-events: none; }
+.lbl-modes .ps-chip:has(input:checked) { background: var(--ink); color: var(--white); border-color: var(--ink); }
+.lbl-modes .ps-chip:has(input:focus-visible) { outline: 2px solid var(--bark); outline-offset: 2px; }
+.lbl-modes .ps-chip.chk input { position: static; opacity: 1; pointer-events: auto; margin: 0; }
+.lbl-modes .ps-chip.chk:has(input:checked) { background: transparent; color: var(--ink); border-color: var(--ink-lighter); }
+.lbl-modes .ps-grow { flex: 1; }
+body.ps-shell .label-box { border: 1.5px solid var(--cream-border); border-radius: 10px; padding: 12px 14px; font-size: 13px; }
+body.ps-shell .label-box-hdr-l, body.ps-shell .label-section-name { font-size: 11.5px; letter-spacing: 0; text-transform: none; font-weight: 500; }
+body.ps-shell .label-content { font-family: 'DM Sans', sans-serif; font-size: 13.5px; line-height: 1.55; }
+body.ps-shell .label-merge-note { font-size: 12px; border-radius: 8px; }
+body.ps-shell .runs-list { border: 1.5px solid var(--cream-border); border-radius: 10px 10px 0 0; border-bottom: 0; overflow: hidden; }
+body.ps-shell .run-row { font-size: 14px; padding: 8px 12px; border-bottom: 1px solid var(--cream-border); }
+body.ps-shell .run-row .rr-batch, body.ps-shell .run-row .rr-notes { font-size: 13px; font-style: normal; }
+body.ps-shell .run-add-row { margin-top: 0; border: 1.5px solid var(--cream-border); border-radius: 0 0 10px 10px; background: var(--cream); }
+body.ps-shell .run-add-row .field { margin: 0; }
+body.ps-shell .run-add-row .field input, body.ps-shell .run-add-row .field select { font-size: 13.5px; padding: 4px 8px; }
+.runs-sum { font-size: 12.5px; color: var(--ink-lighter); margin-top: 6px; }
+#p-notes { width: 100%; min-height: 120px; font-family: 'DM Sans', sans-serif; font-size: 14px; line-height: 1.6; color: var(--ink); background: var(--white); border: 1px solid var(--cream-border); border-radius: 9px; padding: 10px 12px; resize: vertical; outline: none; }
+#p-notes:focus { border-color: var(--bark); }
+
+@media (max-width: 980px) {
+  .ed-layout { grid-template-columns: minmax(0, 1fr); }
+  .ed-side { position: static; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
 }
+@media (max-width: 760px) {
+  .fe-name { font-size: 24px; }
+  .ps-page-head.fe-head { flex-wrap: wrap; }
+  .pl-table .hide-sm { display: none; }
+  .pl-table th:first-child { padding-left: 10px; }
+  .pkg-recipe-row, .pkg-recipe-hdr { grid-template-columns: 1fr 56px 70px 26px; gap: 6px; }
+  .comp-recipe-row, .comp-recipe-hdr { grid-template-columns: 1fr 60px 70px 26px; gap: 6px; }
+  .comp-recipe-row > :nth-child(3), .comp-recipe-hdr > :nth-child(3) { display: none; }
+  .run-row { grid-template-columns: 84px 50px 1fr 26px !important; }
+  .run-row > .rr-notes { display: none; }
+  .run-add-row { grid-template-columns: 1fr 1fr !important; }
+}
+@media print { .ps-side, .fe-top { display: none !important; } body.ps-shell { padding-left: 0 !important; } }
 </style>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#404834">
@@ -227,231 +383,230 @@ main { max-width:1240px; margin:0 auto; padding:24px 22px 60px; }
 </head>
 <body>
 
-<header class="app-hdr">
-  <div>
-    <div class="brand">Plume</div>
-    <div class="brand-sub">by Little Bird Studio &middot; Products &amp; Costing</div>
-  </div>
-  <div class="hdr-actions">
-    <a href="plume-ingredients.html" target="plume-ingredients" class="btn btn-ghost">Ingredients</a>
-    <a href="plume-formulations.html" target="plume-formulations" class="btn btn-ghost">Formulations</a>
-    <a href="plume-packaging.html" target="plume-packaging" class="btn btn-ghost">Packaging</a>
-    <a href="plume-batchlog.html" target="plume-batchlog" class="btn btn-ghost">Batches</a>
-    <button class="btn btn-ghost" onclick="openBarcode('')" title="Generate printable barcode labels">Barcodes</button>
-    <button class="btn btn-ghost" onclick="exportData()">Export</button>
-    <button class="btn btn-ghost" onclick="document.getElementById('import-input').click()">Import</button>
-    <input type="file" id="import-input" accept=".json" style="display:none" onchange="importData(event)">
-    <button class="btn btn-ghost" onclick="openSettings()" title="Settings &amp; appearance">&#9881; Settings</button>
-  </div>
-</header>
+<!-- The sidebar (Plume.shell) replaces the old header: modules and
+     Settings are there; Barcodes sits in the toolbar, Export and Import
+     in its ⋯ menu. -->
+<input type="file" id="import-input" accept=".json" style="display:none" onchange="importData(event)">
 
-<main>
+<div class="app-body">
   <div id="stor-banner-slot"></div>
 
-  <!-- List view -->
+  <!-- List view: product type > formulation > products -->
   <div id="view-list">
-    <div class="sec-header">
-      <div style="display:flex; align-items:center; gap:14px">
-        <div class="sec-title">Products</div>
-        <button class="btn btn-primary btn-sm" onclick="openNewProduct()">+ Add product</button>
-      </div>
-      <div class="search-wrap">
-        <input class="search-input" type="text" id="search" placeholder="Search by name, SKU, or formula..." oninput="renderList()">
-        <div class="filter-pills" id="status-pills"></div>
+    <div class="ps-page-head">
+      <div>
+        <div class="ps-title"><span class="ps-title-icon" data-ps-icon="costing"></span><h1>Products &amp; Costing</h1></div>
+        <div class="ps-summary" id="pl-summary"></div>
       </div>
     </div>
-    <div class="list-section">
-      <div class="list-hdr-row">
-        <div>Name &middot; SKU</div>
-        <div>Formula</div>
-        <div class="hr">Units made</div>
-        <div class="hr">Unit cost</div>
-        <div class="hr">Retail</div>
-        <div class="hr">Margin</div>
-        <div class="hr">Wholesale</div>
-        <div></div>
+    <div class="ps-toolbar">
+      <span class="ps-tab on">All products</span>
+      <div class="ps-tools">
+        <button type="button" class="ps-link-btn" onclick="openBarcode('')" title="Generate printable barcode labels"><span data-ps-icon="print"></span>Barcodes</button>
+        <button type="button" class="ps-btn-primary" onclick="openNewProduct()"><span data-ps-icon="plus"></span>New</button>
+        <div class="ps-menu-wrap">
+          <button type="button" class="ps-icon-btn" data-ps-menu aria-label="More actions" aria-expanded="false"><span data-ps-icon="more"></span></button>
+          <div class="ps-menu" role="menu">
+            <button type="button" onclick="exportData()"><span data-ps-icon="download"></span>Export backup</button>
+            <button type="button" onclick="document.getElementById('import-input').click()"><span data-ps-icon="upload"></span>Import</button>
+          </div>
+        </div>
       </div>
-      <div id="list-body"></div>
+    </div>
+    <div class="ps-chips" id="status-pills"></div>
+    <div class="pl-search"><label class="ps-search"><span data-ps-icon="search"></span><input type="search" id="search" placeholder="Search by name, SKU, formulation or type" aria-label="Search products" oninput="renderList()"></label></div>
+    <div class="pl-wrap">
+      <table class="ps-table pl-table">
+        <thead><tr>
+          <th>Product</th><th class="ps-num hide-sm">Made</th><th class="ps-num">Unit cost</th>
+          <th class="ps-num hide-sm">Retail</th><th class="ps-num">Margin</th>
+          <th class="ps-num hide-sm">Wholesale</th><th class="ps-num hide-sm">Margin</th><th>Status</th>
+        </tr></thead>
+        <tbody id="list-body"></tbody>
+      </table>
     </div>
   </div>
 
   <!-- Editor view -->
   <div id="view-editor" style="display:none">
-    <button class="btn btn-sm" onclick="goList()" style="margin-bottom:14px">&larr; Back to list</button>
-    <div class="editor">
-      <div class="ed-hdr">
-        <div style="flex:1">
-          <input class="ed-name" id="p-name" placeholder="Product name..." oninput="markDirty()">
+    <div class="fe-top">
+      <div class="fe-crumb"><button type="button" onclick="goList()"><span data-ps-icon="costing"></span>Products &amp; Costing</button><span aria-hidden="true">/</span><span class="cur" id="pe-crumb-cur"></span></div>
+      <span class="ps-grow"></span>
+      <span class="fe-saved" id="save-state"></span>
+      <button type="button" class="ps-link-btn" onclick="openBarcodeForProduct()" title="Generate a printable barcode label for this product"><span data-ps-icon="print"></span>Barcode label</button>
+      <div class="ps-menu-wrap">
+        <button type="button" class="ps-icon-btn" data-ps-menu aria-label="More actions" aria-expanded="false"><span data-ps-icon="more"></span></button>
+        <div class="ps-menu" role="menu">
+          <button type="button" onclick="duplicateProduct()" title="Create a copy of this product"><span data-ps-icon="copy"></span>Duplicate</button>
+          <hr>
+          <button type="button" class="ps-menu-danger" onclick="deleteProduct()"><span data-ps-icon="trash"></span>Delete</button>
         </div>
-        <div class="ed-actions">
-          <button class="btn" onclick="duplicateProduct()" title="Create a copy of this product">Duplicate</button>
-          <button class="btn" onclick="saveProduct()">Save</button>
-          <button class="btn btn-primary" onclick="saveAndClose()">Save &amp; close</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteProduct()">Delete</button>
-        </div>
-      </div>
-
-      <!-- Identity -->
-      <div class="form-grid-3">
-        <div class="field">
-          <label>SKU</label>
-          <input type="text" id="p-sku" placeholder="e.g. HSL-1OZ" oninput="markDirty()">
-        </div>
-        <div class="field">
-          <label>Barcode value (optional)</label>
-          <div style="display:flex; gap:6px; align-items:center">
-            <input type="text" id="p-barcode" placeholder="e.g. HSL-1OZ" oninput="markDirty()">
-            <button class="btn btn-sm" style="white-space:nowrap" onclick="openBarcodeForProduct()" title="Generate a printable barcode label">Label</button>
-          </div>
-        </div>
-        <div class="field">
-          <label>Status</label>
-          <select id="p-status" onchange="markDirty()">
-            <option value="draft">Draft</option>
-            <option value="active">Active</option>
-            <option value="discontinued">Discontinued</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- What it is -->
-      <div class="field field-full" style="margin-bottom:12px">
-        <label>Product type</label>
-        <div class="toggle-row" style="margin-bottom:0">
-          <label><input type="radio" name="prod-kind" value="single" id="kind-single" onchange="onKindChange()" checked> Single formulation</label>
-          <label><input type="radio" name="prod-kind" value="multi" id="kind-multi" onchange="onKindChange()"> Multi-component (sample pack / kit / set)</label>
-        </div>
-      </div>
-
-      <!-- Single-formulation mode -->
-      <div id="single-mode-fields" class="form-grid">
-        <div class="field">
-          <label>Linked formulation *</label>
-          <select id="p-formula" onchange="onFormulaChange()">
-            <option value="">-- Pick a formula --</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>Net weight per unit (g) *</label>
-          <input type="number" id="p-netwt-g" step="0.1" min="0" placeholder="e.g. 30" oninput="markDirty(); recalcCost()">
-        </div>
-      </div>
-
-      <!-- Multi-component mode -->
-      <div id="multi-mode-fields" style="display:none">
-        <div class="section-hdr">
-          <span>Components</span>
-          <span style="font-weight:400; text-transform:none; letter-spacing:0; color:var(--ink-lighter)">each formulation portion in the pack</span>
-        </div>
-        <div class="comp-recipe-hdr">
-          <div>Formulation</div>
-          <div>Net wt (g)</div>
-          <div>Label (optional)</div>
-          <div>Ingred. cost</div>
-          <div></div>
-        </div>
-        <div id="comp-recipe-body"></div>
-        <button class="btn btn-sm pkg-add-btn" onclick="addComponentRow()">+ Add component</button>
-      </div>
-
-      <!-- Display weight / description (shared by both modes) -->
-      <div class="field field-full" style="margin-top:14px">
-        <label>Display weight / description (label text)</label>
-        <input type="text" id="p-netwt-display" placeholder="e.g. 1 oz / 30 g  --or--  3 mL + 5 mL sample duo" oninput="markDirty()">
-      </div>
-
-      <div class="field field-full">
-        <label>Notes</label>
-        <textarea id="p-notes" rows="2" placeholder="Internal notes, formulation details, marketing description..." oninput="markDirty()"></textarea>
-      </div>
-
-      <!-- Packaging recipe -->
-      <div class="section-hdr">
-        <span>Packaging recipe</span>
-        <span style="font-weight:400; text-transform:none; letter-spacing:0; color:var(--ink-lighter)">what goes around each unit</span>
-      </div>
-      <div class="pkg-recipe-hdr">
-        <div>Packaging item</div>
-        <div>Qty / unit</div>
-        <div>Unit cost</div>
-        <div></div>
-      </div>
-      <div id="pkg-recipe-body"></div>
-      <button class="btn btn-sm pkg-add-btn" onclick="addPkgRecipeRow()">+ Add packaging</button>
-
-      <!-- Pricing -->
-      <div class="section-hdr"><span>Pricing</span></div>
-      <div class="form-grid">
-        <div class="field">
-          <label>Retail price</label>
-          <input type="number" id="p-retail" step="0.01" min="0" placeholder="e.g. 14.00" oninput="markDirty(); recalcCost()">
-        </div>
-        <div class="field">
-          <label>Wholesale price</label>
-          <input type="number" id="p-wholesale" step="0.01" min="0" placeholder="e.g. 7.00" oninput="markDirty(); recalcCost()">
-        </div>
-      </div>
-
-      <!-- Cost rollup panel -->
-      <div class="cost-panel" id="cost-panel"></div>
-
-      <!-- Pricing helper -->
-      <div class="section-hdr">
-        <span>Pricing helper</span>
-        <span style="font-weight:400; text-transform:none; letter-spacing:0; color:var(--ink-lighter)">work out a price from your cost</span>
-      </div>
-      <div class="pricing-helper" id="pricing-helper"></div>
-
-      <!-- Label preview -->
-      <div class="section-hdr">
-        <span>Label info</span>
-        <span style="font-weight:400; text-transform:none; letter-spacing:0">
-          <button class="btn btn-sm" onclick="copyLabel()">Copy to clipboard</button>
-        </span>
-      </div>
-      <div class="toggle-row">
-        <label><input type="radio" name="label-mode" value="inci" id="lbl-inci" onchange="markDirty(); renderLabel()" checked> INCI names</label>
-        <label><input type="radio" name="label-mode" value="common" id="lbl-common" onchange="markDirty(); renderLabel()"> Common names</label>
-        <label><input type="checkbox" id="lbl-override-on" onchange="onOverrideToggle()"> Use override text instead</label>
-      </div>
-      <div id="lbl-override-wrap" style="display:none; margin-bottom:10px">
-        <div class="field">
-          <label>Ingredient list override</label>
-          <textarea id="p-label-override" rows="3" placeholder="Type your own ingredient list (used in place of auto-generated)" oninput="markDirty(); renderLabel()"></textarea>
-        </div>
-      </div>
-      <div class="label-box" id="label-preview"></div>
-
-      <!-- Production runs -->
-      <div class="section-hdr">
-        <span>Production runs</span>
-        <span id="runs-summary" style="font-weight:400; text-transform:none; letter-spacing:0; color:var(--ink-lighter)"></span>
-      </div>
-      <div class="runs-list" id="runs-list"></div>
-      <div class="run-add-row">
-        <div class="field">
-          <label>Date</label>
-          <input type="date" id="run-date">
-        </div>
-        <div class="field">
-          <label>Units</label>
-          <input type="number" id="run-units" min="1" step="1" placeholder="e.g. 12">
-        </div>
-        <div class="field">
-          <label>From batch (optional)</label>
-          <select id="run-batch">
-            <option value="">-- No batch linked --</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>Notes</label>
-          <input type="text" id="run-notes" placeholder="Optional">
-        </div>
-        <button class="btn btn-primary" onclick="addRun()">+ Add run</button>
       </div>
     </div>
+
+    <!-- Name, the label weight line and the identity fields sit in the colour block. -->
+    <div class="ps-page-head fe-head">
+      <span class="ps-title-icon" data-ps-icon="costing"></span>
+      <div class="fe-head-body">
+        <input class="fe-name" id="p-name" placeholder="Product name..." aria-label="Product name" oninput="markDirty(); syncCrumb()">
+        <input class="fe-intent" id="p-netwt-display" placeholder="Weight or description for the label, e.g. 1 oz / 30 g or 3 mL + 5 mL sample duo" aria-label="Display weight or description (label text)" oninput="markDirty()">
+        <div class="fe-meta">
+          <div class="fe-mf"><label for="p-sku">SKU</label><input type="text" id="p-sku" placeholder="e.g. HSL-1OZ" oninput="markDirty()"></div>
+          <div class="fe-mf"><label for="p-barcode">Barcode value</label><input type="text" id="p-barcode" placeholder="same as SKU" oninput="markDirty()"></div>
+          <div class="fe-mf"><label for="p-status">Status</label>
+            <select id="p-status" onchange="markDirty()">
+              <option value="draft">Draft</option>
+              <option value="active">Active</option>
+              <option value="discontinued">Discontinued</option>
+            </select>
+          </div>
+          <div class="fe-mf"><span class="lbl" id="kind-lbl">Made from</span>
+            <span class="kind-seg" role="radiogroup" aria-labelledby="kind-lbl">
+              <button type="button" id="kind-btn-single" onclick="pickKind('single')">One formulation</button><button type="button" id="kind-btn-multi" onclick="pickKind('multi')">Several (pack or kit)</button>
+            </span>
+            <span hidden>
+              <input type="radio" name="prod-kind" value="single" id="kind-single" onchange="onKindChange()" checked>
+              <input type="radio" name="prod-kind" value="multi" id="kind-multi" onchange="onKindChange()">
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ed-layout">
+      <div class="ed-main">
+        <!-- Single-formulation mode -->
+        <section id="single-mode-fields">
+          <div class="sec-h"><h2>What it is</h2></div>
+          <div class="fieldrow">
+            <div class="field grow">
+              <label for="p-formula">Formulation</label>
+              <select id="p-formula" onchange="onFormulaChange()">
+                <option value="">-- Pick a formula --</option>
+              </select>
+            </div>
+            <div class="field num">
+              <label for="p-netwt-g">Net weight per unit (g)</label>
+              <input type="number" id="p-netwt-g" step="0.1" min="0" placeholder="e.g. 30" oninput="markDirty(); recalcCost()">
+            </div>
+          </div>
+          <div class="form-hint" id="p-form-hint"></div>
+        </section>
+
+        <!-- Multi-component mode -->
+        <section id="multi-mode-fields" style="display:none">
+          <div class="sec-h"><h2>What is in it</h2><span class="ps-muted">each formulation portion in the pack</span></div>
+          <div class="rows">
+            <div class="comp-recipe-hdr">
+              <div>Formulation</div>
+              <div>Grams</div>
+              <div>Label (optional)</div>
+              <div>Ingredients</div>
+              <div></div>
+            </div>
+            <div id="comp-recipe-body"></div>
+            <div class="add-row"><button type="button" onclick="addComponentRow()"><span data-ps-icon="plus"></span>Add a component</button></div>
+          </div>
+        </section>
+
+        <!-- Packaging recipe -->
+        <section>
+          <div class="sec-h"><h2>Packaging</h2><span class="ps-muted">what goes around each unit</span></div>
+          <div class="rows">
+            <div class="pkg-recipe-hdr">
+              <div>Item</div>
+              <div>Per unit</div>
+              <div>Unit cost</div>
+              <div></div>
+            </div>
+            <div id="pkg-recipe-body"></div>
+            <div class="add-row"><button type="button" onclick="addPkgRecipeRow()"><span data-ps-icon="plus"></span>Add packaging</button></div>
+          </div>
+        </section>
+
+        <!-- Label, production runs and notes: tabs under the recipe -->
+        <section class="ed-tabs">
+          <div class="ps-toolbar">
+            <button type="button" class="ps-tab on" id="pt-label" onclick="setEdTab('label')">Label</button>
+            <button type="button" class="ps-tab" id="pt-runs" onclick="setEdTab('runs')">Production runs<span class="et-ct" id="pt-runs-ct"></span></button>
+            <button type="button" class="ps-tab" id="pt-notes" onclick="setEdTab('notes')">Notes<span class="et-ct" id="pt-notes-ct"></span></button>
+          </div>
+
+          <div class="ed-pane" id="pp-label">
+            <div class="lbl-modes">
+              <label class="ps-chip"><input type="radio" name="label-mode" value="inci" id="lbl-inci" onchange="markDirty(); renderLabel()" checked>INCI names</label>
+              <label class="ps-chip"><input type="radio" name="label-mode" value="common" id="lbl-common" onchange="markDirty(); renderLabel()">Common names</label>
+              <span class="ps-chip-sep"></span>
+              <label class="ps-chip chk"><input type="checkbox" id="lbl-override-on" onchange="onOverrideToggle()">Use my own text</label>
+              <span class="ps-grow"></span>
+              <button type="button" class="ps-link-btn" onclick="copyLabel()"><span data-ps-icon="copy"></span>Copy</button>
+            </div>
+            <div id="lbl-override-wrap" style="display:none; margin-bottom:10px">
+              <div class="field">
+                <label for="p-label-override">Ingredient list, in my own words</label>
+                <textarea id="p-label-override" rows="3" placeholder="Type your own ingredient list (used in place of the generated one)" oninput="markDirty(); renderLabel()"></textarea>
+              </div>
+            </div>
+            <div class="label-box" id="label-preview"></div>
+          </div>
+
+          <div class="ed-pane" id="pp-runs" hidden>
+            <div class="runs-list" id="runs-list"></div>
+            <div class="run-add-row">
+              <div class="field">
+                <label for="run-date">Date</label>
+                <input type="date" id="run-date">
+              </div>
+              <div class="field">
+                <label for="run-units">Units</label>
+                <input type="number" id="run-units" min="1" step="1" placeholder="e.g. 12">
+              </div>
+              <div class="field">
+                <label for="run-batch">From batch (optional)</label>
+                <select id="run-batch">
+                  <option value="">-- No batch linked --</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="run-notes">Notes</label>
+                <input type="text" id="run-notes" placeholder="Optional">
+              </div>
+              <button type="button" class="ps-btn-primary" onclick="addRun()"><span data-ps-icon="plus"></span>Add run</button>
+            </div>
+            <div class="runs-sum" id="runs-summary"></div>
+          </div>
+
+          <div class="ed-pane" id="pp-notes" hidden>
+            <textarea id="p-notes" rows="5" placeholder="Internal notes, formulation details, marketing description..." oninput="markDirty(); setTabCounts()"></textarea>
+          </div>
+        </section>
+      </div>
+
+      <!-- Cost, prices and margins stay in view while editing -->
+      <aside class="ed-side">
+        <div class="card" id="cost-panel"></div>
+        <div class="card">
+          <div class="card-h"><span>Prices</span><span>margin</span></div>
+          <div class="price-row">
+            <label for="p-retail">Retail</label>
+            <span class="money">$<input type="number" id="p-retail" step="0.01" min="0" placeholder="0.00" oninput="markDirty(); recalcCost()"></span>
+            <span class="marg" id="marg-retail"></span>
+          </div>
+          <div class="price-row">
+            <label for="p-wholesale">Wholesale</label>
+            <span class="money">$<input type="number" id="p-wholesale" step="0.01" min="0" placeholder="0.00" oninput="markDirty(); recalcCost()"></span>
+            <span class="marg" id="marg-wholesale"></span>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-h"><span>Price from cost</span></div>
+          <div class="pricing-helper" id="pricing-helper"></div>
+        </div>
+      </aside>
+    </div>
   </div>
-</main>
+</div>
+
 
 <!-- New product modal -->
 <div class="modal-ov" id="m-new">
@@ -1506,7 +1661,41 @@ function toast(msg) {
   if (t._timer) clearTimeout(t._timer);
   t._timer = setTimeout(function() { t.classList.remove('show'); }, 1800);
 }
-function markDirty() { dirty = true; }
+function markDirty() { dirty = true; renderSaveState(); }
+
+// "Saved" when there is nothing to save, a Save button when there is.
+function renderSaveState() {
+  var el = document.getElementById('save-state');
+  if (!el) return;
+  el.innerHTML = dirty
+    ? '<button type="button" class="ps-btn-primary" onclick="saveProduct()">Save</button>'
+    : Plume.icon('check') + 'Saved';
+}
+// The breadcrumb follows the name field as it is typed.
+function syncCrumb() {
+  document.getElementById('pe-crumb-cur').textContent = document.getElementById('p-name').value || '(unnamed)';
+}
+// The "Made from" buttons drive the two radios, which onKindChange reads.
+function pickKind(kind) {
+  var r = document.getElementById(kind === 'multi' ? 'kind-multi' : 'kind-single');
+  if (r.checked) return;
+  r.checked = true;
+  onKindChange();
+}
+var edTab = 'label';
+function setEdTab(t) {
+  edTab = t;
+  ['label', 'runs', 'notes'].forEach(function(k) {
+    document.getElementById('pt-' + k).classList.toggle('on', k === t);
+    document.getElementById('pp-' + k).hidden = (k !== t);
+  });
+}
+function setTabCounts() {
+  var p = curId ? findProduct(curId) : null;
+  var n = p ? (p.productionRuns || []).length : 0;
+  document.getElementById('pt-runs-ct').textContent = n ? String(n) : '';
+  document.getElementById('pt-notes-ct').textContent = document.getElementById('p-notes').value.trim() ? '•' : '';
+}
 
 function findIng(id) {
   for (var i = 0; i < ings.length; i++) if (ings[i].id === id) return ings[i];
@@ -1547,7 +1736,7 @@ function loadData() {
 // caught. Plume.noteSaveFailed shows a red banner offering an immediate
 // backup and alerts once -- not once per save.
 function saveProducts() {
-  if (Store.setJSON(PRODUCT_KEY, products)) { Plume.noteSaveOk(); return true; }
+  if (Store.setJSON(PRODUCT_KEY, products)) { Plume.noteSaveOk(); if (Plume.refreshShell) Plume.refreshShell(); return true; }
   Plume.noteSaveFailed();
   return false;
 }
@@ -1864,8 +2053,10 @@ function renderStatusPills() {
     { v:'discontinued', label:'Discontinued' }
   ];
   document.getElementById('status-pills').innerHTML = pills.map(function(p) {
-    return '<button class="filter-pill' + (statusFilter === p.v ? ' active' : '') +
-      '" onclick="setStatusFilter(\'' + p.v + '\')">' + p.label + '</button>';
+    var n = p.v === 'all' ? products.length
+      : products.filter(function(x) { return (x.status || 'draft') === p.v; }).length;
+    return '<button type="button" class="ps-chip' + (statusFilter === p.v ? ' on' : '') +
+      '" onclick="setStatusFilter(\'' + p.v + '\')">' + p.label + ' <span class="ct">' + n + '</span></button>';
   }).join('');
 }
 function setStatusFilter(v) {
@@ -1874,85 +2065,146 @@ function setStatusFilter(v) {
   renderList();
 }
 
+// The parent level of the list is the product TYPE, read from the linked
+// formulation's type (f.type, the same dropdown as in Formulations), so it
+// needs no data entry and follows a formulation that is retyped. A pack or
+// kit draws on several formulations, so packs keep a group of their own.
+var PACKS_GROUP = 'Sample packs & kits';
+function prodTypeKey(p) {
+  if (p.productKind === 'multi') return PACKS_GROUP;
+  var f = findForm(p.formulaId);
+  if (!f) return 'No formulation';
+  return f.type || 'No type set';
+}
+function typeOrder(a, b) {
+  if (a === PACKS_GROUP) return 1;
+  if (b === PACKS_GROUP) return -1;
+  return a.localeCompare(b);
+}
+
+// Folded type headings, for this visit only.
+var foldedTypes = {};
+function toggleTypeFold(t) {
+  foldedTypes[t] = !foldedTypes[t];
+  renderList();
+}
+
+function renderSummary() {
+  var el = document.getElementById('pl-summary');
+  if (!el) return;
+  var active = 0, made = 0, low = 0;
+  products.forEach(function(p) {
+    (p.productionRuns || []).forEach(function(r) { made += parseInt(r.units, 10) || 0; });
+    if ((p.status || 'draft') !== 'active') return;
+    active++;
+    var c = computeProductCost(p);
+    if ((c.retailMargin !== null && c.retailMargin < 0.30) ||
+        (c.wholesaleMargin !== null && c.wholesaleMargin < 0.30)) low++;
+  });
+  el.innerHTML = '<span><b>' + products.length + '</b> product' + (products.length === 1 ? '' : 's') + '</span>' +
+    '<span><b>' + active + '</b> active</span>' +
+    '<span><b>' + made + '</b> units made</span>' +
+    (low ? '<span title="Active products whose retail or wholesale margin is under 30%"><b style="color:var(--warning)">' + low + '</b> with a margin under 30%</span>' : '');
+}
+
+function prodRowHtml(p, key, nested) {
+  var c = computeProductCost(p);
+  var status = p.status || 'draft';
+  var runs = p.productionRuns || [];
+  var totalUnits = 0, mostRecent = '';
+  runs.forEach(function(r) {
+    totalUnits += parseInt(r.units, 10) || 0;
+    if (!mostRecent || (r.date && r.date > mostRecent)) mostRecent = r.date || '';
+  });
+  var dash = '<span class="ps-muted">--</span>';
+  var unitsCell = totalUnits > 0
+    ? '<span title="' + runs.length + ' run' + (runs.length === 1 ? '' : 's') +
+        (mostRecent ? '; last: ' + fmtDate(mostRecent) : '') + '">' + totalUnits + '</span>'
+    : dash;
+  var sub = [p.sku, p.netWtDisplay].filter(function(x) { return x; }).join(' · ');
+  return '<tr class="prod-row' + (nested ? ' l2' : '') + (status === 'discontinued' ? ' dim' : '') + '"' +
+    ' ondragover="onProdDragOver(event,\'' + p.id + '\')"' +
+    ' ondragleave="onProdDragLeave(event)"' +
+    ' ondrop="onProdDrop(event,\'' + p.id + '\')"' +
+    ' onclick="openProduct(\'' + p.id + '\')">' +
+    '<td><div class="prod-name-cell">' +
+      '<span class="prod-drag" draggable="true" title="Drag to reorder within ' + esc(key) + '"' +
+        ' ondragstart="onProdDragStart(event,\'' + p.id + '\')"' +
+        ' ondragend="onProdDragEnd(event)"' +
+        ' onclick="event.stopPropagation()">&#8942;&#8942;</span>' +
+      '<div><div class="ps-name">' + esc(p.name || '(unnamed)') + '</div>' +
+        (sub ? '<div class="ps-sub">' + esc(sub) + '</div>' : '') + '</div>' +
+    '</div></td>' +
+    '<td class="ps-num hide-sm">' + unitsCell + '</td>' +
+    '<td class="ps-num">' + (c.totalCost > 0 ? '$' + c.totalCost.toFixed(2) : dash) +
+      (c.ingCostKnown ? '' : '<span class="cost-flag" title="Some ingredient costs are missing, so this is low">&#9679;</span>') + '</td>' +
+    '<td class="ps-num hide-sm">' + (c.retail > 0 ? '$' + c.retail.toFixed(2) : dash) + '</td>' +
+    '<td class="ps-num">' + (c.retailMargin === null ? dash : marginCell(c.retailMargin)) + '</td>' +
+    '<td class="ps-num hide-sm">' + (c.wholesale > 0 ? '$' + c.wholesale.toFixed(2) : dash) + '</td>' +
+    '<td class="ps-num hide-sm">' + (c.wholesaleMargin === null ? dash : marginCell(c.wholesaleMargin)) + '</td>' +
+    '<td><span class="st st-' + status + '">' + status.charAt(0).toUpperCase() + status.slice(1) + '</span></td>' +
+    '</tr>';
+}
+
 function renderList() {
+  renderSummary();
   var body = document.getElementById('list-body');
   if (!products.length) {
-    body.innerHTML = '<div class="empty-state">No products yet. Click <strong>+ Add product</strong> to get started.</div>';
+    body.innerHTML = '<tr><td colspan="8" class="empty-state">No products yet. Click <strong>New</strong> to add the first one.</td></tr>';
     return;
   }
   var q = (document.getElementById('search').value || '').toLowerCase().trim();
   var filtered = products.filter(function(p) {
     if (statusFilter !== 'all' && (p.status || 'draft') !== statusFilter) return false;
     if (q) {
-      var f = findForm(p.formulaId);
-      var fn = (f && f.name) || '';
-      var hay = ((p.name || '') + ' ' + (p.sku || '') + ' ' + fn).toLowerCase();
+      var hay = ((p.name || '') + ' ' + (p.sku || '') + ' ' + prodGroupKey(p) + ' ' + prodTypeKey(p)).toLowerCase();
       if (hay.indexOf(q) === -1) return false;
     }
     return true;
   });
   if (!filtered.length) {
-    body.innerHTML = '<div class="empty-state">No products match the current filter.</div>';
+    body.innerHTML = '<tr><td colspan="8" class="empty-state">No products match the current filter.</td></tr>';
     return;
   }
-  // Group by formulation name (multi-component products group separately)
-  var groups = {};
-  var order  = [];
+  // Type > formulation > products. Within a formulation, array order
+  // (manual drag-to-reorder), never alphabetical: alphabetical sorts sizes
+  // wrong ("100ml" before "15ml").
+  var types = {}, typeKeys = [];
   filtered.forEach(function(p) {
-    var key = prodGroupKey(p);
-    if (!groups[key]) { groups[key] = []; order.push(key); }
-    groups[key].push(p);
+    var t = prodTypeKey(p);
+    if (!types[t]) { types[t] = []; typeKeys.push(t); }
+    types[t].push(p);
   });
-  order.sort(function(a, b) { return a.localeCompare(b); });
-  // Within-group order follows array order (manual drag-to-reorder), not
-  // alphabetical -- alphabetical sorts sizes wrong ("100ml" before "15ml").
+  typeKeys.sort(typeOrder);
 
   var html = '';
-  order.forEach(function(key) {
-    html += '<div class="group-hdr">' + esc(key) + '</div>';
-    groups[key].forEach(function(p) {
-      var c = computeProductCost(p);
-      var statusCls = 'status-' + (p.status || 'draft');
-      var statusLabel = (p.status || 'draft');
-      statusLabel = statusLabel.charAt(0).toUpperCase() + statusLabel.slice(1);
-      var marginTxt = c.retailMargin === null
-        ? '<span style="color:var(--ink-lighter)">--</span>'
-        : marginCell(c.retailMargin);
-      // Total units across all production runs, with most recent date for context
-      var runs = p.productionRuns || [];
-      var totalUnits = 0;
-      var mostRecent = '';
-      runs.forEach(function(r) {
-        totalUnits += parseInt(r.units, 10) || 0;
-        if (!mostRecent || (r.date && r.date > mostRecent)) mostRecent = r.date || '';
-      });
-      var unitsCell = totalUnits > 0
-        ? '<span title="' + runs.length + ' run' + (runs.length === 1 ? '' : 's') +
-            (mostRecent ? '; last: ' + fmtDate(mostRecent) : '') + '">' + totalUnits + '</span>'
-        : '<span style="color:var(--ink-lighter)">--</span>';
-      html += '<div class="prod-row"' +
-        ' ondragover="onProdDragOver(event,\'' + p.id + '\')"' +
-        ' ondragleave="onProdDragLeave(event)"' +
-        ' ondrop="onProdDrop(event,\'' + p.id + '\')"' +
-        ' onclick="openProduct(\'' + p.id + '\')">' +
-        '<div class="prod-name-cell">' +
-          '<span class="prod-drag" draggable="true" title="Drag to reorder within ' + esc(key) + '"' +
-            ' ondragstart="onProdDragStart(event,\'' + p.id + '\')"' +
-            ' ondragend="onProdDragEnd(event)"' +
-            ' onclick="event.stopPropagation()">&#8942;&#8942;</span>' +
-          '<div><div class="prod-name">' + esc(p.name || '(unnamed)') + '</div>' +
-            (p.sku ? '<div class="prod-sku">' + esc(p.sku) + '</div>' : '') + '</div>' +
-        '</div>' +
-        '<div class="prod-formula">' + esc(key) +
-          (p.netWtDisplay ? '<span class="prod-formula-meta">' + esc(p.netWtDisplay) + '</span>' : '') +
-        '</div>' +
-        '<div class="prod-num">' + unitsCell + '</div>' +
-        '<div class="prod-num">' + (c.totalCost > 0 ? '$' + c.totalCost.toFixed(2) : '--') + '</div>' +
-        '<div class="prod-num">' + (c.retail > 0 ? '$' + c.retail.toFixed(2) : '--') + '</div>' +
-        '<div class="prod-num">' + marginTxt + '</div>' +
-        '<div class="prod-num">' + (c.wholesale > 0 ? '$' + c.wholesale.toFixed(2) : '--') + '</div>' +
-        '<div><span class="status-pill ' + statusCls + '">' + statusLabel + '</span></div>' +
-        '</div>';
+  typeKeys.forEach(function(t) {
+    var list = types[t];
+    var folded = !!foldedTypes[t] && !q;
+    var tArg = esc(t).replace(/'/g, '&#39;');
+    html += '<tr class="grp-type' + (folded ? ' closed' : '') + '" onclick="toggleTypeFold(\'' + tArg + '\')"' +
+      ' title="' + (folded ? 'Show' : 'Fold away') + ' ' + esc(t) + '"><td colspan="8">' +
+      '<div class="type-bar">' + Plume.icon(t === PACKS_GROUP ? 'packaging' : 'costing') + esc(t) +
+      '<span class="ct">' + list.length + ' product' + (list.length === 1 ? '' : 's') + '</span>' +
+      '<span class="chev">' + Plume.icon('chevron') + '</span></div></td></tr>';
+    if (folded) return;
+    if (t === PACKS_GROUP) {
+      list.forEach(function(p) { html += prodRowHtml(p, prodGroupKey(p), false); });
+      return;
+    }
+    var groups = {}, order = [];
+    list.forEach(function(p) {
+      var k = prodGroupKey(p);
+      if (!groups[k]) { groups[k] = []; order.push(k); }
+      groups[k].push(p);
+    });
+    order.sort(function(a, b) { return a.localeCompare(b); });
+    order.forEach(function(k) {
+      var fid = groups[k][0].formulaId;
+      html += '<tr class="grp-sub"><td colspan="8"><div class="sub-h">' + Plume.icon('formulations') + esc(k) +
+        (findForm(fid) ? '<a href="plume-formulations.html#f=' + esc(fid) + '" target="plume-formulations" onclick="event.stopPropagation()" title="Open this formulation">Formulation &rarr;</a>' : '') +
+        '</div></td></tr>';
+      groups[k].forEach(function(p) { html += prodRowHtml(p, k, true); });
     });
   });
   body.innerHTML = html;
@@ -2065,8 +2317,13 @@ function openProduct(id) {
   renderLabel();
   renderRuns(p);
 
+  syncCrumb();
+  setTabCounts();
+  setEdTab(edTab);
+  renderSaveState();
   document.getElementById('view-list').style.display = 'none';
   document.getElementById('view-editor').style.display = '';
+  document.documentElement.scrollTop = 0;
 }
 
 function goList() {
@@ -2115,6 +2372,8 @@ function saveProduct() {
   p.updatedAt = new Date().toISOString();
   saveProducts();
   dirty = false;
+  renderSaveState();
+  syncCrumb();
   toast('Saved');
   return true;
 }
@@ -2208,7 +2467,7 @@ function renderPkgRecipe(p) {
   var body = document.getElementById('pkg-recipe-body');
   var rows = p.packagingRecipe || [];
   if (!rows.length) {
-    body.innerHTML = '<div style="padding:8px 0; font-size:12px; color:var(--ink-lighter); font-style:italic">No packaging components yet. Add a tin, jar, label, lid, etc.</div>';
+    body.innerHTML = '<div class="empty-row">No packaging yet. Add a jar, bottle, label, lid and so on.</div>';
     return;
   }
   var html = '';
@@ -2267,6 +2526,9 @@ function onPkgRecipeChange(idx, newPkgId, newQty) {
 function applyKindVisibility(kind) {
   document.getElementById('single-mode-fields').style.display = (kind === 'multi') ? 'none' : '';
   document.getElementById('multi-mode-fields').style.display  = (kind === 'multi') ? '' : 'none';
+  var bs = document.getElementById('kind-btn-single'), bm = document.getElementById('kind-btn-multi');
+  bs.classList.toggle('on', kind !== 'multi'); bs.setAttribute('aria-pressed', kind !== 'multi' ? 'true' : 'false');
+  bm.classList.toggle('on', kind === 'multi'); bm.setAttribute('aria-pressed', kind === 'multi' ? 'true' : 'false');
 }
 
 function onKindChange() {
@@ -2290,7 +2552,7 @@ function renderComponents(p) {
   if (!body) return;
   var rows = p.components || [];
   if (!rows.length) {
-    body.innerHTML = '<div style="padding:8px 0; font-size:12px; color:var(--ink-lighter); font-style:italic">No components yet. Add each formulation portion that goes in the pack.</div>';
+    body.innerHTML = '<div class="empty-row">No components yet. Add each formulation portion that goes in the pack.</div>';
     return;
   }
   var formOpts = forms.slice().sort(function(a, b) { return (a.name||'').localeCompare(b.name||''); });
@@ -2373,85 +2635,66 @@ function recalcCost() {
   p.retail      = parseFloat(document.getElementById('p-retail').value) || '';
   p.wholesale   = parseFloat(document.getElementById('p-wholesale').value) || '';
   var c = computeProductCost(p);
-  var panel = document.getElementById('cost-panel');
 
-  var html = '';
-  html += '<div class="cost-row cost-section-hdr"><span>Per-unit cost breakdown</span><span></span><span></span></div>';
+  // Under the formulation picker: its type and its cost per gram.
+  var hint = document.getElementById('p-form-hint');
+  if (hint) {
+    var hf = isMulti ? null : findForm(p.formulaId);
+    hint.textContent = hf
+      ? [hf.type, c.formulaCostPerG !== null ? 'ingredients cost $' + c.formulaCostPerG.toFixed(4) + ' per gram' : 'ingredient costs incomplete'].filter(function(x) { return x; }).join(' · ')
+      : '';
+  }
 
+  var lines = '';
   if (isMulti) {
-    // One line per component
     c.compRows.forEach(function(r) {
       var cpgTxt = r.cpg !== null ? '$' + r.cpg.toFixed(4) + '/g' : 'no cost';
-      var wtTxt  = r.netWtG > 0 ? r.netWtG + 'g' : 'no wt';
-      html += '<div class="cost-row">' +
-        '<span class="cr-label">' + esc(r.label) + ' (' + cpgTxt + ' &times; ' + wtTxt + ')</span>' +
-        '<span class="cr-aux"></span>' +
-        '<span class="cr-val">$' + r.subtotal.toFixed(2) + '</span></div>';
+      var wtTxt  = r.netWtG > 0 ? r.netWtG + ' g' : 'no weight';
+      lines += '<div class="cl"><span>' + esc(r.label) + '<span class="sub">' + wtTxt + ' &times; ' + cpgTxt + '</span></span><b>$' + r.subtotal.toFixed(2) + '</b></div>';
     });
-    if (!c.compRows.length) {
-      html += '<div style="font-size:11px; color:var(--ink-lighter); font-style:italic; padding:6px 0 10px">No components added yet.</div>';
-    }
-    // Flag components missing cost data
+    if (!c.compRows.length) lines += '<div class="cl"><span class="ps-muted">No components added yet.</span></div>';
+  } else {
+    var fcpgTxt = c.formulaCostPerG !== null ? '$' + c.formulaCostPerG.toFixed(4) + '/g' : 'no cost data';
+    var netTxt  = c.netWtG > 0 ? c.netWtG + ' g' : 'no weight';
+    lines += '<div class="cl"><span>Ingredients<span class="sub">' + netTxt + ' &times; ' + fcpgTxt + '</span></span><b>$' + c.ingCost.toFixed(2) + '</b></div>';
+  }
+  c.pkgRows.forEach(function(r) {
+    var ucTxt = r.unitCost !== null ? '$' + r.unitCost.toFixed(3) + ' each' : 'no cost yet';
+    lines += '<div class="cl"><span>' + esc(r.name) + (r.qty > 1 ? ' &times; ' + r.qty : '') +
+      '<span class="sub">' + (r.missing ? '<span style="color:var(--warning)">missing item</span>' : ucTxt) + '</span></span><b>$' + r.subtotal.toFixed(2) + '</b></div>';
+  });
+
+  var warn = '';
+  if (isMulti) {
     var missingComp = c.compRows.filter(function(r) { return !r.known; });
     if (missingComp.length) {
-      var compNames = missingComp.map(function(r) { return esc(r.label); }).join(', ');
-      html += '<div style="font-size:11px; color:var(--warning); padding:6px 0 10px; line-height:1.5">' +
-        '<strong>Incomplete cost data for:</strong> ' + compNames + '.<br>' +
-        'Each component needs a formulation and a net weight, and that formulation\'s ingredients need cost/g.' +
-        '</div>';
+      warn = '<div class="warn-line"><strong>Incomplete cost for</strong> ' +
+        missingComp.map(function(r) { return esc(r.label); }).join(', ') +
+        '. Each component needs a formulation and a weight, and its ingredients need a cost per gram.</div>';
     }
-  } else {
-    var f = findForm(p.formulaId);
-    var detail = formulationCostDetail(f);
-    var fcpgTxt = c.formulaCostPerG !== null ? '$' + c.formulaCostPerG.toFixed(4) + '/g' : 'no cost data';
-    var netTxt  = c.netWtG > 0 ? c.netWtG + 'g' : 'no weight';
-    html += '<div class="cost-row">' +
-      '<span class="cr-label">Ingredients (' + fcpgTxt + ' &times; ' + netTxt + ')</span>' +
-      '<span class="cr-aux"></span>' +
-      '<span class="cr-val">$' + c.ingCost.toFixed(2) + '</span></div>';
-    // If ingredient cost is missing, surface WHICH ingredients are missing data
-    if (!c.ingCostKnown && detail.lines.length) {
-      var missing = detail.lines.filter(function(l) { return !l.hasCost; });
-      if (missing.length) {
-        var names = missing.map(function(l) { return esc(l.name); }).join(', ');
-        html += '<div style="font-size:11px; color:var(--warning); padding:6px 0 10px; line-height:1.5">' +
-          '<strong>Missing cost data for:</strong> ' + names + '.<br>' +
-          'Open the <a href="plume-ingredients.html" target="plume-ingredients" style="color:var(--clay-dark); text-decoration:underline">Ingredients</a> module and add a purchase lot with cost/g for each.' +
-          '</div>';
-      }
+  } else if (!c.ingCostKnown) {
+    var detail = formulationCostDetail(findForm(p.formulaId));
+    var missing = detail.lines.filter(function(l) { return !l.hasCost; });
+    if (missing.length) {
+      warn = '<div class="warn-line"><strong>Missing a cost per gram for</strong> ' +
+        missing.map(function(l) { return esc(l.name); }).join(', ') +
+        ', so this is low. Add a lot price in <a href="plume-ingredients.html" target="plume-ingredients">Ingredients</a>.</div>';
     }
   }
 
-  c.pkgRows.forEach(function(r) {
-    var ucTxt = r.unitCost !== null ? '$' + r.unitCost.toFixed(3) : '--';
-    html += '<div class="cost-row">' +
-      '<span class="cr-label">' + esc(r.name) + ' &times; ' + r.qty + (r.missing ? ' <span style="color:var(--warning)">(missing)</span>' : '') + '</span>' +
-      '<span class="cr-aux">' + ucTxt + '</span>' +
-      '<span class="cr-val">$' + r.subtotal.toFixed(2) + '</span></div>';
-  });
-  html += '<div class="cost-row cost-total">' +
-    '<span class="cr-label">Total unit cost</span>' +
-    '<span class="cr-aux"></span>' +
-    '<span class="cr-val">$' + c.totalCost.toFixed(2) + '</span></div>';
+  document.getElementById('cost-panel').innerHTML =
+    '<div class="card-h"><span>Cost per unit</span></div>' +
+    '<div class="big">$' + c.totalCost.toFixed(2) + '</div>' +
+    '<div class="cl-list">' + lines + '</div>' + warn;
 
-  html += '<div class="cost-row cost-section-hdr"><span>Pricing</span><span class="cr-aux">profit</span><span>margin</span></div>';
-  if (c.retail > 0) {
-    var rMargTxt = c.retailMargin !== null ? (c.retailMargin * 100).toFixed(0) + '%' : '--';
-    var rMargCls = c.retailMargin === null ? '' : (c.retailMargin < 0 ? 'margin-neg' : (c.retailMargin < 0.30 ? 'margin-low' : 'margin-pos'));
-    html += '<div class="cost-row">' +
-      '<span class="cr-label">Retail at $' + c.retail.toFixed(2) + '</span>' +
-      '<span class="cr-aux">$' + (c.retailProfit || 0).toFixed(2) + '</span>' +
-      '<span class="cr-val ' + rMargCls + '">' + rMargTxt + '</span></div>';
-  }
-  if (c.wholesale > 0) {
-    var wMargTxt = c.wholesaleMargin !== null ? (c.wholesaleMargin * 100).toFixed(0) + '%' : '--';
-    var wMargCls = c.wholesaleMargin === null ? '' : (c.wholesaleMargin < 0 ? 'margin-neg' : (c.wholesaleMargin < 0.30 ? 'margin-low' : 'margin-pos'));
-    html += '<div class="cost-row">' +
-      '<span class="cr-label">Wholesale at $' + c.wholesale.toFixed(2) + '</span>' +
-      '<span class="cr-aux">$' + (c.wholesaleProfit || 0).toFixed(2) + '</span>' +
-      '<span class="cr-val ' + wMargCls + '">' + wMargTxt + '</span></div>';
-  }
-  panel.innerHTML = html;
+  var marg = function(m, profit) {
+    if (m === null) return '';
+    var cls = m < 0 ? 'margin-neg' : (m < 0.30 ? 'margin-low' : 'margin-pos');
+    return '<b class="' + cls + '">' + (m * 100).toFixed(0) + '%</b><br>$' + (profit || 0).toFixed(2) + ' profit';
+  };
+  document.getElementById('marg-retail').innerHTML    = marg(c.retailMargin, c.retailProfit);
+  document.getElementById('marg-wholesale').innerHTML = marg(c.wholesaleMargin, c.wholesaleProfit);
+
   // The pricing helper depends on totalCost too, so refresh it alongside
   renderPricingHelper(c.totalCost);
 }
@@ -2503,7 +2746,7 @@ function renderPricingHelper(totalCost) {
   var el = document.getElementById('pricing-helper');
   if (!el) return;
   if (!(totalCost > 0)) {
-    el.innerHTML = '<div class="ph-empty">Fill in net weight and packaging to see pricing suggestions.</div>';
+    el.innerHTML = '<div class="ph-empty">Fill in the weight and packaging to see suggested prices.</div>';
     return;
   }
   var custom = getCustomMultiplier();
@@ -2513,7 +2756,7 @@ function renderPricingHelper(totalCost) {
   var html = '';
   // Custom multiplier row (lets you dial in any value)
   html += '<div class="ph-custom-row">' +
-    '<span class="ph-custom-label">Custom multiplier</span>' +
+    '<span class="ph-custom-label">Your multiplier</span>' +
     '<input type="number" min="0.5" step="0.1" value="' + custom + '" ' +
       'oninput="onCustomMultiplierChange(this.value)" title="Multiplier x unit cost">' +
     '<span class="ph-custom-result" id="ph-custom-result">$' + (totalCost * custom).toFixed(2) + '</span>' +
@@ -2523,18 +2766,18 @@ function renderPricingHelper(totalCost) {
   multipliers.forEach(function(m) {
     var price = totalCost * m;
     html += '<div class="ph-cell">' +
-      '<div class="ph-cell-mult">' + m + '&times; cost</div>' +
+      '<div class="ph-cell-mult">' + m + '&times;</div>' +
       '<div class="ph-cell-price">$' + price.toFixed(2) + '</div>' +
       '<div class="ph-cell-actions">' +
-        '<button onclick="usePriceAs(\'wholesale\', ' + price + ')" title="Set as wholesale price">&rarr; Wholesale</button>' +
-        '<button onclick="usePriceAs(\'retail\', '    + price + ')" title="Set as retail price">&rarr; Retail</button>' +
+        '<button type="button" onclick="usePriceAs(\'wholesale\', ' + price + ')" title="Set as wholesale price">Wholesale</button>' +
+        '<button type="button" onclick="usePriceAs(\'retail\', '    + price + ')" title="Set as retail price">Retail</button>' +
       '</div>' +
     '</div>';
   });
   html += '</div>';
   // Quick reference note
   html += '<div style="font-size:11px; color:var(--ink-lighter); line-height:1.5; margin-top:10px">' +
-    'Cottage-industry rule of thumb: handmade skincare often prices at <strong>2&times; cost for wholesale</strong> and <strong>4-5&times; cost for retail</strong>. Use as a starting point, then adjust for your market.' +
+    'Handmade skincare often sells at about 2&times; cost wholesale and 4 to 5&times; retail. A starting point; adjust for your market.' +
     '</div>';
   el.innerHTML = html;
 }
@@ -2733,8 +2976,9 @@ function renderRuns(p) {
   var list = document.getElementById('runs-list');
   var summary = document.getElementById('runs-summary');
   if (!runs.length) {
-    list.innerHTML = '<div style="padding:14px; text-align:center; color:var(--ink-lighter); font-size:12px; font-style:italic">No production runs logged yet.</div>';
+    list.innerHTML = '<div class="empty-row">No production runs logged yet.</div>';
     summary.textContent = '';
+    setTabCounts();
     return;
   }
   var totalUnits = 0;
@@ -2759,6 +3003,7 @@ function renderRuns(p) {
   });
   list.innerHTML = html;
   summary.textContent = totalUnits + ' units across ' + runs.length + ' run' + (runs.length === 1 ? '' : 's');
+  setTabCounts();
 }
 
 function addRun() {
@@ -2835,6 +3080,10 @@ if (typeof Plume === 'undefined') {
   // hands control back.
   Plume.setModule('products');
   Plume.boot(function () {
+    // The 2026-10-19 shell: sidebar, icons in the title and toolbar.
+    Plume.shell({ module: 'costing' });
+    var ic = document.querySelectorAll('[data-ps-icon]');
+    for (var k = 0; k < ic.length; k++) ic[k].innerHTML = Plume.icon(ic[k].getAttribute('data-ps-icon'));
     loadData();
   });
 }

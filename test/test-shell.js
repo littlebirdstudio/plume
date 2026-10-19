@@ -218,6 +218,96 @@ ok('an unknown icon name gives nothing rather than breaking', P.icon('nope') ===
     await page.close();
   }
 
+  console.log('\n4c. Products & Costing in the shell (2026-10-19)');
+  {
+    const page = await open('costing');
+    // Body butter (f1 Whip, f2 Peppermint), Face oil (f3), a pack, and a
+    // formulation with no type. Packaging p1 costs 1.00 a unit.
+    const f = [
+      { id: 'f1', name: 'Whipped butter', type: 'Body butter', lines: [{ ingId: 'a1', pct: 100 }] },
+      { id: 'f2', name: 'Peppermint butter', type: 'Body butter', lines: [{ ingId: 'a1', pct: 100 }] },
+      { id: 'f3', name: 'Calendula oil', type: 'Face oil', lines: [{ ingId: 'a1', pct: 100 }] },
+      { id: 'f4', name: 'Mystery', lines: [] }];
+    const pk = [{ id: 'k1', kind: 'jar', capacity: '4 oz', color: 'White', purchases: [{ date: '2026-09-01', qty: 10, totalCost: 10, shipping: 0 }] }];
+    const pr = [
+      { id: 'w4', name: 'Whip 4 oz', sku: 'W4', status: 'active', formulaId: 'f1', netWtG: 100, packagingRecipe: [{ packagingId: 'k1', quantity: 1 }], retail: 20, wholesale: 10,
+        productionRuns: [{ id: 'r1', date: '2026-10-01', units: 6 }] },
+      { id: 'w2', name: 'Whip 2 oz', status: 'draft', formulaId: 'f1', netWtG: 50, packagingRecipe: [] },
+      { id: 'pp', name: 'Pepper 4 oz', status: 'active', formulaId: 'f2', netWtG: 100, packagingRecipe: [] },
+      { id: 'c1', name: 'Calendula 30', status: 'discontinued', formulaId: 'f3', netWtG: 27, packagingRecipe: [] },
+      { id: 'kit', name: 'Duo', status: 'active', productKind: 'multi', components: [{ id: 'x', formulaId: 'f3', netWtG: 3, label: 'Oil 3 mL' }], packagingRecipe: [{ packagingId: 'k1', quantity: 1 }], retail: 8, wholesale: 1 },
+      { id: 'mm', name: 'Mystery jar', status: 'active', formulaId: 'f4', packagingRecipe: [] }];
+    await page.evaluate("localStorage.setItem('aerie-formulations-v1', " + JSON.stringify(JSON.stringify(f)) + ");" +
+      "localStorage.setItem('aerie-packaging-v2', " + JSON.stringify(JSON.stringify(pk)) + ");" +
+      "localStorage.setItem('plume-products-v1', " + JSON.stringify(JSON.stringify(pr)) + ");" +
+      "localStorage.setItem('plume_costing_listorder_v1', '1');");
+    await page.reload(); await page.waitForTimeout(500);
+
+    ok('the sidebar marks Products & Costing', (await page.evaluate("document.querySelector('#ps-side .ps-nav.on').textContent")).indexOf('Products') !== -1);
+    ok('the old dark header is gone', (await page.evaluate("document.querySelector('.app-hdr')")) === null);
+    const sum = await page.evaluate("document.getElementById('pl-summary').innerText");
+    ok('the summary counts products, active, units made and low margins', /6 products[\s\S]*4 active[\s\S]*6 units made[\s\S]*1 with a margin under 30%/.test(sum), sum);
+    const outline = () => page.evaluate(`Array.from(document.querySelectorAll('#list-body tr')).map(function (r) {
+      if (r.classList.contains('grp-type')) return 'T:' + r.querySelector('.type-bar').childNodes[1].textContent;
+      if (r.classList.contains('grp-sub')) return 'F:' + r.querySelector('.sub-h').childNodes[1].textContent;
+      return r.querySelector('.ps-name').textContent; }).join('|')`);
+    ok('types, then formulations, then products; packs last; array order within a formulation',
+       (await outline()) === 'T:Body butter|F:Peppermint butter|Pepper 4 oz|F:Whipped butter|Whip 4 oz|Whip 2 oz|T:Face oil|F:Calendula oil|Calendula 30|T:No type set|F:Mystery|Mystery jar|T:Sample packs & kits|Duo',
+       await outline());
+    ok('the type bar is the palette colour', await page.evaluate(
+      "getComputedStyle(document.querySelector('.type-bar')).backgroundColor === getComputedStyle(document.querySelector('.ps-btn-primary')).backgroundColor"));
+    ok('a formulation heading links to it', (await page.evaluate("document.querySelector('.sub-h a').getAttribute('href')")) === 'plume-formulations.html#f=f2');
+    await page.evaluate("document.querySelector('.grp-type').click()");
+    ok('clicking a type folds it away', (await outline()).indexOf('Pepper 4 oz') === -1 && (await outline()).indexOf('T:Body butter') === 0, await outline());
+    await page.evaluate("document.getElementById('search').value = 'face oil'; renderList();");
+    ok('search matches the type, and reaches a folded group', (await outline()) === 'T:Face oil|F:Calendula oil|Calendula 30', await outline());
+    await page.evaluate("document.getElementById('search').value = ''; setStatusFilter('draft');");
+    ok('a status chip filters', (await outline()) === 'T:Body butter', await outline());
+    await page.evaluate("document.querySelector('.grp-type').click(); setStatusFilter('all');");
+    ok('the row shows unit cost and both margins', /\$1\.00[\s\S]*95%[\s\S]*90%/.test(await page.evaluate(
+      "Array.from(document.querySelectorAll('.prod-row')).find(r => r.innerText.indexOf('Whip 4 oz') !== -1).innerText")));
+
+    await page.evaluate("openProduct('w4')");
+    await page.waitForTimeout(200);
+    ok('the breadcrumb names the product', (await page.evaluate("document.getElementById('pe-crumb-cur').textContent")) === 'Whip 4 oz');
+    ok('name, label line and the fields sit in the colour block', await page.evaluate(
+      "var h=document.querySelector('#view-editor .ps-page-head'); !!(h.querySelector('#p-name') && h.querySelector('#p-netwt-display') && h.querySelector('#p-sku') && h.querySelector('#p-status'))"));
+    ok('cost, prices and the helper sit in the right column', await page.evaluate(
+      "var a=document.querySelector('.ed-side'); !!(a.querySelector('#cost-panel') && a.querySelector('#p-retail') && a.querySelector('#pricing-helper'))"));
+    ok('the right column stays in view', (await page.evaluate("getComputedStyle(document.querySelector('.ed-side')).position")) === 'sticky');
+    ok('the cost card shows the total', /\$1\.00/.test(await page.evaluate("document.querySelector('#cost-panel .big').textContent")));
+    ok('a clean product reads Saved', /Saved/.test(await page.evaluate("document.getElementById('save-state').textContent")));
+    await page.evaluate("var r=document.getElementById('p-retail'); r.value='40'; r.dispatchEvent(new Event('input'))");
+    ok('changing the price updates the margin beside it', /98%/.test(await page.evaluate("document.getElementById('marg-retail').textContent")),
+       await page.evaluate("document.getElementById('marg-retail').textContent"));
+    ok('an edit turns Saved into a Save button', await page.evaluate("!!document.querySelector('#save-state button')"));
+    await page.evaluate("document.querySelector('#save-state button').click()");
+    ok('Save saves and goes back to Saved', (await page.evaluate("findProduct('w4').retail")) === 40 &&
+       /Saved/.test(await page.evaluate("document.getElementById('save-state').textContent")));
+    ok('Label is the first tab', await page.evaluate("!document.getElementById('pp-label').hidden && document.getElementById('pp-runs').hidden"));
+    ok('the runs tab shows how many runs', (await page.evaluate("document.getElementById('pt-runs-ct').textContent")) === '1');
+    await page.evaluate("setEdTab('runs')");
+    ok('Production runs opens as a tab', await page.evaluate("!document.getElementById('pp-runs').hidden && document.getElementById('pp-label').hidden"));
+    await page.evaluate("pickKind('multi')");
+    ok('Made from switches to components', await page.evaluate(
+      "document.getElementById('kind-multi').checked && document.getElementById('multi-mode-fields').style.display === '' && document.getElementById('kind-btn-multi').classList.contains('on')"));
+    await page.evaluate("pickKind('single')");
+    ok('and back', await page.evaluate("document.getElementById('kind-single').checked && document.getElementById('single-mode-fields').style.display === ''"));
+    ok('Duplicate and Delete are in the ⋯ menu', await page.evaluate(
+      "var m=document.querySelector('.fe-top .ps-menu'); /Duplicate/.test(m.textContent) && !!m.querySelector('.ps-menu-danger')"));
+    await page.close();
+
+    const phone = await open('costing', { width: 390, height: 844 });
+    await phone.evaluate("localStorage.setItem('plume-products-v1', " + JSON.stringify(JSON.stringify(pr)) + ");" +
+      "localStorage.setItem('aerie-formulations-v1', " + JSON.stringify(JSON.stringify(f)) + ");");
+    await phone.reload(); await phone.waitForTimeout(500);
+    ok('Costing list does not scroll sideways on a phone', await phone.evaluate("document.documentElement.scrollWidth <= window.innerWidth + 1"));
+    await phone.evaluate("openProduct('w4')"); await phone.waitForTimeout(200);
+    ok('nor does the editor', await phone.evaluate("document.documentElement.scrollWidth <= window.innerWidth + 1"),
+       await phone.evaluate("document.documentElement.scrollWidth"));
+    await phone.close();
+  }
+
   console.log('\n5. Phone width');
   {
     const page = await open('ingredients', { width: 390, height: 844 });
