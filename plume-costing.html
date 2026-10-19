@@ -358,6 +358,94 @@ body.ps-shell .run-add-row .field input, body.ps-shell .run-add-row .field selec
 #p-notes { width: 100%; min-height: 120px; font-family: 'DM Sans', sans-serif; font-size: 14px; line-height: 1.6; color: var(--ink); background: var(--white); border: 1px solid var(--cream-border); border-radius: 9px; padding: 10px 12px; resize: vertical; outline: none; }
 #p-notes:focus { border-color: var(--bark); }
 
+
+/* ══ Barcode panel and line sheet (2026-10-19) ════════════════════════
+   As previewed with Heide (version 5). The barcode tool slides in from
+   the right like Packaging's edit panel; its choices are pills. The line
+   sheet is a third view: pick products, then print or copy. */
+#m-barcode.modal-ov { padding: 0; background: rgba(20,22,17,.22); }
+#m-barcode.modal-ov.open { display: block; }
+#m-barcode .modal { position: fixed; top: 0; right: 0; bottom: 0; width: min(640px, 100%); max-width: none; margin: 0; border-radius: 0; overflow-y: auto; padding: 0 24px; display: flex; flex-direction: column; gap: 16px; box-shadow: 0 12px 40px rgba(20,20,15,.18), 0 2px 6px rgba(20,20,15,.06); animation: bc-in .22s cubic-bezier(.2,.8,.2,1); }
+@keyframes bc-in { from { transform: translateX(40px); opacity: .4; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { #m-barcode .modal { animation: none; } }
+#m-barcode .modal > * { flex: none; }
+#m-barcode .modal-hdr { position: sticky; top: 0; z-index: 3; background: var(--white); margin: 0 -24px; padding: 10px 14px; justify-content: flex-start; gap: 8px; align-items: center; border-bottom: 1px solid var(--cream-border); }
+.bc-crumb { font-size: 13px; color: var(--ink-lighter); }
+.bc-intro .modal-title { margin: 0; font-size: 20px; }
+.bc-intro p { margin: 2px 0 0; font-size: 13px; color: var(--ink-lighter); }
+.bc-grp { display: flex; flex-direction: column; gap: 8px; }
+.bc-grp > .lbl { font-size: 12.5px; font-weight: 500; color: var(--ink-light); }
+.bc-grp .field { margin: 0; }
+.bc-pills { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.bc-pills .ps-chip small { opacity: .75; font-size: 11.5px; }
+.bc-help { font-size: 12.5px; color: var(--ink-lighter); line-height: 1.45; }
+#m-barcode .bc-grid { margin: 0; gap: 10px 12px; }
+#m-barcode .bc-grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.bc-pair > div { display: flex; gap: 6px; }
+.bc-pair input { min-width: 0; }
+.bc-tog input, .ls-cols input { position: absolute; opacity: 0; pointer-events: none; }
+.bc-tog:has(input:checked) { background: var(--ink); color: var(--white); border-color: var(--ink); }
+.bc-tog:has(input:checked)::before { content: '\2713'; }
+.bc-tog:has(input:focus-visible) { outline: 2px solid var(--bark); outline-offset: 2px; }
+.bc-cardlist { font-family: ui-monospace, Menlo, monospace !important; font-size: 13px !important; line-height: 1.6; }
+#m-barcode .bc-preview { border: 1.5px solid var(--cream-border); border-radius: 10px; background: #F6F3EE; min-height: 120px; margin: 0; }
+#m-barcode #bc-preview > svg { width: min(100%, 380px); height: auto; }
+#m-barcode .bc-meta { margin: -8px 0 0; font-size: 12.5px; text-align: center; }
+details.bc-tips { font-size: 12.5px; color: var(--ink-light); line-height: 1.5; }
+details.bc-tips summary { cursor: pointer; color: var(--ink); font-weight: 500; }
+details.bc-tips .bc-note { border: 0; padding: 6px 0 0; margin: 0; font-size: 12.5px; }
+#m-barcode .modal-foot { position: sticky; bottom: 0; z-index: 3; background: var(--white); margin: auto -24px 0 !important; padding: 12px 24px; border-top: 1px solid var(--cream-border); align-items: center; }
+#m-barcode .modal-foot .ps-grow { flex: 1; }
+
+/* Line sheet */
+.ls-layout { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 28px; margin-top: 20px; align-items: start; }
+.ls-side { display: flex; flex-direction: column; gap: 20px; position: sticky; top: 16px; min-width: 0; }
+.ls-side .field { margin: 0; }
+.ls-side .field input, .ls-side .field textarea { width: 100%; }
+.ls-fields { display: flex; flex-direction: column; gap: 10px; }
+.ls-pick { border: 1.5px solid var(--cream-border); border-radius: 10px; background: var(--white); max-height: 440px; overflow-y: auto; }
+.ls-pick .t { display: flex; align-items: center; gap: 8px; padding: 7px 12px; background: var(--bark); color: var(--white); font-size: 13px; font-weight: 600; position: sticky; top: 0; z-index: 1; cursor: pointer; }
+.ls-pick .t input { accent-color: var(--white); margin: 0; }
+.ls-pick .t span { opacity: .85; font-weight: 400; font-size: 12px; margin-left: auto; }
+.ls-pick label.r { display: flex; align-items: flex-start; gap: 9px; padding: 7px 12px 7px 22px; border-top: 1px solid var(--cream-border); font-size: 13.5px; cursor: pointer; }
+.ls-pick label.r:hover { background: var(--cream-dark); }
+.ls-pick label.r input { margin: 3px 0 0; accent-color: var(--bark); }
+.ls-pick .nm { flex: 1; min-width: 0; }
+.ls-pick .nm small { display: block; font-size: 12px; color: var(--ink-lighter); }
+.ls-pick .flag { font-size: 11.5px; color: var(--warning); white-space: nowrap; }
+.ls-pick label.r.off .nm { color: var(--ink-lighter); }
+.ls-pick .empty-row { padding: 14px 12px; font-size: 13px; color: var(--ink-lighter); }
+.ls-cols .ps-chip.on::before { content: '\2713'; }
+.ls-paper-wrap { background: #ECEAE6; border-radius: 12px; padding: 22px; overflow-x: auto; }
+.ls-paper { background: #fff; color: #26221F; max-width: 720px; min-height: 860px; margin: 0 auto; padding: 40px 32px; box-shadow: 0 2px 10px rgba(0,0,0,.12); }
+.ls-saved-note { font-size: 12.5px; color: var(--ink-lighter); }
+
+/* The sheet itself. Literal colours, because it is paper: dark mode must
+   not touch it, and the print window copies these rules. */
+.lsx { font-family: 'DM Sans', Helvetica, Arial, sans-serif; color: #26221F; font-size: 12.5px; }
+.lsx .ph { display: flex; justify-content: space-between; gap: 20px; align-items: flex-end; border-bottom: 2px solid var(--ls-accent, #B9492F); padding-bottom: 12px; }
+.lsx h3 { margin: 0; font-size: 22px; font-weight: 600; color: #26221F; }
+.lsx .from { font-size: 13px; color: #5D5752; margin-top: 2px; }
+.lsx .rt { text-align: right; font-size: 12px; color: #5D5752; line-height: 1.5; }
+.lsx .note { margin: 12px 0 0; font-size: 12px; color: #3E3833; line-height: 1.5; white-space: pre-wrap; }
+.lsx table { font-size: 12.5px; width: 100%; border-collapse: collapse; margin-top: 16px; font-variant-numeric: tabular-nums; }
+.lsx th { text-align: left; font-size: 11px; font-weight: 600; color: #5D5752; text-transform: uppercase; letter-spacing: .05em; padding: 6px; border-bottom: 1px solid #26221F; }
+.lsx th:first-child { width: 40%; }
+.lsx td { padding: 7px 6px; border-bottom: 1px solid #E2DED8; vertical-align: top; }
+.lsx td.nw { white-space: nowrap; }
+.lsx td:first-child { min-width: 120px; }
+.lsx .r { text-align: right; white-space: nowrap; }
+.lsx tr.g td { padding: 14px 6px 5px; border-bottom: 0; font-weight: 600; font-size: 12px; color: var(--ls-accent, #B9492F); }
+.lsx td small { color: #8C8580; }
+.lsx tbody tr { break-inside: avoid; page-break-inside: avoid; }
+.lsx .foot { margin-top: 22px; font-size: 11px; color: #8C8580; text-align: center; }
+@media (max-width: 980px) {
+  .ls-layout { grid-template-columns: minmax(0, 1fr); }
+  .ls-side { position: static; }
+  .ls-paper { padding: 26px 20px; min-height: 0; }
+}
+@media (max-width: 760px) { #m-barcode .bc-grid-4 { grid-template-columns: 1fr 1fr; } }
+
 @media (max-width: 980px) {
   .ed-layout { grid-template-columns: minmax(0, 1fr); }
   .ed-side { position: static; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
@@ -402,6 +490,7 @@ body.ps-shell .run-add-row .field input, body.ps-shell .run-add-row .field selec
     <div class="ps-toolbar">
       <span class="ps-tab on">All products</span>
       <div class="ps-tools">
+        <button type="button" class="ps-link-btn" onclick="openLineSheet()" title="A wholesale line sheet for a shop: pick the products, then print or save as PDF"><span data-ps-icon="note"></span>Line sheet</button>
         <button type="button" class="ps-link-btn" onclick="openBarcode('')" title="Generate printable barcode labels"><span data-ps-icon="print"></span>Barcodes</button>
         <button type="button" class="ps-btn-primary" onclick="openNewProduct()"><span data-ps-icon="plus"></span>New</button>
         <div class="ps-menu-wrap">
@@ -605,6 +694,50 @@ body.ps-shell .run-add-row .field input, body.ps-shell .run-add-row .field selec
       </aside>
     </div>
   </div>
+
+  <!-- Line sheet: pick products, then print or copy (2026-10-19) -->
+  <div id="view-sheet" style="display:none">
+    <div class="fe-top">
+      <div class="fe-crumb"><button type="button" onclick="closeLineSheet()"><span data-ps-icon="costing"></span>Products &amp; Costing</button><span aria-hidden="true">/</span><span class="cur">Line sheet</span></div>
+      <span class="ps-grow"></span>
+      <button type="button" class="ps-link-btn" onclick="copyLineSheet()"><span data-ps-icon="copy"></span>Copy as a table</button>
+      <button type="button" class="ps-btn-primary" onclick="printLineSheet()"><span data-ps-icon="print"></span>Print or save as PDF</button>
+    </div>
+    <div class="ps-page-head">
+      <div>
+        <div class="ps-title"><span class="ps-title-icon" data-ps-icon="note"></span><h1>Line sheet</h1></div>
+        <div class="ps-summary"><span>Pick the products, then print it or save it as a PDF for a shop. Your last sheet is remembered on this device.</span></div>
+      </div>
+    </div>
+    <div class="ls-layout">
+      <div class="ls-side">
+        <section>
+          <div class="sec-h"><h2>Products</h2><span class="ps-muted" id="ls-count"></span></div>
+          <div class="bc-pills" style="margin-bottom:8px">
+            <button type="button" class="ps-chip" onclick="lsQuick('active')">All active</button>
+            <button type="button" class="ps-chip" onclick="lsQuick('wholesale')">Active with a wholesale price</button>
+            <button type="button" class="ps-chip" onclick="lsQuick('none')">Clear</button>
+          </div>
+          <div class="ls-pick" id="ls-pick"></div>
+        </section>
+        <section>
+          <div class="sec-h"><h2>Columns</h2></div>
+          <div class="bc-pills ls-cols" id="ls-cols"></div>
+        </section>
+        <section>
+          <div class="sec-h"><h2>Heading</h2></div>
+          <div class="ls-fields">
+            <div class="field"><label for="ls-title">Title</label><input type="text" id="ls-title" oninput="lsField('title', this.value)"></div>
+            <div class="field"><label for="ls-from">From</label><input type="text" id="ls-from" placeholder="Your studio name" oninput="lsField('from', this.value)"></div>
+            <div class="field"><label for="ls-web">Website</label><input type="text" id="ls-web" placeholder="optional, for photos and descriptions" oninput="lsField('web', this.value)"></div>
+            <div class="field"><label for="ls-to">Prepared for</label><input type="text" id="ls-to" placeholder="optional, e.g. the shop's name" oninput="lsField('to', this.value)"></div>
+            <div class="field"><label for="ls-note">Terms or a note</label><textarea id="ls-note" rows="3" placeholder="e.g. Minimum opening order $150. Prices valid through December 31." oninput="lsField('note', this.value)"></textarea></div>
+          </div>
+        </section>
+      </div>
+      <div class="ls-paper-wrap"><div class="ls-paper lsx" id="ls-paper"></div></div>
+    </div>
+  </div>
 </div>
 
 
@@ -629,177 +762,186 @@ body.ps-shell .run-add-row .field input, body.ps-shell .run-add-row .field selec
   </div>
 </div>
 
-<!-- Settings modal -->
-<!-- Barcode / label generator -->
+<!-- Barcode / label generator: slides in from the right (2026-10-19).
+     Pills drive the original controls, which stay in the page (hidden
+     where a pill row replaces them), so every bc* function reads the same
+     ids as before. -->
 <div class="modal-ov" id="m-barcode">
-  <div class="modal" style="max-width:620px">
+  <div class="modal" role="dialog" aria-labelledby="bc-title">
     <div class="modal-hdr">
-      <div>
-        <div class="modal-title">Barcode labels</div>
-        <div style="font-size:11px; color:var(--ink-lighter); margin-top:2px">Code 39 &mdash; scannable by Square Handheld</div>
+      <button class="ps-icon-btn" type="button" onclick="closeModal('m-barcode')" aria-label="Close"><span data-ps-icon="close"></span></button>
+      <span class="bc-crumb">Products &amp; Costing</span>
+    </div>
+
+    <div class="bc-intro">
+      <h2 class="modal-title" id="bc-title">Barcode labels</h2>
+      <p>Scannable by the Square Handheld. Set each item's SKU in Square to the same code.</p>
+    </div>
+
+    <div class="bc-grp">
+      <span class="lbl">What are you printing?</span>
+      <div class="bc-pills">
+        <button type="button" class="ps-chip" data-bc-pill="mode:roll" onclick="bcPill('mode','roll')">Sticker roll</button>
+        <button type="button" class="ps-chip" data-bc-pill="mode:sheet" onclick="bcPill('mode','sheet')">Sticker sheet</button>
+        <button type="button" class="ps-chip" data-bc-pill="mode:card" onclick="bcPill('mode','card')">Scan card</button>
       </div>
-      <button class="modal-x" onclick="closeModal('m-barcode')">&#x2715;</button>
+      <div class="bc-help" id="bc-mode-help"></div>
+      <span hidden>
+        <input type="radio" name="bc-mode" value="roll" id="bc-mode-roll" checked onchange="bcModeChange()">
+        <input type="radio" name="bc-mode" value="sheet" id="bc-mode-sheet" onchange="bcModeChange()">
+        <input type="radio" name="bc-mode" value="card" id="bc-mode-card" onchange="bcModeChange()">
+      </span>
     </div>
 
-    <div class="bc-mode-row">
-      <label><input type="radio" name="bc-mode" value="roll" id="bc-mode-roll" checked onchange="bcModeChange()"> Sticker roll</label>
-      <label><input type="radio" name="bc-mode" value="sheet" id="bc-mode-sheet" onchange="bcModeChange()"> Sticker sheet</label>
-      <label><input type="radio" name="bc-mode" value="card" id="bc-mode-card" onchange="bcModeChange()"> Multiple item scan card</label>
-    </div>
-
-    <div class="field" style="margin-bottom:14px">
-      <label>Barcode format</label>
-      <select id="bc-format" onchange="bcRefresh()">
-        <option value="c39" selected>Code 39 &mdash; classic, wider bars</option>
-        <option value="c128">Code 128 &mdash; ~25% narrower, more characters</option>
+    <div class="bc-grp">
+      <span class="lbl">Format</span>
+      <div class="bc-pills">
+        <button type="button" class="ps-chip" data-bc-pill="fmt:c39" onclick="bcPill('fmt','c39')">Code 39 <small>wider bars</small></button>
+        <button type="button" class="ps-chip" data-bc-pill="fmt:c128" onclick="bcPill('fmt','c128')">Code 128 <small>about 25% narrower, more characters</small></button>
+      </div>
+      <select id="bc-format" onchange="bcRefresh()" hidden>
+        <option value="c39" selected>Code 39</option>
+        <option value="c128">Code 128</option>
       </select>
     </div>
 
     <!-- Single-code block: shared by roll and sheet -->
-    <div id="bc-single-fields">
-      <div class="field" style="margin-bottom:12px">
-        <label>From a product</label>
+    <div id="bc-single-fields" class="bc-grp">
+      <span class="lbl">Code</span>
+      <div class="field">
+        <label for="bc-product">From a product</label>
         <select id="bc-product" onchange="bcPickProduct()">
           <option value="">-- Type my own code --</option>
         </select>
       </div>
       <div class="bc-grid" style="grid-template-columns:1fr 1fr">
         <div class="field">
-          <label>Code to encode</label>
+          <label for="bc-value">Code to encode</label>
           <input type="text" id="bc-value" placeholder="e.g. HSL-1OZ" oninput="bcRefresh()" autocomplete="off">
         </div>
         <div class="field">
-          <label>Caption above bars (optional)</label>
-          <input type="text" id="bc-caption" placeholder="e.g. Hawaiian Sunset 1oz" oninput="bcRefresh()" autocomplete="off">
+          <label for="bc-caption">Caption above the bars</label>
+          <input type="text" id="bc-caption" placeholder="optional, e.g. Hawaiian Sunset 1oz" oninput="bcRefresh()" autocomplete="off">
         </div>
       </div>
     </div>
 
     <!-- Sticker roll mode -->
-    <div id="bc-roll-fields">
-      <div class="bc-grid">
+    <div id="bc-roll-fields" class="bc-grp">
+      <span class="lbl">Sticker</span>
+      <div class="bc-grid bc-grid-4">
         <div class="field">
-          <label>Sticker width (in)</label>
+          <label for="bc-lw">Width (in)</label>
           <input type="number" id="bc-lw" step="0.05" min="0.5" value="1.5" oninput="bcRefresh()">
         </div>
         <div class="field">
-          <label>Sticker height (in)</label>
+          <label for="bc-lh">Height (in)</label>
           <input type="number" id="bc-lh" step="0.05" min="0.3" value="0.5" oninput="bcRefresh()">
         </div>
         <div class="field">
-          <label>Bar height (in)</label>
+          <label for="bc-bh">Bar height (in)</label>
           <input type="number" id="bc-bh" step="0.05" min="0.15" value="0.3" oninput="bcRefresh()">
         </div>
+        <div class="field">
+          <label for="bc-copies">Copies</label>
+          <input type="number" id="bc-copies" min="1" max="500" value="30">
+        </div>
       </div>
-      <div class="toggle-row" style="margin-bottom:12px">
-        <label><input type="checkbox" id="bc-showtext" checked onchange="bcRefresh()"> Code text under bars</label>
-        <label style="margin-left:auto">Copies <input type="number" id="bc-copies" min="1" max="500" value="30" style="width:64px; margin-left:6px; font-size:13px; padding:4px 6px; border:1px solid var(--cream-border); border-radius:3px"></label>
+      <div class="bc-pills">
+        <label class="ps-chip bc-tog"><input type="checkbox" id="bc-showtext" checked onchange="bcRefresh()">Code text under bars</label>
       </div>
     </div>
 
     <!-- Sticker sheet mode -->
-    <div id="bc-sheet-fields" style="display:none">
-      <div class="field" style="margin-bottom:12px">
-        <label>Sheet layout</label>
-        <select id="bc-preset" onchange="bcApplyPreset()"></select>
-      </div>
-      <div class="bc-grid">
+    <div id="bc-sheet-fields" class="bc-grp" style="display:none">
+      <span class="lbl">Label sheet</span>
+      <div class="bc-pills" id="bc-preset-pills"></div>
+      <select id="bc-preset" onchange="bcApplyPreset()" hidden></select>
+      <div class="bc-grid bc-grid-4">
         <div class="field">
-          <label>Label width (in)</label>
+          <label for="bc-slw">Label width (in)</label>
           <input type="number" id="bc-slw" step="0.0625" min="0.5" value="2" oninput="bcSheetEdited()">
         </div>
         <div class="field">
-          <label>Label height (in)</label>
+          <label for="bc-slh">Label height (in)</label>
           <input type="number" id="bc-slh" step="0.0625" min="0.25" value="1" oninput="bcSheetEdited()">
         </div>
         <div class="field">
-          <label>Bar height (in)</label>
+          <label for="bc-sbh">Bar height (in)</label>
           <input type="number" id="bc-sbh" step="0.05" min="0.15" value="0.35" oninput="bcRefresh()">
         </div>
-      </div>
-      <div class="bc-grid">
         <div class="field">
-          <label>Top margin (in)</label>
+          <label for="bc-stop">Top margin (in)</label>
           <input type="number" id="bc-stop" step="0.0625" min="0" value="0.5" oninput="bcSheetEdited()">
         </div>
         <div class="field">
-          <label>Left margin (in)</label>
+          <label for="bc-sleft">Left margin (in)</label>
           <input type="number" id="bc-sleft" step="0.0625" min="0" value="0.5" oninput="bcSheetEdited()">
         </div>
         <div class="field">
-          <label>Gap H / V (in)</label>
-          <div style="display:flex; gap:6px">
-            <input type="number" id="bc-shg" step="0.0625" min="0" value="0.125" oninput="bcSheetEdited()">
-            <input type="number" id="bc-svg" step="0.0625" min="0" value="0.125" oninput="bcSheetEdited()">
-          </div>
-        </div>
-      </div>
-      <div class="bc-grid">
-        <div class="field">
-          <label>Columns</label>
-          <input type="number" id="bc-scols" min="1" max="20" value="3" oninput="bcRefresh()">
+          <label for="bc-shg">Gap across (in)</label>
+          <input type="number" id="bc-shg" step="0.0625" min="0" value="0.125" oninput="bcSheetEdited()">
         </div>
         <div class="field">
-          <label>Rows</label>
-          <input type="number" id="bc-srows" min="1" max="40" value="8" oninput="bcRefresh()">
+          <label for="bc-svg">Gap down (in)</label>
+          <input type="number" id="bc-svg" step="0.0625" min="0" value="0.125" oninput="bcSheetEdited()">
         </div>
-        <div class="field" style="display:flex; align-items:flex-end">
-          <label style="display:flex; align-items:center; gap:5px; cursor:pointer; font-size:12px; color:var(--ink-light); text-transform:none; letter-spacing:0; font-weight:400">
-            <input type="checkbox" id="bc-scut" checked onchange="bcRefresh()"> Cut guides
-          </label>
+        <div class="field bc-pair">
+          <label for="bc-scols">Columns × rows</label>
+          <div><input type="number" id="bc-scols" min="1" max="20" value="3" oninput="bcRefresh()" aria-label="Columns"><input type="number" id="bc-srows" min="1" max="40" value="8" oninput="bcRefresh()" aria-label="Rows"></div>
         </div>
       </div>
-      <div class="toggle-row" style="margin-bottom:12px">
-        <label><input type="checkbox" id="bc-sshowtext" checked onchange="bcRefresh()"> Code text under bars</label>
+      <div class="bc-help">On an Avery sheet the columns and rows are fixed by the die-cut; nudge the margins to line up with your printer.</div>
+      <div class="bc-pills">
+        <label class="ps-chip bc-tog"><input type="checkbox" id="bc-sshowtext" checked onchange="bcRefresh()">Code text under bars</label>
+        <label class="ps-chip bc-tog"><input type="checkbox" id="bc-scut" checked onchange="bcRefresh()">Cut guides</label>
       </div>
     </div>
 
     <!-- Multiple item scan card mode -->
-    <div id="bc-card-fields" style="display:none">
-      <div class="field" style="margin-bottom:10px">
-        <label>Add from a product</label>
+    <div id="bc-card-fields" class="bc-grp" style="display:none">
+      <span class="lbl">Codes</span>
+      <div class="field">
+        <label for="bc-card-product">Add from a product</label>
         <select id="bc-card-product" onchange="bcAddProductToCard()">
           <option value="">-- Pick a product to append --</option>
         </select>
       </div>
-      <div class="field" style="margin-bottom:14px">
-        <label>Codes &mdash; one per line, <code>CODE = caption</code></label>
-        <textarea id="bc-card-list" rows="6" style="font-family:monospace; font-size:12px" placeholder="MUG32 = Mug $32&#10;MUG38 = Large mug $38&#10;BOWL45 = Bowl $45&#10;VASE60 = Vase $60" oninput="bcRefresh()"></textarea>
+      <div class="field">
+        <label for="bc-card-list">One per line: CODE = caption</label>
+        <textarea id="bc-card-list" rows="6" class="bc-cardlist" placeholder="MUG32 = Mug $32&#10;MUG38 = Large mug $38&#10;BOWL45 = Bowl $45&#10;VASE60 = Vase $60" oninput="bcRefresh()"></textarea>
       </div>
-
-      <div class="bc-grid">
+      <span class="lbl" style="margin-top:6px">Columns</span>
+      <div class="bc-pills">
+        <button type="button" class="ps-chip" data-bc-pill="cols:1" onclick="bcPill('cols','1')">1</button>
+        <button type="button" class="ps-chip" data-bc-pill="cols:2" onclick="bcPill('cols','2')">2</button>
+        <button type="button" class="ps-chip" data-bc-pill="cols:3" onclick="bcPill('cols','3')">3</button>
+        <button type="button" class="ps-chip" data-bc-pill="cols:4" onclick="bcPill('cols','4')">4</button>
+        <span class="ps-chip-sep"></span>
+        <label class="ps-chip bc-tog"><input type="checkbox" id="bc-cshowtext" checked onchange="bcRefresh()">Code text under bars</label>
+      </div>
+      <select id="bc-cols" onchange="bcRefresh()" hidden>
+        <option value="1">1</option>
+        <option value="2" selected>2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+      </select>
+      <div class="bc-grid bc-grid-4">
         <div class="field">
-          <label>Page width (in)</label>
+          <label for="bc-cw">Page width (in)</label>
           <input type="number" id="bc-cw" step="0.25" min="2" value="8.5" oninput="bcRefresh()">
         </div>
         <div class="field">
-          <label>Page height (in)</label>
+          <label for="bc-ch">Page height (in)</label>
           <input type="number" id="bc-ch" step="0.25" min="2" value="11" oninput="bcRefresh()">
         </div>
         <div class="field">
-          <label>Columns</label>
-          <select id="bc-cols" onchange="bcRefresh()">
-            <option value="1">1</option>
-            <option value="2" selected>2</option>
-            <option value="3">3</option>
-            <option value="4">4</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="bc-grid">
-        <div class="field">
-          <label>Bar height (in)</label>
+          <label for="bc-cbh">Bar height (in)</label>
           <input type="number" id="bc-cbh" step="0.05" min="0.2" value="0.45" oninput="bcRefresh()">
         </div>
         <div class="field">
-          <label>Page margin (in)</label>
+          <label for="bc-cmargin">Page margin (in)</label>
           <input type="number" id="bc-cmargin" step="0.05" min="0" value="0.4" oninput="bcRefresh()">
-        </div>
-        <div class="field" style="display:flex; align-items:flex-end">
-          <label style="display:flex; align-items:center; gap:5px; cursor:pointer; font-size:12px; color:var(--ink-light); text-transform:none; letter-spacing:0; font-weight:400">
-            <input type="checkbox" id="bc-cshowtext" checked onchange="bcRefresh()"> Code text under bars
-          </label>
         </div>
       </div>
     </div>
@@ -807,23 +949,27 @@ body.ps-shell .run-add-row .field input, body.ps-shell .run-add-row .field selec
     <div class="bc-preview" id="bc-preview"></div>
     <div class="bc-meta" id="bc-meta"></div>
 
-    <div class="modal-foot">
-      <button class="btn" id="bc-btn-svg" onclick="bcDownloadSvg()">Download SVG</button>
-      <button class="btn" id="bc-btn-png" onclick="bcDownloadPng()">Download PNG</button>
-      <button class="btn btn-primary" id="bc-btn-print" onclick="bcPrint()">Print stickers</button>
-    </div>
+    <details class="bc-tips">
+      <summary>Before you print</summary>
+      <div class="bc-note" id="bc-note-roll">
+        <strong>To make Square recognize it:</strong> set the item's SKU in your Square item library to exactly this code. Test with More &rarr; Settings &rarr; Hardware &rarr; Barcode scanner before the market.<br>
+        Code 39 accepts A&ndash;Z, 0&ndash;9, space, and <code>- . $ / + %</code>. Code 128 accepts any printable character and prints about 25% narrower. Both uppercase automatically, so switching format never changes the value Square receives. Captions are print-only and aren't encoded.
+      </div>
+      <div class="bc-note" id="bc-note-sheet" style="display:none">
+        <strong>Before using real label stock:</strong> print one test page on plain paper, hold it behind the label sheet against a light, and check every corner. In Chrome's print dialog set Scale to 100% (not "Fit to page"), Margins to None, and turn off headers and footers. Those are the usual cause of misalignment.<br>
+        For plain sticker paper you cut yourself, leave Cut guides on and any layout will do.
+      </div>
+      <div class="bc-note" id="bc-note-card" style="display:none">
+        <strong>Multiple item scan card:</strong> prints one page with every code laid out in a grid, each with its caption. Good for pottery price tiers: print once, keep it by the register, scan the card instead of the piece.<br>
+        Captions are print-only and aren't encoded, so they can contain any characters. Each code still needs a matching item SKU in Square.
+      </div>
+    </details>
 
-    <div class="bc-note" id="bc-note-roll">
-      <strong>To make Square recognize it:</strong> set the item's SKU in your Square item library to exactly this code. Test with More &rarr; Settings &rarr; Hardware &rarr; Barcode scanner before the market.<br>
-      Code 39 accepts A&ndash;Z, 0&ndash;9, space, and <code>- . $ / + %</code>. Code 128 accepts any printable character and prints about 25% narrower. Both uppercase automatically, so switching format never changes the value Square receives. Captions are print-only and aren't encoded.
-    </div>
-    <div class="bc-note" id="bc-note-sheet" style="display:none">
-      <strong>Before using real label stock:</strong> print one test page on plain paper, hold it behind the label sheet against a light, and check every corner. In Chrome's print dialog set Scale to 100% (not "Fit to page"), Margins to None, and turn off headers and footers &mdash; those are the usual cause of misalignment.<br>
-      For plain sticker paper you cut yourself, leave Cut guides on and any layout will do.
-    </div>
-    <div class="bc-note" id="bc-note-card" style="display:none">
-      <strong>Multiple item scan card:</strong> prints one page with every code laid out in a grid, each with its caption. Good for pottery price tiers &mdash; print once, keep it by the register, scan the card instead of the piece.<br>
-      Captions are print-only and aren't encoded, so they can contain any characters. Each code still needs a matching item SKU in Square.
+    <div class="modal-foot">
+      <button class="ps-link-btn" type="button" id="bc-btn-svg" onclick="bcDownloadSvg()">SVG</button>
+      <button class="ps-link-btn" type="button" id="bc-btn-png" onclick="bcDownloadPng()">PNG</button>
+      <span class="ps-grow"></span>
+      <button class="ps-btn-primary" type="button" id="bc-btn-print" onclick="bcPrint()">Print stickers</button>
     </div>
   </div>
 </div>
@@ -1117,8 +1263,39 @@ function bcMode() {
   return 'roll';
 }
 
+// Pills drive the original controls (radios and hidden selects), so every
+// bc* function keeps reading the same ids.
+var BC_HELP = {
+  roll:  'One code, many copies, one sticker per label on a thermal roll.',
+  sheet: 'One code repeated across a full page of labels.',
+  card:  'Several different codes on one page, each with a caption. For price tiers kept by the register.'
+};
+function bcPill(group, v) {
+  if (group === 'mode') {
+    document.getElementById('bc-mode-' + v).checked = true;
+    bcModeChange();
+    return;
+  }
+  var id = { fmt: 'bc-format', preset: 'bc-preset', cols: 'bc-cols' }[group];
+  document.getElementById(id).value = v;
+  if (group === 'preset') bcApplyPreset(); else bcRefresh();
+}
+function bcSyncPills() {
+  var cur = { mode: bcMode(), fmt: bcFormat(),
+    preset: document.getElementById('bc-preset').value,
+    cols: document.getElementById('bc-cols').value };
+  var pills = document.querySelectorAll('[data-bc-pill]');
+  for (var i = 0; i < pills.length; i++) {
+    var kv = pills[i].getAttribute('data-bc-pill').split(':');
+    var on = cur[kv[0]] === kv[1];
+    pills[i].classList.toggle('on', on);
+    pills[i].setAttribute('aria-pressed', on ? 'true' : 'false');
+  }
+}
+
 function bcModeChange() {
   var m = bcMode();
+  document.getElementById('bc-mode-help').textContent = BC_HELP[m];
   document.getElementById('bc-single-fields').style.display = (m === 'card') ? 'none' : '';
   document.getElementById('bc-roll-fields').style.display   = (m === 'roll')  ? '' : 'none';
   document.getElementById('bc-sheet-fields').style.display  = (m === 'sheet') ? '' : 'none';
@@ -1130,8 +1307,8 @@ function bcModeChange() {
   var single = (m !== 'card');
   document.getElementById('bc-btn-svg').style.display = single ? '' : 'none';
   document.getElementById('bc-btn-png').style.display = single ? '' : 'none';
-  document.getElementById('bc-btn-print').textContent =
-    (m === 'card') ? 'Print scan card' : (m === 'sheet' ? 'Print sheet' : 'Print stickers');
+  document.getElementById('bc-btn-print').innerHTML = Plume.icon('print') +
+    ((m === 'card') ? 'Print scan card' : (m === 'sheet' ? 'Print sheet' : 'Print stickers'));
   bcRefresh();
 }
 
@@ -1201,12 +1378,20 @@ function openBarcode(prefill, caption) {
   bcModeChange();
 }
 
+document.addEventListener('keydown', function(e) {
+  var m = document.getElementById('m-barcode');
+  if (e.key === 'Escape' && m && m.classList.contains('open') && !document.querySelector('.plume-dlg-ov')) closeModal('m-barcode');
+});
+
 // Opens prefilled from the current product: barcode field if set, else SKU.
 function openBarcodeForProduct() {
   var bc   = document.getElementById('p-barcode').value.trim();
   var sku  = document.getElementById('p-sku').value.trim();
   var name = document.getElementById('p-name').value.trim();
   openBarcode(bc || sku, name);
+  // Show which product it came from, when that product is in the picker.
+  var sel = document.getElementById('bc-product');
+  for (var i = 0; i < sel.options.length; i++) if (sel.options[i].value === curId) { sel.value = curId; break; }
 }
 
 // The code and caption shared by roll and sheet modes.
@@ -1234,6 +1419,14 @@ function bcInitPresets() {
   if (sel.options.length) return;  // already built
   sel.innerHTML = BC_PRESETS.map(function(p) {
     return '<option value="' + p.id + '">' + p.name + '</option>';
+  }).join('');
+  // One pill per layout: the short name, with the size as a note.
+  document.getElementById('bc-preset-pills').innerHTML = BC_PRESETS.map(function(p) {
+    var parts = p.name.split(' \u2014 ');
+    var label = p.id === 'custom' ? 'Cut it yourself' : parts[0].replace(/ \/ \d+$/, '');
+    var note  = p.id === 'custom' ? 'any plain sticker paper' : (parts[1] || '');
+    return '<button type="button" class="ps-chip" data-bc-pill="preset:' + p.id + '" onclick="bcPill(\'preset\',\'' + p.id + '\')">' +
+      esc(label) + (note ? ' <small>' + esc(note) + '</small>' : '') + '</button>';
   }).join('');
   bcApplyPreset();
 }
@@ -1385,6 +1578,7 @@ function bcScaledPreview(html, pageW, pageH) {
 
 // ── Refresh dispatch ──
 function bcRefresh() {
+  bcSyncPills();
   var m = bcMode();
   if (m === 'card')  return bcRefreshCard();
   if (m === 'sheet') return bcRefreshSheet();
@@ -2338,6 +2532,7 @@ function goList() {
 }
 
 function leaveEditor() {
+  document.getElementById('view-sheet').style.display = 'none';
   document.getElementById('view-list').style.display = '';
   document.getElementById('view-editor').style.display = 'none';
   curId = null; dirty = false;
@@ -3047,6 +3242,222 @@ function deleteRun(rid) {
     saveProducts();
     if (curId === p.id) renderRuns(p);
   }, { title: 'Delete this run?', yes: 'Delete', danger: true });
+}
+
+
+// ──────────────────────────────────────────────────────────────────────
+// Line sheet (2026-10-19)
+// ──────────────────────────────────────────────────────────────────────
+// What a shop asks for: the products on offer with their wholesale price
+// and MSRP. Heide picks the products; the last sheet (picks, columns,
+// heading) is remembered on this device, and "Clear" starts from nothing.
+// Discontinued products are never offered. Photos are not part of it:
+// shops can find those on the website, which the heading can name.
+var LS_KEY = 'plume-linesheet-v1';
+var LS_COLS = [['sku', 'SKU'], ['size', 'Size'], ['wholesale', 'Wholesale'], ['msrp', 'MSRP'], ['group', 'Group by type'], ['date', 'Date']];
+var ls = null;
+
+function lsLoad() {
+  var saved = Store.getJSON(LS_KEY, null);
+  var d = { title: 'Wholesale line sheet', from: '', web: '', to: '', note: '',
+    cols: { sku: true, size: true, wholesale: true, msrp: true, group: true, date: true }, pick: null };
+  if (saved && typeof saved === 'object') {
+    ['title', 'from', 'web', 'to', 'note'].forEach(function(k) { if (typeof saved[k] === 'string') d[k] = saved[k]; });
+    if (saved.cols) for (var k in d.cols) if (typeof saved.cols[k] === 'boolean') d.cols[k] = saved.cols[k];
+    if (saved.pick && typeof saved.pick === 'object') d.pick = saved.pick;
+  }
+  // First time: every active product.
+  if (!d.pick) {
+    d.pick = {};
+    products.forEach(function(p) { if ((p.status || 'draft') === 'active') d.pick[p.id] = true; });
+  }
+  ls = d;
+}
+function lsSave() {
+  var pick = {};
+  for (var k in ls.pick) if (ls.pick[k]) pick[k] = true;
+  ls.pick = pick;
+  Store.setJSON(LS_KEY, ls);   // a convenience; a failed write loses nothing that matters
+}
+
+// Products a sheet can offer: everything not discontinued, in the list's
+// own order (type, then formulation, then her drag order).
+function lsOffered() {
+  return products.filter(function(p) { return (p.status || 'draft') !== 'discontinued'; });
+}
+function lsGrouped(list) {
+  var types = {}, typeKeys = [];
+  list.forEach(function(p) {
+    var t = prodTypeKey(p);
+    if (!types[t]) { types[t] = []; typeKeys.push(t); }
+    types[t].push(p);
+  });
+  typeKeys.sort(typeOrder);
+  return typeKeys.map(function(t) {
+    var groups = {}, order = [];
+    types[t].forEach(function(p) {
+      var k = prodGroupKey(p);
+      if (!groups[k]) { groups[k] = []; order.push(k); }
+      groups[k].push(p);
+    });
+    order.sort(function(a, b) { return a.localeCompare(b); });
+    var items = [];
+    order.forEach(function(k) { items = items.concat(groups[k]); });
+    return { t: t, items: items };
+  });
+}
+function lsPicked() {
+  return lsOffered().filter(function(p) { return ls.pick[p.id]; });
+}
+function lsSize(p) {
+  return p.netWtDisplay || (p.productKind !== 'multi' && parseFloat(p.netWtG) > 0 ? p.netWtG + ' g' : '');
+}
+function lsMoney(v) { var n = parseFloat(v); return n > 0 ? '$' + n.toFixed(2) : ''; }
+function lsToday() {
+  var d = Plume.parseLocalDate ? Plume.parseLocalDate(todayISO()) : new Date();
+  try { return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }); }
+  catch (e) { return fmtDate(todayISO()); }
+}
+
+function openLineSheet() {
+  if (!ls) lsLoad();
+  document.getElementById('view-list').style.display = 'none';
+  document.getElementById('view-editor').style.display = 'none';
+  document.getElementById('view-sheet').style.display = '';
+  ['title', 'from', 'web', 'to', 'note'].forEach(function(k) { document.getElementById('ls-' + k).value = ls[k]; });
+  renderLineSheet();
+  document.documentElement.scrollTop = 0;
+}
+function closeLineSheet() {
+  document.getElementById('view-sheet').style.display = 'none';
+  document.getElementById('view-list').style.display = '';
+  renderList();
+}
+function lsField(k, v) { ls[k] = v; lsSave(); renderLsPaper(); }
+function lsToggle(id) { ls.pick[id] = !ls.pick[id]; lsSave(); renderLineSheet(); }
+function lsToggleType(t, on) {
+  lsOffered().forEach(function(p) { if (prodTypeKey(p) === t) ls.pick[p.id] = on; });
+  lsSave(); renderLineSheet();
+}
+function lsQuick(w) {
+  ls.pick = {};
+  lsOffered().forEach(function(p) {
+    var active = (p.status || 'draft') === 'active';
+    if (w === 'active' && active) ls.pick[p.id] = true;
+    if (w === 'wholesale' && active && parseFloat(p.wholesale) > 0) ls.pick[p.id] = true;
+  });
+  lsSave(); renderLineSheet();
+}
+function lsCol(k) { ls.cols[k] = !ls.cols[k]; lsSave(); renderLineSheet(); }
+
+function renderLineSheet() {
+  var offered = lsOffered();
+  var n = lsPicked().length;
+  document.getElementById('ls-count').textContent = n + ' on the sheet';
+  var html = lsGrouped(offered).map(function(g) {
+    var picked = g.items.filter(function(p) { return ls.pick[p.id]; }).length;
+    var tArg = esc(g.t).replace(/'/g, '&#39;');
+    return '<label class="t"><input type="checkbox"' + (picked === g.items.length ? ' checked' : '') +
+        ' onchange="lsToggleType(\'' + tArg + '\', this.checked)">' + esc(g.t) +
+        '<span>' + picked + ' of ' + g.items.length + '</span></label>' +
+      g.items.map(function(p) {
+        var on = !!ls.pick[p.id];
+        var sub = [p.sku, (p.status || 'draft') === 'draft' ? 'Draft' : ''].filter(function(x) { return x; }).join(' · ');
+        return '<label class="r' + (on ? '' : ' off') + '"><input type="checkbox" data-ls="' + esc(p.id) + '"' + (on ? ' checked' : '') +
+          ' onchange="lsToggle(\'' + esc(p.id) + '\')"><span class="nm">' + esc(p.name || '(unnamed)') +
+          (sub ? '<small>' + esc(sub) + '</small>' : '') + '</span>' +
+          (parseFloat(p.wholesale) > 0 ? '' : '<span class="flag">no wholesale price</span>') + '</label>';
+      }).join('');
+  }).join('');
+  document.getElementById('ls-pick').innerHTML = html || '<div class="empty-row">No products to offer yet.</div>';
+  document.getElementById('ls-cols').innerHTML = LS_COLS.map(function(c) {
+    return (c[0] === 'group' ? '<span class="ps-chip-sep"></span>' : '') +
+      '<button type="button" class="ps-chip' + (ls.cols[c[0]] ? ' on' : '') + '" aria-pressed="' + (ls.cols[c[0]] ? 'true' : 'false') +
+      '" data-ls-col="' + c[0] + '" onclick="lsCol(\'' + c[0] + '\')">' + c[1] + '</button>';
+  }).join('');
+  renderLsPaper();
+}
+
+// The sheet body: used on screen and in the print window.
+function lsSheetHtml() {
+  var c = ls.cols;
+  var heads = '<th>Product</th>' + (c.sku ? '<th>SKU</th>' : '') + (c.size ? '<th>Size</th>' : '') +
+    (c.wholesale ? '<th class="r">Wholesale</th>' : '') + (c.msrp ? '<th class="r">MSRP</th>' : '');
+  var ncol = 1 + (c.sku ? 1 : 0) + (c.size ? 1 : 0) + (c.wholesale ? 1 : 0) + (c.msrp ? 1 : 0);
+  var groups = c.group ? lsGrouped(lsPicked()) : [{ t: '', items: lsGrouped(lsPicked()).reduce(function(a, g) { return a.concat(g.items); }, []) }];
+  var body = '';
+  groups.forEach(function(g) {
+    if (g.t) body += '<tr class="g"><td colspan="' + ncol + '">' + esc(g.t) + '</td></tr>';
+    g.items.forEach(function(p) {
+      body += '<tr><td>' + esc(p.name || '') + '</td>' +
+        (c.sku ? '<td class="nw">' + esc(p.sku || '') + '</td>' : '') +
+        (c.size ? '<td>' + esc(lsSize(p)) + '</td>' : '') +
+        (c.wholesale ? '<td class="r">' + (lsMoney(p.wholesale) || '<small>ask</small>') + '</td>' : '') +
+        (c.msrp ? '<td class="r">' + lsMoney(p.retail) + '</td>' : '') + '</tr>';
+    });
+  });
+  if (!body) body = '<tr><td colspan="' + ncol + '" style="text-align:center;color:#8C8580;padding:30px">Pick products on the left.</td></tr>';
+  var right = [];
+  if (ls.to) right.push('Prepared for <b>' + esc(ls.to) + '</b>');
+  if (c.date) right.push(esc(lsToday()));
+  var fromLine = [ls.from, ls.web].filter(function(x) { return x; }).map(esc).join(' &middot; ');
+  return '<div class="ph"><div><h3>' + esc(ls.title || 'Line sheet') + '</h3>' +
+      (fromLine ? '<div class="from">' + fromLine + '</div>' : '') + '</div>' +
+      '<div class="rt">' + right.join('<br>') + '</div></div>' +
+    (ls.note ? '<p class="note">' + esc(ls.note) + '</p>' : '') +
+    '<table><thead><tr>' + heads + '</tr></thead><tbody>' + body + '</tbody></table>' +
+    (c.msrp ? '<div class="foot">MSRP is the suggested retail price.</div>' : '');
+}
+function lsAccent() {
+  var v = getComputedStyle(document.documentElement).getPropertyValue('--bark').trim();
+  // In dark mode the accent is lightened for the screen; paper wants the
+  // palette's own colour, which is what light mode holds.
+  if (document.documentElement.getAttribute('data-theme') === 'dark' && Plume.PALETTES && Plume.loadPaletteChoice) {
+    var pal = Plume.PALETTES[Plume.loadPaletteChoice()];
+    if (pal && pal.vars['--bark']) v = pal.vars['--bark'];
+  }
+  return v || '#B9492F';
+}
+function renderLsPaper() {
+  var el = document.getElementById('ls-paper');
+  el.style.setProperty('--ls-accent', lsAccent());
+  el.innerHTML = lsSheetHtml();
+}
+
+function printLineSheet() {
+  var rules = [];
+  // Copy the .lsx rules out of this page's stylesheet, so print and
+  // screen cannot disagree.
+  for (var i = 0; i < document.styleSheets.length; i++) {
+    var rs; try { rs = document.styleSheets[i].cssRules; } catch (e) { continue; }
+    for (var j = 0; j < rs.length; j++) if (rs[j].cssText.indexOf('.lsx') === 0) rules.push(rs[j].cssText);
+  }
+  var css = '@page { size: letter; margin: 0.6in; } html, body { margin: 0; background: #fff; }' +
+    '.lsx { --ls-accent: ' + lsAccent() + '; }' + rules.join('\n');
+  bcOpenPrintWindow(ls.title || 'Line sheet', css, '<div class="lsx">' + lsSheetHtml() + '</div>');
+}
+
+// Tab-separated: pastes into an email, Word or a spreadsheet as a table.
+function lsTableText() {
+  var c = ls.cols;
+  var row = function(cells) { return cells.join('\t'); };
+  var out = [row(['Product'].concat(c.sku ? ['SKU'] : [], c.size ? ['Size'] : [], c.wholesale ? ['Wholesale'] : [], c.msrp ? ['MSRP'] : []))];
+  lsGrouped(lsPicked()).forEach(function(g) {
+    g.items.forEach(function(p) {
+      out.push(row([p.name || ''].concat(c.sku ? [p.sku || ''] : [], c.size ? [lsSize(p)] : [],
+        c.wholesale ? [lsMoney(p.wholesale)] : [], c.msrp ? [lsMoney(p.retail)] : [])));
+    });
+  });
+  return out.join('\n');
+}
+function copyLineSheet() {
+  var text = lsTableText();
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function() { toast('Copied. Paste into an email or a spreadsheet.'); },
+      function() { fallbackCopy(text); });
+  } else {
+    fallbackCopy(text);
+  }
 }
 
 // ──────────────────────────────────────────────────────────────────────

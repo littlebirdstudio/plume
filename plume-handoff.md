@@ -2449,3 +2449,48 @@ status chips, row margins, breadcrumb, colour block, sticky right column,
 live margin, Save / Saved, tabs, Made from, menu, phone width.
 
 **Next:** Batches, previewed first, the same way.
+
+### Session 20 (cont.) — Barcode panel restyled; line sheet (core v1.26)
+
+Both previewed with Heide first (version 5 of the redesign preview).
+
+**Barcode labels** slide in from the right like Packaging's edit panel
+(`#m-barcode`, still opened with `openModal`). Her ask: pills, not
+dropdowns and radio buttons. The pills DRIVE the original controls, which
+stay in the page hidden: `bcPill(group, value)` sets the mode radio, the
+`#bc-format`, `#bc-preset` or `#bc-cols` select, then calls the same
+handler as before; `bcSyncPills()` (first line of `bcRefresh`) marks the
+pill that matches. So every `bc*` function reads the same ids, and the
+encoders, renderer, presets and print code are untouched. Preset pills are
+built from `BC_PRESETS` in `bcInitPresets`. Checkboxes are toggle pills
+(`label.bc-tog`, the checkbox inside, styled with `:has(:checked)`). Every
+measurement field stayed. The notes moved into a "Before you print"
+disclosure. Opening from a product now also selects it in "From a product".
+Escape closes the panel.
+
+**Line sheet** (the word her retailer used; she first called it a price
+sheet). A third view in Products & Costing (`#view-sheet`,
+`openLineSheet` / `closeLineSheet`), from a toolbar button beside
+Barcodes. Left: product picks grouped like the list (type box ticks a
+whole type), quick pills "All active", "Active with a wholesale price",
+"Clear"; column pills (SKU, Size, Wholesale, MSRP, Group by type, Date);
+heading fields (Title, From, Website, Prepared for, Terms or a note).
+Right: the page as it prints. Discontinued products are never offered; a
+product with no wholesale price is flagged in the picker and prints "ask".
+Size is the label line (`netWtDisplay`), else grams.
+
+Her calls: **remember the last sheet** on this device, as long as there is
+a way to start from a cleared selection (the Clear pill). **No photos**:
+shops can find those on the website, which is why the heading has a
+Website line. Stored under `plume-linesheet-v1` (`ls`: title, from, web,
+to, note, cols, pick), labelled in Settings, Storage; the first sheet
+starts with every active product.
+
+**Print or save as PDF** opens just the sheet through `bcOpenPrintWindow`
+(letter page, 0.6 in margins), copying the `.lsx` rules from the page's
+own stylesheet, so screen and paper cannot disagree. The sheet's colours
+are literal (paper), except the accent, which is the palette's main colour
+taken from the palette itself, not the dark-mode screen version.
+**Copy as a table** is tab-separated, for an email or a spreadsheet.
+
+**Tests:** new `test/test-costing-tools.js` (35 checks), the 18th suite.
