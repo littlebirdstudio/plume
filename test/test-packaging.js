@@ -112,8 +112,9 @@ const PRODUCTS = [
       { id: 'e', kind: 'dropper', capacity: '1 oz', color: 'Blue' },
       { id: 'f', kind: 'dropper', capacity: '1 oz', color: 'Amber' }
     ]).map(function (g) { return g.name + ':' + g.items.map(function (i) { return i.id; }).join(''); })`);
-    ok('groups in section order, sizes small to large then color, Needs sorting last',
-       JSON.stringify(grp) === '["Dropper bottle:dfea","Product label:c","Needs sorting:b"]', grp);
+    ok('groups in section order, by color then size small to large, Needs sorting last',
+       JSON.stringify(grp) === '["Dropper bottle:dfae","Product label:c","Needs sorting:b"]', grp);
+    ok('label parts include Bottom', await page.evaluate("Plume.PK_PARTS.join(',')") === 'Front,Back,Top,Bottom,Wrap');
     const m = await page.evaluate(`(function () { var it = { kind: 'dropper', capacity: '1 oz', color: 'Blue', material: 'Glass', supplier: 'SKS' };
       return [Plume.pkMatches(it, '1oz blue'), Plume.pkMatches(it, 'dropper sks'), Plume.pkMatches(it, 'amber')]; })()`);
     ok('search: every word must match, "1oz" finds "1 oz"', JSON.stringify(m) === '[true,true,false]', m);
@@ -158,7 +159,7 @@ const PRODUCTS = [
     ok('items sit indented under their heading', await page.evaluate("parseFloat(getComputedStyle(document.querySelector('.pk-row td')).paddingLeft) >= 50"));
     ok('the list groups by kind now (an Other groups under its own name)', JSON.stringify(groups) === '["Dropper bottle","Tissue paper","Needs sorting"]', groups);
     const sizes = await page.evaluate("Array.from(document.querySelectorAll('.pk-row .pk-size')).slice(0,3).map(function(e){return e.textContent})");
-    ok('sizes small to large inside a kind', JSON.stringify(sizes) === '["0.5 oz","1 oz","1 oz"]', sizes);
+    ok('by color, then size, inside a kind', JSON.stringify(sizes) === '["0.5 oz","1 oz","1 oz"]', sizes);
     ok('rows with stock keep their tint', await page.evaluate("document.querySelectorAll('.pk-row.has-stock').length") === 5);
     await page.fill('#search', 'blue 1oz');
     ok('search narrows to the one blue 1 oz', await page.evaluate("document.querySelectorAll('.pk-row').length") === 1);

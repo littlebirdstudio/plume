@@ -2372,4 +2372,10 @@ spec is in the backlog history and summarized here.
   the next, and its items sit indented beneath it on a guide line. Minimum
   order qty is gone as a field; an item that had one shows it as a
   "Minimum order: N" line in its notes, moved there for good on save or Tidy.
-- `test-packaging.js` (90 checks) is the 17th suite.
+- **Second round, same evening:** Bottom added to the label parts (Front,
+  Back, Top, Bottom, Wrap; the Tidy parser reads "bottom" too). Items in a
+  kind now sort by color first, in swatch-list order (Amber, Blue, Green...),
+  then size, so all the amber droppers sit together. The list table is
+  capped at 840px with fixed widths for size, supplier, cost, stock and Buy,
+  because at full width it left a wide gap between Supplier and Cost.
+- `test-packaging.js` (91 checks) is the 17th suite.

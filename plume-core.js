@@ -2154,7 +2154,7 @@ var PK_COLORS = [
   { key: 'kraft',  label: 'Kraft',  fill: '#B08A5A' }
 ];
 var PK_MATERIALS = ['Glass', 'Plastic', 'Aluminum', 'Paperboard', 'Corrugated', 'Paper'];
-var PK_PARTS = ['Front', 'Back', 'Top', 'Wrap'];
+var PK_PARTS = ['Front', 'Back', 'Top', 'Bottom', 'Wrap'];
 
 // group decides which fields the form asks for; type is what the rest of
 // the app already read before kinds existed (container / box / label ...).
@@ -2320,7 +2320,15 @@ function pkStock(it) {
 }
 function pkSizeNum(s) { var m = String(s || '').match(/\d+(?:\.\d+)?|\.\d+/); return m ? parseFloat(m[0]) : 0; }
 var PK_GROUP_ORDER = { bottles: 0, boxes: 1, labels: 2, bands: 3, other: 4, sort: 5 };
-// Items grouped by kind, in section order: sizes small to large, then color.
+// Color order inside a kind: the swatch list's order (Amber, Blue, Green...),
+// then any other color typed, alphabetically, then items with no color.
+function pkColorRank(c) {
+  var k = pkColor(c);
+  if (k) for (var i = 0; i < PK_COLORS.length; i++) if (PK_COLORS[i] === k) return i;
+  return String(c || '').trim() ? PK_COLORS.length : PK_COLORS.length + 1;
+}
+// Items grouped by kind, in section order: by color, then size small to
+// large (Heide's call, 2026-10-18: all the amber droppers together).
 // Labels sort by product, then size, then part. Items without a kind come
 // last, under "Needs sorting".
 function pkGroups(list) {
@@ -2346,8 +2354,9 @@ function pkGroups(list) {
         return pkProductName(a.forProduct).localeCompare(pkProductName(b.forProduct)) ||
                pkSizeNum(a.capacity) - pkSizeNum(b.capacity) || String(a.part || '').localeCompare(String(b.part || ''));
       }
-      return pkSizeNum(a.capacity) - pkSizeNum(b.capacity) || String(a.capacity || '').localeCompare(String(b.capacity || '')) ||
-             String(a.color || '').localeCompare(String(b.color || '')) || String(a.material || '').localeCompare(String(b.material || ''));
+      return pkColorRank(a.color) - pkColorRank(b.color) || String(a.color || '').toLowerCase().localeCompare(String(b.color || '').toLowerCase()) ||
+             pkSizeNum(a.capacity) - pkSizeNum(b.capacity) || String(a.capacity || '').localeCompare(String(b.capacity || '')) ||
+             String(a.material || '').localeCompare(String(b.material || ''));
     });
     return grp;
   });
@@ -2398,7 +2407,7 @@ function pkGuess(oldName, products) {
   else if (/alumin|\btins?\b/i.test(s)) g.material = 'Aluminum';
   else if (/mailer|shipper|corrugated/i.test(s)) g.material = 'Corrugated';
   else if (/kraft|card|paper/i.test(s) && pkKind(g.kind).group === 'boxes') g.material = 'Paperboard';
-  if (/\bfront\b/i.test(s)) g.part = 'Front'; else if (/\bback\b/i.test(s)) g.part = 'Back';
+  if (/\bfront\b/i.test(s)) g.part = 'Front'; else if (/\bback\b/i.test(s)) g.part = 'Back'; else if (/\bbottom\b/i.test(s)) g.part = 'Bottom';
   if (pkForProduct(g.kind)) {
     var best = null, bestScore = 0, low = s.toLowerCase();
     (products || pkProducts()).forEach(function (p) {
