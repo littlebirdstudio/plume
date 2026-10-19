@@ -97,6 +97,12 @@
   /* Inside the app shell (2026-10-18): the content sits on the white main
      surface beside the sidebar. */
   body.ps-shell .app-body { max-width: 1180px; padding: 28px clamp(16px, 4vw, 48px) 48px; }
+  #ing-search-row { margin: 2px 0 10px; }
+  #ing-search-row .ps-search { background: var(--cream); max-width: 440px; padding: 0 10px; }
+  #ing-search-row .ps-search:hover, #ing-search-row .ps-search:focus-within { background: var(--cream-dark); }
+  #ing-search-row .ps-search input { width: 100%; }
+  #ing-arch-btn .ps-i { width: 15px; height: 15px; }
+  .ing-arch-n { font-variant-numeric: tabular-nums; opacity: .7; }
   body.ps-shell .app-footer { background: transparent; }
   .ps-table tbody tr:last-child td { border-bottom: 1px solid var(--cream-border); }
   .ps-table .td-name { color: var(--ink); }
@@ -1190,7 +1196,7 @@
       <button type="button" class="ps-tab on" id="vt-list" onclick="setIngView('list')">List</button>
       <button type="button" class="ps-tab" id="vt-cheat" onclick="setIngView('cheat')">Cheat sheet</button>
       <div class="ps-tools">
-        <label class="ps-search" id="ing-search-wrap"><span id="ing-search-icon"></span><input type="search" id="search" placeholder="Search ingredients" aria-label="Search name, INCI, function, purpose or supplier" title="Searches name, INCI, function, purpose and supplier" oninput="renderTable()"></label>
+        <button type="button" class="ps-chip" id="ing-arch-btn" style="display:none" onclick="toggleShowArchivedIngs()" aria-pressed="false" title="Show archived ingredients in the list. Searching always finds them."></button>
         <button type="button" class="ps-btn-primary" id="ing-new-btn" onclick="openAdd()"><span id="ing-new-icon"></span>New</button>
         <div class="ps-menu-wrap">
           <button type="button" class="ps-icon-btn" data-ps-menu aria-label="More actions" aria-expanded="false" id="ing-more-btn"></button>
@@ -1235,8 +1241,11 @@
       <div id="recently-viewed-list" style="display:flex;gap:8px;flex-wrap:wrap"></div>
     </div>
 
-    <!-- Only rendered when something is archived; see syncArchiveBar(). -->
-    <div id="ing-arch-bar" style="display:none;align-items:center;justify-content:space-between;gap:12px;padding:8px 12px;margin-bottom:10px;border:1px solid var(--cream-border);border-radius:4px;background:var(--cream)"></div>
+    <!-- The list search sits just above the table; the archived toggle is in
+         the toolbar (Heide, 2026-10-18). -->
+    <div id="ing-search-row">
+      <label class="ps-search" id="ing-search-wrap"><span id="ing-search-icon"></span><input type="search" id="search" placeholder="Search ingredients" aria-label="Search name, INCI, function, purpose or supplier" title="Searches name, INCI, function, purpose and supplier" oninput="renderTable()"></label>
+    </div>
 
     <div class="ps-table-wrap">
       <table class="ps-table" id="ing-table">
@@ -2348,49 +2357,18 @@ function toggleRestrictedChip() {
 var showArchived = false;
 
 function syncArchiveBar() {
-  var bar = document.getElementById('ing-arch-bar');
-  if (!bar) return;
+  var btn = document.getElementById('ing-arch-btn');
+  if (!btn) return;
   var n = ingredients.filter(function(i) { return i.archived; }).length;
-  if (!n) { bar.style.display = 'none'; showArchived = false; return; }
-  bar.style.display = 'flex';
-
-  // The wording has to follow the state. It used to say "hidden from this
-  // list" in both, so with archived showing, the one element that explains
-  // the extra rows was flatly contradicting them. Turning the toggle on from
-  // a search and then clearing the search leaves the whole library on screen
-  // with archived mixed in, and that banner was the only thing that could
-  // have said so.
-  // Three states, because the archive behaves differently while searching.
-  var inResults = archivedInResults();
-  var searching = !!(document.getElementById('search').value || '').trim();
-  var msg, lit;
-
-  if (searching) {
-    lit = inResults > 0;
-    msg = inResults
-      ? 'Your search is also looking in the archive, and found ' + inResults +
-        ' archived ingredient' + (inResults === 1 ? '' : 's') + ', tagged below.'
-      : 'Searching the archive too. No archived ingredient matches this one, so it is safe to add as new.';
-  } else if (showArchived) {
-    lit = true;
-    msg = 'Showing ' + n + ' archived ingredient' + (n === 1 ? '' : 's') +
-          ' alongside the rest. They stay out of the add-ingredient search either way.';
-  } else {
-    lit = false;
-    msg = n + ' archived ingredient' + (n === 1 ? '' : 's') +
-          ' hidden while browsing. Searching still finds them.';
-  }
-
-  bar.style.background  = lit ? 'var(--cream-dark)' : 'var(--cream)';
-  bar.style.borderColor = lit ? 'var(--bark-light)' : 'var(--cream-border)';
-  bar.innerHTML =
-    '<span style="font-size:12px;color:' + (lit ? 'var(--ink)' : 'var(--ink-lighter)') + '">' +
-      esc(msg) +
-    '</span>' +
-    (searching ? '' :
-      '<button class="btn btn-sm" onclick="toggleShowArchivedIngs()">' +
-        (showArchived ? 'Hide archived' : 'Show ' + n + ' archived') +
-      '</button>');
+  if (!n) { btn.style.display = 'none'; showArchived = false; return; }
+  // Just the button, no explanation (her call). Its state has to be visible
+  // on its own, since it is all that accounts for archived rows in the list:
+  // "on" styling and Hide/Show wording follow showArchived.
+  btn.style.display = ingView === 'list' ? '' : 'none';
+  btn.classList.toggle('on', showArchived);
+  btn.setAttribute('aria-pressed', showArchived ? 'true' : 'false');
+  btn.innerHTML = Plume.icon('archive') + (showArchived ? 'Hide archived' : 'Show archived') +
+    ' <span class="ing-arch-n">' + n + '</span>';
 }
 
 function toggleShowArchivedIngs() {
@@ -2465,7 +2443,7 @@ function renderTable() {
     // No "but it is in the archive" hint is needed any more: a search now
     // returns archived matches directly, so reaching this really does mean
     // nothing matches anywhere.
-    tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><p>' + (noActive ? 'No ingredients yet' : (lowStockActive ? 'No low stock items' : (inStockActive ? 'No ingredients in stock' : 'No results'))) + '</p>' +
+    tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><p>' + (noActive ? 'No ingredients yet' : (lowStockActive ? 'No low stock items' : (inStockActive ? 'No ingredients in stock' : ((document.getElementById('search').value || '').trim() ? 'No results, archived ingredients included' : 'No results')))) + '</p>' +
       '<span>' + (noActive ? 'Click &quot;+ New ingredient&quot; to get started, or use Quick add from Settings for a curated starter list' : (lowStockActive ? 'All stocked items are above their threshold' : (inStockActive ? 'Add lot quantities to ingredients you have on hand' : 'Try adjusting your search or filters'))) + '</span></div></td></tr>';
     return;
   }
@@ -2691,9 +2669,9 @@ function setIngView(v) {
   document.body.classList.toggle('cs-wide', ingView === 'cheat');
   document.getElementById('vt-list').classList.toggle('on',  ingView === 'list');
   document.getElementById('vt-cheat').classList.toggle('on', ingView === 'cheat');
-  // The toolbar search belongs to the list; the cheat sheet has its own.
-  var sw = document.getElementById('ing-search-wrap');
-  if (sw) sw.style.display = ingView === 'list' ? '' : 'none';
+  // The archived toggle belongs to the list; the cheat sheet leaves archived
+  // ingredients out. (The list search lives inside list-mode.)
+  syncArchiveBar();
   Store.set('plume_ing_view', ingView);
   if (ingView === 'cheat') PlumeCheat.render(ingredients);
 }

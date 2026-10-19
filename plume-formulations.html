@@ -495,6 +495,149 @@ span.ing-name-btn{text-decoration:none}
 .palette-swatch-stripes span { flex:1; height:100%; display:block; }
 .palette-swatch-label { font-size:11px; color:var(--ink-light); text-align:center; letter-spacing:0.02em; }
 .palette-swatch.active .palette-swatch-label { color:var(--ink); font-weight:600; }
+/* ── App shell (2026-10-18, round 2 as previewed with Heide) ──────────
+   Sidebar and colour-block head come from core; everything below adapts
+   this module's own pieces. Phase boxes keep their colours and structure
+   (session 15-16 work): only radius and type are softened. */
+body.ps-shell .app-body { max-width: 1240px; margin: 0; padding: 28px clamp(16px, 4vw, 48px) 48px; }
+body.ps-shell { font-family: 'DM Sans', sans-serif; }
+
+/* List */
+.fl-search { margin: 2px 0 14px; }
+.fl-search .ps-search { background: var(--cream); max-width: 440px; padding: 0 10px; }
+.fl-search .ps-search:hover, .fl-search .ps-search:focus-within { background: var(--cream-dark); }
+.fl-search .ps-search input { width: 100%; }
+#fl-arch-btn .ps-i { width: 15px; height: 15px; }
+.fl-arch-n { opacity: .7; font-variant-numeric: tabular-nums; }
+body.ps-shell .cards-grid { grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+body.ps-shell .fcard { border-radius: 12px; padding: 13px 15px 11px; display: flex; flex-direction: column; gap: 6px; transition: border-color .12s, background .12s; }
+body.ps-shell .fcard:hover { border-color: var(--bark-light); background: color-mix(in srgb, var(--bark) 4%, var(--white)); }
+body.ps-shell .fcard-name { font-family: 'DM Sans', sans-serif; font-size: 15.5px; font-weight: 600; color: var(--ink); margin: 0; line-height: 1.3; }
+body.ps-shell .fcard-meta { font-size: 12.5px; margin: 0; }
+body.ps-shell .fcard-tags { align-items: center; }
+.fcard-dots { display: inline-flex; gap: 4px; margin-left: 2px; }
+.fcard-dots .pdot { width: 9px; height: 9px; }
+body.ps-shell .fcard-foot { margin-top: 2px; padding-top: 7px; font-size: 12.5px; color: var(--ink-light); font-variant-numeric: tabular-nums; }
+body.ps-shell .fcard-foot .ps-muted { font-size: 12px; }
+.st { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 5px; white-space: nowrap; line-height: 1.6; background: color-mix(in srgb, var(--ink) 8%, transparent); color: var(--ink-light); }
+.st-approved { background: var(--sage-light); color: var(--sage-dark); }
+.st-testing { background: var(--warning-bg); color: var(--warning); }
+.st-retired { background: transparent; color: var(--ink-lighter); box-shadow: inset 0 0 0 1px var(--cream-border); }
+body.ps-shell .empty p { font-family: 'DM Sans', sans-serif; font-size: 17px; font-weight: 500; }
+
+/* Editor top bar */
+.fe-top { display: flex; align-items: center; gap: 8px; margin: -8px 0 16px; min-height: 34px; flex-wrap: wrap; }
+.fe-crumb { display: flex; align-items: center; gap: 6px; color: var(--ink-lighter); font-size: 13.5px; min-width: 0; }
+.fe-crumb button { font: inherit; border: 0; background: none; padding: 3px 6px; margin-left: -6px; border-radius: 6px; color: var(--ink-light); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.fe-crumb button:hover { background: var(--cream-dark); color: var(--ink); }
+.fe-crumb .ps-i { width: 16px; height: 16px; }
+.fe-crumb .cur { color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 40vw; }
+.fe-saved { font-size: 12.5px; color: var(--ink-lighter); display: inline-flex; gap: 5px; align-items: center; margin-right: 4px; }
+.fe-saved .ps-i { width: 14px; height: 14px; }
+
+/* Header block: name, purpose, the three fields */
+.ps-page-head.fe-head { align-items: flex-start; flex-wrap: nowrap; gap: 14px; }
+.fe-head .ps-title-icon { margin-top: 2px; }
+.fe-head-body { flex: 1; min-width: 0; }
+.fe-name { width: 100%; border: 0; outline: none; background: transparent; padding: 0 4px; margin: 0 0 0 -4px; font-family: 'DM Sans', sans-serif; font-size: 30px; font-weight: 600; letter-spacing: -.01em; line-height: 1.2; color: var(--ink); border-radius: 6px; }
+.fe-intent { display: block; width: 100%; border: 0; outline: none; resize: none; background: transparent; padding: 2px 4px; margin: 4px 0 0 -4px; color: var(--ink-light); font-family: 'DM Sans', sans-serif; font-size: 14.5px; line-height: 1.5; border-radius: 6px; overflow: hidden; min-height: 0; }
+.fe-name:hover, .fe-intent:hover { background: color-mix(in srgb, var(--white) 55%, transparent); }
+.fe-name:focus, .fe-intent:focus { background: color-mix(in srgb, var(--white) 70%, transparent); }
+.fe-name::placeholder, .fe-intent::placeholder { color: var(--ink-lighter); }
+.fe-meta { display: flex; flex-wrap: wrap; gap: 8px 22px; margin-top: 12px; align-items: flex-start; }
+.fe-mf { display: flex; flex-direction: column; gap: 3px; }
+.fe-mf > label { font-size: 11.5px; color: var(--ink-light); line-height: 1.4; }
+.fe-mf > label > span:not(.ph-word) { color: var(--ink-lighter); }
+.fe-mf select, .fe-mf .ph-target input { font-family: 'DM Sans', sans-serif; font-size: 13.5px; background: var(--white); color: var(--ink); border: 1px solid var(--cream-border); border-radius: 7px; padding: 4px 8px; outline: none; }
+.fe-mf select:focus, .fe-mf .ph-target input:focus { border-color: var(--bark); }
+.fe-mf .ph-target input { width: 60px; }
+.fe-mf select:disabled, .fe-mf .ph-target input:disabled { background: transparent; opacity: 1; color: var(--ink); }
+.fe-mf .ph-err { max-width: 260px; }
+
+/* Version tabs, as the toolbar tabs elsewhere */
+body.ps-shell .var-strip { gap: 0; margin: 22px 0 0; border-bottom: 1px solid var(--cream-border); align-items: flex-end; }
+body.ps-shell .var-tab { font-size: 14px; font-weight: 400; padding: 8px 2px; margin: 0 14px -1px 0; border: 0; border-bottom: 2px solid transparent; border-radius: 0; color: var(--ink-lighter); background: none; }
+body.ps-shell .var-tab:hover { background: none; color: var(--ink-light); }
+body.ps-shell .var-tab.sel { background: none; border: 0; border-bottom: 2px solid var(--ink); color: var(--ink); font-weight: 500; }
+body.ps-shell .var-dot { background: var(--bark); }
+body.ps-shell .var-add { font-size: 14px; padding: 8px 2px; margin: 0 14px -1px 0; border-radius: 0; background: none; color: var(--ink-lighter); }
+body.ps-shell .var-add:hover { background: none; color: var(--ink); }
+.var-notes-btn { margin-bottom: 6px; }
+.var-notes-btn .ps-i { width: 15px; height: 15px; }
+.var-notes-btn .vn-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--bark); }
+body.ps-shell .var-bar { margin: 10px 0 0; font-size: 13px; }
+body.ps-shell .var-inuse { color: var(--ink); font-weight: 500; }
+body.ps-shell .var-bar .btn { font-family: 'DM Sans', sans-serif; font-size: 13px; letter-spacing: 0; text-transform: none; padding: 3px 8px; border: 0; border-radius: 6px; background: none; color: var(--ink-light); }
+body.ps-shell .var-bar .btn:hover { background: var(--cream-dark); color: var(--ink); }
+body.ps-shell .var-bar .btn-danger { color: var(--danger); }
+body.ps-shell #lock-bar .lock-bar, body.ps-shell #arch-bar-ed .lock-bar { margin: 12px 0 0; border: 0; border-radius: 9px; background: var(--cream); padding: 8px 12px; font-size: 13px; }
+body.ps-shell #lock-bar .lock-bar.is-open { background: var(--warning-bg); }
+body.ps-shell #lock-bar .btn, body.ps-shell #arch-bar-ed .btn { font-family: 'DM Sans', sans-serif; font-size: 13px; text-transform: none; letter-spacing: 0; border-radius: 7px; background: var(--white); }
+
+/* Body grid */
+body.ps-shell .ed-layout { grid-template-columns: minmax(0, 1fr) 300px; gap: 32px; margin-top: 22px; }
+body.ps-shell .ed-sidebar { top: 16px; }
+body.ps-shell .col-hdr, body.ps-shell .soap-col-hdr { font-size: 11.5px; letter-spacing: 0; text-transform: none; font-weight: 400; padding-left: 24px; padding-right: 24px; }
+
+/* Phase boxes: unchanged colours, softer corners, sentence-case band */
+body.ps-shell .phase-group { border-radius: 10px; margin-bottom: 14px; padding-bottom: 6px; }
+body.ps-shell .phase-label { font-size: 12.5px; font-weight: 600; letter-spacing: 0; text-transform: none; padding: 7px 12px; margin-bottom: 6px; }
+body.ps-shell .ing-row, body.ps-shell .soap-row { border-radius: 7px; }
+
+/* Add bar */
+body.ps-shell .ing-search { font-size: 14px; padding: 8px 12px; border-radius: 8px; background: var(--cream); border-color: transparent; }
+body.ps-shell .ing-search:hover { background: var(--cream-dark); }
+body.ps-shell .ing-search:focus { background: var(--white); border-color: var(--bark); }
+body.ps-shell #addin-btn.active, body.ps-shell #addin-btn.on { background: var(--ink); color: var(--white); border-color: var(--ink); }
+
+/* Method / Usage log / Change history */
+.fe-sub { margin-top: 28px; }
+.fe-sub .ps-toolbar { margin-top: 0; }
+.et-ct { color: var(--ink-lighter); font-weight: 400; margin-left: 5px; font-size: 13px; }
+.et-ct:empty { display: none; }
+.fe-pane { padding-top: 12px; }
+#f-instruct { width: 100%; min-height: 110px; font-family: 'DM Sans', sans-serif; font-size: 14px; line-height: 1.6; color: var(--ink); background: var(--white); border: 1px solid var(--cream-border); border-radius: 9px; padding: 10px 12px; resize: vertical; outline: none; }
+#f-instruct:focus { border-color: var(--bark); }
+#f-instruct:disabled { background: var(--cream); border-color: transparent; color: var(--ink); }
+.fe-hint { font-size: 12.5px; color: var(--ink-lighter); margin-top: 6px; }
+body.ps-shell .hist-row, body.ps-shell .use-entry { font-size: 13px; padding: 10px 0; }
+body.ps-shell .hist-date, body.ps-shell .use-date { font-size: 13px; }
+body.ps-shell .hist-changes, body.ps-shell .hist-note { font-size: 13px; }
+body.ps-shell .hist-scroll { max-height: 420px; }
+
+/* Right column cards */
+body.ps-shell .sb-panel { border-radius: 11px; margin-bottom: 14px; }
+body.ps-shell .sb-hdr { background: transparent; padding: 12px 16px 0; font-size: 12.5px; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--ink-lighter); }
+body.ps-shell .sb-body { padding: 10px 16px 14px; }
+body.ps-shell .batch-inp { font-size: 28px; font-weight: 600; color: var(--ink); width: 110px; text-align: left; border-bottom-width: 1.5px; }
+.batch-btns { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.batch-btns .ps-chip { padding: 2px 9px; font-size: 12.5px; }
+#total-block { margin-bottom: 10px; }
+.addin-total-lbl { display: flex !important; align-items: center; gap: 8px; cursor: pointer; font-size: 13px !important; letter-spacing: 0 !important; text-transform: none !important; color: var(--ink-light) !important; margin: 0 0 2px !important; }
+.addin-total-lbl input { width: auto; margin: 0; }
+.addin-total-hint { font-size: 11.5px; color: var(--ink-lighter); line-height: 1.45; margin-bottom: 12px; }
+.fe-make { width: 100%; justify-content: center; padding: 9px 12px; font-size: 14px; }
+.fe-lnk { font-family: 'DM Sans', sans-serif; border: 0; background: none; padding: 2px 6px; border-radius: 6px; color: var(--ink-light); cursor: pointer; font-size: 13px; }
+.fe-lnk:hover { background: var(--cream-dark); color: var(--ink); }
+body.ps-shell .inci-list { font-size: 13px; color: var(--ink); }
+
+/* Notes panel */
+.np-h { margin: 0 0 4px; font-size: 20px; font-weight: 600; }
+.np-sub { color: var(--ink-lighter); font-size: 13px; margin: 0 0 14px; }
+.np-text { width: 100%; min-height: 300px; font-family: 'DM Sans', sans-serif; font-size: 14px; line-height: 1.6; color: var(--ink); background: var(--white); border: 1px solid var(--cream-border); border-radius: 9px; padding: 10px 12px; resize: vertical; outline: none; }
+.np-text:focus { border-color: var(--bark); }
+.np-hint { font-size: 12.5px; color: var(--ink-lighter); margin: 6px 0 0; }
+
+@media (max-width: 980px) {
+  body.ps-shell .ed-layout { grid-template-columns: 1fr; }
+  body.ps-shell .ed-sidebar { position: static; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+  body.ps-shell .sb-panel { margin-bottom: 0; }
+}
+@media (max-width: 760px) {
+  .fe-name { font-size: 24px; }
+  body.ps-shell .app-body { padding-top: 18px; }
+}
+@media print { .ps-side, .fe-top, .fe-sub .ps-toolbar, .var-notes-btn { display: none !important; } body.ps-shell { padding-left: 0 !important; } }
 </style>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#404834">
@@ -502,120 +645,122 @@ span.ing-name-btn{text-decoration:none}
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 </head>
 <body>
-<header class="app-header">
-  <div>
-    <div class="brand-name">Plume</div>
-    <div class="brand-sub">by Little Bird Studio &middot; Formulations</div>
-  </div>
-  <div class="hdr-actions">
-    <a href="plume-ingredients.html" target="plume-ingredients" class="btn btn-ghost">Ingredients</a>
-    <a href="plume-packaging.html" target="plume-packaging" class="btn btn-ghost">Packaging</a>
-    <a href="plume-costing.html" target="plume-costing" class="btn btn-ghost">Products &amp; Costing</a>
-    <a href="plume-batchlog.html" target="plume-batchlog" class="btn btn-ghost">Batches</a>
-    <span style="width:1px;height:20px;background:rgba(253,252,250,0.2);margin:0 4px"></span>
-    <button class="btn btn-ghost" onclick="exportData()">Export backup</button>
-    <label class="btn btn-ghost" style="cursor:pointer">Import<input type="file" accept=".json" style="display:none" onchange="importData(event)"></label>
-    <button class="btn btn-ghost" onclick="openSettings()" title="Settings &amp; appearance">⚙ Settings</button>
-  </div>
-</header>
-<nav class="app-nav">
-  <button class="nav-tab active" id="nav-list" onclick="goList()">All formulations</button>
-  <button class="nav-tab" id="nav-ed" style="display:none">Editor</button>
-</nav>
+<!-- The sidebar (Plume.shell) replaces the old header; Export and Import
+     are in the list's ⋯ menu, Settings in the sidebar. -->
+<input type="file" id="import-file-input" accept=".json" style="display:none" onchange="importData(event)">
 <div class="app-body">
   <div id="stor-banner-slot"></div>
   <div id="list-view">
-    <div class="sec-header">
-      <div class="sec-title">Your formulations</div>
-      <button class="btn btn-primary" onclick="newFormula()">+ New formulation</button>
+    <div class="ps-page-head">
+      <div>
+        <div class="ps-title"><span class="ps-title-icon" data-ps-icon="formulations"></span><h1>Formulations</h1></div>
+        <div class="ps-summary" id="fl-summary"></div>
+      </div>
     </div>
+    <div class="ps-toolbar">
+      <span class="ps-tab on">All formulations</span>
+      <div class="ps-tools">
+        <button type="button" class="ps-chip" id="fl-arch-btn" style="display:none" onclick="toggleShowArchived()" aria-pressed="false" title="Show archived formulations in the list. Searching always finds them."></button>
+        <button type="button" class="ps-btn-primary" onclick="newFormula()"><span data-ps-icon="plus"></span>New</button>
+        <div class="ps-menu-wrap">
+          <button type="button" class="ps-icon-btn" data-ps-menu aria-label="More actions" aria-expanded="false"><span data-ps-icon="more"></span></button>
+          <div class="ps-menu" role="menu">
+            <button type="button" onclick="exportData()"><span data-ps-icon="download"></span>Export backup</button>
+            <button type="button" onclick="document.getElementById('import-file-input').click()"><span data-ps-icon="upload"></span>Import</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="ps-chips" id="fl-chips"></div>
+    <div class="fl-search"><label class="ps-search"><span data-ps-icon="search"></span><input type="search" id="fl-search" placeholder="Search formulations, types or version names" aria-label="Search formulations" oninput="renderCards()"></label></div>
     <div id="fcard-container"></div>
   </div>
+
   <div id="editor-view">
-    <button class="back-lnk" onclick="goList()">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12L6 8l4-4"/></svg>
-      All formulations
-    </button>
-    <div class="ed-header">
-      <div style="flex:1">
-        <input class="ed-name" id="f-name" placeholder="Formula name..." oninput="markDirty()">
-        <div style="font-size:12px;color:var(--ink-lighter);margin-top:4px" id="f-ver-lbl"></div>
-      </div>
-      <div style="display:flex;gap:8px;flex-shrink:0">
-        <button class="btn" onclick="printFormula()">Print</button>
-        <button class="btn" onclick="duplicateFormula()" title="Copy the whole formulation, with all its versions">Duplicate</button>
-        <button class="btn btn-primary" onclick="saveFormula()">Save</button>
-        <button class="btn btn-sm" id="archive-btn" onclick="toggleArchiveFormula()">Archive</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteFormula()">Delete</button>
+    <div class="fe-top">
+      <div class="fe-crumb"><button type="button" onclick="goList()"><span data-ps-icon="formulations"></span>Formulations</button><span aria-hidden="true">/</span><span class="cur" id="fe-crumb-cur"></span></div>
+      <span class="ps-grow"></span>
+      <span class="fe-saved" id="save-state"></span>
+      <button type="button" class="ps-link-btn" onclick="printFormula()" title="Bench sheet for this version at the batch size shown"><span data-ps-icon="print"></span>Print</button>
+      <div class="ps-menu-wrap">
+        <button type="button" class="ps-icon-btn" data-ps-menu aria-label="More actions" aria-expanded="false"><span data-ps-icon="more"></span></button>
+        <div class="ps-menu" role="menu">
+          <button type="button" onclick="duplicateFormula()" title="Copy the whole formulation, with all its versions"><span data-ps-icon="copy"></span>Duplicate</button>
+          <button type="button" onclick="toggleArchiveFormula()"><span data-ps-icon="archive"></span><span id="archive-btn">Archive</span></button>
+          <hr>
+          <button type="button" class="ps-menu-danger" onclick="deleteFormula()"><span data-ps-icon="trash"></span>Delete</button>
+        </div>
       </div>
     </div>
+
+    <!-- Name, purpose and the three fields sit in the colour block. -->
+    <div class="ps-page-head fe-head">
+      <span class="ps-title-icon" data-ps-icon="formulations"></span>
+      <div class="fe-head-body">
+        <input class="fe-name" id="f-name" placeholder="Formula name..." aria-label="Formula name" oninput="markDirty();syncCrumb()">
+        <textarea class="fe-intent" id="f-notes" rows="1" placeholder="What is this formula for? Goals, target skin type, inspiration..." aria-label="Intention / purpose (all versions)" oninput="markDirty();growIntent()"></textarea>
+        <div class="fe-meta">
+          <div class="fe-mf">
+            <label for="f-type">Product type <span>· all versions</span></label>
+            <select id="f-type" onchange="onTypeChange()"></select>
+          </div>
+          <div class="fe-mf">
+            <label for="f-status">Status <span>· this version</span></label>
+            <select id="f-status" onchange="onStatusChange(this)">
+              <option value="draft">Draft</option><option value="testing">Testing</option>
+              <option value="approved">Approved</option><option value="retired">Retired</option>
+            </select>
+          </div>
+          <div class="fe-mf" id="ph-target-row" style="display:none">
+            <label for="f-ph-min" title="Optional. Readings in the usage log and batches show as in or out of this range.">Target <span class="ph-word">pH</span> <span>· this version</span></label>
+            <div class="ph-target">
+              <input type="text" inputmode="decimal" id="f-ph-min" placeholder="min" aria-label="Target pH minimum" oninput="markDirty();checkPhField(this)">
+              <span class="ph-to">to</span>
+              <input type="text" inputmode="decimal" id="f-ph-max" placeholder="max" aria-label="Target pH maximum" oninput="markDirty();checkPhField(this)">
+            </div>
+            <div class="ph-err" id="ph-target-err" style="display:none"></div>
+          </div>
+        </div>
+        <div id="f-ver-lbl" hidden></div>
+      </div>
+    </div>
+
     <div class="var-strip" id="var-strip"></div>
     <div class="var-bar" id="var-bar"></div>
     <div id="arch-bar-ed"></div>
     <div id="lock-bar"></div>
-    <div id="notes-view" style="display:none">
-      <div class="notes-wrap">
-        <h3>Formulation notes</h3>
-        <div class="notes-hint">Notes that belong to the whole formulation rather than any one version &mdash; what you have learned comparing them, when to reach for which, supplier quirks, customer feedback.</div>
-        <textarea id="f-formnotes" placeholder="e.g. Candelilla makes a firmer bar but runs about 3x the cost. Beeswax version is fine in winter but goes soft above 70F." oninput="markDirty()"></textarea>
-      </div>
-    </div>
+    <!-- Formulation notes open in the slide-in panel (selectNotes). This
+         field is what saveFormula reads; the panel writes into it. -->
+    <div id="notes-view" style="display:none"><textarea id="f-formnotes" oninput="markDirty()"></textarea></div>
+
     <div class="ed-layout" id="ed-layout">
       <div class="ed-main">
-        <div class="meta-card">
-          <div class="meta-grid">
-            <div class="mf">
-              <label>Product type <span class="mf-scope">all versions</span></label>
-              <select id="f-type" onchange="onTypeChange()">
-              </select>
-            </div>
-            <div class="mf">
-              <label>Status <span class="mf-scope">this version</span></label>
-              <select id="f-status" onchange="onStatusChange(this)">
-                <option value="draft">Draft</option><option value="testing">Testing</option>
-                <option value="approved">Approved</option><option value="retired">Retired</option>
-              </select>
-            </div>
-            <div class="mf meta-full" id="ph-target-row" style="display:none">
-              <label>Target <span class="ph-word">pH</span> <span class="mf-scope">this version</span></label>
-              <div class="ph-target">
-                <input type="text" inputmode="decimal" id="f-ph-min" placeholder="min" aria-label="Target pH minimum" oninput="markDirty();checkPhField(this)">
-                <span class="ph-to">to</span>
-                <input type="text" inputmode="decimal" id="f-ph-max" placeholder="max" aria-label="Target pH maximum" oninput="markDirty();checkPhField(this)">
-              </div>
-              <div class="ph-err" id="ph-target-err" style="display:none"></div>
-              <div class="ph-hint">Optional. Leave blank if you don't know it yet. Readings in the usage log and batches show as in or out of this range.</div>
-            </div>
-            <div class="mf meta-full">
-              <label>Intention / purpose <span class="mf-scope">all versions</span></label>
-              <textarea id="f-notes" rows="2" placeholder="What is this formula for? Goals, target skin type, inspiration..." oninput="markDirty()"></textarea>
-            </div>
-            <div class="mf meta-full">
-              <label>Method / instructions <span class="mf-scope">this version</span></label>
-              <textarea id="f-instruct" rows="3" placeholder="Step-by-step process: temperatures, mixing order, special handling..." oninput="markDirty()"></textarea>
-            </div>
-            <div class="mf meta-full" id="addin-total-row" style="display:none">
-              <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-                <input type="checkbox" id="f-addins-in-total" onchange="onAddinsInTotalChange()" style="width:auto;margin:0">
-                <span>Count add-ins toward total %</span>
-              </label>
-              <div style="font-size:11px;color:var(--ink-lighter);margin-top:4px;line-height:1.5">
-                Standard cosmetic practice includes fragrance, essential oils, and preservatives in the 100% batch total. Turn this off only if you want to track those amounts outside the formula percentage.
-                <span id="addin-soap-note" style="display:none">Soap recipes traditionally calculate fragrance and additives PPO (per pound of oils), separate from the oil total — add-ins are always outside the oil 100% for soap.</span>
-              </div>
-            </div>
-          </div>
-        </div>
         <div id="phase-groups"></div>
         <div class="add-bar">
           <div class="srch-wrap">
             <input class="ing-search" id="ing-search" placeholder="Search by name, function, or what it's for..." oninput="searchIngs(this.value)" autocomplete="off">
             <div class="ing-dd" id="ing-dd" style="display:none"></div>
           </div>
-          <button class="btn btn-sm" id="addin-btn" onclick="toggleAddin()" title="Changes what the search adds: the next ingredient goes in as an add-in, measured in drops or grams">As add-in</button>
+          <button class="ps-chip" id="addin-btn" onclick="toggleAddin()" title="Changes what the search adds: the next ingredient goes in as an add-in, measured in drops or grams">As add-in</button>
         </div>
-        <div id="addin-note" style="font-size:11px;color:var(--clay);margin-top:4px;display:none">Add-in mode on -- next ingredient will not be counted in formula %</div>
-        <div id="ing-count" style="margin-top:0.5rem;font-size:12px;color:var(--ink-lighter)"></div>
+        <div id="addin-note" style="font-size:12px;color:var(--clay-dark);margin-top:6px;display:none">Add-in mode on: the next ingredient will not be counted in formula %</div>
+        <div id="ing-count" style="margin-top:6px;font-size:12px;color:var(--ink-lighter)"></div>
+
+        <!-- Method, usage log and history: tabs under the recipe. -->
+        <div class="fe-sub">
+          <div class="ps-toolbar">
+            <button type="button" class="ps-tab on" id="et-method" onclick="setEdTab('method')">Method</button>
+            <button type="button" class="ps-tab" id="et-log" onclick="setEdTab('log')">Usage log<span class="et-ct" id="et-log-ct"></span></button>
+            <button type="button" class="ps-tab" id="et-hist" onclick="setEdTab('hist')">Change history<span class="et-ct" id="et-hist-ct"></span></button>
+            <div class="ps-tools"><button type="button" class="ps-link-btn" id="et-log-add" style="display:none" onclick="openUsage()"><span data-ps-icon="plus"></span>Log use</button></div>
+          </div>
+          <div class="fe-pane" id="ep-method">
+            <textarea id="f-instruct" rows="5" placeholder="Step-by-step process: temperatures, mixing order, special handling..." oninput="markDirty()"></textarea>
+            <div class="fe-hint">This version only.</div>
+          </div>
+          <div class="fe-pane" id="ep-log" style="display:none"><div id="use-panel"></div></div>
+          <div class="fe-pane" id="ep-hist" style="display:none"><div id="hist-panel"><div id="hist-body"></div></div></div>
+        </div>
       </div>
       <div class="ed-sidebar">
         <div class="sb-panel" id="sb-soap-lye" style="display:none">
@@ -674,36 +819,45 @@ span.ing-name-btn{text-decoration:none}
           <div class="sb-hdr" id="batch-panel-hdr">Batch size</div>
           <div class="sb-body">
             <div class="batch-ctrl">
-              <input class="batch-inp" type="text" inputmode="decimal" id="batch-sz" value="100" onclick="this.select()" oninput="onBatchIn(this.value)" onblur="onBatchBlur(this.value)">
+              <input class="batch-inp" type="text" inputmode="decimal" id="batch-sz" value="100" aria-label="Batch size in grams" onclick="this.select()" oninput="onBatchIn(this.value)" onblur="onBatchBlur(this.value)">
               <span class="batch-unit">grams</span>
             </div>
-            <div style="font-size:11px;color:var(--ink-lighter);margin-bottom:8px;display:none" id="batch-soap-note">Oils must total 100% of this weight. Lye and water are calculated on top.</div>
-            <div id="batch-btns-skincare" style="display:flex;gap:6px;flex-wrap:wrap">
-              <button class="btn btn-sm" onclick="setBatch(50)">50g</button>
-              <button class="btn btn-sm" onclick="setBatch(100)">100g</button>
-              <button class="btn btn-sm" onclick="setBatch(250)">250g</button>
-              <button class="btn btn-sm" onclick="setBatch(500)">500g</button>
-              <button class="btn btn-sm" onclick="setBatch(1000)">1kg</button>
+            <div style="font-size:12px;color:var(--ink-lighter);margin-bottom:8px;display:none" id="batch-soap-note">Oils must total 100% of this weight. Lye and water are calculated on top.</div>
+            <div id="batch-btns-skincare" class="batch-btns">
+              <button class="ps-chip" onclick="setBatch(50)">50 g</button>
+              <button class="ps-chip" onclick="setBatch(100)">100 g</button>
+              <button class="ps-chip" onclick="setBatch(250)">250 g</button>
+              <button class="ps-chip" onclick="setBatch(500)">500 g</button>
+              <button class="ps-chip" onclick="setBatch(1000)">1 kg</button>
             </div>
-            <div id="batch-btns-soap" style="display:none;gap:6px;flex-wrap:wrap">
-              <button class="btn btn-sm" onclick="setBatch(500)">500g</button>
-              <button class="btn btn-sm" onclick="setBatch(1000)">1kg</button>
-              <button class="btn btn-sm" onclick="setBatch(1500)">1.5kg</button>
-              <button class="btn btn-sm" onclick="setBatch(2000)">2kg</button>
-              <button class="btn btn-sm" onclick="setBatch(3000)">3kg</button>
+            <div id="batch-btns-soap" class="batch-btns" style="display:none">
+              <button class="ps-chip" onclick="setBatch(500)">500 g</button>
+              <button class="ps-chip" onclick="setBatch(1000)">1 kg</button>
+              <button class="ps-chip" onclick="setBatch(1500)">1.5 kg</button>
+              <button class="ps-chip" onclick="setBatch(2000)">2 kg</button>
+              <button class="ps-chip" onclick="setBatch(3000)">3 kg</button>
             </div>
-            <button class="btn btn-primary" onclick="makeBatchFromFormula()" title="Open the batch log with this formula and batch size pre-filled" style="width:100%;margin-top:12px;padding:10px;font-size:13px">Make batch</button>
-          </div>
-        </div>
-        <div class="sb-panel">
-          <div class="sb-hdr">Formula total</div>
-          <div class="sb-body">
-            <div class="total-row">
-              <span style="font-size:12px;color:var(--ink-light)">Total percentage</span>
-              <span class="total-val" id="total-pct">0.00%</span>
+            <!-- Formula total lives with the batch size; hidden for soap,
+                 where the lye calculator takes its place. -->
+            <div id="total-block">
+              <div class="total-row">
+                <span style="font-size:13px;color:var(--ink-light)">Formula total</span>
+                <span class="total-val" id="total-pct">0.00%</span>
+              </div>
+              <div class="pct-outer"><div class="pct-inner" id="pct-bar" style="width:0%"></div></div>
+              <div style="font-size:12px;color:var(--ink-lighter)" id="total-note">Add ingredients to begin</div>
             </div>
-            <div class="pct-outer"><div class="pct-inner" id="pct-bar" style="width:0%"></div></div>
-            <div style="font-size:12px;color:var(--ink-lighter)" id="total-note">Add ingredients to begin</div>
+            <div class="mf" id="addin-total-row" style="display:none">
+              <label class="addin-total-lbl">
+                <input type="checkbox" id="f-addins-in-total" onchange="onAddinsInTotalChange()">
+                <span>Count add-ins toward total %</span>
+              </label>
+              <div class="addin-total-hint" title="Standard cosmetic practice includes fragrance, essential oils, and preservatives in the 100% batch total. Turn this off only if you want to track those amounts outside the formula percentage.">
+                Usual practice. Off tracks fragrance and the like outside the %.
+                <span id="addin-soap-note" style="display:none">Soap always measures add-ins by weight, outside the oil total.</span>
+              </div>
+            </div>
+            <button class="ps-btn-primary fe-make" onclick="makeBatchFromFormula()" title="Open the batch log with this formula and batch size pre-filled">Make batch</button>
           </div>
         </div>
         <div class="sb-panel">
@@ -715,23 +869,10 @@ span.ing-name-btn{text-decoration:none}
         <div class="sb-panel">
           <div class="sb-hdr">
             INCI list
-            <button class="btn btn-sm" id="copy-btn" onclick="copyInci()" style="font-size:10px;padding:3px 8px">Copy</button>
+            <button class="fe-lnk" id="copy-btn" onclick="copyInci()">Copy</button>
           </div>
           <div class="sb-body" id="inci-panel">
             <div style="font-size:12px;color:var(--ink-lighter)">INCI list generates as you add ingredients.</div>
-          </div>
-        </div>
-        <div class="sb-panel" id="hist-panel">
-          <div class="sb-hdr">Change history</div>
-          <div class="sb-body" id="hist-body"></div>
-        </div>
-        <div class="sb-panel">
-          <div class="sb-hdr">
-            Usage log
-            <button class="btn btn-sm" onclick="openUsage()" style="font-size:10px;padding:3px 8px">+ Log use</button>
-          </div>
-          <div class="sb-body" id="use-panel">
-            <div style="font-size:12px;color:var(--ink-lighter)">No uses logged yet.</div>
           </div>
         </div>
       </div>
@@ -905,7 +1046,7 @@ function loadAll() {
 // -- and since saving is automatic, that could otherwise go unnoticed for a
 // whole session. Plume.noteSaveFailed makes it loud.
 function saveAll() {
-  if (Store.setJSON(FORM_KEY, forms)) { Plume.noteSaveOk(); return true; }
+  if (Store.setJSON(FORM_KEY, forms)) { Plume.noteSaveOk(); if (Plume.refreshShell) Plume.refreshShell(); return true; }
   Plume.noteSaveFailed();
   return false;
 }
@@ -947,7 +1088,7 @@ function importData(e) {
 }
 
 // ── Utilities ─────────────────────────────────────────
-function markDirty() { dirty = true; }
+function markDirty() { var was = dirty; dirty = true; if (!was) renderSaveState(); }
 
 function isSoap() {
   // The two soap strings live in plume-core.js now -- Batchlog tests the
@@ -1281,22 +1422,59 @@ function goList() {
   if (lay) lay.style.display  = 'grid';
   if (nv)  nv.style.display   = 'none';
   if (dirty && curId && curVar()) saveFormula(true);
+  if (Plume.peek && Plume.peek.isOpen()) Plume.peek.close();
   document.getElementById('list-view').style.display = 'block';
   document.getElementById('editor-view').style.display = 'none';
-  document.getElementById('nav-list').classList.add('active');
-  document.getElementById('nav-ed').style.display = 'none';
   dirty = false;
   renderCards();
+  window.scrollTo(0, 0);
 }
 
 function showEditor(name) {
   document.getElementById('list-view').style.display = 'none';
   document.getElementById('editor-view').style.display = 'block';
-  document.getElementById('nav-list').classList.remove('active');
-  var tab = document.getElementById('nav-ed');
-  tab.style.display = 'inline-block';
-  tab.classList.add('active');
-  tab.textContent = name && name.length > 20 ? name.slice(0,20) + '...' : (name || 'Editor');
+  document.getElementById('fe-crumb-cur').textContent = name || '';
+  growIntent();
+  window.scrollTo(0, 0);
+}
+
+// The breadcrumb follows the name field as it is typed.
+function syncCrumb() {
+  document.getElementById('fe-crumb-cur').textContent = document.getElementById('f-name').value;
+}
+// The purpose line is a one-line textarea that grows with what is in it.
+function growIntent() {
+  var t = document.getElementById('f-notes');
+  if (!t) return;
+  t.style.height = 'auto';
+  t.style.height = t.scrollHeight + 'px';
+}
+
+// Saved / Save, top right. Saving is mostly automatic; this shows a Save
+// button only while there are changes to save.
+function renderSaveState(justSaved) {
+  var el = document.getElementById('save-state');
+  if (!el) return;
+  if (dirty) {
+    el.innerHTML = '<button type="button" class="ps-btn-primary" onclick="saveFormula()">Save</button>';
+  } else {
+    el.innerHTML = Plume.icon('check') + (justSaved ? 'Saved just now' : 'Saved');
+  }
+}
+
+// Method, Usage log and Change history under the recipe.
+var edTab = 'method';
+function setEdTab(t) {
+  edTab = t;
+  ['method', 'log', 'hist'].forEach(function (k) {
+    document.getElementById('et-' + k).classList.toggle('on', k === t);
+    document.getElementById('ep-' + k).style.display = k === t ? '' : 'none';
+  });
+  document.getElementById('et-log-add').style.display = t === 'log' ? '' : 'none';
+}
+function setTabCount(id, n) {
+  var el = document.getElementById(id);
+  if (el) el.textContent = n ? String(n) : '';
 }
 
 // ── Cards list ────────────────────────────────────────
@@ -1304,60 +1482,111 @@ function showEditor(name) {
 // toggle only appears when there is something archived to show, so the
 // control does not advertise a state most libraries never enter.
 var showArchived = false;
+var listStatus = '';   // status chip
+var listType   = '';   // type chip
 
 function toggleShowArchived() {
   showArchived = !showArchived;
   renderCards();
 }
+function setListStatus(st) { listStatus = st; renderCards(); }
+function setListType(t)    { listType = t; renderCards(); }
+
+function statusTag(st) {
+  st = st || 'draft';
+  return '<span class="st st-' + esc(st) + '">' + esc(st.charAt(0).toUpperCase() + st.slice(1)) + '</span>';
+}
+
+function renderListChrome(live) {
+  var counts = { approved: 0, testing: 0, draft: 0 };
+  live.forEach(function (f) { var st = f.status || 'draft'; if (counts[st] !== undefined) counts[st]++; });
+  document.getElementById('fl-summary').innerHTML =
+    '<span><b>' + live.length + '</b> formulation' + (live.length === 1 ? '' : 's') + '</span>' +
+    '<span><b>' + counts.approved + '</b> approved</span>' +
+    '<span><b>' + counts.testing + '</b> testing</span>' +
+    '<span><b>' + counts.draft + '</b> draft</span>';
+
+  var nArchived = forms.filter(function (f) { return f.archived; }).length;
+  if (!nArchived) showArchived = false;
+  var ab = document.getElementById('fl-arch-btn');
+  ab.style.display = nArchived ? '' : 'none';
+  ab.classList.toggle('on', showArchived);
+  ab.setAttribute('aria-pressed', showArchived ? 'true' : 'false');
+  ab.innerHTML = Plume.icon('archive') + (showArchived ? 'Hide archived' : 'Show archived') +
+    ' <span class="fl-arch-n">' + nArchived + '</span>';
+
+  var types = {};
+  forms.forEach(function (f) { if (f.type) types[f.type] = 1; });
+  var h = '';
+  [['', 'All'], ['approved', 'Approved'], ['testing', 'Testing'], ['draft', 'Draft']].forEach(function (c) {
+    h += '<button type="button" class="ps-chip' + (listStatus === c[0] ? ' on' : '') + '" onclick="setListStatus(\'' + c[0] + '\')">' + c[1] + '</button>';
+  });
+  h += '<span class="ps-chip-sep"></span><select class="ps-chip' + (listType ? ' on' : '') + '" aria-label="Product type" onchange="setListType(this.value)"><option value="">Type: all</option>';
+  Object.keys(types).sort().forEach(function (t) {
+    h += '<option value="' + esc(t) + '"' + (t === listType ? ' selected' : '') + '>' + esc(t) + '</option>';
+  });
+  h += '</select>';
+  document.getElementById('fl-chips').innerHTML = h;
+}
 
 function renderCards() {
   var el = document.getElementById('fcard-container');
+  var live = forms.filter(function (f) { return !f.archived; });
+  renderListChrome(live);
   if (!forms.length) {
-    el.innerHTML = '<div class="empty"><p>No formulations yet</p><span style="font-size:13px">Click "+ New formulation" to start building your first formula.</span></div>';
+    el.innerHTML = '<div class="empty"><p>No formulations yet</p><span style="font-size:13px">Click New to start building your first formula.</span></div>';
     return;
   }
 
-  var nArchived = forms.filter(function(f) { return f.archived; }).length;
-  var list = showArchived ? forms.slice() : forms.filter(function(f) { return !f.archived; });
-
-  var bar = '';
-  if (nArchived) {
-    bar = '<div class="arch-bar">' +
-      '<button class="btn btn-sm" onclick="toggleShowArchived()">' +
-      (showArchived ? 'Hide archived' : 'Show ' + nArchived + ' archived') +
-      '</button></div>';
-  }
+  // A search reaches the archive too, as in Ingredients: a name you type is
+  // a specific thing, and "no results" for something archived is how a
+  // duplicate gets made. Browsing keeps archived out unless asked.
+  var q = (document.getElementById('fl-search').value || '').toLowerCase().trim();
+  var list = forms.filter(function (f) {
+    if (f.archived && !showArchived && !q) return false;
+    if (listStatus && (f.status || 'draft') !== listStatus) return false;
+    if (listType && f.type !== listType) return false;
+    if (q) {
+      var hay = [f.name, f.type].concat((f.variants || []).map(function (v) { return v.label || ''; })).join(' ').toLowerCase();
+      if (hay.indexOf(q) === -1) return false;
+    }
+    return true;
+  });
 
   if (!list.length) {
-    el.innerHTML = bar + '<div class="empty"><p>Nothing here</p>' +
-      '<span style="font-size:13px">Every formulation is archived. Use the button above to see them.</span></div>';
+    el.innerHTML = '<div class="empty"><p>Nothing here</p><span style="font-size:13px">' +
+      (q ? 'No formulation matches, archived ones included.' :
+       (live.length ? 'Nothing matches these filters.' : 'Every formulation is archived. Use Show archived to see them.')) +
+      '</span></div>';
     return;
   }
 
-  var html = bar + '<div class="cards-grid">';
+  var html = '<div class="cards-grid">';
   list.forEach(function(f) {
     var phases = {}, phList = [];
     (f.lines||[]).forEach(function(l) {
       var ing = ings.find(function(i) { return i.id === l.ingId; });
-      if (ing && !phases[ing.phase]) { phases[ing.phase] = true; phList.push(ing.phase); }
+      var ph = ing ? normPhase(l.phase || ing.phase) : null;
+      if (l.addin || l.soapAddin) ph = null;
+      if (ph && !phases[ph]) { phases[ph] = true; phList.push(ph); }
     });
     var cost = calcBatchCost(f.lines||[], 100);
-    var costStr = cost !== null ? ('~$' + cost.toFixed(2) + '/100g') : 'No cost data';
-    var dateStr = f.updatedAt ? new Date(f.updatedAt).toLocaleDateString() : '--';
-    html += '<div class="fcard' + (f.archived ? ' fcard-archived' : '') + '" onclick="openFormula(\'' + f.id + '\')">';
+    var costStr = cost !== null ? ('$' + cost.toFixed(2) + ' <span class="ps-muted">/ 100 g</span>') : '<span class="ps-muted">No cost data</span>';
+    var d = f.updatedAt ? new Date(f.updatedAt) : null;
+    var dateStr = d && !isNaN(d.getTime()) ? d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+    html += '<div class="fcard' + (f.archived ? ' fcard-archived' : '') + '" tabindex="0" role="button" onclick="openFormula(\'' + f.id + '\')" onkeydown="if(event.key===\'Enter\')openFormula(\'' + f.id + '\')">';
     html += '<div class="fcard-name">' + esc(f.name) +
       (f.archived ? '<span class="arch-tag">archived</span>' : '') + '</div>';
     var nv    = (f.variants || []).length;
     var av    = activeVar(f);
     var vBit  = nv > 1
-      ? (esc(varTitle(av)) + ' &middot; ' + nv + ' versions')
+      ? (nv + ' versions, using ' + esc(varTitle(av)))
       : ('v' + ((av && av.num) || f.version || 1));
     html += '<div class="fcard-meta">' + esc(f.type || 'Formula') + ' &middot; ' + vBit + ' &middot; ' + (f.lines||[]).length + ' ingredients</div>';
-    html += '<div class="fcard-tags">';
-    phList.forEach(function(p) { html += '<span class="tag">' + p + '</span>'; });
-    html += '<span class="tag" style="background:var(--sage-light);color:var(--sage-dark)">' + (f.status||'draft') + '</span>';
-    html += '</div>';
-    html += '<div class="fcard-foot"><span>' + costStr + '</span><span>' + dateStr + '</span></div>';
+    html += '<div class="fcard-tags">' + statusTag(f.status) + '<span class="fcard-dots">';
+    phList.forEach(function(p) { html += '<i class="pdot dot-' + p + '" title="' + esc(p) + '"></i>'; });
+    html += '</span></div>';
+    html += '<div class="fcard-foot"><span>' + costStr + '</span><span class="ps-muted">' + dateStr + '</span></div>';
     html += '</div>';
   });
   html += '</div>';
@@ -1457,10 +1686,7 @@ function updateSoapUI() {
   if (soap && parseFloat(bsEl.value) <= 100) bsEl.value = 1000;
   if (!soap && parseFloat(bsEl.value) >= 500) bsEl.value = 100;
   // Hide formula % total for soap (lye calc replaces it)
-  document.querySelectorAll('.sb-panel').forEach(function(p) {
-    var hdr = p.querySelector('.sb-hdr');
-    if (hdr && hdr.textContent.trim() === 'Formula total') p.style.display = soap ? 'none' : 'block';
-  });
+  document.getElementById('total-block').style.display = soap ? 'none' : '';
   // Add-in button label
   var btn = document.getElementById('addin-btn');
   if (btn) btn.textContent = soap ? 'As additive' : 'As add-in';
@@ -2676,15 +2902,12 @@ function saveFormula(silent) {
   saveAll(); dirty = false;
   renderVarTabs();   // keeps the notes dot and version names current
   renderHistory();
+  renderSaveState(!silent);
   if (!silent) flashSaved();
 }
 
 function flashSaved() {
-  var el = document.getElementById('f-ver-lbl');
-  if (!el) return;
-  var base = el.getAttribute('data-base') || '';
-  el.textContent = base ? (base + ' \u2014 Saved') : 'Saved';
-  setTimeout(function() { el.textContent = base; }, 2000);
+  setTimeout(function() { if (!dirty) renderSaveState(false); }, 2500);
 }
 
 // ── Tab strip ─────────────────────────────────────────
@@ -2736,10 +2959,10 @@ function renderVarTabs() {
       (showRetired ? 'Hide retired' : 'Show ' + nRetired + ' retired') + '</button>';
   }
   html += '<span class="var-spacer"></span>';
-  var nCls = 'var-notes-tab' + (notesTab ? ' sel' : '');
-  html += '<button class="' + nCls + '" onclick="selectNotes()" title="Notes about the whole formulation">';
-  if ((f.formNotes || '').trim()) html += '<span class="vn-dot"></span>';
-  html += 'Notes</button>';
+  html += '<button type="button" class="ps-link-btn var-notes-btn" onclick="selectNotes()" title="Notes about the whole formulation">' + Plume.icon('note');
+  html += 'Notes';
+  if ((f.formNotes || '').trim()) html += '<span class="vn-dot" title="Has notes"></span>';
+  html += '</button>';
 
   strip.innerHTML = html;
   renderVarBar();
@@ -2977,18 +3200,26 @@ function selectVariant(vid) {
   loadVariantIntoEditor();
 }
 
+// Formulation notes slide in from the right, like the ingredient quick look,
+// so the recipe stays in view. The panel writes into #f-formnotes, which is
+// what saveFormula reads; closing the panel saves.
 function selectNotes() {
-  if (notesTab) return;
-  persistBeforeSwitch();
-  notesTab = true;
-  document.getElementById('ed-layout').style.display  = 'none';
-  document.getElementById('notes-view').style.display = 'block';
-  renderLockBar(false);
   var f = curForm();
-  document.getElementById('f-formnotes').value = (f && f.formNotes) || '';
-  document.getElementById('f-ver-lbl').setAttribute('data-base', 'Formulation notes');
-  document.getElementById('f-ver-lbl').textContent = 'Formulation notes';
-  renderVarTabs();
+  if (!f) return;
+  var fn = document.getElementById('f-formnotes');
+  Plume.peek.open(
+    '<h2 class="np-h">Formulation notes</h2>' +
+    '<p class="np-sub">' + esc(document.getElementById('f-name').value || f.name) + ' &middot; for every version, not just one</p>' +
+    '<textarea id="np-text" class="np-text" placeholder="What you have learned comparing versions, when to reach for which, supplier quirks, customer feedback."></textarea>' +
+    '<p class="np-hint">Saved when you close this panel.</p>',
+    { label: 'Notes', onClose: function () {
+        if (dirty && curForm()) saveFormula(true);
+        renderVarTabs();
+      } });
+  var t = document.getElementById('np-text');
+  t.value = fn.value;
+  t.addEventListener('input', function () { fn.value = t.value; markDirty(); });
+  setTimeout(function () { t.focus(); }, 250);
 }
 
 function loadVariantIntoEditor() {
@@ -3028,6 +3259,7 @@ function loadVariantIntoEditor() {
   renderVarTabs(); renderHistory(); renderUseLog(v);
   renderLines(); recalc();
   applyLockState();
+  renderSaveState();
 }
 
 function setActiveVariant(vid) {
@@ -3168,6 +3400,7 @@ function renderHistory() {
   if (!v) { body.innerHTML = ''; return; }
 
   var all = (v.history || []).slice().reverse();
+  setTabCount('et-hist-ct', all.length);
   if (!all.length) {
     body.innerHTML = '<div style="font-size:12px;color:var(--ink-lighter);line-height:1.5">No changes recorded yet. Every save that alters the formula gets logged here automatically.</div>';
     return;
@@ -3647,6 +3880,7 @@ function renderUseLog(v) {
   var el = document.getElementById('use-panel');
   if (!el) return;
   var log = ((v && v.usageLog) || []).slice();
+  setTabCount('et-log-ct', log.length);
   if (!log.length) {
     el.innerHTML = '<div style="font-size:12px;color:var(--ink-lighter)">No uses logged yet for this version.</div>';
     return;
@@ -3826,6 +4060,9 @@ if (typeof Plume === 'undefined') {
   // still remembers its own colour scheme independently of the others.
   Plume.setModule('formulations');
   Plume.boot(function () {
+    Plume.shell({ module: 'formulations' });
+    var icons = document.querySelectorAll('[data-ps-icon]');
+    for (var ii = 0; ii < icons.length; ii++) icons[ii].innerHTML = Plume.icon(icons[ii].getAttribute('data-ps-icon'));
     loadAll();
     // Deep link from Ingredients' "Used in" names: #f=<formulation id>
     if (location.hash.indexOf('#f=') === 0) {
