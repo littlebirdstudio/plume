@@ -9,8 +9,9 @@
 //
 // What this suite holds in place:
 //   1. core's parser, display, grouping and search
-//   2. old items (no kind) still list, under Needs sorting, and the Tidy
-//      screen converts only the ticked rows without touching stock or cost
+//   2. old items (no kind) still list, under Needs sorting; giving one a
+//      kind writes name and type and leaves stock and cost alone (the bulk
+//      Tidy screen was removed on 2026-10-19)
 //   3. the edit panel: kind first, the fields that follow it, Other needs a
 //      name, the duplicate warning, name/type still written for old readers
 //   4. photos: no upload, per-item and all-at-once removal
@@ -122,38 +123,31 @@ const PRODUCTS = [
     await ctx.close();
   }
 
-  console.log('\n2. Old items, and the Tidy screen');
+  console.log('\n2. Old items, and the list');
   {
     const { ctx, page, errors, dialogs } = await open('packaging', base);
     ok('the page is in the shell (sidebar, colour-block head)', await page.evaluate("!!document.getElementById('ps-side') && !!document.querySelector('.ps-page-head h1')"));
     ok('the old dark header is gone', await page.evaluate("!document.querySelector('header.app-header')"));
     ok('old items are listed under Needs sorting', await page.evaluate("document.querySelector('.pk-g .gn').textContent === 'Needs sorting' && document.querySelectorAll('.pk-row').length === 5"));
-    ok('with a note pointing at Tidy up names', /saved before kinds/.test(await page.evaluate("document.getElementById('pk-sort-note').innerText")));
-    ok('and the Tidy tab shows their count', await page.evaluate("document.getElementById('vt-tidy').style.display !== 'none' && document.getElementById('tidy-n').textContent === '(5)'"));
-
-    await page.evaluate("setPkView('tidy')");
-    await page.waitForTimeout(100);
-    ok('the Tidy screen has a row per old item', await page.evaluate("document.querySelectorAll('#tidy-body tbody tr').length") === 5);
-    // Untick the label row; clear the Other's name to prove Apply refuses it.
-    await page.evaluate("tidyRows[3].on = false; tidyRows[4].g.other = ''; renderTidy()");
-    await page.evaluate("applyTidy()");
-    await page.waitForTimeout(100);
-    ok('Apply refuses an Other without a name, and says which', /needs a name: Tissue paper sheets/.test(dialogs.join('|')), dialogs);
-    ok('and changed nothing', (await stored(page)).every(i => !i.kind));
-    await page.evaluate("tidyRows[4].g.other = 'Tissue paper'; applyTidy()");
-    await page.waitForTimeout(100);
+    ok('with a note saying how to sort them', /saved before kinds[\s\S]*Open one and save it/.test(await page.evaluate("document.getElementById('pk-sort-note').innerText")));
+    // The bulk Tidy up names screen was removed on 2026-10-19, her call.
+    ok('there is no Tidy screen, tab or menu item', await page.evaluate("!document.getElementById('vt-tidy') && !document.getElementById('pk-tidy-view') && typeof applyTidy === 'undefined' && !/Tidy/.test(document.querySelector('.ps-menu').innerText)"));
+    // Give four of the five a kind, the way saving each from the panel does,
+    // and leave the label without one.
+    await page.evaluate(`['p1','p2','p3','p5'].forEach(function (id) {
+      var it = items.find(function (i) { return i.id === id; });
+      var g = Plume.pkGuess(it.name);
+      if (id === 'p5') g.other = 'Tissue paper';
+      applyKindFields(it, g);
+    }); saveData(); renderAll();`);
     const s = await stored(page);
     const p1 = s.find(i => i.id === 'p1'), p4 = s.find(i => i.id === 'p4'), p5 = s.find(i => i.id === 'p5');
-    ok('a ticked row gets its kind, size, color and material', p1.kind === 'dropper' && p1.capacity === '1 oz' && p1.color === 'Amber' && p1.material === 'Glass', p1);
-    ok('its name becomes the display string, for readers that only know .name', p1.name === 'Dropper bottle · 1 oz · Amber glass', p1.name);
+    ok('a sorted item has its kind, size, color and material', p1.kind === 'dropper' && p1.capacity === '1 oz' && p1.color === 'Amber' && p1.material === 'Glass', p1);
+    ok('its name becomes the display string, for readers that only know .name', p1.name === 'Dropper bottle \u00b7 1 oz \u00b7 Amber glass', p1.name);
     ok('its type follows the kind', p1.type === 'container' && p5.type === 'closure', [p1.type, p5.type]);
     ok('purchases and stock are untouched', JSON.stringify(p1.purchases) === JSON.stringify(OLD[0].purchases) && p1.image === PHOTO);
-    ok('the unticked row keeps its old name and no kind', !p4.kind && p4.name === 'Serum label front 3.5x1.25', p4);
+    ok('an item left alone keeps its old name and no kind', !p4.kind && p4.name === 'Serum label front 3.5x1.25', p4);
     ok('Other keeps the name typed for it', p5.kind === 'other' && p5.name === 'Tissue paper', p5);
-    ok('it says how many changed', dialogs.some(t => /4 items updated/.test(t)), dialogs);
-    ok('the Tidy screen now lists only what is left', await page.evaluate("document.querySelectorAll('#tidy-body tbody tr').length") === 1);
-
-    await page.evaluate("setPkView('list')");
     const groups = await page.evaluate("Array.from(document.querySelectorAll('.pk-g .gn')).map(function(e){return e.textContent})");
     ok('each kind heading carries its drawing, with a gap before the next kind', await page.evaluate("document.querySelectorAll('.pk-g .pk-g-ic svg').length === 3 && document.querySelectorAll('.pk-gap').length === 2"));
     ok('items sit indented under their heading', await page.evaluate("parseFloat(getComputedStyle(document.querySelector('.pk-row td')).paddingLeft) >= 50"));

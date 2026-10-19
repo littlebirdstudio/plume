@@ -2393,4 +2393,9 @@ Change button. The footer is pinned to the bottom of the panel.
 Same session: the list block (chips, search, table) is centered as one
 840px column, and the item indent under each kind heading is deeper (84px,
 size column 250px), which also closes the gap before Supplier.
+Same session: **Tidy up names removed**, her call once her own list was
+sorted. Items without a kind still list under "Needs sorting", with a note
+saying to open and save one; the edit panel still fills in Plume's reading
+of the old name (`Plume.pkGuess` stays in core, and drives the drawing for
+unsorted items). `test-packaging.js` is at 95 checks.
 `test-packaging.js` is at 100 checks.
