@@ -2304,3 +2304,19 @@ unlocking it, and that closing saves. `test-archive.js` and
 **Next:** Packaging, Products & Costing, Batches, one per PR, each previewed
 first. Lesson from this round: for a module she already likes, preview a
 restyle of what is there before proposing structural change.
+
+### Session 19 (cont.) — Cards and the bench sheet (core v1.20)
+
+- **Formulation cards:** a dark 2px edge (`--ink-light`, `--bark` on hover)
+  and the name on a medium-tone bar (`--bark` 20% into `--white`). Phase dots
+  removed from the cards, her call.
+- **Bench sheet, % vs grams.** Her report: she loves the prints, but % and
+  grams side by side were easy to mix up at the scale. Now `% ` sits right
+  after the name in small grey (`td.pc`), INCI between, and Grams is the one
+  bold number beside the tick box (`td.gr`). Applies to all three tables
+  (skincare, soap oils with lye and water, soap additives) and to both
+  modules, since they share `Plume.buildSheet`. Offered and not taken: drop %
+  from the sheet entirely. `test-ph.js` checks the column order.
+- The "$0.00 / 100 g on soap cards" note from earlier was a mistake in the
+  preview's sample data (grams in place of `pct` on soap lines), not an app
+  bug. Removed from the backlog.
