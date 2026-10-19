@@ -219,6 +219,131 @@ tbody tr:last-child td{border-bottom:none}
 .palette-swatch-stripes span { flex:1; height:100%; display:block; }
 .palette-swatch-label { font-size:11px; color:var(--ink-light); text-align:center; letter-spacing:0.02em; }
 .palette-swatch.active .palette-swatch-label { color:var(--ink); font-weight:600; }
+
+/* ══ App shell (2026-10-19) ══════════════════════════════════════════
+   As previewed with Heide ("Batches Redesign", version 1). The list keeps
+   its columns; a batch and the new-batch form slide in from the right,
+   like a packaging item. Pills drive the original selects, which stay in
+   the page hidden, so the batch code reads the same ids as before. */
+[hidden] { display: none !important; }
+body.ps-shell { font-family: 'DM Sans', sans-serif; font-weight: 400; }
+body.ps-shell .app-body { max-width: 1240px; margin: 0; padding: 28px clamp(16px, 4vw, 48px) 48px; }
+body.ps-shell .btn { border-radius: 7px; letter-spacing: 0; font-size: 13px; }
+body.ps-shell .field label { font-size: 12px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--ink-light); }
+body.ps-shell .field input, body.ps-shell .field select, body.ps-shell .field textarea { border-radius: 8px; font-size: 14px; padding: 6px 9px; }
+body.ps-shell .field input:focus, body.ps-shell .field select:focus, body.ps-shell .field textarea:focus { border-color: var(--bark); }
+
+/* List */
+.bl-search { margin: 2px 0 10px; }
+.bl-search .ps-search { background: var(--cream); max-width: 440px; padding: 0 10px; }
+.bl-search .ps-search:hover, .bl-search .ps-search:focus-within { background: var(--cream-dark); }
+.bl-search .ps-search input { width: 100%; }
+.bl-table { width: 100%; border-collapse: collapse; min-width: 680px; }
+.bl-table tbody tr.bl-row td { border-bottom: 1.5px solid var(--cream-border); }
+.bl-table tr.group-row td { background: none; padding: 16px 0 4px; border-bottom: 0; cursor: default; }
+.ps-table tbody tr.group-row:hover td { background: none; }
+.grp-bar { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600; color: var(--bark-dark); background: color-mix(in srgb, var(--bark) 13%, var(--white)); border-radius: 7px; padding: 6px 12px; text-transform: none; letter-spacing: 0; }
+.grp-bar .ps-i { width: 16px; height: 16px; color: var(--bark); }
+.grp-bar .ct { font-weight: 400; color: var(--ink-light); font-size: 12.5px; }
+.bl-st { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 5px; line-height: 1.6; white-space: nowrap; }
+.bl-st-ready { background: var(--sage-light); color: var(--sage-dark); }
+.bl-st-curing { background: var(--warning-bg); color: var(--warning); }
+.bl-st-depleted { background: transparent; color: var(--ink-lighter); box-shadow: inset 0 0 0 1px var(--cream-border); }
+.bl-st-test { background: color-mix(in srgb, var(--ink) 8%, transparent); color: var(--ink-light); }
+.bl-when { font-size: 12px; color: var(--ink-lighter); display: block; }
+.cure-bar { display: block; width: 90px; height: 4px; border-radius: 2px; background: var(--cream-dark); margin-top: 5px; overflow: hidden; }
+.cure-bar i { display: block; height: 100%; background: var(--warning); }
+.bl-row.dim td { color: var(--ink-lighter); }
+.bl-empty { padding: 36px 20px; text-align: center; color: var(--ink-lighter); }
+.bl-empty p { margin: 0 0 4px; font-size: 16px; color: var(--ink-light); font-weight: 500; }
+
+/* Side panels (#m-new, #m-detail) */
+#m-new.modal-ov, #m-detail.modal-ov { padding: 0; background: rgba(20,22,17,.22); }
+#m-new.modal-ov.open, #m-detail.modal-ov.open { display: block; }
+#m-new .modal, #m-detail .modal { position: fixed; top: 0; right: 0; bottom: 0; width: min(620px, 100%); max-width: none; margin: 0; border: 0; border-radius: 0; padding: 0; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 12px 40px rgba(20,20,15,.18), 0 2px 6px rgba(20,20,15,.06); animation: bl-in .22s cubic-bezier(.2,.8,.2,1); }
+@keyframes bl-in { from { transform: translateX(40px); opacity: .4; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { #m-new .modal, #m-detail .modal { animation: none; } }
+.bp-top { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--cream-border); font-size: 13px; color: var(--ink-lighter); flex: none; }
+.bp-top .ps-grow { flex: 1; }
+.bp-body { flex: 1; overflow-y: auto; padding: 18px 24px 24px; display: flex; flex-direction: column; gap: 16px; }
+.bp-head { display: flex; gap: 12px; align-items: flex-start; }
+.bp-head .ps-title-icon { flex: none; }
+.bp-head h2 { margin: 0; font-size: 22px; font-weight: 600; }
+.bp-name { width: 100%; border: 0; outline: none; background: transparent; font-family: 'DM Sans', sans-serif; font-size: 22px; font-weight: 600; color: var(--ink); padding: 0 4px; margin-left: -4px; border-radius: 6px; }
+.bp-name:hover, .bp-name:focus { background: var(--cream); }
+.bp-sub { font-size: 13.5px; color: var(--ink-light); display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 3px; }
+.bp-sub a { color: var(--bark-dark); }
+.bp-tabs { display: flex; gap: 6px; border-bottom: 1px solid var(--cream-border); }
+.bp-tabs .ps-tab { font-size: 14px; }
+.bp-ct { color: var(--ink-lighter); font-weight: 400; margin-left: 5px; font-size: 13px; }
+.bp-ct:empty { display: none; }
+.bp-pane { display: flex; flex-direction: column; gap: 14px; }
+.bp-fields { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: flex-end; }
+.bp-fields .field { margin: 0; min-width: 0; }
+.bp-fields .field.grow { flex: 1 1 220px; }
+.bp-fields .field.full { flex: 1 1 100%; }
+.bp-fields .field.n input { width: 110px; }
+.bp-fields .field textarea, .bp-fields .field.full input, .bp-fields .field.full select { width: 100%; }
+.bp-lbl { display: block; font-size: 12px; color: var(--ink-light); margin-bottom: 5px; }
+.bp-pills { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.bp-note { font-size: 12.5px; color: var(--ink-light); background: var(--cream); border-radius: 9px; padding: 9px 12px; line-height: 1.5; }
+.bp-note.warn { background: var(--warning-bg); color: var(--warning); display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; }
+.bp-note.warn .btn { background: var(--white); }
+.bp-h3 { display: flex; gap: 10px; align-items: baseline; margin: 0; }
+.bp-h3 h3 { margin: 0; font-size: 15px; font-weight: 600; }
+.bp-h3 .ps-muted { font-size: 12.5px; }
+.bp-foot { display: flex; gap: 8px; align-items: center; padding: 12px 24px; border-top: 1px solid var(--cream-border); flex: none; background: var(--white); }
+.bp-foot .ps-grow { flex: 1; }
+.bp-saved { font-size: 12.5px; color: var(--ink-lighter); display: inline-flex; gap: 5px; align-items: center; }
+.bp-saved .ps-i { width: 14px; height: 14px; }
+.bp-lnk { border: 0; background: none; color: var(--ink-light); font: inherit; font-size: 13px; padding: 4px 6px; border-radius: 6px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
+.bp-lnk:hover { background: var(--cream-dark); color: var(--ink); }
+.bp-lnk .ps-i { width: 15px; height: 15px; }
+.ph-final { display: flex; gap: 6px; align-items: center; }
+.ph-final input { width: 84px; }
+.ph-final select { width: auto; }
+
+/* New batch: ingredient table */
+#m-new .ing-preview-hdr, #m-new .ing-preview-row { grid-template-columns: minmax(0,1fr) 110px 90px; padding: 7px 12px; }
+#m-new .ing-preview-hdr { font-size: 12px; letter-spacing: 0; text-transform: none; font-weight: 400; color: var(--ink-lighter); background: var(--cream); border: 1.5px solid var(--cream-border); border-bottom: 1px solid var(--cream-border); border-radius: 10px 10px 0 0; margin: 0; }
+#m-new #preview-body { border: 1.5px solid var(--cream-border); border-top: 0; border-radius: 0 0 10px 10px; overflow: hidden; background: var(--white); }
+#m-new .ing-preview-row { border: 0; border-bottom: 1px solid var(--cream-border); border-radius: 0; margin: 0; font-size: 14px; }
+#m-new .ing-preview-stock.warn { font-size: 14px; font-weight: 500; }
+.bp-name::placeholder { color: var(--ink); opacity: .85; }
+#m-new .ing-preview-row:last-child { border-bottom: 0; }
+#m-new .ing-preview-row.low { box-shadow: inset 3px 0 0 var(--warning); background: var(--warning-bg); }
+#m-new .ing-preview-amt { border-radius: 7px; font-size: 14px; }
+#m-new .stock-warning { border-radius: 9px; font-size: 12.5px; }
+
+/* Batch: ingredients table and runs */
+.bt { border: 1.5px solid var(--cream-border); border-radius: 10px; overflow: hidden; background: var(--white); }
+.bt-r { display: grid; grid-template-columns: minmax(0,1fr) 90px 90px; gap: 10px; padding: 8px 12px; border-top: 1px solid var(--cream-border); font-size: 14px; align-items: center; }
+.bt-r:first-child { border-top: 0; }
+.bt-r.h { font-size: 12px; color: var(--ink-lighter); background: var(--cream); padding-top: 7px; padding-bottom: 7px; }
+.bt-r .r { text-align: right; font-variant-numeric: tabular-nums; }
+.bt-r small { display: block; font-size: 12px; color: var(--ink-lighter); }
+.bt-r.tot { font-weight: 600; background: var(--cream); }
+.bt-r .nocost { color: var(--ink-lighter); font-weight: 400; }
+details.bp-rcpt summary { cursor: pointer; font-size: 13px; color: var(--ink); font-weight: 500; }
+details.bp-rcpt .receipt-wrap { margin-top: 8px; border-radius: 10px; }
+body.ps-shell .pkg-run-card { border: 1.5px solid var(--cream-border); border-radius: 10px; overflow: hidden; margin-bottom: 10px; background: var(--white); padding: 0; }
+body.ps-shell .pkg-run-card-hdr { background: color-mix(in srgb, var(--bark) 9%, var(--white)); padding: 8px 12px; margin: 0; border: 0; }
+body.ps-shell .pkg-run-card-hdr-l { font-size: 13.5px; font-weight: 600; font-family: 'DM Sans', sans-serif; letter-spacing: 0; text-transform: none; color: var(--ink); }
+body.ps-shell .pkg-run-card-comps { margin: 0; padding: 0; }
+body.ps-shell .pkg-run-card-comp { padding: 6px 12px; border-top: 1px solid var(--cream-border); font-size: 14px; display: flex; gap: 10px; align-items: center; }
+body.ps-shell .pkg-run-card-comp .pk-thumb { width: 28px; height: 28px; flex: none; }
+body.ps-shell .pkg-run-card-comp .prc-qty { margin-left: auto; font-weight: 500; }
+body.ps-shell .pkg-builder { border: 1.5px dashed var(--cream-border); border-radius: 10px; background: var(--cream); padding: 12px; margin: 0; }
+body.ps-shell .pkg-builder-comps-label { font-size: 12px; letter-spacing: 0; text-transform: none; font-weight: 400; color: var(--ink-light); }
+body.ps-shell .pkg-empty { font-size: 13px; font-style: normal; color: var(--ink-light); background: var(--cream); border-radius: 9px; padding: 9px 12px; border: 0; text-align: left; }
+.bp-top .ps-menu-wrap { margin-left: auto; }
+body.ps-shell .pkg-builder-hdr .field input { width: 100%; min-width: 0; }
+@media (max-width: 600px) {
+  body.ps-shell .pkg-builder-hdr { grid-template-columns: 1fr; }
+  .bp-body { padding: 16px; }
+  .bt-r { grid-template-columns: minmax(0,1fr) 70px 76px; }
+  #m-new .ing-preview-hdr, #m-new .ing-preview-row { grid-template-columns: minmax(0,1fr) 84px 70px; }
+}
 </style>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#404834">
@@ -227,67 +352,63 @@ tbody tr:last-child td{border-bottom:none}
 </head>
 <body>
 
-<header class="app-header">
-  <div>
-    <div class="brand-name">Plume</div>
-    <div class="brand-sub">by Little Bird Studio &middot; Batch Log</div>
-  </div>
-  <div class="hdr-actions">
-    <a href="plume-ingredients.html" target="plume-ingredients" class="btn btn-ghost">Ingredients</a>
-    <a href="plume-formulations.html" target="plume-formulations" class="btn btn-ghost">Formulations</a>
-    <a href="plume-packaging.html" target="plume-packaging" class="btn btn-ghost">Packaging</a>
-    <a href="plume-costing.html" target="plume-costing" class="btn btn-ghost">Products &amp; Costing</a>
-    <button class="btn btn-ghost" onclick="exportData()">Export</button>
-    <button class="btn btn-ghost" onclick="document.getElementById('import-input').click()">Import</button>
-    <input type="file" id="import-input" accept=".json" style="display:none" onchange="importData(event)">
-    <button class="btn btn-ghost" onclick="openSettings()" title="Settings &amp; appearance">&#9881; Settings</button>
-  </div>
-</header>
+<!-- The sidebar (Plume.shell) replaces the old header: modules and
+     Settings are there; Export and Import are in the toolbar's ⋯ menu. -->
+<input type="file" id="import-input" accept=".json" style="display:none" onchange="importData(event)">
 
 <div class="app-body">
   <div id="stor-banner-slot"></div>
 
-  <!-- Stats -->
-  <div class="stats-row">
-    <div class="stat-card"><div class="stat-label">Total batches</div><div class="stat-value" id="s-total">0</div></div>
-    <div class="stat-card"><div class="stat-label">Curing</div><div class="stat-value" id="s-curing">0</div></div>
-    <div class="stat-card"><div class="stat-label">Ready</div><div class="stat-value" id="s-ready">0</div></div>
-    <div class="stat-card"><div class="stat-label">This month</div><div class="stat-value" id="s-month">0</div></div>
-  </div>
-
-  <div class="sec-header">
-    <div style="display:flex; align-items:center; gap:14px">
-      <div class="sec-title">Batches</div>
-      <button class="btn btn-primary btn-sm" onclick="openNewBatch()">+ Add batch</button>
+  <div class="ps-page-head">
+    <div>
+      <div class="ps-title"><span class="ps-title-icon" data-ps-icon="batches"></span><h1>Batches</h1></div>
+      <div class="ps-summary" id="bl-summary"></div>
     </div>
   </div>
 
-  <!-- Toolbar -->
-  <div class="toolbar">
-    <input class="search-inp" type="text" id="search" placeholder="Search by formula or batch name..." oninput="renderList()">
-    <select class="filter-sel" id="f-view" onchange="renderList()">
-      <option value="recent">Recent</option>
-      <option value="formula">By formula</option>
-      <option value="status">By status</option>
-    </select>
-    <select class="filter-sel" id="f-type" onchange="renderList()">
-      <option value="">All types</option>
-      <option value="production">Production only</option>
-      <option value="test">Tests only</option>
-    </select>
+  <div class="ps-toolbar">
+    <button type="button" class="ps-tab" data-bl-view="recent" onclick="setBlView('recent')">Recent</button>
+    <button type="button" class="ps-tab" data-bl-view="formula" onclick="setBlView('formula')">By formulation</button>
+    <button type="button" class="ps-tab" data-bl-view="status" onclick="setBlView('status')">By status</button>
+    <div class="ps-tools">
+      <button type="button" class="ps-btn-primary" onclick="openNewBatch()"><span data-ps-icon="plus"></span>New batch</button>
+      <div class="ps-menu-wrap">
+        <button type="button" class="ps-icon-btn" data-ps-menu aria-label="More actions" aria-expanded="false"><span data-ps-icon="more"></span></button>
+        <div class="ps-menu" role="menu">
+          <button type="button" onclick="exportData()"><span data-ps-icon="download"></span>Export backup</button>
+          <button type="button" onclick="document.getElementById('import-input').click()"><span data-ps-icon="upload"></span>Import</button>
+        </div>
+      </div>
+    </div>
   </div>
+  <div class="ps-chips">
+    <button type="button" class="ps-chip" data-bl-pill="f-type:" onclick="blPill('f-type','')">All</button>
+    <button type="button" class="ps-chip" data-bl-pill="f-type:production" onclick="blPill('f-type','production')">Production</button>
+    <button type="button" class="ps-chip" data-bl-pill="f-type:test" onclick="blPill('f-type','test')">Tests</button>
+  </div>
+  <!-- The old view and type selects, driven by the tabs and chips above. -->
+  <select id="f-view" onchange="renderList()" hidden>
+    <option value="recent">Recent</option>
+    <option value="formula">By formula</option>
+    <option value="status">By status</option>
+  </select>
+  <select id="f-type" onchange="renderList()" hidden>
+    <option value="">All types</option>
+    <option value="production">Production only</option>
+    <option value="test">Tests only</option>
+  </select>
+  <div class="bl-search"><label class="ps-search"><span data-ps-icon="search"></span><input type="search" id="search" placeholder="Search by formulation, batch name or notes" aria-label="Search batches" oninput="renderList()"></label></div>
 
-  <!-- List -->
-  <div class="table-wrap">
-    <table>
+  <div class="ps-table-wrap">
+    <table class="ps-table bl-table">
       <thead>
         <tr>
-          <th style="width:14%">Date</th>
-          <th>Formula / batch</th>
-          <th style="width:10%">Yield</th>
-          <th style="width:12%">Type</th>
-          <th style="width:14%">Status</th>
-          <th style="width:10%">Packaged</th>
+          <th style="width:13%">Date</th>
+          <th>Batch</th>
+          <th class="ps-num" style="width:11%">Yield</th>
+          <th style="width:11%">Type</th>
+          <th style="width:18%">Status</th>
+          <th style="width:11%">Packaged</th>
         </tr>
       </thead>
       <tbody id="tbody"></tbody>
@@ -296,190 +417,215 @@ tbody tr:last-child td{border-bottom:none}
 
 </div>
 
-<!-- ── New batch modal ── -->
+<!-- ── New batch: slides in from the right ── -->
 <div class="modal-ov" id="m-new">
-  <div class="modal">
-    <div class="modal-hdr">
-      <div class="modal-title">New batch</div>
-      <button class="modal-x" onclick="closeModal('m-new')">&#x2715;</button>
+  <div class="modal" role="dialog" aria-labelledby="nb-title">
+    <div class="bp-top">
+      <button type="button" class="ps-icon-btn" onclick="closeModal('m-new')" aria-label="Close"><span data-ps-icon="close"></span></button>Batches
     </div>
+    <div class="bp-body">
+      <div class="bp-head">
+        <span class="ps-title-icon" data-ps-icon="batches"></span>
+        <div><h2 id="nb-title">New batch</h2><div class="bp-sub">Makes the batch and takes the ingredients out of stock.</div></div>
+      </div>
+      <div class="bp-fields">
+        <div class="field full">
+          <label for="f-formula">Formulation</label>
+          <select id="f-formula" onchange="onFormulaChange()">
+            <option value="">-- Pick a formula --</option>
+          </select>
+          <div class="note-inline" id="formula-hint" style="display:none"></div>
+        </div>
+        <div class="field">
+          <label for="f-date">Date made</label>
+          <input type="date" id="f-date">
+        </div>
+        <div class="field n">
+          <label for="f-yield">Yield (g)</label>
+          <input type="number" id="f-yield" step="1" min="0" oninput="recalcPreview()">
+        </div>
+        <div class="field">
+          <span class="bp-lbl">Batch type</span>
+          <div class="bp-pills">
+            <button type="button" class="ps-chip" data-bl-pill="f-type-sel:production" onclick="blPill('f-type-sel','production')">Production</button>
+            <button type="button" class="ps-chip" data-bl-pill="f-type-sel:test" onclick="blPill('f-type-sel','test')">Test</button>
+          </div>
+          <select id="f-type-sel" hidden>
+            <option value="production">Production</option>
+            <option value="test">Test</option>
+          </select>
+        </div>
+        <div class="field" id="f-cure-row" style="display:none">
+          <span class="bp-lbl">Cure time</span>
+          <div class="bp-pills">
+            <button type="button" class="ps-chip" data-bl-pill="f-cure:4" onclick="blPill('f-cure','4')">4 weeks</button>
+            <button type="button" class="ps-chip" data-bl-pill="f-cure:6" onclick="blPill('f-cure','6')">6 weeks</button>
+          </div>
+          <select id="f-cure" hidden>
+            <option value="4">4 weeks</option>
+            <option value="6">6 weeks</option>
+          </select>
+        </div>
+        <div class="field full">
+          <label for="f-name">Batch name</label>
+          <input type="text" id="f-name" placeholder="optional; blank uses the formulation and date">
+        </div>
+        <div class="field full">
+          <label for="f-notes">Notes</label>
+          <textarea id="f-notes" rows="2" placeholder="Deviations from the recipe, observations..."></textarea>
+        </div>
+      </div>
 
-    <div class="form-grid">
-      <div class="field form-full">
-        <label>Formula</label>
-        <select id="f-formula" onchange="onFormulaChange()">
-          <option value="">-- Pick a formula --</option>
-        </select>
-        <div class="note-inline" id="formula-hint" style="display:none"></div>
+      <div class="bp-h3"><h3>Ingredients it will use</h3><span class="ps-muted">edit any amount to override</span></div>
+      <div id="preview-warning"></div>
+      <div>
+        <div class="ing-preview-hdr">
+          <span>Ingredient</span>
+          <span style="text-align:right">Grams</span>
+          <span style="text-align:right">In stock</span>
+        </div>
+        <div id="preview-body"></div>
       </div>
-      <div class="field">
-        <label>Date made</label>
-        <input type="date" id="f-date">
-      </div>
-      <div class="field">
-        <label>Yield (grams)</label>
-        <input type="number" id="f-yield" step="1" min="0" oninput="recalcPreview()">
-      </div>
-      <div class="field">
-        <label>Batch type</label>
-        <select id="f-type-sel" onchange="renderList()">
-          <option value="production">Production</option>
-          <option value="test">Test</option>
-        </select>
-      </div>
-      <div class="field" id="f-cure-row" style="display:none">
-        <label>Cure time</label>
-        <select id="f-cure">
-          <option value="4">4 weeks</option>
-          <option value="6">6 weeks</option>
-        </select>
-      </div>
-      <div class="field form-full">
-        <label>Batch name (optional)</label>
-        <input type="text" id="f-name" placeholder="Auto-generated if blank: 'Formula name -- date'">
-      </div>
-      <div class="field form-full">
-        <label>Notes</label>
-        <textarea id="f-notes" rows="2" placeholder="Deviations from recipe, observations..."></textarea>
-      </div>
+      <div id="new-commit-msg" class="commit-msg" style="display:none"></div>
     </div>
-
-    <!-- Ingredient preview -->
-    <div class="modal-section"><span>Ingredients to consume</span><span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--ink-lighter)">edit any amount to override</span></div>
-    <div id="preview-warning"></div>
-    <div class="ing-preview-hdr">
-      <span>Ingredient</span>
-      <span style="text-align:right">Amount (g)</span>
-      <span style="text-align:right">In stock</span>
-    </div>
-    <div id="preview-body"></div>
-
-    <div id="new-commit-msg" class="commit-msg" style="display:none"></div>
-
-    <div class="modal-foot">
-      <button class="btn" onclick="closeModal('m-new')">Cancel</button>
-      <button class="btn" id="new-print-btn" onclick="printNewBatchSheet()" title="Print the recipe at this batch size, with a tick box per ingredient">Print sheet</button>
-      <button class="btn btn-primary" onclick="saveBatch()">Make it!</button>
+    <div class="bp-foot">
+      <button type="button" class="bp-lnk" id="new-print-btn" onclick="printNewBatchSheet()" title="Print the recipe at this batch size, with a tick box per ingredient"><span data-ps-icon="print"></span>Print sheet</button>
+      <span class="ps-grow"></span>
+      <button type="button" class="ps-btn-primary" onclick="saveBatch()">Make it!</button>
     </div>
   </div>
 </div>
 
-<!-- ── Batch detail modal ── -->
+<!-- ── A batch: slides in from the right, three tabs ── -->
 <div class="modal-ov" id="m-detail">
-  <div class="modal">
-    <div class="modal-hdr">
-      <div>
-        <div class="modal-title" id="d-title">Batch</div>
-        <div class="detail-hdr-meta" id="d-meta"></div>
-      </div>
-      <button class="modal-x" onclick="closeModal('m-detail')">&#x2715;</button>
-    </div>
-
-    <!-- Commit bar (Block 4 -- hidden in auto-commit mode; kept for legacy data path) -->
-    <div class="commit-bar" id="d-commit-bar" style="display:none">
-      <div class="commit-status" id="d-commit-status"></div>
-      <button class="btn" id="d-commit-btn" onclick="onCommitButton()">Commit to inventory</button>
-    </div>
-    <div class="commit-msg" id="d-commit-msg" style="display:none"></div>
-
-    <div class="form-grid">
-      <div class="field">
-        <label>Date made</label>
-        <input type="date" id="d-date">
-      </div>
-      <div class="field">
-        <label>Yield (grams)</label>
-        <input type="number" id="d-yield" step="1" min="0">
-      </div>
-      <div class="field">
-        <label>Batch type</label>
-        <select id="d-type-sel">
-          <option value="production">Production</option>
-          <option value="test">Test</option>
-        </select>
-      </div>
-      <div class="field" id="d-cure-row" style="display:none">
-        <label>Cure time</label>
-        <select id="d-cure">
-          <option value="4">4 weeks</option>
-          <option value="6">6 weeks</option>
-        </select>
-      </div>
-      <div class="field" id="d-ph-row" style="display:none">
-        <label>Final <span class="ph-word">pH</span></label>
-        <div class="ph-final">
-          <input type="text" inputmode="decimal" id="d-ph" placeholder="e.g. 5.3" aria-label="Final pH" oninput="onFinalPhInput()">
-          <select id="d-ph-method" aria-label="Measured with" onchange="onFinalPhInput()">
-            <option value="strip">strip</option><option value="meter">meter</option>
-          </select>
-        </div>
-        <div class="ph-note" id="d-ph-note"></div>
-        <div class="ph-err" id="d-ph-err" style="display:none"></div>
-      </div>
-      <div class="field form-full">
-        <label>Batch name</label>
-        <input type="text" id="d-name">
-      </div>
-      <div class="field form-full">
-        <label>Notes</label>
-        <textarea id="d-notes" rows="2"></textarea>
-      </div>
-    </div>
-
-    <!-- Ingredient snapshot (read-only) -->
-    <div class="modal-section">
-      <span>Ingredients used</span>
-      <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--ink-lighter)">locked at creation</span>
-    </div>
-    <div class="snapshot-wrap" id="d-snapshot"></div>
-
-    <!-- Cost rollup -->
-    <div class="modal-section">
-      <span>Cost rollup</span>
-      <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--ink-lighter)">ingredient cost only</span>
-    </div>
-    <div id="d-cost-rollup"></div>
-
-    <!-- Inventory receipt (post-commit) -->
-    <div class="modal-section" id="d-receipt-hdr" style="display:none">
-      <span>Inventory receipt</span>
-      <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--ink-lighter)">what came from where</span>
-    </div>
-    <div id="d-receipt" style="display:none"></div>
-
-    <!-- Packaging runs -->
-    <div class="modal-section">
-      <span>Packaging runs</span>
-      <span id="d-pkg-total" style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--ink-lighter)"></span>
-    </div>
-    <div id="d-pkg-list"></div>
-    <div class="pkg-builder" id="d-pkg-builder">
-      <div class="pkg-builder-hdr">
-        <div class="field">
-          <label>Run date</label>
-          <input type="date" id="d-pkg-date">
-        </div>
-        <div class="field">
-          <label>Notes (optional)</label>
-          <input type="text" id="d-pkg-notes" placeholder="Purpose, customer, lot code, etc.">
-        </div>
-      </div>
-      <div class="pkg-builder-comps-label">Components used in this run</div>
-      <div id="d-pkg-builder-comps"></div>
-      <div class="pkg-builder-actions">
-        <button class="btn btn-sm" onclick="pendingRunAddComponent()">+ Add component</button>
-        <div style="display:flex;gap:6px">
-          <button class="btn btn-sm" onclick="pendingRunReset()">Reset</button>
-          <button class="btn btn-primary btn-sm" onclick="pendingRunCommit()">+ Add run</button>
+  <div class="modal" role="dialog" aria-label="Batch">
+    <div class="bp-top">
+      <button type="button" class="ps-icon-btn" onclick="closeDetail()" aria-label="Close"><span data-ps-icon="close"></span></button>Batches
+      <span class="ps-grow"></span>
+      <div class="ps-menu-wrap">
+        <button type="button" class="ps-icon-btn" data-ps-menu aria-label="More actions" aria-expanded="false"><span data-ps-icon="more"></span></button>
+        <div class="ps-menu" role="menu">
+          <button type="button" class="ps-menu-danger" onclick="deleteBatch()"><span data-ps-icon="trash"></span>Delete batch</button>
         </div>
       </div>
     </div>
+    <div class="bp-body">
+      <div class="bp-head">
+        <span class="ps-title-icon" data-ps-icon="batches"></span>
+        <div style="flex:1;min-width:0">
+          <input class="bp-name" type="text" id="d-name" aria-label="Batch name" oninput="detDirty()">
+          <div class="bp-sub" id="d-meta"></div>
+          <div id="d-title" hidden></div>
+        </div>
+      </div>
 
-    <div class="modal-foot">
-      <button class="btn btn-danger" onclick="deleteBatch()" style="margin-right:auto">Delete batch</button>
-      <button class="btn" id="d-mark-ready-btn" onclick="markBatchReady()" style="display:none">Mark ready now</button>
-      <button class="btn" onclick="closeModal('m-detail')">Close</button>
-      <button class="btn btn-primary" id="d-save-btn" onclick="saveBatchEdits()">Save changes</button>
+      <!-- Commit bar (Block 4 -- hidden in auto-commit mode; kept for legacy data path) -->
+      <div class="commit-bar" id="d-commit-bar" style="display:none">
+        <div class="commit-status" id="d-commit-status"></div>
+        <button class="btn" id="d-commit-btn" onclick="onCommitButton()">Commit to inventory</button>
+      </div>
+      <div class="commit-msg" id="d-commit-msg" style="display:none"></div>
+
+      <div class="bp-tabs">
+        <button type="button" class="ps-tab on" id="bt-details" onclick="setBatchTab('details')">Details</button>
+        <button type="button" class="ps-tab" id="bt-ings" onclick="setBatchTab('ings')">Ingredients<span class="bp-ct" id="bt-ings-ct"></span></button>
+        <button type="button" class="ps-tab" id="bt-runs" onclick="setBatchTab('runs')">Packaging runs<span class="bp-ct" id="bt-runs-ct"></span></button>
+      </div>
+
+      <div class="bp-pane" id="bp-details">
+        <div class="bp-fields">
+          <div class="field">
+            <label for="d-date">Date made</label>
+            <input type="date" id="d-date" oninput="detDirty()">
+          </div>
+          <div class="field n">
+            <label for="d-yield">Yield (g)</label>
+            <input type="number" id="d-yield" step="1" min="0" oninput="detDirty()">
+          </div>
+          <div class="field">
+            <span class="bp-lbl">Batch type</span>
+            <div class="bp-pills">
+              <button type="button" class="ps-chip" data-bl-pill="d-type-sel:production" onclick="blPill('d-type-sel','production')">Production</button>
+              <button type="button" class="ps-chip" data-bl-pill="d-type-sel:test" onclick="blPill('d-type-sel','test')">Test</button>
+            </div>
+            <select id="d-type-sel" onchange="detDirty()" hidden>
+              <option value="production">Production</option>
+              <option value="test">Test</option>
+            </select>
+          </div>
+          <div class="field" id="d-cure-row" style="display:none">
+            <span class="bp-lbl">Cure time</span>
+            <div class="bp-pills">
+              <button type="button" class="ps-chip" data-bl-pill="d-cure:4" onclick="blPill('d-cure','4')">4 weeks</button>
+              <button type="button" class="ps-chip" data-bl-pill="d-cure:6" onclick="blPill('d-cure','6')">6 weeks</button>
+            </div>
+            <select id="d-cure" onchange="detDirty()" hidden>
+              <option value="4">4 weeks</option>
+              <option value="6">6 weeks</option>
+            </select>
+          </div>
+          <div class="field" id="d-ph-row" style="display:none">
+            <label for="d-ph">Final <span class="ph-word">pH</span></label>
+            <div class="ph-final">
+              <input type="text" inputmode="decimal" id="d-ph" placeholder="e.g. 5.3" aria-label="Final pH" oninput="onFinalPhInput()">
+              <select id="d-ph-method" aria-label="Measured with" onchange="onFinalPhInput()">
+                <option value="strip">strip</option><option value="meter">meter</option>
+              </select>
+            </div>
+            <div class="ph-note" id="d-ph-note"></div>
+            <div class="ph-err" id="d-ph-err" style="display:none"></div>
+          </div>
+          <div class="field full">
+            <label for="d-notes">Notes</label>
+            <textarea id="d-notes" rows="3" oninput="detDirty()"></textarea>
+          </div>
+        </div>
+        <div class="bp-note warn" id="d-curing-note" style="display:none">
+          <span id="d-curing-text"></span>
+          <button type="button" class="btn" id="d-mark-ready-btn" onclick="markBatchReady()" style="display:none">Mark ready now</button>
+        </div>
+      </div>
+
+      <div class="bp-pane" id="bp-ings" hidden>
+        <div class="bp-note">What went into this batch, locked when it was made. Changing the formulation later does not change it. Costs are at today's lot prices.</div>
+        <div id="d-snapshot"></div>
+        <div id="d-cost-rollup"></div>
+        <details class="bp-rcpt" id="d-receipt-hdr" style="display:none">
+          <summary>Which lots it came from</summary>
+          <div id="d-receipt" style="display:none"></div>
+        </details>
+      </div>
+
+      <div class="bp-pane" id="bp-runs" hidden>
+        <div class="bp-h3"><span class="ps-muted" id="d-pkg-total"></span></div>
+        <div id="d-pkg-list"></div>
+        <div class="pkg-builder" id="d-pkg-builder">
+          <div class="pkg-builder-hdr">
+            <div class="field">
+              <label for="d-pkg-date">Run date</label>
+              <input type="date" id="d-pkg-date">
+            </div>
+            <div class="field">
+              <label for="d-pkg-notes">Notes</label>
+              <input type="text" id="d-pkg-notes" placeholder="optional: purpose, customer, lot code">
+            </div>
+          </div>
+          <div class="pkg-builder-comps-label">What went into this run</div>
+          <div id="d-pkg-builder-comps"></div>
+          <div class="pkg-builder-actions">
+            <button type="button" class="bp-lnk" onclick="pendingRunAddComponent()"><span data-ps-icon="plus"></span>Add packaging</button>
+            <div style="display:flex;gap:6px;align-items:center">
+              <button type="button" class="bp-lnk" onclick="pendingRunReset()">Reset</button>
+              <button type="button" class="ps-btn-primary" id="d-run-commit" onclick="pendingRunCommit()">Commit this run</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="bp-foot">
+      <span class="ps-grow"></span>
+      <span id="d-save-state"></span>
+      <button type="button" class="ps-btn-primary" id="d-save-btn" onclick="saveBatchEdits()" hidden>Save changes</button>
     </div>
   </div>
 </div>
@@ -697,21 +843,45 @@ function findLyeIngredient(lyeType) {
   return null;
 }
 
-// ── Stats ──
+// ── Summary (the stat cards became one line in the page head) ──
 function renderStats() {
-  document.getElementById('s-total').textContent = batches.length;
+  var el = document.getElementById('bl-summary');
+  if (!el) return;
   var curing = 0, ready = 0, monthCount = 0;
-  var now = new Date();
-  var thisMonth = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+  var thisMonth = todayISO().slice(0, 7);
   batches.forEach(function(b) {
     if (b.status === 'curing') curing++;
     if (b.status === 'ready')  ready++;
     if (b.date && b.date.indexOf(thisMonth) === 0) monthCount++;
   });
-  document.getElementById('s-curing').textContent = curing;
-  document.getElementById('s-ready').textContent  = ready;
-  document.getElementById('s-month').textContent  = monthCount;
+  el.innerHTML = '<span><b>' + batches.length + '</b> batch' + (batches.length === 1 ? '' : 'es') + '</span>' +
+    '<span><b>' + curing + '</b> curing</span><span><b>' + ready + '</b> ready</span>' +
+    '<span><b>' + monthCount + '</b> this month</span>';
+  if (Plume.refreshShell) Plume.refreshShell();
 }
+
+// Pills and tabs drive the original selects, which stay in the page
+// hidden: set the value, fire its own change handler, mark the pill.
+function blPill(selId, v) {
+  var sel = document.getElementById(selId);
+  sel.value = v;
+  sel.dispatchEvent(new Event('change'));
+  blSyncPills();
+}
+function blSyncPills() {
+  var pills = document.querySelectorAll('[data-bl-pill]');
+  for (var i = 0; i < pills.length; i++) {
+    var kv = pills[i].getAttribute('data-bl-pill'), at = kv.indexOf(':');
+    var sel = document.getElementById(kv.slice(0, at));
+    var on = !!sel && sel.value === kv.slice(at + 1);
+    pills[i].classList.toggle('on', on);
+    pills[i].setAttribute('aria-pressed', on ? 'true' : 'false');
+  }
+  var view = document.getElementById('f-view').value;
+  var tabs = document.querySelectorAll('[data-bl-view]');
+  for (var j = 0; j < tabs.length; j++) tabs[j].classList.toggle('on', tabs[j].getAttribute('data-bl-view') === view);
+}
+function setBlView(v) { blPill('f-view', v); }
 
 // ── List rendering ──
 function renderList() {
@@ -729,10 +899,11 @@ function renderList() {
     return true;
   });
 
+  blSyncPills();
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><p>' +
-      (batches.length ? 'No batches match your filters' : 'No batches yet') + '</p>' +
-      '<span>' + (batches.length ? 'Try clearing the search or filter' : 'Click "+ Add batch" to log your first production') + '</span></div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6"><div class="bl-empty"><p>' +
+      (batches.length ? 'No batches match' : 'No batches yet') + '</p>' +
+      '<span>' + (batches.length ? 'Try clearing the search or a filter.' : 'Click New batch to log your first one.') + '</span></div></td></tr>';
     return;
   }
 
@@ -753,7 +924,7 @@ function renderList() {
       groups[key].push(b);
     });
     Object.keys(groups).sort().forEach(function(k) {
-      html += '<tr class="group-row"><td colspan="6">' + esc(k) + ' &middot; ' + groups[k].length + '</td></tr>';
+      html += '<tr class="group-row"><td colspan="6"><div class="grp-bar">' + Plume.icon('formulations') + esc(k) + '<span class="ct">' + groups[k].length + '</span></div></td></tr>';
       groups[k].forEach(function(b) { html += rowHtml(b); });
     });
   } else if (viewMode === 'status') {
@@ -766,7 +937,7 @@ function renderList() {
     var labels = { curing: 'Curing', ready: 'Ready', depleted: 'Depleted' };
     ['curing','ready','depleted'].forEach(function(s) {
       if (groups[s].length) {
-        html += '<tr class="group-row"><td colspan="6">' + labels[s] + ' &middot; ' + groups[s].length + '</td></tr>';
+        html += '<tr class="group-row"><td colspan="6"><div class="grp-bar">' + Plume.icon('batches') + labels[s] + '<span class="ct">' + groups[s].length + '</span></div></td></tr>';
         groups[s].forEach(function(b) { html += rowHtml(b); });
       }
     });
@@ -775,31 +946,46 @@ function renderList() {
   tbody.innerHTML = html;
 }
 
+// Curing: the ready date, days left and a bar from the day it was made.
+function cureHtml(b, withBar) {
+  if (!b.readyDate) return '';
+  var left  = Math.max(0, Math.round((Plume.parseLocalDate(b.readyDate) - Plume.parseLocalDate(todayISO())) / 86400000));
+  var total = Math.max(1, Math.round((Plume.parseLocalDate(b.readyDate) - Plume.parseLocalDate(b.date)) / 86400000));
+  var pct   = Math.min(100, Math.max(0, Math.round((total - left) / total * 100)));
+  return '<span class="bl-when">ready ' + fmtDate(b.readyDate) + ' &middot; ' + (left ? left + ' day' + (left === 1 ? '' : 's') : 'today') + '</span>' +
+    (withBar ? '<span class="cure-bar" aria-hidden="true"><i style="width:' + pct + '%"></i></span>' : '');
+}
+function statusBadgeHtml(b) {
+  if (b.status === 'curing')   return '<span class="bl-st bl-st-curing">Curing</span>';
+  if (b.status === 'depleted') return '<span class="bl-st bl-st-depleted">Depleted</span>';
+  return '<span class="bl-st bl-st-ready">Ready</span>';
+}
+// Units packaged: the largest component quantity in each run (a run of 6
+// jars with 6 labels is 6 units, not 12).
+function runUnits(r) {
+  var m = 0;
+  runComponents(r).forEach(function(c) { m = Math.max(m, parseInt(c.quantity, 10) || 0); });
+  return m;
+}
+
 function rowHtml(b) {
   var runs = b.packagingRuns || [];
+  var units = runs.reduce(function(s, r) { return s + runUnits(r); }, 0);
   var pkgLabel = runs.length === 0
-    ? '<span style="color:var(--ink-lighter)">--</span>'
-    : runs.length + (runs.length === 1 ? ' run' : ' runs');
+    ? '<span class="ps-muted">--</span>'
+    : runs.length + (runs.length === 1 ? ' run' : ' runs') + (units ? '<span class="bl-when">' + units + ' units</span>' : '');
   var typeBadge = b.batchType === 'test'
-    ? '<span class="type-pill type-test">Test</span>'
-    : '<span class="type-pill type-prod">Production</span>';
-  var statusBadge;
-  if (b.status === 'curing') {
-    var readyTxt = b.readyDate ? 'ready ' + fmtDate(b.readyDate) : '';
-    statusBadge = '<span class="status-pill status-curing">Curing</span>' +
-      (readyTxt ? '<div class="batch-meta">' + readyTxt + '</div>' : '');
-  } else if (b.status === 'depleted') {
-    statusBadge = '<span class="status-pill status-depleted">Depleted</span>';
-  } else {
-    statusBadge = '<span class="status-pill status-ready">Ready</span>';
-  }
+    ? '<span class="bl-st bl-st-test">Test</span>'
+    : '<span class="ps-muted">Production</span>';
+  var statusBadge = statusBadgeHtml(b) + (b.status === 'curing' ? cureHtml(b, true) : '');
+  var f = findFormula(b.formulaId);
   var nameDisplay = b.batchName
-    ? esc(b.batchName) + '<div class="batch-meta">' + esc(b.formulaName||'') + '</div>'
-    : '<span class="batch-name-display">' + esc(b.formulaName||'(no formula)') + '</span>';
-  return '<tr onclick="openBatchDetail(\'' + b.id + '\')">' +
+    ? '<div class="ps-name">' + esc(b.batchName) + '</div><div class="ps-sub">' + esc(b.formulaName || '') + '</div>'
+    : '<div class="ps-name">' + esc(b.formulaName || '(no formula)') + '</div>' + (f && f.type ? '<div class="ps-sub">' + esc(f.type) + '</div>' : '');
+  return '<tr class="bl-row' + (b.status === 'depleted' ? ' dim' : '') + '" onclick="openBatchDetail(\'' + b.id + '\')">' +
     '<td>' + fmtDate(b.date) + '</td>' +
     '<td>' + nameDisplay + '</td>' +
-    '<td>' + (b.actualYield || b.targetYield || '--') + 'g' +
+    '<td class="ps-num">' + (b.actualYield || b.targetYield || '--') + ' g' +
       (b.finalPh ? '<div class="yield-ph">' + Plume.phBadge(b.finalPh, b.finalPhMethod, batchPhTarget(b).min, batchPhTarget(b).max) + '</div>' : '') +
     '</td>' +
     '<td>' + typeBadge + '</td>' +
@@ -845,6 +1031,7 @@ function openNewBatch() {
   if (blockedBox) { blockedBox.innerHTML = ''; blockedBox.style.display = 'none'; }
   newPreview = [];
   newFormula = null;
+  blSyncPills();
   openModal('m-new');
 }
 
@@ -855,6 +1042,7 @@ function onFormulaChange() {
     document.getElementById('formula-hint').style.display = 'none';
     document.getElementById('f-cure-row').style.display = 'none';
     document.getElementById('f-type-sel').value = 'production';
+    blSyncPills();
     recalcPreview();
     return;
   }
@@ -874,7 +1062,8 @@ function onFormulaChange() {
     document.getElementById('f-type-sel').value = 'production';
   }
   // Show cure row only for soap
-  document.getElementById('f-cure-row').style.display = isSoapType(newFormula.type) ? 'flex' : 'none';
+  document.getElementById('f-cure-row').style.display = isSoapType(newFormula.type) ? '' : 'none';
+  blSyncPills();
   // Default yield to 100g if blank (formulas don't store batchSize -- that's a session-only field)
   if (!document.getElementById('f-yield').value) {
     document.getElementById('f-yield').value = isSoapType(newFormula.type) ? 1000 : 100;
@@ -1244,6 +1433,7 @@ function renderFinalPhNote() {
 }
 
 function onFinalPhInput() {
+  if (editingBatchId) detDirty();
   var el  = document.getElementById('d-ph');
   var bad = Plume.parsePh(el.value) === null;
   el.classList.toggle('ph-bad', bad);
@@ -1260,21 +1450,14 @@ function openBatchDetail(id) {
 
   // Title + header meta
   document.getElementById('d-title').textContent = b.batchName || b.formulaName || 'Batch';
-  var metaParts = [];
-  if (b.formulaName) metaParts.push('<span><strong>' + esc(b.formulaName) + '</strong></span>');
-  metaParts.push('<span>' + fmtDate(b.date) + '</span>');
-  var statusLabel = (b.status === 'curing') ? 'Curing' : (b.status === 'depleted') ? 'Depleted' : 'Ready';
-  metaParts.push('<span>' + statusLabel + '</span>');
-  if (b.status === 'curing' && b.readyDate) {
-    metaParts.push('<span style="color:var(--ink-lighter)">ready ' + fmtDate(b.readyDate) + '</span>');
-  }
-  document.getElementById('d-meta').innerHTML = metaParts.join('');
+  renderDetailMeta(b);
 
   // Editable fields
   document.getElementById('d-date').value     = b.date || '';
   document.getElementById('d-yield').value    = b.actualYield || b.targetYield || '';
   document.getElementById('d-type-sel').value = b.batchType || 'production';
   document.getElementById('d-name').value     = b.batchName || '';
+  document.getElementById('d-name').placeholder = b.formulaName || 'Batch';
   document.getElementById('d-notes').value    = b.notes || '';
 
   // Final pH: shown for a water-based batch, or one that already has a reading.
@@ -1294,6 +1477,7 @@ function openBatchDetail(id) {
 
   // "Mark ready" button: only for curing soap batches
   document.getElementById('d-mark-ready-btn').style.display = (b.status === 'curing') ? '' : 'none';
+  renderCuringNote(b);
 
   // Ingredient snapshot (read-only)
   renderSnapshot(b);
@@ -1311,8 +1495,69 @@ function openBatchDetail(id) {
   var box = document.getElementById('d-commit-msg');
   if (box) { box.style.display = 'none'; box.innerHTML = ''; }
 
+  setBatchTab('details');
+  setBatchTabCounts(b);
+  detIsDirty = false;
+  renderDetSave();
+  blSyncPills();
   openModal('m-detail');
 }
+
+// The panel's header line: formulation (a link to it), date, status.
+function renderDetailMeta(b) {
+  var parts = [];
+  if (b.formulaName) {
+    parts.push(findFormula(b.formulaId)
+      ? '<a href="plume-formulations.html#f=' + encodeURIComponent(b.formulaId) + '" target="plume-formulations">' + esc(b.formulaName) + '</a>'
+      : '<span>' + esc(b.formulaName) + '</span>');
+  }
+  parts.push('<span>' + fmtDate(b.date) + '</span>');
+  parts.push(statusBadgeHtml(b));
+  document.getElementById('d-meta').innerHTML = parts.join('<span aria-hidden="true">&middot;</span>');
+}
+function renderCuringNote(b) {
+  var box = document.getElementById('d-curing-note');
+  if (b.status !== 'curing') { box.style.display = 'none'; return; }
+  box.style.display = '';
+  document.getElementById('d-curing-text').innerHTML = 'Curing: ' + cureHtml(b, false).replace(/<\/?span[^>]*>/g, '') + '.';
+}
+
+var batchTab = 'details';
+function setBatchTab(t) {
+  batchTab = t;
+  ['details', 'ings', 'runs'].forEach(function(k) {
+    document.getElementById('bt-' + k).classList.toggle('on', k === t);
+    document.getElementById('bp-' + k).hidden = (k !== t);
+  });
+}
+function setBatchTabCounts(b) {
+  var n = (b.ingredientSnapshot || []).length, r = (b.packagingRuns || []).length;
+  document.getElementById('bt-ings-ct').textContent = n ? String(n) : '';
+  document.getElementById('bt-runs-ct').textContent = r ? String(r) : '';
+}
+
+// "Saved" when nothing is pending, a Save changes button when it is. The
+// packaging run builder does not count: a run is committed on its own.
+var detIsDirty = false;
+function detDirty() { detIsDirty = true; renderDetSave(); }
+function renderDetSave() {
+  var st = document.getElementById('d-save-state');
+  document.getElementById('d-save-btn').hidden = !detIsDirty;
+  st.innerHTML = detIsDirty ? '' : '<span class="bp-saved">' + Plume.icon('check') + 'Saved</span>';
+}
+// Closing with unsaved edits asks first; nothing else changes.
+function closeDetail() {
+  if (!detIsDirty) { closeModal('m-detail'); return; }
+  Plume.ask('Your changes to this batch are not saved.', function() {
+    detIsDirty = false;
+    closeModal('m-detail');
+  }, { title: 'Close without saving?', yes: 'Close', danger: true });
+}
+document.addEventListener('keydown', function(e) {
+  if (e.key !== 'Escape' || document.querySelector('.plume-dlg-ov')) return;
+  if (document.getElementById('m-detail').classList.contains('open')) closeDetail();
+  else if (document.getElementById('m-new').classList.contains('open')) closeModal('m-new');
+});
 
 function renderCommitBar(b) {
   var status = document.getElementById('d-commit-status');
@@ -1345,6 +1590,7 @@ function renderReceipt(b) {
   }
   hdr.style.display  = '';
   wrap.style.display = '';
+  setBatchTabCounts(b);
   // Group by ingredient so multi-lot draws show together
   var byIng = {};
   var order = [];
@@ -1400,54 +1646,35 @@ function renderSnapshot(b) {
     wrap.innerHTML = '<div class="pkg-empty">No ingredient snapshot recorded.</div>';
     return;
   }
-  var html = '';
+  var total = 0, anyMissing = false;
+  var html = '<div class="bt"><div class="bt-r h"><span>Ingredient</span><span class="r">Grams</span><span class="r">Cost</span></div>';
   snap.forEach(function(s) {
     var g = parseFloat(s.grams) || 0;
-    html += '<div class="snapshot-row">' +
-      '<span>' + esc(s.ingredientName || '(unknown)') + '</span>' +
-      '<span class="snap-amt">' + g.toFixed(g < 10 ? 2 : 1) + ' g</span>' +
-      '</div>';
+    var cpg = ingCostPerG(findIng(s.ingredientId));
+    var cost = cpg === null ? null : g * cpg;
+    if (cost === null) anyMissing = true; else total += cost;
+    html += '<div class="bt-r"><span>' + esc(s.ingredientName || '(unknown)') + '</span>' +
+      '<span class="r">' + g.toFixed(g < 10 ? 2 : 1) + '</span>' +
+      '<span class="r">' + (cost === null ? '<span class="nocost">no cost</span>' : '$' + cost.toFixed(2)) + '</span></div>';
   });
+  var yieldG = parseFloat(b.actualYield) || parseFloat(b.targetYield) || 0;
+  html += '<div class="bt-r tot"><span>Ingredient cost' + (yieldG ? ' for ' + yieldG.toFixed(0) + ' g' : '') + (anyMissing ? ' <span class="nocost">(incomplete)</span>' : '') + '</span>' +
+    '<span></span><span class="r">$' + total.toFixed(2) + '</span></div></div>';
   wrap.innerHTML = html;
 }
 
 function renderCostRollup(b) {
   var wrap = document.getElementById('d-cost-rollup');
   var snap = b.ingredientSnapshot || [];
-  if (!snap.length) {
-    wrap.innerHTML = '<div class="pkg-empty">Nothing to roll up.</div>';
-    return;
-  }
-  var totalCost  = 0;
-  var totalGrams = 0;
-  var missing    = [];
+  var missing = [];
   snap.forEach(function(s) {
-    var g = parseFloat(s.grams) || 0;
-    totalGrams += g;
-    var ing = findIng(s.ingredientId);
-    var cpg = ingCostPerG(ing);
-    if (cpg === null) {
-      missing.push(s.ingredientName || '(unknown)');
-    } else {
-      totalCost += g * cpg;
-    }
+    if (ingCostPerG(findIng(s.ingredientId)) === null) missing.push(s.ingredientName || '(unknown)');
   });
-  var yieldG = parseFloat(b.actualYield) || parseFloat(b.targetYield) || totalGrams;
-
-  var html = '<div class="cost-rollup">' +
-    '<span class="cr-label">Total ingredient cost</span>' +
-    '<span class="cr-val">$' + totalCost.toFixed(2) + '</span>' +
-    '<span class="cr-label">Yield</span>' +
-    '<span class="cr-val">' + yieldG.toFixed(0) + ' g</span>';
-
-  if (missing.length) {
-    var names = missing.slice(0, 4).map(esc).join(', ');
-    if (missing.length > 4) names += ' and ' + (missing.length - 4) + ' more';
-    html += '<div class="cr-missing">Missing cost data: ' + names +
-      '. Add cost/g in the Ingredients library for a complete rollup.</div>';
-  }
-  html += '</div>';
-  wrap.innerHTML = html;
+  if (!missing.length) { wrap.innerHTML = ''; return; }
+  var names = missing.slice(0, 4).map(esc).join(', ');
+  if (missing.length > 4) names += ' and ' + (missing.length - 4) + ' more';
+  wrap.innerHTML = '<div class="bp-note warn">Missing a cost per gram for ' + names +
+    '. Add a lot price in the <a href="plume-ingredients.html" target="plume-ingredients" style="color:inherit">Ingredients</a> library for a complete total.</div>';
 }
 
 // Cache of packaging items sorted by name, used by the run builder to
@@ -1504,9 +1731,10 @@ function runComponents(r) {
 function renderPackagingRuns(b) {
   var list = document.getElementById('d-pkg-list');
   var runs = b.packagingRuns || [];
+  if (document.getElementById('bt-runs-ct')) setBatchTabCounts(b);
   document.getElementById('d-pkg-total').textContent = '';
   if (!runs.length) {
-    list.innerHTML = '<div class="pkg-empty">No packaging runs logged yet.</div>';
+    list.innerHTML = '<div class="pkg-empty">No packaging runs yet. A run records filling this batch into jars, bottles or bands, and takes them out of packaging stock.</div>';
     return;
   }
   // Sort by date desc, fall back to creation time so same-date runs preserve
@@ -1528,6 +1756,7 @@ function renderPackagingRuns(b) {
       var nm = (pkg && Plume.pkDisplay(pkg)) || c.packagingName || '(missing)';
       var qty = parseInt(c.quantity, 10) || 0;
       compHTML += '<li class="pkg-run-card-comp">' +
+        (pkg ? '<span class="pk-thumb">' + Plume.pkIconFor(pkg) + '</span>' : '') +
         '<span class="prc-name">' + esc(nm) + '</span>' +
         '<span class="prc-qty">' + qty + '</span>' +
         '</li>';
@@ -1824,18 +2053,12 @@ function saveBatchEdits() {
 
   // Update the title in case the name changed
   document.getElementById('d-title').textContent = b.batchName || b.formulaName || 'Batch';
-
-  // Flash a "Saved" indicator on the save button briefly
-  var btn = document.getElementById('d-save-btn');
-  if (btn) {
-    var prev = btn.textContent;
-    btn.textContent = 'Saved \u2713';
-    btn.disabled = true;
-    setTimeout(function() {
-      btn.textContent = prev;
-      btn.disabled = false;
-    }, 1100);
-  }
+  document.getElementById('d-name').value = b.batchName || '';
+  renderDetailMeta(b);
+  renderCuringNote(b);
+  renderSnapshot(b);
+  detIsDirty = false;
+  renderDetSave();
 }
 
 function markBatchReady() {
@@ -1852,11 +2075,8 @@ function markBatchReady() {
     // Update detail UI in place
     document.getElementById('d-mark-ready-btn').style.display = 'none';
     // Refresh header meta
-    var metaParts = [];
-    if (b.formulaName) metaParts.push('<span><strong>' + esc(b.formulaName) + '</strong></span>');
-    metaParts.push('<span>' + fmtDate(b.date) + '</span>');
-    metaParts.push('<span>Ready</span>');
-    document.getElementById('d-meta').innerHTML = metaParts.join('');
+    renderDetailMeta(b);
+    renderCuringNote(b);
     renderStats();
     renderList();
   }, { title: 'Mark this batch as ready?', yes: 'Mark ready' });
@@ -2391,6 +2611,10 @@ if (typeof Plume === 'undefined') {
   // new-batch form against `forms`, which is empty until Store has hydrated.
   Plume.setModule('batchlog');
   Plume.boot(function () {
+    // The 2026-10-19 shell: sidebar, icons in the title and toolbar.
+    Plume.shell({ module: 'batchlog' });
+    var ic = document.querySelectorAll('[data-ps-icon]');
+    for (var k = 0; k < ic.length; k++) ic[k].innerHTML = Plume.icon(ic[k].getAttribute('data-ps-icon'));
     loadData();
     handleDeepLink();
   });

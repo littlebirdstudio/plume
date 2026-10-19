@@ -2494,3 +2494,48 @@ taken from the palette itself, not the dark-mode screen version.
 **Copy as a table** is tab-separated, for an email or a spreadsheet.
 
 **Tests:** new `test/test-costing-tools.js` (35 checks), the 18th suite.
+
+### Session 20 (cont.) — Batches in the shell (core v1.27). The redesign is complete.
+
+Previewed with Heide ("Batches Redesign", version 1), then built. Her
+calls: a batch opens in a **slide-in panel** (offered against a full page
+like the product editor), **each ingredient line shows its cost** (new;
+today's lot prices, like the total always was), and the run button reads
+**"Commit this run"** (was "+ Add run").
+
+- **List:** sidebar and colour-block head; the four stat cards became the
+  one-line summary (`renderStats` fills `#bl-summary`). Recent / By
+  formulation / By status are toolbar tabs and All / Production / Tests are
+  chips; both DRIVE the old `#f-view` and `#f-type` selects, which stay in
+  the page hidden (`blPill(selectId, value)` sets the value and fires its
+  change; `blSyncPills()` marks pills and tabs). Same mechanism as the
+  barcode panel. Curing rows show the ready date, days left and a bar
+  (`cureHtml`). Packaged shows units: the LARGEST component quantity per run
+  (`runUnits`), so 6 jars + 6 labels is 6 units, not 12.
+- **A batch** (`#m-detail`, still opened with `openModal`): slides in from
+  the right. Header: the name as a big field (`#d-name`; an unnamed batch
+  shows the formulation as placeholder), then the formulation as a link
+  (`#f=<id>`), date and status. Tabs (`setBatchTab`): Details (date, yield,
+  batch type and cure time as pills over hidden selects, final pH, notes,
+  and a curing note holding Mark ready now), Ingredients (`renderSnapshot`
+  is now a table with cost per line and a total; `renderCostRollup` only
+  keeps the missing-cost note; the lot receipt sits in a "Which lots it
+  came from" disclosure), Packaging runs (cards with drawings, then the
+  builder). Delete is in the ⋯ menu.
+- **Saved / Save changes:** `detDirty()` on any edit in Details or the name
+  shows the Save changes button; saving returns to "Saved". The run
+  builder does not count (a run commits on its own). Closing with unsaved
+  edits asks first (`closeDetail`); Escape and the close button use it.
+- **New batch** (`#m-new`): the same panel; batch type and cure time are
+  pills; the ingredient table is one bordered table with short lines tinted.
+  `onFormulaChange` still picks Test for a draft or testing formulation, and
+  the pills follow.
+- **Not added:** Print sheet on an existing batch (it was in the preview's
+  top bar). It would print the formulation's current version, which may not
+  be what the batch was made from. New batch keeps its Print sheet.
+
+**Tests:** `test-shell.js` section 4d (39 checks). `test-packaging.js` now
+opens the Packaging runs tab before using the run builder, as a person
+would. 18 suites.
+
+**The app-style redesign is finished:** all five modules are in the shell.
