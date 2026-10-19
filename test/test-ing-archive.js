@@ -143,12 +143,14 @@ const SEED = `
     ok('an archived ingredient is not listed', !/Retired wax/.test(names), names);
     ok('live ingredients are listed', /Olive oil/.test(names) && /Shea butter/.test(names), names);
 
-    let bar = await page.evaluate("document.getElementById('ing-arch-bar').innerText");
-    ok('the bar offers the archived count', /Show 1 archived/.test(bar), bar);
-    ok('while hidden, it says so', /hidden while browsing/.test(bar), bar);
-    // The promise that makes archiving safe to use freely: putting something
-    // away never makes it unfindable.
-    ok('and promises search will still find them', /Searching still finds them/.test(bar), bar);
+    const btn = () => page.evaluate("(function(b){return b.style.display === 'none' ? '' : b.innerText + '|' + b.getAttribute('aria-pressed');})(document.getElementById('ing-arch-btn'))");
+    let bar = await btn();
+    // Just a button, no explanation (Heide, 2026-10-18). It sits in the toolbar.
+    ok('the toolbar offers Show archived with the count', /Show archived\s*1\|false/.test(bar), bar);
+    ok('it is in the toolbar', (await page.evaluate("!!document.querySelector('.ps-tools #ing-arch-btn')")) === true);
+    ok('and the list search sits above the table, not in the toolbar',
+       (await page.evaluate("!!document.querySelector('#list-mode #ing-search-row #search') && !document.querySelector('.ps-tools #search')")) === true);
+    ok('the old explanation bar is gone', (await page.evaluate("document.getElementById('ing-arch-bar')")) === null);
 
     await page.evaluate('toggleShowArchivedIngs()');
     await page.waitForTimeout(200);
@@ -156,15 +158,11 @@ const SEED = `
     ok('archived shown when asked', /Retired wax/.test(names), names);
     ok('and tagged as archived', /archived/i.test(names), names);
 
-    // The banner has to follow the state. Saying "hidden" while they are on
-    // screen makes the extra rows inexplicable, which is exactly how this
-    // was found.
-    bar = await page.evaluate("document.getElementById('ing-arch-bar').innerText");
-    ok('while showing, it does NOT still claim they are hidden',
-       !/hidden from this list/.test(bar), bar);
-    ok('it says they are being shown', /Showing 1 archived/.test(bar), bar);
-    ok('and that the add-ingredient search is unaffected either way',
-       /add-ingredient search/.test(bar), bar);
+    // The button has to follow the state: it is the only thing that accounts
+    // for archived rows in the list, which is how the old banner bug was found.
+    bar = await btn();
+    ok('while showing, it reads Hide archived and is pressed', /Hide archived\s*1\|true/.test(bar), bar);
+    ok('and is styled on', (await page.evaluate("document.getElementById('ing-arch-btn').classList.contains('on')")) === true);
     await page.close();
   }
 
@@ -189,30 +187,19 @@ const SEED = `
     ok('without the toggle having been touched',
        (await page.evaluate('showArchived')) === false);
 
-    const bar = await page.evaluate("document.getElementById('ing-arch-bar').innerText");
-    ok('the banner says the archive was searched', /also looking in the archive/.test(bar), bar);
-    ok('and how many it found', /found 1 archived ingredient/.test(bar), bar);
-    ok('the toggle button is out of the way while searching',
-       (await page.evaluate("document.querySelector('#ing-arch-bar button')")) === null);
-
     // The case that prevents the duplicate: nothing matches anywhere, and
     // the banner says so positively rather than leaving it ambiguous.
     await page.evaluate("document.getElementById('search').value = 'zzzznothing'; renderTable();");
     await page.waitForTimeout(200);
     const body = await page.evaluate("document.getElementById('tbody').innerText");
-    const bar2 = await page.evaluate("document.getElementById('ing-arch-bar').innerText");
     ok('a genuine miss reads as no results', /No results/.test(body), body);
-    ok('and confirms the archive was checked too',
-       /No archived ingredient matches/.test(bar2), bar2);
-    ok('so it is safe to add as new', /safe to add as new/.test(bar2), bar2);
+    ok('and confirms the archive was checked too, so it is safe to add as new',
+       /archived ingredients included/.test(body), body);
 
     // Clearing the search returns to the browsing view.
     await page.evaluate("document.getElementById('search').value = ''; renderTable();");
     await page.waitForTimeout(200);
     ok('clearing the search hides archived again', !/Retired wax/.test(await rows()));
-    const bar3 = await page.evaluate("document.getElementById('ing-arch-bar').innerText");
-    ok('and the banner says searching will still find them',
-       /Searching still finds them/.test(bar3), bar3);
     await page.close();
   }
 
