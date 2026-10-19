@@ -168,7 +168,16 @@ body.ps-shell .app-footer { background: transparent; }
 .pk-sort-note { font-size: 13px; color: var(--warning); background: var(--warning-bg); border: 1px solid var(--warning-border); border-radius: 9px; padding: 8px 12px; margin: 0 0 12px; max-width: 760px; }
 .pk-sort-note button, .pk-note button { border: 0; background: none; color: var(--bark); cursor: pointer; padding: 0; font: inherit; font-weight: 600; }
 /* Grouped list */
-table.pk { font-size: 14px; }
+/* Sized to its content rather than the whole window (her ask, 2026-10-18:
+   too much blank space between Supplier and Cost). */
+table.pk { font-size: 14px; width: 100%; max-width: 840px; }
+table.pk th:nth-child(1) { width: 200px; }
+.pk .pk-size { white-space: nowrap; }
+table.pk th:nth-child(3) { width: 130px; }
+table.pk th:nth-child(4) { width: 80px; }
+table.pk th:nth-child(5) { width: 58px; }
+table.pk th:nth-child(6) { width: 52px; }
+.pk-sort-note, .pk-search .ps-search { max-width: 440px; }
 /* Each kind is a heading with its drawing; its items sit indented beneath
    it on a guide line, with a gap before the next kind (her ask, 2026-10-18:
    the kinds were hard to pick out in the list). */
