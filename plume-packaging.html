@@ -84,37 +84,16 @@
 
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);min-height:100vh;font-size:14px;line-height:1.6}
-.app-header{background:var(--hdr-bg,var(--bark-dark));color:var(--hdr-fg,var(--cream));padding:1.25rem 2rem;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid var(--hdr-line,var(--bark))}
-.brand-name{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:300;letter-spacing:0.12em;color:var(--hdr-fg,var(--cream));line-height:1}
-.brand-sub{font-size:10px;letter-spacing:0.25em;text-transform:uppercase;color:var(--hdr-sub,var(--bark-light));font-weight:300}
-.hdr-actions{display:flex;gap:8px;align-items:center}
 .btn{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;letter-spacing:0.04em;padding:7px 16px;border-radius:3px;border:1px solid var(--cream-border);background:transparent;color:var(--ink);cursor:pointer;transition:all 0.15s;white-space:nowrap}
 .btn:hover{background:var(--cream-dark)}
 .btn-primary{background:var(--bark);color:var(--cream);border-color:var(--bark)}
 .btn-primary:hover{background:var(--bark-dark)}
-.btn-ghost{background:transparent;border-color:rgba(253,252,250,0.3);color:var(--hdr-fg,var(--cream))}
-.btn-ghost:hover{background:rgba(253,252,250,0.1)}
 .btn-danger{color:var(--danger);border-color:var(--danger-border)}
 .btn-danger:hover{background:var(--danger-bg)}
 .btn-sage{background:var(--sage);color:var(--cream);border-color:var(--sage)}
 .btn-sage:hover{background:var(--sage-dark)}
 .btn-sm{font-size:11px;padding:4px 10px}
 .app-body{max-width:1060px;margin:0 auto;padding:2rem}
-.sec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem}
-.sec-title{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:300;color:var(--bark-dark)}
-.toolbar{display:flex;gap:10px;margin-bottom:1.25rem;flex-wrap:wrap;align-items:center}
-.search-inp{font-family:'DM Sans',sans-serif;font-size:13px;padding:7px 12px;border:1px solid var(--cream-border);border-radius:3px;background:var(--white);color:var(--ink);flex:1;min-width:200px;outline:none}
-.search-inp:focus{border-color:var(--bark-light)}
-.filter-sel{font-family:'DM Sans',sans-serif;font-size:12px;padding:7px 10px;border:1px solid var(--cream-border);border-radius:3px;background:var(--white);color:var(--ink);outline:none;cursor:pointer}
-.table-wrap{background:var(--white);border:1px solid var(--cream-border);border-radius:4px;overflow:hidden}
-table{width:100%;border-collapse:collapse;font-size:13px}
-thead th{background:var(--cream-dark);color:var(--ink-light);font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;padding:10px 14px;text-align:left;border-bottom:1px solid var(--cream-border)}
-tbody tr{cursor:pointer;transition:background 0.1s}
-tbody tr:hover td{background:var(--cream)}
-td{padding:10px 14px;border-bottom:1px solid var(--cream-border);vertical-align:middle;color:var(--ink)}
-tbody tr:last-child td{border-bottom:none}
-.pkg-thumb{width:48px;height:48px;object-fit:cover;border-radius:3px;border:1px solid var(--cream-border);display:block}
-.pkg-thumb-placeholder{width:48px;height:48px;border-radius:3px;border:1px dashed var(--cream-border);background:var(--cream);display:flex;align-items:center;justify-content:center;color:var(--ink-lighter);font-size:18px;flex-shrink:0}
 .type-badge{display:inline-block;font-size:10px;font-weight:500;letter-spacing:0.06em;padding:3px 9px;border-radius:20px;text-transform:uppercase}
 .type-container{background:var(--ph-water-bg);color:var(--ph-water-fg)}
 .type-label{background:var(--ph-active-bg);color:var(--ph-active-fg)}
@@ -137,19 +116,7 @@ tbody tr:last-child td{border-bottom:none}
 .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--bark-light)}
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .form-full{grid-column:1/-1}
-.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1.75rem}
-.stat-card{background:var(--white);border:1px solid var(--cream-border);border-radius:4px;padding:1rem 1.25rem}
-.stat-label{font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:var(--ink-lighter);margin-bottom:4px;font-weight:500}
-.stat-value{font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:300;color:var(--bark-dark);line-height:1}
-.img-upload-area{border:2px dashed var(--cream-border);border-radius:4px;padding:16px;text-align:center;cursor:pointer;transition:all 0.15s;background:var(--cream);position:relative}
-.img-upload-area:hover{border-color:var(--bark-light);background:var(--cream-dark)}
-.img-upload-area.has-img{border-style:solid;border-color:var(--cream-border);padding:8px;background:var(--white)}
-.img-upload-area input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
-.img-preview{width:100%;max-height:180px;object-fit:contain;border-radius:3px;display:block;margin:0 auto}
-.img-upload-hint{font-size:12px;color:var(--ink-lighter);line-height:1.5}
 .img-upload-hint strong{display:block;font-size:13px;color:var(--ink-light);margin-bottom:4px}
-.img-remove-btn{font-family:'DM Sans',sans-serif;font-size:11px;color:var(--danger);background:none;border:none;cursor:pointer;padding:4px 0;display:block;margin:6px auto 0}
-.img-size-note{font-size:10px;color:var(--ink-lighter);margin-top:4px}
 .modal-section{font-size:10px;font-weight:500;letter-spacing:0.15em;text-transform:uppercase;color:var(--ink-lighter);padding:12px 0 8px;border-top:1px solid var(--cream-border);margin-top:4px;display:flex;align-items:center;justify-content:space-between}
 /* Purchase records */
 .purchase-row{background:var(--cream);border-radius:4px;padding:10px 12px;margin-bottom:8px}
@@ -184,6 +151,94 @@ tbody tr:last-child td{border-bottom:none}
 .palette-swatch-stripes span { flex:1; height:100%; display:block; }
 .palette-swatch-label { font-size:11px; color:var(--ink-light); text-align:center; letter-spacing:0.02em; }
 .palette-swatch.active .palette-swatch-label { color:var(--ink); font-weight:600; }
+/* ── App shell and the packaging rethink (core v1.22, 2026-10-18) ─────
+   As previewed with Heide ("Packaging Redesign", version 5). Sidebar and
+   colour-block head come from core; the drawings, swatches and picker
+   styles live in core too (Plume.pkCss), because Batches and Products &
+   Costing use the same picker. */
+body.ps-shell { font-family: 'DM Sans', sans-serif; }
+body.ps-shell .app-body { max-width: 1240px; margin: 0; padding: 28px clamp(16px, 4vw, 48px) 48px; }
+body.ps-shell .app-footer { background: transparent; }
+[hidden] { display: none !important; }
+.pk-tab-n { color: var(--ink-lighter); font-size: 12px; }
+.pk-search { margin: 2px 0 14px; }
+.pk-search .ps-search { background: var(--cream); max-width: 440px; padding: 0 10px; }
+.pk-search .ps-search:hover, .pk-search .ps-search:focus-within { background: var(--cream-dark); }
+.pk-search .ps-search input { width: 100%; }
+.pk-sort-note { font-size: 13px; color: var(--warning); background: var(--warning-bg); border: 1px solid var(--warning-border); border-radius: 9px; padding: 8px 12px; margin: 0 0 12px; max-width: 760px; }
+.pk-sort-note button, .pk-note button { border: 0; background: none; color: var(--bark); cursor: pointer; padding: 0; font: inherit; font-weight: 600; }
+/* Grouped list */
+table.pk { font-size: 14px; }
+.pk .pk-g td { background: var(--cream); padding: 9px 10px; border-bottom: 1.5px solid var(--cream-border); cursor: default; }
+.ps-table tbody tr.pk-g:hover td { background: var(--cream); }
+.pk-g .gn { font-weight: 600; font-size: 14.5px; }
+.pk-g .gc { color: var(--ink-lighter); font-size: 12.5px; margin-left: 8px; }
+.pk-g .type-badge { margin-left: 10px; text-transform: none; letter-spacing: 0; font-size: 11.5px; padding: 1px 8px; border-radius: 5px; }
+.pk-g-act { float: right; font: inherit; font-size: 12.5px; border: 1px solid var(--cream-border); background: var(--white); border-radius: 7px; padding: 1px 10px; cursor: pointer; color: var(--ink-light); }
+.pk-row td:first-child { padding-left: 22px; }
+.pk-row td { padding-top: 7px; padding-bottom: 7px; }
+.pk-cell { display: inline-flex; gap: 10px; align-items: center; }
+.pk-row .pk-thumb { width: 38px; height: 38px; }
+.pk-buy { font-size: 12px; color: var(--sage-dark); text-decoration: none; white-space: nowrap; }
+.pk-buy:hover { text-decoration: underline; }
+.ps-table tbody tr.pk-empty { cursor: default; }
+.ps-table tbody tr.pk-empty:hover td { background: transparent; }
+/* Edit panel: the old modal, now sliding in from the right */
+#m-add.modal-ov { padding: 0; background: rgba(20,22,17,.18); }
+#m-add.modal-ov.open { display: block; }
+#m-add .modal { position: fixed; top: 0; right: 0; bottom: 0; width: min(600px, 100%); max-width: none; margin: 0; border: 0; border-radius: 0; overflow-y: auto; padding: 0 26px; box-shadow: 0 12px 40px rgba(20,20,15,.18), 0 2px 6px rgba(20,20,15,.06); animation: pk-in .22s cubic-bezier(.2,.8,.2,1); }
+@keyframes pk-in { from { transform: translateX(40px); opacity: .4; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { #m-add .modal { animation: none; } }
+#m-add .modal-hdr { position: sticky; top: 0; z-index: 3; background: var(--white); margin: 0 -26px 16px; padding: 10px 18px; justify-content: flex-start; gap: 8px; }
+#m-add .modal-title { font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--ink-lighter); }
+#m-add .modal-foot .btn { display: inline-flex; align-items: center; }
+#m-add .modal-foot { position: sticky; bottom: 0; z-index: 3; background: var(--white); margin: 20px -26px 0; padding: 12px 26px; }
+#m-add .field label { font-size: 12px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--ink-light); }
+#m-add .field label span { color: var(--ink-lighter); }
+#m-add .field input, #m-add .field select, #m-add .field textarea { border-radius: 7px; font-size: 14px; padding: 6px 9px; }
+#m-add .form-grid { gap: 2px 14px; }
+.pk-ed-top { display: flex; gap: 14px; align-items: center; margin-bottom: 14px; }
+.pk-big { width: 64px; height: 64px; border-radius: 12px; background: #F6F3EE; display: grid; place-items: center; flex: none; border: 1px solid var(--cream-border); padding: 7px; }
+.pk-ed-top h2 { margin: 0 0 2px; font-size: 20px; font-weight: 600; line-height: 1.25; }
+.pk-as { color: var(--ink-lighter); font-size: 13px; margin: 0; }
+.pk-as b { color: var(--ink); font-weight: 500; }
+.kind-sec { font-size: 11.5px; color: var(--ink-lighter); margin: 8px 0 4px; }
+.kind-sec:first-child { margin-top: 0; }
+.icon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 6px; }
+.icon-grid button { border: 1px solid var(--cream-border); background: #F6F3EE; color: #5D5752; border-radius: 9px; padding: 6px 2px 4px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; font: inherit; font-size: 10.5px; line-height: 1.2; text-align: center; min-height: 66px; }
+.icon-grid button:hover { border-color: var(--bark-light); }
+.icon-grid button.on { border-color: var(--bark); box-shadow: 0 0 0 1.5px var(--bark); color: #26221F; }
+.icon-grid svg { width: 30px; height: 30px; flex: none; }
+.pk-hint { font-size: 12.5px; color: var(--ink-lighter); margin: 4px 0 8px; }
+.sugg { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 2px; }
+.sugg button { border: 1px solid var(--cream-border); background: transparent; border-radius: 999px; padding: 1px 9px; font: inherit; font-size: 12px; color: var(--ink-light); cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
+.sugg button:hover { background: var(--cream-dark); }
+.sugg button.on { background: var(--ink); color: var(--white); border-color: var(--ink); }
+.pk-used { font-size: 12.5px; margin: 0 6px 4px 0; display: inline-block; }
+.pk-note { font-size: 12.5px; color: var(--ink-light); background: var(--cream); border-radius: 9px; padding: 9px 12px; margin: 0 0 12px; }
+.pk-note.warn { background: var(--warning-bg); color: var(--warning); }
+.pk-note.warn b { color: inherit; }
+/* Tidy up names */
+.tidy-intro { color: var(--ink-light); max-width: 760px; margin: 16px 0 12px; }
+table.tidy { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tidy th { text-align: left; font-weight: 500; font-size: 12px; color: var(--ink-lighter); padding: 8px 6px; border-bottom: 1.5px solid var(--cream-border); white-space: nowrap; background: transparent; text-transform: none; letter-spacing: 0; }
+.tidy td { padding: 7px 6px; border-bottom: 1px solid var(--cream-border); vertical-align: middle; }
+.tidy tbody tr { cursor: default; }
+.tidy tbody tr:hover td { background: transparent; }
+.tidy .old { color: var(--ink-light); max-width: 220px; }
+.tidy input[type=text], .tidy select { width: 100%; min-width: 0; border: 1px solid var(--cream-border); border-radius: 6px; padding: 4px 7px; background: var(--white); color: var(--ink); font: inherit; font-size: 13px; }
+.tidy .ic { width: 44px; }
+.tidy .ic .pk-thumb { width: 36px; height: 36px; }
+.tidy tr.off td { opacity: .5; }
+.tidy select.kind { min-width: 150px; }
+.tidy-col { display: flex; gap: 6px; align-items: center; }
+.tidy-foot { display: flex; gap: 12px; align-items: center; margin-top: 14px; flex-wrap: wrap; }
+.tidy-done-box { margin-top: 16px; padding: 14px 16px; border-radius: 10px; background: var(--sage-light); color: var(--sage-dark); max-width: 760px; }
+.tidy-done-box .btn { margin-left: 8px; }
+body.ps-shell .btn { border-radius: 7px; letter-spacing: 0; font-size: 13px; }
+body.ps-shell .btn-sm { font-size: 12px; }
+@media (max-width: 900px) { .tidy .hide-md { display: none; } }
+@media (max-width: 760px) { .hide-sm { display: none; } #m-add .form-grid { grid-template-columns: 1fr; } .purchase-row-grid { grid-template-columns: 1fr 1fr; } }
 </style>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#404834">
@@ -191,127 +246,133 @@ tbody tr:last-child td{border-bottom:none}
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 </head>
 <body>
-<header class="app-header">
-  <div>
-    <div class="brand-name">Plume</div>
-    <div class="brand-sub">by Little Bird Studio &middot; Packaging Library</div>
-  </div>
-  <div class="hdr-actions">
-    <a href="plume-ingredients.html" target="plume-ingredients" class="btn btn-ghost">Ingredients</a>
-    <a href="plume-formulations.html" target="plume-formulations" class="btn btn-ghost">Formulations</a>
-    <a href="plume-costing.html" target="plume-costing" class="btn btn-ghost">Products &amp; Costing</a>
-    <a href="plume-batchlog.html" target="plume-batchlog" class="btn btn-ghost">Batches</a>
-    <button class="btn btn-ghost" onclick="exportData()">Export</button>
-    <button class="btn btn-ghost" onclick="document.getElementById('import-input').click()">Import</button>
-    <input type="file" id="import-input" accept=".json" style="display:none" onchange="importData(event)">
-    <button class="btn btn-ghost" onclick="openSettings()" title="Settings &amp; appearance">⚙ Settings</button>
-  </div>
-</header>
+
+<!-- The sidebar (Plume.shell) replaces the old header: modules, Suppliers and
+     Settings are there; Export and Import are in the toolbar's ⋯ menu. -->
+<input type="file" id="import-input" accept=".json" style="display:none" onchange="importData(event)">
+
 <div class="app-body">
   <div id="stor-banner-slot"></div>
-  <div class="stats-row">
-    <div class="stat-card"><div class="stat-label">Total items</div><div class="stat-value" id="s-total">0</div></div>
-    <div class="stat-card"><div class="stat-label">Containers</div><div class="stat-value" id="s-containers">0</div></div>
-    <div class="stat-card"><div class="stat-label">Labels</div><div class="stat-value" id="s-labels">0</div></div>
-    <div class="stat-card"><div class="stat-label">Inventory value</div><div class="stat-value" id="s-value" style="font-size:22px;padding-top:6px">$0.00</div></div>
-  </div>
-  <div class="sec-header">
-    <div style="display:flex; align-items:center; gap:14px">
-      <div class="sec-title">Packaging items</div>
-      <button class="btn btn-primary btn-sm" onclick="openAdd()">+ New item</button>
+
+  <div class="ps-page-head">
+    <div>
+      <div class="ps-title"><span class="ps-title-icon" data-ps-icon="packaging"></span><h1>Packaging</h1></div>
+      <div class="ps-summary" id="pk-summary"></div>
     </div>
   </div>
-  <div class="toolbar">
-    <input class="search-inp" type="text" id="search" placeholder="Search by name or supplier..." oninput="renderTable()">
-    <select class="filter-sel" id="f-type" onchange="renderTable()">
-      <option value="">All types</option>
-      <option value="container">Container</option>
-      <option value="label">Label</option>
-      <option value="box">Box / outer</option>
-      <option value="closure">Closure / cap</option>
-      <option value="other">Other</option>
-    </select>
+
+  <div class="ps-toolbar">
+    <button type="button" class="ps-tab on" id="vt-list" onclick="setPkView('list')">All packaging</button>
+    <button type="button" class="ps-tab" id="vt-tidy" onclick="setPkView('tidy')" style="display:none">Tidy up names <span class="pk-tab-n" id="tidy-n"></span></button>
+    <div class="ps-tools">
+      <button type="button" class="ps-btn-primary" onclick="openAdd()"><span data-ps-icon="plus"></span>New</button>
+      <div class="ps-menu-wrap">
+        <button type="button" class="ps-icon-btn" data-ps-menu aria-label="More actions" aria-expanded="false" id="pk-more-btn"><span data-ps-icon="more"></span></button>
+        <div class="ps-menu" role="menu">
+          <button type="button" onclick="setPkView('tidy')"><span data-ps-icon="sparkle"></span>Tidy up names</button>
+          <hr>
+          <button type="button" onclick="exportData()"><span data-ps-icon="download"></span>Export backup</button>
+          <button type="button" onclick="document.getElementById('import-input').click()"><span data-ps-icon="upload"></span>Import</button>
+        </div>
+      </div>
+    </div>
   </div>
-  <div class="table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th style="width:56px"></th>
-          <th style="width:22%">Item name</th>
-          <th style="width:10%">Type</th>
-          <th style="width:12%">Supplier</th>
-          <th style="width:9%">Cost / unit</th>
-          <th style="width:8%">Stock</th>
-          <th style="width:8%">Min order</th>
-          <th>Notes</th>
-          <th style="width:5%"></th>
-        </tr>
-      </thead>
-      <tbody id="tbody"></tbody>
-    </table>
-  </div>
+
+  <!-- List: grouped by kind, sizes small to large, then color -->
+  <section id="pk-list-view">
+    <div class="ps-chips" id="pk-chips"></div>
+    <div class="pk-search"><label class="ps-search"><span data-ps-icon="search"></span><input type="search" id="search" placeholder="Search kind, size, color, material, product or supplier" oninput="renderTable()" aria-label="Search packaging"></label></div>
+    <div id="pk-sort-note"></div>
+    <div class="ps-table-wrap">
+      <table class="ps-table pk">
+        <thead><tr><th>Size</th><th>Color and material, or product</th><th class="hide-sm">Supplier</th><th class="ps-num">Cost / unit</th><th class="ps-num">Stock</th><th class="hide-sm"></th></tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Tidy up names: a one-time screen for items saved before kinds -->
+  <section id="pk-tidy-view" hidden>
+    <p class="tidy-intro">Each row is an item saved before kinds, with its current name and what Plume reads from it. Check each guess and fix anything wrong. Nothing changes until you click Apply, and only ticked rows change. Stock, purchases and costs are never touched.</p>
+    <div id="tidy-body"></div>
+  </section>
 </div>
 
-<!-- Add/Edit modal -->
-<div class="modal-ov" id="m-add">
-  <div class="modal">
+<!-- Edit panel: slides in from the right. "What is it?" replaces the Name
+     field; the fields below it follow the kind. -->
+<div class="modal-ov" id="m-add" onclick="if (event.target === this) closeModal('m-add')">
+  <div class="modal" role="dialog" aria-labelledby="m-add-title">
     <div class="modal-hdr">
+      <button class="modal-x" onclick="closeModal('m-add')" aria-label="Close">&#x2715;</button>
       <div class="modal-title" id="m-add-title">New packaging item</div>
-      <button class="modal-x" onclick="closeModal('m-add')">&#x2715;</button>
     </div>
 
-    <!-- Photo -->
-    <div class="field form-full" style="margin-bottom:16px">
-      <label>Photo</label>
-      <div class="img-upload-area" id="img-upload-area">
-        <input type="file" accept="image/*" onchange="handleImageUpload(event)">
-        <img id="img-preview" class="img-preview" style="display:none">
-        <div id="img-upload-hint" class="img-upload-hint">
-          <strong>Click to upload a photo</strong>
-          JPG, PNG, WEBP &mdash; auto-compressed on upload
-        </div>
-        <button type="button" class="img-remove-btn" id="img-remove-btn" style="display:none" onclick="removeImage(event)">Remove photo</button>
+    <div class="pk-ed-top">
+      <span class="pk-big" id="ed-icon"></span>
+      <div>
+        <h2 id="ed-title">New packaging item</h2>
+        <p class="pk-as" id="ed-as"></p>
       </div>
-      <div class="img-size-note">Images are compressed and stored locally.</div>
+    </div>
+    <div id="ed-was"></div>
+
+    <div class="field form-full">
+      <label>What is it?</label>
+      <div id="e-kinds"></div>
     </div>
 
-    <!-- Core fields — no cost/unit, comes from purchase history -->
-    <div class="form-grid">
-      <div class="field form-full">
-        <label>Item name *</label>
-        <input type="text" id="f-name" placeholder="e.g. 1oz amber glass dropper bottle">
+    <div class="pk-hint" id="e-pick-first">Pick what it is, and the right fields appear.</div>
+    <div class="form-grid" id="e-fields" style="display:none">
+      <div class="field form-full" id="row-other">
+        <label for="f-other">Name</label>
+        <input type="text" id="f-other" placeholder="e.g. Tissue paper" oninput="edLive()">
       </div>
       <div class="field">
-        <label>Type</label>
-        <select id="f-type-field">
-          <option value="container">Container</option>
-          <option value="label">Label</option>
-          <option value="box">Box / outer</option>
-          <option value="closure">Closure / cap</option>
-          <option value="other">Other</option>
-        </select>
+        <label for="f-capacity">Size</label>
+        <input type="text" id="f-capacity" placeholder="e.g. 1 oz, 30 ml, 2 × 2 × 4 in" oninput="edLive()">
       </div>
       <div class="field">
-        <label>Supplier</label>
+        <label for="f-supplier">Supplier</label>
         <input type="text" id="f-supplier" placeholder="e.g. SKS Bottle">
       </div>
+      <div class="field form-full" id="row-color">
+        <label for="f-color">Color</label>
+        <input type="text" id="f-color" placeholder="e.g. Amber" oninput="edLive(true)">
+        <div class="sugg" id="sugg-color"></div>
+      </div>
+      <div class="field form-full" id="row-material">
+        <label for="f-material">Material</label>
+        <input type="text" id="f-material" placeholder="e.g. Glass" oninput="edLive()">
+        <div class="sugg" id="sugg-material"></div>
+      </div>
+      <div class="field" id="row-for">
+        <label for="f-for">For product <span>· blank for any product</span></label>
+        <select id="f-for" onchange="edLive()"></select>
+      </div>
+      <div class="field" id="row-part">
+        <label for="f-part">Part <span>· optional</span></label>
+        <input type="text" id="f-part" placeholder="Front, Back, Top…" oninput="edLive()">
+        <div class="sugg" id="sugg-part"></div>
+      </div>
       <div class="field">
-        <label>Minimum order qty</label>
+        <label for="f-moq">Minimum order qty</label>
         <input type="number" id="f-moq" placeholder="e.g. 12" min="1" step="1">
       </div>
       <div class="field">
-        <label>Fill volume / capacity</label>
-        <input type="text" id="f-capacity" placeholder="e.g. 1oz, 30mL, 100g">
-      </div>
-      <div class="field form-full">
-        <label>Purchase link</label>
+        <label for="f-link">Purchase link</label>
         <input type="url" id="f-link" placeholder="https://...">
       </div>
       <div class="field form-full">
-        <label>Notes</label>
-        <textarea id="f-notes" rows="2" placeholder="Color, material, dimensions, finish..."></textarea>
+        <label for="f-notes">Notes</label>
+        <textarea id="f-notes" rows="2" placeholder="Finish, neck size, anything else worth knowing"></textarea>
+      </div>
+      <div class="field form-full">
+        <label>Used in <span>· from each product's packaging recipe</span></label>
+        <div id="e-used"></div>
       </div>
     </div>
+    <div id="ed-photo"></div>
+    <div id="ed-dup"></div>
 
     <!-- Purchase history -->
     <div class="modal-section">
@@ -385,9 +446,9 @@ tbody tr:last-child td{border-bottom:none}
       <div style="font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-lighter);margin-bottom:10px;border-top:1px solid var(--cream-border);padding-top:16px">Photo storage</div>
       <div style="padding:4px 0 8px">
         <div id="photo-stats" style="font-size:12px;color:var(--ink-light);line-height:1.5;margin-bottom:10px"></div>
-        <button class="btn" id="opt-photos-btn" onclick="optimisePhotos()">Shrink stored photos</button>
+        <button class="btn" id="rm-photos-btn" onclick="removeAllPhotos()">Remove every photo</button>
         <div style="font-size:11px;color:var(--ink-lighter);line-height:1.5;margin-top:8px">
-          Re-saves every photo at the size actually used on screen. The pictures stay &mdash; they just stop carrying pixels nothing displays. Export a backup first if you would like a safety net.
+          Packaging shows drawings now, so the old photos are not shown anywhere. Removing them frees the space they take. Export a backup first if you want to keep them.
         </div>
         <div id="opt-photos-result" style="font-size:12px;color:var(--sage-dark);line-height:1.5;margin-top:8px"></div>
       </div>
@@ -405,7 +466,7 @@ var PKG_KEY = 'aerie-packaging-v2';
 // ── App state ─────────────────────────────────────────
 var items              = [];
 var editingId          = null;
-var pendingImage       = null;
+var pendingImage       = null;   // an old item's photo, kept until removed
 var pendingAdjustments = [];
 
 // ── Helpers ───────────────────────────────────────────
@@ -444,8 +505,7 @@ function latestCostPerUnit(item) {
 // ── Data ──────────────────────────────────────────────
 function loadData() {
   items = Store.getJSON(PKG_KEY, []) || [];
-  renderTable();
-  renderStats();
+  renderAll();
   Plume.renderStorBanner();
 }
 
@@ -460,7 +520,10 @@ function saveData() {
   return false;
 }
 
-// ── Photo optimisation ────────────────────────────────
+// ── Old photos ────────────────────────────────────────
+// Drawings replaced photos on 2026-10-18 (core v1.22): photos were a pain to
+// make and most of Plume's storage. No new ones can be added. Old ones stay
+// until removed, one at a time in the edit panel or all at once here.
 function photoBytes() {
   var n = 0, total = 0;
   items.forEach(function(i) {
@@ -469,72 +532,27 @@ function photoBytes() {
   return { count: n, bytes: total };
 }
 
-// One line rather than a deletion: the photo panel calls fmtSize in four
-// places, and core's copy is reached under two other names already. The
-// implementation is core's; only the name is local.
-function fmtSize(b) { return Plume.fmtBytes(b); }
-
 function renderPhotoStats() {
   var el = document.getElementById('photo-stats');
+  var btn = document.getElementById('rm-photos-btn');
   if (!el) return;
   var p = photoBytes();
-  if (!p.count) { el.textContent = 'No photos stored.'; return; }
-  el.innerHTML = '<strong>' + p.count + '</strong> photo' + (p.count === 1 ? '' : 's') +
-                 ' using <strong>' + fmtSize(p.bytes) + '</strong>.';
+  if (btn) btn.style.display = p.count ? '' : 'none';
+  if (!p.count) { el.textContent = 'No photos stored. Packaging uses drawings.'; return; }
+  el.innerHTML = '<strong>' + p.count + '</strong> old photo' + (p.count === 1 ? '' : 's') +
+                 ' using <strong>' + Plume.fmtBytes(p.bytes) + '</strong>.';
 }
 
-// Walks every stored photo and re-encodes it at display size. Images are
-// processed one at a time (canvas decoding is async) and only written back
-// if the result is actually smaller, so re-running this is harmless.
-function optimisePhotos() {
-  var withPhotos = items.filter(function(i) { return !!i.image; });
-  if (!withPhotos.length) { Plume.tell('There are no photos to shrink.'); return; }
-  // The dialog does not block: the re-encode runs from its onYes callback.
-  Plume.ask('Every picture is kept. This cannot be undone, so export a backup first if you want one.',
-    function () { runOptimisePhotos(withPhotos); },
-    { title: 'Re-save ' + withPhotos.length + ' photo' + (withPhotos.length === 1 ? '' : 's') + ' at display size?',
-      yes: 'Re-save', danger: true });
-}
-
-// The re-encode itself, run only after optimisePhotos gets a yes.
-function runOptimisePhotos(withPhotos) {
-  var before = photoBytes().bytes;
-  var btn = document.getElementById('opt-photos-btn');
-  var res = document.getElementById('opt-photos-result');
-  if (btn) { btn.disabled = true; btn.textContent = 'Working...'; }
-
-  var idx = 0, shrunk = 0;
-  function step() {
-    if (idx >= withPhotos.length) {
-      // If the write fails, say so instead of reporting bytes reclaimed
-      // that were never persisted.
-      if (!saveData()) {
-        if (btn) { btn.disabled = false; btn.textContent = 'Shrink stored photos'; }
-        if (res) res.textContent = 'Could not save the shrunk photos -- nothing was changed on disk.';
-        return;
-      }
-      renderTable();
-      renderPhotoStats();
-      var after = photoBytes().bytes;
-      if (btn) { btn.disabled = false; btn.textContent = 'Shrink stored photos'; }
-      if (res) {
-        res.innerHTML = shrunk
-          ? ('Shrank ' + shrunk + ' photo' + (shrunk === 1 ? '' : 's') + ': ' +
-             fmtSize(before) + ' \u2192 ' + fmtSize(after) +
-             ' (saved ' + fmtSize(Math.max(0, before - after)) + ').')
-          : 'Already at display size \u2014 nothing to reclaim.';
-      }
-      return;
-    }
-    var item = withPhotos[idx++];
-    if (btn) btn.textContent = 'Working... ' + idx + '/' + withPhotos.length;
-    compressImage(item.image, PHOTO_MAX_W, PHOTO_QUALITY, function(out) {
-      // Only keep the new one if it genuinely helps
-      if (out && out.length < item.image.length) { item.image = out; shrunk++; }
-      step();
-    });
-  }
-  step();
+function removeAllPhotos() {
+  var p = photoBytes();
+  if (!p.count) { Plume.tell('There are no photos to remove.'); return; }
+  Plume.ask('This frees ' + Plume.fmtBytes(p.bytes) + '. It cannot be undone, so export a backup first if you want to keep them.', function () {
+    items.forEach(function (i) { delete i.image; });
+    var res = document.getElementById('opt-photos-result');
+    if (!saveData()) { if (res) res.textContent = 'Could not save, so nothing was removed.'; return; }
+    renderAll(); renderPhotoStats(); Plume.renderStorage();
+    if (res) res.textContent = 'Removed ' + p.count + ' photo' + (p.count === 1 ? '' : 's') + ', freeing ' + Plume.fmtBytes(p.bytes) + '.';
+  }, { title: 'Remove ' + p.count + ' photo' + (p.count === 1 ? '' : 's') + '?', yes: 'Remove', danger: true });
 }
 
 function exportData() {
@@ -559,7 +577,7 @@ function importData(e) {
           arr.forEach(function(item) {
             if (!ex.has((item.name||'').toLowerCase())) { items.push(item); added++; }
           });
-          saveData(); renderTable(); renderStats();
+          saveData(); renderAll();
           Plume.tell('Imported ' + added + ' items.');
         } catch(err) { Plume.tell('Could not read file.'); }
       }, { title: 'Import ' + arr.length + ' items?', yes: 'Import' });
@@ -569,136 +587,193 @@ function importData(e) {
   document.getElementById('import-input').value = '';
 }
 
-// ── Stats ─────────────────────────────────────────────
+// ── Summary and list ──────────────────────────────────
+// Grouped by kind (core's Plume.pkGroups): one header row per kind, its
+// sizes and colors beneath. Items saved before kinds sit under "Needs
+// sorting" until the Tidy screen gives them one.
+var groupFilter = '';
 function renderStats() {
-  document.getElementById('s-total').textContent      = items.length;
-  document.getElementById('s-containers').textContent = items.filter(function(i){return i.type==='container';}).length;
-  document.getElementById('s-labels').textContent     = items.filter(function(i){return i.type==='label';}).length;
   var totalVal = items.reduce(function(sum, i) {
     var cpu = latestCostPerUnit(i);
     return sum + (cpu !== null ? cpu * calcStock(i) : 0);
   }, 0);
-  document.getElementById('s-value').textContent = '$' + totalVal.toFixed(2);
+  var kinds = Plume.pkGroups(items.filter(function (i) { return !!i.kind; })).length;
+  var unsorted = untidied().length;
+  document.getElementById('pk-summary').innerHTML =
+    '<span><b>' + items.length + '</b> item' + (items.length === 1 ? '' : 's') + '</span>' +
+    '<span><b>' + kinds + '</b> kind' + (kinds === 1 ? '' : 's') + '</span>' +
+    '<span><b>$' + totalVal.toFixed(2) + '</b> on hand</span>' +
+    (unsorted ? '<span><b>' + unsorted + '</b> to sort</span>' : '');
+  var tab = document.getElementById('vt-tidy');
+  tab.style.display = unsorted || pkView === 'tidy' ? '' : 'none';
+  document.getElementById('tidy-n').textContent = unsorted ? '(' + unsorted + ')' : '';
+  if (Plume.refreshShell) Plume.refreshShell();
+}
+function untidied() { return items.filter(function (i) { return !i.kind; }); }
+
+function renderChips() {
+  var present = {};
+  items.forEach(function (i) { present[i.kind ? Plume.pkKindOf(i).group : 'sort'] = 1; });
+  if (groupFilter && !present[groupFilter]) groupFilter = '';
+  var chip = function (key, label) {
+    return '<button type="button" class="ps-chip' + (groupFilter === key ? ' on' : '') + '" onclick="groupFilter=\'' + key + '\';renderChips();renderTable()">' + esc(label) + '</button>';
+  };
+  var h = chip('', 'All');
+  Plume.PK_GROUPS.forEach(function (g) { if (present[g.key]) h += chip(g.key, g.label); });
+  if (present.sort) h += chip('sort', 'Needs sorting');
+  document.getElementById('pk-chips').innerHTML = items.length ? h : '';
 }
 
-// ── Type helpers ──────────────────────────────────────
-function typeClass(t) {
-  var m = {container:'type-container',label:'type-label',box:'type-box',closure:'type-closure',other:'type-other'};
-  return m[t] || 'type-other';
-}
-function typeLabel(t) {
-  var m = {container:'Container',label:'Label',box:'Box / outer',closure:'Closure',other:'Other'};
-  return m[t] || t;
-}
+var GROUP_TAG = { bottles: ['type-container', 'Container'], boxes: ['type-box', 'Box / bag'], labels: ['type-label', 'Label'],
+                  bands: ['type-other', 'Band / wrap'], other: ['type-closure', 'Cap / other'], sort: ['type-other', 'Not sorted yet'] };
 
-// ── Table render ──────────────────────────────────────
 function renderTable() {
-  var q = document.getElementById('search').value.toLowerCase();
-  var t = document.getElementById('f-type').value;
-  // Sort the underlying list so "like with like" stays together as items are
-  // added: primary by Type (alphabetical), secondary by Name (alphabetical).
-  // Sorting a slice() rather than items keeps the on-disk insertion order
-  // intact — only the display is reorganized.
-  var sorted = items.slice().sort(function(a, b) {
-    var ta = (a.type || '').toLowerCase();
-    var tb = (b.type || '').toLowerCase();
-    if (ta !== tb) return ta < tb ? -1 : 1;
-    var na = (a.name || '').toLowerCase();
-    var nb = (b.name || '').toLowerCase();
-    if (na === nb) return 0;
-    return na < nb ? -1 : 1;
+  var q = document.getElementById('search').value;
+  var list = items.filter(function (i) {
+    if (groupFilter && (i.kind ? Plume.pkKindOf(i).group : 'sort') !== groupFilter) return false;
+    return Plume.pkMatches(i, q);
   });
-  var list = sorted.filter(function(i) {
-    if (t && i.type !== t) return false;
-    if (q && (i.name||'').toLowerCase().indexOf(q) < 0 && (i.supplier||'').toLowerCase().indexOf(q) < 0) return false;
-    return true;
-  });
+  var unsorted = untidied().length;
+  document.getElementById('pk-sort-note').innerHTML = unsorted
+    ? '<div class="pk-sort-note">' + unsorted + ' item' + (unsorted === 1 ? ' was' : 's were') + ' saved before kinds and ' + (unsorted === 1 ? 'is' : 'are') +
+      ' listed under Needs sorting. <button type="button" onclick="setPkView(\'tidy\')">Tidy up names</button> gives each one a kind, size and color in one go.</div>'
+    : '';
   var tbody = document.getElementById('tbody');
   if (!list.length) {
-    tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state"><p>' +
-      (items.length ? 'No results' : 'No packaging items yet') + '</p><span>' +
-      (items.length ? 'Try adjusting your search' : 'Click \u201c+ New item\u201d to add your first packaging item') +
+    tbody.innerHTML = '<tr class="pk-empty"><td colspan="6"><div class="empty-state"><p>' +
+      (items.length ? 'Nothing matches' : 'No packaging items yet') + '</p><span>' +
+      (items.length ? 'Try fewer words, or another section' : 'Click “New” to add your first packaging item') +
       '</span></div></td></tr>';
     return;
   }
-  tbody.innerHTML = list.map(function(i) {
-    var stock = calcStock(i);
-    var cpu   = latestCostPerUnit(i);
-    var stockHtml = stock > 0
-      ? '<span class="stock-pill">' + stock + '</span>'
-      : '<span class="stock-zero">\u2014</span>';
-    var thumbHtml = i.image
-      ? '<img src="' + i.image + '" class="pkg-thumb" alt="">'
-      : '<div class="pkg-thumb-placeholder">\uD83D\uDCE6</div>';
-    return '<tr onclick="openEdit(\'' + i.id + '\')">' +
-      '<td style="padding:8px 10px">' + thumbHtml + '</td>' +
-      '<td style="font-weight:500">' + esc(i.name) +
-        (i.capacity ? '<div style="font-size:11px;color:var(--ink-lighter)">' + esc(i.capacity) + '</div>' : '') + '</td>' +
-      '<td><span class="type-badge ' + typeClass(i.type) + '">' + typeLabel(i.type) + '</span></td>' +
-      '<td style="color:var(--ink-light)">' + esc(i.supplier || '\u2014') + '</td>' +
-      '<td style="font-variant-numeric:tabular-nums">' + (cpu !== null ? '$' + cpu.toFixed(4) : '\u2014') +
-        (cpu !== null ? '<div style="font-size:10px;color:var(--ink-lighter)">last purchase</div>' : '') + '</td>' +
-      '<td>' + stockHtml + '</td>' +
-      '<td style="color:var(--ink-light)">' + (i.moq ? i.moq + ' units' : '\u2014') + '</td>' +
-      '<td style="color:var(--ink-lighter);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:130px">' + esc(i.notes||'') + '</td>' +
-      '<td>' + (i.link ? '<a href="' + esc(i.link) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="font-size:11px;color:var(--sage)">Buy &#8599;</a>' : '') + '</td>' +
-    '</tr>';
+  var h = '';
+  Plume.pkGroups(list).forEach(function (g) {
+    var t = GROUP_TAG[g.section] || GROUP_TAG.sort;
+    h += '<tr class="pk-g"><td colspan="6"><span class="gn">' + esc(g.name) + '</span>' +
+      '<span class="type-badge ' + t[0] + '">' + t[1] + '</span>' +
+      '<span class="gc">' + g.items.length + (g.items.length === 1 ? ' item' : ' items') + '</span>' +
+      (g.section === 'sort' ? '<button type="button" class="pk-g-act" onclick="setPkView(\'tidy\')">Tidy up names</button>' : '') + '</td></tr>';
+    g.items.forEach(function (i) {
+      var stock = calcStock(i);
+      var cpu = latestCostPerUnit(i);
+      h += '<tr class="pk-row' + (stock > 0 ? ' has-stock' : '') + '" data-id="' + esc(i.id) + '" onclick="openEdit(\'' + esc(i.id) + '\')">' +
+        '<td><span class="pk-cell"><span class="pk-thumb">' + Plume.pkIconFor(i) + '</span><span class="pk-size">' + esc(i.capacity || '—') + '</span></span></td>' +
+        '<td>' + Plume.pkDetailHtml(i) + '</td>' +
+        '<td class="hide-sm ps-muted">' + esc(i.supplier || '—') + '</td>' +
+        '<td class="ps-num">' + (cpu !== null ? '$' + cpu.toFixed(cpu < 0.1 ? 3 : 2) : '<span class="ps-muted">—</span>') + '</td>' +
+        '<td class="ps-num">' + (stock > 0 ? '<span class="stock-pill">' + stock + '</span>' : '<span class="ps-muted">0</span>') + '</td>' +
+        '<td class="hide-sm">' + (i.link ? '<a class="pk-buy" href="' + esc(i.link) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()">Buy &#8599;</a>' : '') + '</td>' +
+      '</tr>';
+    });
+  });
+  tbody.innerHTML = h;
+}
+
+function renderAll() { renderStats(); renderChips(); renderTable(); if (pkView === 'tidy') renderTidy(); }
+
+var pkView = 'list';
+function setPkView(v) {
+  pkView = v;
+  document.getElementById('pk-list-view').hidden = v !== 'list';
+  document.getElementById('pk-tidy-view').hidden = v !== 'tidy';
+  document.getElementById('vt-list').classList.toggle('on', v === 'list');
+  document.getElementById('vt-tidy').classList.toggle('on', v === 'tidy');
+  if (v === 'tidy') { tidyRows = null; renderTidy(); }
+  renderStats();
+}
+
+// ── Tidy up names ─────────────────────────────────────
+// One row per item without a kind. Each row starts as Plume's guess from
+// the old name (Plume.pkGuess); she checks it, fixes anything, and Apply
+// writes only the ticked rows. Purchases, adjustments and cost are not
+// part of a row, so they cannot change.
+var tidyRows = null;
+function kindOptions(sel) {
+  return Plume.PK_GROUPS.map(function (g) {
+    return '<optgroup label="' + esc(g.label) + '">' + Plume.PK_KINDS.filter(function (k) { return k.group === g.key; }).map(function (k) {
+      return '<option value="' + k.key + '"' + (k.key === sel ? ' selected' : '') + '>' + esc(k.label) + '</option>';
+    }).join('') + '</optgroup>';
   }).join('');
 }
-
-// ── Image handling ────────────────────────────────────
-// Photos are shown as a 48px list thumbnail and a 180px modal preview, and
-// nowhere else. Storing 800px was about four times the pixels that can ever
-// be seen -- and since these are base64 in localStorage, which the whole app
-// shares, those pixels were the single largest thing in storage. 480px is
-// still comfortably sharp on a high-density screen at 180px display size.
-var PHOTO_MAX_W  = 480;
-var PHOTO_QUALITY = 0.72;
-
-function handleImageUpload(e) {
-  var file = e.target.files[0]; if (!file) return;
-  if (file.size > 10 * 1024 * 1024) { Plume.tell('File too large (max 10MB).'); return; }
-  var reader = new FileReader();
-  reader.onload = function(ev) {
-    compressImage(ev.target.result, PHOTO_MAX_W, PHOTO_QUALITY, function(compressed) {
-      pendingImage = compressed;
-      showImagePreview(compressed);
-    });
-  };
-  reader.readAsDataURL(file);
-  e.target.value = '';
+function productOptions(sel) {
+  return '<option value="">Any product</option>' + Plume.pkProducts().slice().sort(function (a, b) {
+    return String(a.name || '').localeCompare(String(b.name || ''));
+  }).map(function (p) {
+    return '<option value="' + esc(p.id) + '"' + (p.id === sel ? ' selected' : '') + '>' + esc(p.name || '(unnamed)') + '</option>';
+  }).join('');
 }
-
-function compressImage(dataUrl, maxWidth, quality, callback) {
-  var img = new Image();
-  img.onload = function() {
-    var canvas = document.createElement('canvas');
-    var ratio  = Math.min(1, maxWidth / img.width);
-    canvas.width  = Math.round(img.width  * ratio);
-    canvas.height = Math.round(img.height * ratio);
-    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-    callback(canvas.toDataURL('image/jpeg', quality));
-  };
-  img.src = dataUrl;
+function renderTidy() {
+  var body = document.getElementById('tidy-body');
+  if (!tidyRows) tidyRows = untidied().map(function (i) { return { id: i.id, old: i.name || '', on: true, g: Plume.pkGuess(i.name || '') }; });
+  if (!tidyRows.length) {
+    body.innerHTML = '<div class="tidy-done-box"><b>Every item has a kind.</b> Nothing to tidy. New items get one when you pick what they are.' +
+      ' <button type="button" class="btn btn-sm" onclick="setPkView(\'list\')">Back to the list</button></div>';
+    return;
+  }
+  var h = '<div class="ps-table-wrap"><table class="tidy"><thead><tr>' +
+    '<th><input type="checkbox" id="tidy-all"' + (tidyRows.every(function (r) { return r.on; }) ? ' checked' : '') + ' onchange="tidyAll(this.checked)" aria-label="Tick all"></th>' +
+    '<th>Now called</th><th class="ic"></th><th>Kind</th><th>Size</th><th>Color</th><th>Material</th><th>For product</th><th class="hide-md">Part</th></tr></thead><tbody>';
+  tidyRows.forEach(function (r, n) {
+    var g = r.g, col = Plume.pkColored(g.kind), fp = Plume.pkForProduct(g.kind);
+    var set = function (f) { return 'tidyRows[' + n + '].g.' + f + '=this.value'; };
+    h += '<tr class="' + (r.on ? '' : 'off') + '" data-n="' + n + '">' +
+      '<td><input type="checkbox"' + (r.on ? ' checked' : '') + ' onchange="tidyRows[' + n + '].on=this.checked;this.closest(\'tr\').classList.toggle(\'off\',!this.checked)" aria-label="Apply this row"></td>' +
+      '<td class="old">' + esc(r.old || '(unnamed)') + '</td>' +
+      '<td class="ic"><span class="pk-thumb" id="ti-' + n + '">' + Plume.pkIcon(g.kind, g.color) + '</span></td>' +
+      '<td><select class="kind" onchange="' + set('kind') + ';renderTidy()" aria-label="Kind">' + kindOptions(g.kind) + '</select>' +
+        (Plume.pkIsOther(g.kind) ? '<input type="text" value="' + esc(g.other) + '" oninput="' + set('other') + '" style="margin-top:4px" aria-label="Name" placeholder="Name">' : '') + '</td>' +
+      '<td style="width:120px"><input type="text" value="' + esc(g.capacity) + '" oninput="' + set('capacity') + '" aria-label="Size"></td>' +
+      '<td style="width:120px">' + (col ? '<span class="tidy-col">' + Plume.pkSwatch(g.color) + '<input type="text" list="pk-colors" value="' + esc(g.color) + '" placeholder="—" oninput="' + set('color') + ';tidyIcon(' + n + ')" aria-label="Color"></span>' : '') + '</td>' +
+      '<td style="width:110px">' + (col ? '<input type="text" list="pk-materials" value="' + esc(g.material) + '" placeholder="—" oninput="' + set('material') + '" aria-label="Material">' : '') + '</td>' +
+      '<td>' + (fp ? '<select onchange="' + set('forProduct') + '" aria-label="For product">' + productOptions(g.forProduct) + '</select>' : '') + '</td>' +
+      '<td class="hide-md" style="width:80px">' + (fp ? '<input type="text" list="pk-parts" value="' + esc(g.part) + '" oninput="' + set('part') + '" placeholder="—" aria-label="Part">' : '') + '</td></tr>';
+  });
+  h += '</tbody></table></div>' +
+    '<datalist id="pk-colors">' + Plume.PK_COLORS.map(function (c) { return '<option value="' + c.label + '">'; }).join('') + '</datalist>' +
+    '<datalist id="pk-materials">' + Plume.PK_MATERIALS.map(function (m) { return '<option value="' + m + '">'; }).join('') + '</datalist>' +
+    '<datalist id="pk-parts">' + Plume.PK_PARTS.map(function (m) { return '<option value="' + m + '">'; }).join('') + '</datalist>' +
+    '<div class="tidy-foot"><button type="button" class="ps-btn-primary" onclick="applyTidy()">Apply ticked rows</button>' +
+    '<span class="ps-muted">Unticked rows keep their old names and stay under Needs sorting.</span></div>';
+  body.innerHTML = h;
 }
-
-function showImagePreview(src) {
-  document.getElementById('img-preview').src = src;
-  document.getElementById('img-preview').style.display = 'block';
-  document.getElementById('img-upload-hint').style.display = 'none';
-  document.getElementById('img-remove-btn').style.display = 'block';
-  document.getElementById('img-upload-area').classList.add('has-img');
+function tidyIcon(n) {
+  var g = tidyRows[n].g, el = document.getElementById('ti-' + n);
+  if (el) el.innerHTML = Plume.pkIcon(g.kind, g.color);
+  var sw = el && el.closest('tr').querySelector('.tidy-col .pk-sw');
+  if (sw) sw.outerHTML = Plume.pkSwatch(g.color) || '<i class="pk-sw" style="visibility:hidden"></i>';
 }
-
-function clearImagePreview() {
-  document.getElementById('img-preview').src = '';
-  document.getElementById('img-preview').style.display = 'none';
-  document.getElementById('img-upload-hint').style.display = 'block';
-  document.getElementById('img-remove-btn').style.display = 'none';
-  document.getElementById('img-upload-area').classList.remove('has-img');
+function tidyAll(on) { tidyRows.forEach(function (r) { r.on = on; }); renderTidy(); }
+function applyTidy() {
+  var picked = tidyRows.filter(function (r) { return r.on; });
+  if (!picked.length) { Plume.tell('Tick at least one row to apply.'); return; }
+  var bad = picked.filter(function (r) { return Plume.pkIsOther(r.g.kind) && !String(r.g.other || '').trim(); });
+  if (bad.length) { Plume.tell('A row set to Other needs a name: ' + bad.map(function (r) { return r.old; }).join(', ') + '.'); return; }
+  var n = 0;
+  picked.forEach(function (r) {
+    var it = items.find(function (i) { return i.id === r.id; });
+    if (!it || it.kind) return;
+    applyKindFields(it, r.g);
+    n++;
+  });
+  if (!saveData()) return;
+  tidyRows = null;
+  renderAll();
+  Plume.tell(n + ' item' + (n === 1 ? '' : 's') + ' updated. Stock, purchases and costs are as they were.', { title: 'Tidied' });
 }
-
-function removeImage(e) { e.stopPropagation(); pendingImage = null; clearImagePreview(); }
+// Writes the kind fields onto an item, plus the two fields older readers use:
+// type (from the kind) and name (the display string).
+function applyKindFields(it, f) {
+  it.kind = f.kind;
+  it.other = Plume.pkIsOther(f.kind) ? String(f.other || '').trim() : '';
+  it.capacity = String(f.capacity || '').trim();
+  var col = Plume.pkColored(f.kind), fp = Plume.pkForProduct(f.kind);
+  it.color = col ? String(f.color || '').trim() : '';
+  it.material = col ? String(f.material || '').trim() : '';
+  it.forProduct = fp ? (f.forProduct || '') : '';
+  it.part = fp ? String(f.part || '').trim() : '';
+  it.type = Plume.pkTypeFor(f.kind);
+  it.name = Plume.pkDisplay(it);
+}
 
 // ── Purchase rows ─────────────────────────────────────
 function addPurchaseRow(purchase) {
@@ -861,20 +936,142 @@ function updateModalSummary() {
   noteEl.textContent = 'from most recent purchase' + (latest.shipping > 0 ? ' (incl. shipping)' : '');
 }
 
+// ── Edit panel: "What is it?" ─────────────────────────
+// One pick sets the name, the drawing and the type. The fields follow it:
+// bottles and boxes have a color and a material; labels and stickers are
+// for a product (blank = any) with an optional part; bands and wraps have
+// both. Only Other asks for a typed name.
+var edKind = '';
+var edWasGuess = false;   // true while an old item shows Plume's reading of its name
+
+function renderKinds() {
+  var color = document.getElementById('f-color').value;
+  var h = '';
+  Plume.PK_GROUPS.forEach(function (g) {
+    h += '<div class="kind-sec">' + esc(g.label) + '</div><div class="icon-grid">';
+    Plume.PK_KINDS.filter(function (k) { return k.group === g.key; }).forEach(function (k) {
+      h += '<button type="button" data-kind="' + k.key + '" class="' + (edKind === k.key ? 'on' : '') + '" onclick="setKind(\'' + k.key + '\')" aria-pressed="' + (edKind === k.key) + '">' +
+        Plume.pkIcon(k.key, Plume.pkColored(k.key) ? color : '') + '<span>' + esc(k.label) + '</span></button>';
+    });
+    h += '</div>';
+  });
+  document.getElementById('e-kinds').innerHTML = h;
+}
+function setKind(k) {
+  edKind = k;
+  renderKinds();
+  edForm();
+  var first = document.getElementById(Plume.pkIsOther(k) ? 'f-other' : 'f-capacity');
+  if (first && !first.value) first.focus();
+}
+function show(id, on) { var el = document.getElementById(id); if (el) el.style.display = on ? '' : 'none'; }
+function edForm() {
+  var k = edKind;
+  show('e-pick-first', !k);
+  show('e-fields', !!k);
+  show('row-other', Plume.pkIsOther(k));
+  show('row-color', !!k && Plume.pkColored(k));
+  show('row-material', !!k && Plume.pkColored(k));
+  show('row-for', Plume.pkForProduct(k));
+  show('row-part', Plume.pkForProduct(k));
+  edLive();
+}
+// Suggestion chips under a field. Free text still works; these just keep
+// the common words spelled one way.
+function quick(field, values, swatches) {
+  var box = document.getElementById('sugg-' + field);
+  if (!box) return;
+  var cur = String(document.getElementById('f-' + field).value || '').toLowerCase().trim();
+  box.innerHTML = values.map(function (v) {
+    return '<button type="button" class="' + (cur === v.toLowerCase() ? 'on' : '') + '" onclick="pickQuick(\'' + field + '\',\'' + v + '\')">' +
+      (swatches ? Plume.pkSwatch(v) : '') + esc(v) + '</button>';
+  }).join('');
+}
+function pickQuick(field, v) {
+  var el = document.getElementById('f-' + field);
+  el.value = String(el.value).toLowerCase() === v.toLowerCase() ? '' : v;
+  edLive(field === 'color');
+}
+// What the item would be if saved now.
+function edDraft() {
+  var g = Plume.pkColored(edKind), fp = Plume.pkForProduct(edKind);
+  return {
+    id: editingId || '',
+    kind: edKind,
+    other: Plume.pkIsOther(edKind) ? document.getElementById('f-other').value.trim() : '',
+    capacity: document.getElementById('f-capacity').value.trim(),
+    color: g ? document.getElementById('f-color').value.trim() : '',
+    material: g ? document.getElementById('f-material').value.trim() : '',
+    forProduct: fp ? document.getElementById('f-for').value : '',
+    part: fp ? document.getElementById('f-part').value.trim() : ''
+  };
+}
+function edLive(colorChanged) {
+  var d = edDraft();
+  document.getElementById('ed-icon').innerHTML = Plume.pkIcon(edKind || 'other', d.color);
+  document.getElementById('ed-title').textContent = edKind ? Plume.pkKindName(d) : (editingId ? 'Packaging item' : 'New packaging item');
+  document.getElementById('ed-as').innerHTML = edKind ? 'Shows everywhere as <b>' + esc(Plume.pkDisplay(d)) + '</b>' : '';
+  quick('color', Plume.PK_COLORS.map(function (c) { return c.label; }), true);
+  quick('material', Plume.PK_MATERIALS, false);
+  quick('part', Plume.PK_PARTS, false);
+  if (colorChanged) renderKinds();
+  // Same kind, size, color, material, product and part as another item?
+  var key = Plume.pkSameKey(d);
+  var dup = edKind && d.capacity ? items.filter(function (x) { return x.id !== editingId && x.kind && Plume.pkSameKey(x) === key; })[0] : null;
+  document.getElementById('ed-dup').innerHTML = dup
+    ? '<div class="pk-note warn">You already have this one: <b>' + esc(Plume.pkDisplay(dup)) + '</b> (' + calcStock(dup) + ' in stock). ' +
+      'Add a purchase to it instead, or change the size or color here.</div>'
+    : '';
+}
+function renderUsedIn(id) {
+  var used = !id ? [] : Plume.pkProducts().filter(function (p) {
+    return (p.packagingRecipe || []).some(function (r) { return r.packagingId === id; });
+  }).map(function (p) { return p.name || '(unnamed)'; }).sort();
+  document.getElementById('e-used').innerHTML = used.length
+    ? used.map(function (u) { return '<span class="pk-part pk-used">' + esc(u) + '</span>'; }).join('')
+    : '<span class="ps-muted">Not in any product’s packaging recipe yet</span>';
+}
+function renderPhotoNote() {
+  var el = document.getElementById('ed-photo');
+  var it = editingId ? items.find(function (i) { return i.id === editingId; }) : null;
+  if (!it || !it.image) { el.innerHTML = ''; return; }
+  el.innerHTML = pendingImage
+    ? '<div class="pk-note">This item still has its old photo (' + Plume.fmtBytes(it.image.length) + '). The drawing is used everywhere now. ' +
+      '<button type="button" onclick="pendingImage=null;renderPhotoNote()">Remove the photo</button> to free the space.</div>'
+    : '<div class="pk-note">The photo will be removed when you save. <button type="button" onclick="pendingImage=items.find(function(i){return i.id===editingId;}).image;renderPhotoNote()">Keep it</button></div>';
+}
+function fillProducts(sel) {
+  document.getElementById('f-for').innerHTML = productOptions(sel);
+}
+function setFields(f) {
+  document.getElementById('f-other').value    = f.other || '';
+  document.getElementById('f-capacity').value = f.capacity || '';
+  document.getElementById('f-color').value    = f.color || '';
+  document.getElementById('f-material').value = f.material || '';
+  document.getElementById('f-part').value     = f.part || '';
+  fillProducts(f.forProduct || '');
+}
+
 // ── Modal open/close ──────────────────────────────────
-function openAdd() {
-  editingId = null; pendingImage = null; pendingAdjustments = [];
-  document.getElementById('m-add-title').textContent = 'New packaging item';
-  document.getElementById('m-delete-btn').style.display = 'none';
-  document.getElementById('m-duplicate-btn').style.display = 'none';
-  ['f-name','f-supplier','f-moq','f-capacity','f-link','f-notes'].forEach(function(id){ document.getElementById(id).value=''; });
-  document.getElementById('f-type-field').value = 'container';
+function resetPurchaseUi() {
   document.getElementById('purchase-rows').innerHTML = '<div id="purchase-empty" style="font-size:12px;color:var(--ink-lighter);padding:6px 0">No purchases recorded yet.</div>';
   renderAdjLog();
   updateModalSummary();
-  clearImagePreview();
   document.getElementById('adj-form').style.display = 'none';
+}
+function openAdd() {
+  editingId = null; pendingImage = null; pendingAdjustments = []; edKind = ''; edWasGuess = false;
+  document.getElementById('m-add-title').textContent = 'New packaging item';
+  document.getElementById('m-delete-btn').style.display = 'none';
+  document.getElementById('m-duplicate-btn').style.display = 'none';
+  ['f-supplier','f-moq','f-link','f-notes'].forEach(function(id){ document.getElementById(id).value=''; });
+  setFields({});
+  document.getElementById('ed-was').innerHTML = '';
+  renderUsedIn(null);
+  resetPurchaseUi();
+  renderKinds(); edForm(); renderPhotoNote();
   openModal('m-add');
+  var m = document.querySelector('#m-add .modal'); if (m) m.scrollTop = 0;
 }
 
 function openEdit(id) {
@@ -882,31 +1079,36 @@ function openEdit(id) {
   if (!item) return;
   editingId = id; pendingImage = item.image || null;
   pendingAdjustments = (item.adjustments || []).slice();
-  document.getElementById('m-add-title').textContent = 'Edit item';
+  document.getElementById('m-add-title').textContent = 'Packaging item';
   document.getElementById('m-delete-btn').style.display = 'inline-flex';
   document.getElementById('m-duplicate-btn').style.display = 'inline-flex';
-  document.getElementById('f-name').value       = item.name     || '';
-  document.getElementById('f-type-field').value = item.type     || 'container';
   document.getElementById('f-supplier').value   = item.supplier || '';
   document.getElementById('f-moq').value        = item.moq      || '';
-  document.getElementById('f-capacity').value   = item.capacity || '';
   document.getElementById('f-link').value       = item.link     || '';
   document.getElementById('f-notes').value      = item.notes    || '';
-  // Load purchase rows
-  document.getElementById('purchase-rows').innerHTML = '<div id="purchase-empty" style="font-size:12px;color:var(--ink-lighter);padding:6px 0">No purchases recorded yet.</div>';
+  // An item saved before kinds opens with Plume's reading of its old name,
+  // to check and save. Nothing is written until Save.
+  edWasGuess = !item.kind;
+  var f = item.kind ? item : Plume.pkGuess(item.name || '');
+  edKind = f.kind || '';
+  setFields(f);
+  document.getElementById('ed-was').innerHTML = edWasGuess
+    ? '<div class="pk-note">Saved before kinds as <b>' + esc(item.name || '(unnamed)') + '</b>. Plume has filled in what it reads from that name. Check it and save.</div>'
+    : '';
+  renderUsedIn(id);
+  resetPurchaseUi();
   var purchases = item.purchases || [];
-  // Sort oldest first for display
   purchases.slice().sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); }).forEach(function(p) { addPurchaseRow(p); });
-  renderAdjLog();
   updateModalSummary();
-  document.getElementById('adj-form').style.display = 'none';
-  if (item.image) { showImagePreview(item.image); } else { clearImagePreview(); }
+  renderKinds(); edForm(); renderPhotoNote();
   openModal('m-add');
+  var m = document.querySelector('#m-add .modal'); if (m) m.scrollTop = 0;
 }
 
 function saveItem() {
-  var name = document.getElementById('f-name').value.trim();
-  if (!name) { Plume.tell('Item name is required.'); return; }
+  if (!edKind) { Plume.tell('Pick what it is first.'); return; }
+  var d = edDraft();
+  if (Plume.pkIsOther(edKind) && !d.other) { Plume.tell('Give it a name. Other is for anything not in the list.'); document.getElementById('f-other').focus(); return; }
   var purchases = getPurchaseRows();
   // Derive current cost/unit for backward compat with costing module
   var cpu = null;
@@ -916,27 +1118,29 @@ function saveItem() {
     var qty = parseInt(latest.qty,10)||0;
     if (qty > 0) cpu = ((parseFloat(latest.totalCost)||0) + (parseFloat(latest.shipping)||0)) / qty;
   }
-  var data = {
-    id:          editingId || (Date.now().toString() + Math.random().toString(36).slice(2,6)),
-    name:        name,
-    type:        document.getElementById('f-type-field').value,
-    supplier:    document.getElementById('f-supplier').value.trim(),
-    cost:        cpu !== null ? cpu.toFixed(4) : '',  // derived, for costing module
-    moq:         document.getElementById('f-moq').value,
-    capacity:    document.getElementById('f-capacity').value.trim(),
-    link:        document.getElementById('f-link').value.trim(),
-    notes:       document.getElementById('f-notes').value.trim(),
-    image:       pendingImage || null,
-    purchases:   purchases,
-    adjustments: pendingAdjustments
-  };
-  if (editingId) {
+  var old = editingId ? items.find(function(i){ return i.id === editingId; }) : null;
+  // Start from the stored item so any field this panel does not show is kept.
+  var data = old ? JSON.parse(JSON.stringify(old)) : {};
+  data.id          = editingId || (Date.now().toString() + Math.random().toString(36).slice(2,6));
+  data.supplier    = document.getElementById('f-supplier').value.trim();
+  data.cost        = cpu !== null ? cpu.toFixed(4) : '';  // derived, for costing module
+  data.moq         = document.getElementById('f-moq').value;
+  data.link        = document.getElementById('f-link').value.trim();
+  data.notes       = document.getElementById('f-notes').value.trim();
+  data.image       = pendingImage || null;
+  data.purchases   = purchases;
+  data.adjustments = pendingAdjustments;
+  applyKindFields(data, d);
+  if (!data.image) delete data.image;
+  if (old) {
     var idx = items.findIndex(function(i){ return i.id === editingId; });
     if (idx > -1) items[idx] = data;
   } else {
     items.push(data);
   }
-  saveData(); renderTable(); renderStats(); closeModal('m-add');
+  if (!saveData()) return;
+  tidyRows = null;
+  renderAll(); closeModal('m-add');
 }
 
 function deleteItem() {
@@ -944,43 +1148,32 @@ function deleteItem() {
   var id = editingId;
   Plume.ask('This cannot be undone.', function () {
     items = items.filter(function(i){ return i.id !== id; });
-    saveData(); renderTable(); renderStats(); closeModal('m-add');
+    saveData(); tidyRows = null; renderAll(); closeModal('m-add');
   }, { title: 'Delete this item?', yes: 'Delete', danger: true });
 }
 
-// Duplicate the currently-edited item as a new entry. Copies the "style"
-// fields (name, type, supplier, MOQ, capacity, link, notes, image) but
-// NOT purchase history, stock adjustments, or derived cost — those are
-// specific to a real purchase and should be re-entered for the new item.
-// After this runs, the modal is in new-item mode so Save creates a fresh
-// record rather than overwriting the original.
+// Duplicate the currently-edited item as a new entry: the kind, size, color
+// and the rest come along, purchases and stock do not (those belong to a
+// real purchase of the original). The panel switches to new-item mode, so
+// Save creates a fresh record. Until the size or color changes, the panel
+// says it is the same as the original.
 function duplicateItem() {
   if (!editingId) return;
-  var src = items.find(function(i){ return i.id === editingId; });
-  if (!src) return;
-  // Switch the modal into new-item mode, preserving the form values that
-  // are currently on screen (the user may have unsaved edits — we don't
-  // want to throw those away).
   editingId = null;
+  pendingImage = null;
   document.getElementById('m-add-title').textContent = 'New packaging item (copy)';
   document.getElementById('m-delete-btn').style.display = 'none';
   document.getElementById('m-duplicate-btn').style.display = 'none';
-  // Suggest a distinct name so saving without an edit doesn't produce
-  // a confusing pair of identically-named rows.
-  var nameEl = document.getElementById('f-name');
-  if (nameEl.value && !/\(copy\)/i.test(nameEl.value)) {
-    nameEl.value = nameEl.value + ' (copy)';
-  }
-  // Clear purchase rows and adjustments — those belong to the original.
+  document.getElementById('ed-was').innerHTML = '';
   pendingAdjustments = [];
-  document.getElementById('purchase-rows').innerHTML = '<div id="purchase-empty" style="font-size:12px;color:var(--ink-lighter);padding:6px 0">No purchases recorded yet.</div>';
-  renderAdjLog();
-  updateModalSummary();
-  // Image is part of the "style" so we keep pendingImage as-is.
-  // Scroll to top of modal and focus the name so the user can edit it.
+  renderUsedIn(null);
+  resetPurchaseUi();
+  renderPhotoNote();
+  edLive();
   var modal = document.querySelector('#m-add .modal');
   if (modal) modal.scrollTop = 0;
-  setTimeout(function(){ nameEl.focus(); nameEl.select(); }, 50);
+  var el = document.getElementById(Plume.pkIsOther(edKind) ? 'f-other' : 'f-capacity');
+  setTimeout(function(){ if (el) { el.focus(); el.select(); } }, 50);
 }
 
 // openModal and closeModal come from core, which no-ops on a missing
@@ -1016,6 +1209,11 @@ if (typeof Plume === 'undefined') {
 } else {
   Plume.setModule('packaging');
   Plume.boot(function () {
+    // The 2026-10-18 shell: sidebar, icons in the title and toolbar.
+    Plume.shell({ module: 'packaging' });
+    Plume.pkCss();
+    var ic = document.querySelectorAll('[data-ps-icon]');
+    for (var k = 0; k < ic.length; k++) ic[k].innerHTML = Plume.icon(ic[k].getAttribute('data-ps-icon'));
     loadData();
   });
 }

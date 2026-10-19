@@ -2326,3 +2326,45 @@ bench-sheet row now reads Grams | tick box | Ingredient | INCI | (SAP) | %,
 in all three tables, with lye, water and the batch total following the same
 order. Drops for a skincare add-in sit under its grams. `test-ph.js` pins
 the order.
+
+### Session 19 (cont.) — Packaging kinds, drawings and the shared picker (core v1.22)
+
+Her problem: packaging was the module getting out of control. Every size and
+color lived in the free-text name, so relatives only sorted together if she
+phrased them identically, and the Batches dropdown made them hard to tell
+apart. Agreed through five rounds of the "Packaging Redesign" preview; the
+spec is in the backlog history and summarized here.
+
+- **Kinds, in core** (`Plume.PK_KINDS`, 22 of them in five sections, one
+  Other). An item stores `kind`, `capacity` (the size), `color`, `material`,
+  `forProduct`, `part` and, for Other only, `other` (its typed name).
+  Bottles and boxes take color and material; labels and stickers take a
+  product (blank = any) and part; bands and wraps take both.
+- **One display everywhere**: `Plume.pkDisplay(item)`, e.g. "Dropper bottle ·
+  1 oz · Blue glass". The product name is read live from Products, so a
+  renamed product follows. `item.name` is still written on every save, as
+  the display string, and `item.type` from the kind, so any reader that only
+  knows those keeps working. Items saved before kinds display their old name.
+- **Drawings replace photos.** `Plume.pkIcon(kind, color)`: 32×32 SVG, body in
+  the item's color, caps dark, colors as literal hex so dark mode cannot
+  shift them, tiles fixed light (#F6F3EE). No upload any more. Old photos stay
+  until removed: "Remove the photo" per item, "Remove every photo" in
+  Settings (the old Shrink stored photos is gone with the upload code).
+- **Packaging module** in the shell: colour-block head, chips per section,
+  search above the list, list grouped by kind (sizes small to large, then
+  color; labels by product), in-stock tint and Buy link kept. The edit modal
+  keeps its IDs but slides in from the right; "What is it?" replaces Name.
+  Opening an old item fills in Plume's reading of its name to check and save.
+  Duplicate warning when kind, size, color, material, product and part all
+  match another item. Used in comes from products' packaging recipes.
+- **Tidy up names**: a one-time screen (tab and ⋯ menu) listing items without
+  a kind, each pre-filled by `Plume.pkGuess`. Only ticked rows change; stock,
+  purchases and costs are not part of a row. The tab hides once nothing is
+  left to sort.
+- **Shared picker**: `Plume.pkPickers(root, items)` turns every
+  `select[data-pk-pick]` into a button plus a searchable list grouped by
+  kind, with drawing, size, color or product and stock. The select stays
+  (hidden) and picking fires its change event, so Batches' run builder and
+  Costing's packaging recipe run their own handlers unchanged. Costing's
+  cost breakdown and Batches' run names use the display name.
+- `test-packaging.js` (85 checks) is the 17th suite.
