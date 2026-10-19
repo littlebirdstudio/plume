@@ -797,6 +797,10 @@ var ICONS = {
   sparkle:      ['0 0 24 24', '<path d="M12 3v5M12 16v5M3 12h5M16 12h5M6 6l3 3M15 15l3 3M18 6l-3 3M9 15l-3 3"/>'],
   collapse:     ['0 0 24 24', '<path d="M15 6l-6 6 6 6"/><path d="M4 4v16"/>'],
   expand:       ['0 0 24 24', '<path d="M9 6l6 6-6 6"/><path d="M20 4v16"/>'],
+  check:        ['0 0 24 24', '<path d="M5 12.5l4.5 4.5L19 7.5"/>'],
+  copy:         ['0 0 24 24', '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>'],
+  trash:        ['0 0 24 24', '<path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/>'],
+  note:         ['0 0 24 24', '<path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4"/><path d="M9 12h7M9 16h5"/>'],
   archive:      ['0 0 24 24', '<rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9"/><path d="M10 13h4"/>'],
   external:     ['0 0 24 24', '<path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>']
 };
@@ -1196,6 +1200,7 @@ function injectStyles() {
     '.ps-menu button{display:flex;gap:10px;align-items:center;width:100%;border:0;background:none;padding:7px 9px;border-radius:6px;cursor:pointer;text-align:left;color:var(--ink-light);font:inherit;font-size:13.5px}' +
     '.ps-menu button:hover{background:var(--cream-dark);color:var(--ink)}' +
     '.ps-menu hr{border:0;border-top:1px solid var(--cream-border);margin:4px 2px}' +
+    '.ps-menu button.ps-menu-danger{color:var(--danger)}' +
     '' +
     '.ps-chips{display:flex;gap:6px;margin:12px 0 8px;flex-wrap:wrap;align-items:center}' +
     '.ps-chip{font:inherit;font-size:13px;border:1px solid var(--cream-border);background:transparent;border-radius:999px;padding:3px 11px;color:var(--ink-light);cursor:pointer;display:inline-flex;gap:6px;align-items:center;white-space:nowrap;transition:background .12s}' +

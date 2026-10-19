@@ -158,6 +158,66 @@ ok('an unknown icon name gives nothing rather than breaking', P.icon('nope') ===
     await page.close();
   }
 
+  console.log('\n4b. Formulations in the shell (2026-10-18)');
+  {
+    const page = await open('formulations');
+    const f = [{ id: 'f1', name: 'Serum', type: 'Facial serum', notes: 'For dry skin', formNotes: '', activeVariantId: 'v1', status: 'draft',
+      lines: [{ ingId: 'a1', pct: 99 }, { ingId: 'a2', pct: 1 }],
+      variants: [{ vid: 'v1', num: 1, label: '', status: 'draft', lines: [{ ingId: 'a1', pct: 99 }, { ingId: 'a2', pct: 1 }],
+                   instructions: 'Stir', batchSize: '100', addinsInTotal: true, usageLog: [], history: [] }] },
+      { id: 'f2', name: 'Balm', type: 'Face balm', status: 'approved', lines: [],
+        variants: [{ vid: 'b1', num: 1, status: 'approved', lines: [] }], activeVariantId: 'b1' },
+      { id: 'f3', name: 'Old salve', type: 'Face balm', archived: true, lines: [],
+        variants: [{ vid: 'c1', num: 1, status: 'draft', lines: [] }], activeVariantId: 'c1' }];
+    await page.evaluate("localStorage.setItem('aerie-formulations-v1', " + JSON.stringify(JSON.stringify(f)) + ")");
+    await page.reload(); await page.waitForTimeout(500);
+
+    ok('the sidebar marks Formulations', (await page.evaluate("document.querySelector('#ps-side .ps-nav.on').textContent")).indexOf('Formulations') !== -1);
+    ok('the old dark header is gone', (await page.evaluate("document.querySelector('.app-header')")) === null);
+    ok('the page head is the colour block', await page.evaluate("getComputedStyle(document.querySelector('#list-view .ps-page-head')).backgroundColor !== 'rgba(0, 0, 0, 0)'"));
+    ok('the summary counts live formulations by status', /2 formulations[\s\S]*1 approved[\s\S]*0 testing[\s\S]*1 draft/.test(await page.evaluate("document.getElementById('fl-summary').innerText")),
+       await page.evaluate("document.getElementById('fl-summary').innerText"));
+    const names = () => page.evaluate("Array.from(document.querySelectorAll('.fcard-name')).map(e => e.textContent).join('|')");
+    ok('cards list the live formulations', (await names()) === 'Serum|Balm', await names());
+    await page.evaluate("setListStatus('approved')");
+    ok('a status chip filters the cards', (await names()) === 'Balm', await names());
+    await page.evaluate("setListStatus('')");
+    await page.evaluate("document.getElementById('fl-search').value = 'ser'; renderCards();");
+    ok('the search box filters by name', (await names()) === 'Serum', await names());
+    await page.evaluate("document.getElementById('fl-search').value = ''; renderCards();");
+
+    await page.evaluate("openFormula('f1')");
+    await page.waitForTimeout(200);
+    ok('the breadcrumb names the formula', (await page.evaluate("document.getElementById('fe-crumb-cur').textContent")) === 'Serum');
+    ok('name, purpose and the fields sit in the colour block', await page.evaluate(
+      "var h=document.querySelector('#editor-view .ps-page-head'); !!(h.querySelector('#f-name') && h.querySelector('#f-notes') && h.querySelector('#f-type') && h.querySelector('#f-status'))"));
+    ok('phase boxes keep their colours', await page.evaluate(
+      "var w=document.querySelector('.phase-group.ph-water'), o=document.querySelector('.phase-group.ph-oil'); !!w && !!o && getComputedStyle(w).borderTopColor !== getComputedStyle(o).borderTopColor"));
+    ok('rows sit inside their phase box', (await page.evaluate("document.querySelectorAll('.phase-group .ing-row').length")) === 2);
+    ok('a clean formula reads Saved', /Saved/.test(await page.evaluate("document.getElementById('save-state').textContent")));
+    await page.evaluate("document.getElementById('f-notes').value = 'For very dry skin'; document.getElementById('f-notes').dispatchEvent(new Event('input'))");
+    ok('an edit turns it into a Save button', (await page.evaluate("!!document.querySelector('#save-state button')")) === true);
+    await page.evaluate("document.querySelector('#save-state button').click()");
+    ok('Save saves and goes back to Saved', (await page.evaluate("forms.find(x => x.id === 'f1').notes")) === 'For very dry skin' &&
+       /Saved/.test(await page.evaluate("document.getElementById('save-state').textContent")));
+    ok('Method is the first tab under the recipe', (await page.evaluate("document.getElementById('ep-method').style.display")) === '' &&
+       (await page.evaluate("document.getElementById('f-instruct').value")) === 'Stir');
+    await page.evaluate("document.getElementById('f-instruct').value = 'Stir gently'; document.getElementById('f-instruct').dispatchEvent(new Event('input')); saveFormula();");
+    await page.evaluate("setEdTab('hist')");
+    ok('Change history opens as a tab', (await page.evaluate("document.getElementById('ep-hist').style.display")) === '' &&
+       (await page.evaluate("document.getElementById('ep-method').style.display")) === 'none');
+    ok('the tab shows how many changes', (await page.evaluate("document.getElementById('et-hist-ct').textContent")) === String(await page.evaluate("forms.find(x => x.id === 'f1').variants[0].history.length")) &&
+       (await page.evaluate("document.getElementById('et-hist-ct').textContent")) !== '');
+    await page.evaluate("document.querySelector('.var-notes-btn').click()");
+    await page.waitForTimeout(300);
+    ok('Notes slides in from the right', await page.evaluate("document.getElementById('ps-peek').classList.contains('open') && !!document.getElementById('np-text')"));
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(300);
+    ok('Escape closes it', await page.evaluate("!document.getElementById('ps-peek').classList.contains('open')"));
+    ok('Archive is in the ⋯ menu', await page.evaluate("!!document.querySelector('.fe-top .ps-menu #archive-btn')"));
+    await page.close();
+  }
+
   console.log('\n5. Phone width');
   {
     const page = await open('ingredients', { width: 390, height: 844 });

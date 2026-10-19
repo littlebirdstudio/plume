@@ -66,8 +66,14 @@ const SEED = `
     let names = await page.evaluate("Array.from(document.querySelectorAll('.fcard-name')).map(e => e.textContent)");
     ok('archived formulation not listed', !names.join('|').includes('Old salve'), names);
     ok('live formulations listed', names.join('|').includes('Lotion bar') && names.join('|').includes('Face oil'), names);
-    const toggle = await page.evaluate("document.querySelector('.arch-bar button').textContent");
-    ok('toggle offers the archived count', /Show 1 archived/.test(toggle), toggle);
+    const toggle = await page.evaluate("document.getElementById('fl-arch-btn').textContent");
+    ok('toolbar button offers the archived count', /Show archived\s*1/.test(toggle), toggle);
+    ok('it sits in the toolbar', (await page.evaluate("!!document.querySelector('.ps-tools #fl-arch-btn')")) === true);
+    // A search reaches the archive without the toggle, as in Ingredients.
+    await page.evaluate("document.getElementById('fl-search').value = 'salve'; renderCards();");
+    names = await page.evaluate("Array.from(document.querySelectorAll('.fcard-name')).map(e => e.textContent)");
+    ok('a search finds an archived formulation', names.join('|').includes('Old salve'), names);
+    await page.evaluate("document.getElementById('fl-search').value = ''; renderCards();");
     await page.evaluate('toggleShowArchived()');
     names = await page.evaluate("Array.from(document.querySelectorAll('.fcard-name')).map(e => e.textContent)");
     ok('archived shown when asked', names.join('|').includes('Old salve'), names);

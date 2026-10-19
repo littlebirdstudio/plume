@@ -2254,3 +2254,53 @@ Finch is the default, the palette reaches other modules. 16 suites.
 **Next:** Formulations (the most complex), then Packaging, Products &
 Costing, Batches, one per PR, each previewed with Heide. The landing page
 could take the palette later.
+
+### Session 19 (cont.) — Header colour block, Ingredients tweaks, Formulations in the shell (core v1.19)
+
+**Her calls on Ingredients (after the pilot shipped):** the page head sits in a
+colour block; Show archived moves to the toolbar; the search moves to where
+the archive bar was (between the chips and the table); the archive bar's
+explanation goes, just the button. The button's own state carries the
+meaning now (Show / Hide wording, dark when on, `aria-pressed`). One piece of
+the old bar was kept on purpose: when a search finds nothing, the empty
+message says "archived ingredients included", which is the duplicate guard.
+
+**Core v1.19.** `.ps-page-head` is a colour block: a wash of `--bark` mixed
+into `--white`, so it follows the palette and dark mode. The title icon sits
+on a white tile. New icons: `archive`, `check`, `copy`, `trash`, `note`.
+`.ps-menu-danger` for a red menu item.
+
+**Formulations, converted. The first preview went too far and she said so:**
+she likes how the module works and looks, and wanted it spruced up, not
+replaced. Round 2 is what she approved and what was built:
+- **List:** cards stay (smaller), plus a search box above them (reaches the
+  archive, like Ingredients), status chips, a type chip, Show archived in the
+  toolbar, Export / Import in the ⋯ menu.
+- **Editor:** breadcrumb, Saved / Save, Print and a ⋯ menu (Duplicate,
+  Archive, Delete) along the top. The colour block holds the name, the
+  purpose line, and product type / status / target pH in ONE row of small
+  labelled fields. No icons on those fields (she found the property-table
+  layout awkward: too much space, "a weird table without lines").
+- **Phase boxes are unchanged in colour and structure** (the session 15-16
+  work). She was explicit that this must stay. Only the radius and the band's
+  type (sentence case) changed.
+- **Notes slide in from the right** via `Plume.peek` (`selectNotes`). The
+  panel writes into the hidden `#f-formnotes`, which `saveFormula` reads;
+  closing the panel saves. The version underneath keeps its lock.
+- Method, Usage log and Change history are tabs under the recipe
+  (`setEdTab`); the counts on the tabs come from `setTabCount`. The right
+  column keeps batch size (with the formula total and the add-ins toggle
+  inside it), cost, INCI, and lye / soap quality for soap.
+- `renderSaveState()` shows "Saved" or a Save button; `markDirty` and
+  `saveFormula` drive it.
+
+**Tests:** `test-shell.js` gains a Formulations section (22 checks): shell,
+colour block, summary, chips, search, phase boxes keep their colours,
+Saved / Save, the tabs, Notes panel, Archive in the menu. `test-lock.js`
+section 7 now checks that Notes opens beside a locked version without
+unlocking it, and that closing saves. `test-archive.js` and
+`test-ing-archive.js` follow the moved buttons.
+
+**Next:** Packaging, Products & Costing, Batches, one per PR, each previewed
+first. Lesson from this round: for a module she already likes, preview a
+restyle of what is there before proposing structural change.

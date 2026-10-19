@@ -125,11 +125,19 @@ ok('new variant is not locked', w.isLocked() === false);
 ok('approved source untouched',
    f.variants.find(v => v.vid === 'v1').status === 'approved');
 
-console.log('\n7. Notes tab has no lock bar');
+console.log('\n7. Notes open beside a locked version without touching the lock');
+// Notes are formulation-level and slide in from the right (2026-10-18), so
+// the locked recipe stays on screen, still locked, and the notes stay
+// editable because they belong to every version, not this one.
 w.selectVariant('v1');
+ok('the version is locked before opening notes', w.isLocked() === true);
 w.selectNotes();
-ok('lock bar cleared on notes tab', byId('lock-bar').innerHTML === '');
-ok('isLocked() false while on notes', w.isLocked() === false);
+ok('notes open in the side panel', !!byId('np-text') && w.Plume.peek.isOpen());
+ok('the version stays locked behind it', w.isLocked() === true && /locked/i.test(byId('lock-bar').innerHTML));
+byId('np-text').value = 'Firmer with candelilla';
+byId('np-text').dispatchEvent(new w.Event('input'));
+w.Plume.peek.close();
+ok('closing the panel saves the note', w.forms.find(x => x.id === 'f1').formNotes === 'Firmer with candelilla');
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
