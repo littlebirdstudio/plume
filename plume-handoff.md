@@ -2320,3 +2320,9 @@ restyle of what is there before proposing structural change.
 - The "$0.00 / 100 g on soap cards" note from earlier was a mistake in the
   preview's sample data (grams in place of `pct` on soap lines), not an app
   bug. Removed from the backlog.
+
+**Follow-up, same evening (core v1.21):** she asked for the grams first. Each
+bench-sheet row now reads Grams | tick box | Ingredient | INCI | (SAP) | %,
+in all three tables, with lye, water and the batch total following the same
+order. Drops for a skincare add-in sit under its grams. `test-ph.js` pins
+the order.
