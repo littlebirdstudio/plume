@@ -33,7 +33,7 @@ function item(id, name, qty, cost, extra) {
 }
 const OLD = [
   item('p1', '1oz amber glass dropper bottle', 24, 14.88, { image: PHOTO }),
-  item('p2', '1oz blue glass dropper bottle', 12, 8.52, { image: PHOTO }),
+  item('p2', '1oz blue glass dropper bottle', 12, 8.52, { image: PHOTO, moq: '24', notes: 'Black bulb' }),
   item('p3', '.5 oz amber dropper bottle (samples)', 60, 28.80),
   item('p4', 'Serum label front 3.5x1.25', 120, 7.20, { type: 'label' }),
   item('p5', 'Tissue paper sheets', 100, 5.00, { type: 'other' })
@@ -154,6 +154,8 @@ const PRODUCTS = [
 
     await page.evaluate("setPkView('list')");
     const groups = await page.evaluate("Array.from(document.querySelectorAll('.pk-g .gn')).map(function(e){return e.textContent})");
+    ok('each kind heading carries its drawing, with a gap before the next kind', await page.evaluate("document.querySelectorAll('.pk-g .pk-g-ic svg').length === 3 && document.querySelectorAll('.pk-gap').length === 2"));
+    ok('items sit indented under their heading', await page.evaluate("parseFloat(getComputedStyle(document.querySelector('.pk-row td')).paddingLeft) >= 50"));
     ok('the list groups by kind now (an Other groups under its own name)', JSON.stringify(groups) === '["Dropper bottle","Tissue paper","Needs sorting"]', groups);
     const sizes = await page.evaluate("Array.from(document.querySelectorAll('.pk-row .pk-size')).slice(0,3).map(function(e){return e.textContent})");
     ok('sizes small to large inside a kind', JSON.stringify(sizes) === '["0.5 oz","1 oz","1 oz"]', sizes);
@@ -206,6 +208,8 @@ const PRODUCTS = [
     await page.evaluate("openEdit('p2')");
     await page.waitForTimeout(100);
     ok('an old item opens with what Plume reads from its name', await page.evaluate("document.querySelector('#e-kinds button.on').getAttribute('data-kind')") === 'dropper' && (await page.inputValue('#f-color')) === 'Blue');
+    ok('there is no Minimum order qty field', await page.evaluate("!document.getElementById('f-moq')"));
+    ok('an old minimum order shows as a line in the notes', (await page.inputValue('#f-notes')) === 'Black bulb\nMinimum order: 24', await page.inputValue('#f-notes'));
     ok('and says what it was called', /1oz blue glass dropper bottle/.test(await page.evaluate("document.getElementById('ed-was').innerText")));
     ok('the duplicate check sees it matches the item just added', /You already have this one/.test(await page.evaluate("document.getElementById('ed-dup').innerText")));
     ok('Used in is empty for it', /Not in any product/.test(await page.evaluate("document.getElementById('e-used').innerText")));
@@ -219,6 +223,7 @@ const PRODUCTS = [
     const p2 = s.find(i => i.id === 'p2');
     ok('saving it gives it a kind and drops the photo', p2.kind === 'dropper' && p2.capacity === '2 oz' && !p2.image, p2);
     ok('and keeps its purchases', JSON.stringify(p2.purchases) === JSON.stringify(OLD[1].purchases));
+    ok('saving moves the minimum order into the notes for good', !('moq' in p2) && p2.notes === 'Black bulb\nMinimum order: 24', p2);
 
     await page.evaluate("openEdit('p1')");
     await page.waitForTimeout(100);

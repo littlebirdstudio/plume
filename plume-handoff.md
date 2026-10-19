@@ -2367,4 +2367,9 @@ spec is in the backlog history and summarized here.
   (hidden) and picking fires its change event, so Batches' run builder and
   Costing's packaging recipe run their own handlers unchanged. Costing's
   cost breakdown and Batches' run names use the display name.
-- `test-packaging.js` (85 checks) is the 17th suite.
+- **Same evening, her feedback:** kinds were hard to pick out in the list, so
+  each kind heading now carries its drawing on a tinted bar with a gap before
+  the next, and its items sit indented beneath it on a guide line. Minimum
+  order qty is gone as a field; an item that had one shows it as a
+  "Minimum order: N" line in its notes, moved there for good on save or Tidy.
+- `test-packaging.js` (90 checks) is the 17th suite.

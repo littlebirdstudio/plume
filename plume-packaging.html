@@ -169,13 +169,23 @@ body.ps-shell .app-footer { background: transparent; }
 .pk-sort-note button, .pk-note button { border: 0; background: none; color: var(--bark); cursor: pointer; padding: 0; font: inherit; font-weight: 600; }
 /* Grouped list */
 table.pk { font-size: 14px; }
-.pk .pk-g td { background: var(--cream); padding: 9px 10px; border-bottom: 1.5px solid var(--cream-border); cursor: default; }
-.ps-table tbody tr.pk-g:hover td { background: var(--cream); }
-.pk-g .gn { font-weight: 600; font-size: 14.5px; }
+/* Each kind is a heading with its drawing; its items sit indented beneath
+   it on a guide line, with a gap before the next kind (her ask, 2026-10-18:
+   the kinds were hard to pick out in the list). */
+.pk .pk-g td { background: color-mix(in srgb, var(--bark) 9%, var(--white)); padding: 8px 10px; border-top: 1.5px solid var(--ink-lighter); border-bottom: 1.5px solid var(--cream-border); cursor: default; }
+.ps-table tbody tr.pk-g:hover td { background: color-mix(in srgb, var(--bark) 9%, var(--white)); }
+.pk-g-in { display: inline-flex; align-items: center; vertical-align: middle; }
+.pk-g .pk-g-ic { width: 30px; height: 30px; margin-right: 10px; }
+.pk-g .gn { font-weight: 600; font-size: 16px; }
+.pk .pk-gap td, .ps-table tbody tr.pk-gap:hover td { height: 16px; padding: 0; border: 0; background: transparent; }
+.ps-table tbody tr.pk-gap { cursor: default; }
 .pk-g .gc { color: var(--ink-lighter); font-size: 12.5px; margin-left: 8px; }
 .pk-g .type-badge { margin-left: 10px; text-transform: none; letter-spacing: 0; font-size: 11.5px; padding: 1px 8px; border-radius: 5px; }
 .pk-g-act { float: right; font: inherit; font-size: 12.5px; border: 1px solid var(--cream-border); background: var(--white); border-radius: 7px; padding: 1px 10px; cursor: pointer; color: var(--ink-light); }
-.pk-row td:first-child { padding-left: 22px; }
+.pk-row td:first-child { padding-left: 58px; position: relative; }
+.pk-row td:first-child::before { content: ''; position: absolute; left: 25px; top: 0; bottom: 0; border-left: 2px solid var(--cream-border); }
+.pk-row.last td:first-child::before { bottom: 50%; }
+.pk-row td:first-child::after { content: ''; position: absolute; left: 25px; top: 50%; width: 22px; border-top: 2px solid var(--cream-border); }
 .pk-row td { padding-top: 7px; padding-bottom: 7px; }
 .pk-cell { display: inline-flex; gap: 10px; align-items: center; }
 .pk-row .pk-thumb { width: 38px; height: 38px; }
@@ -354,11 +364,7 @@ body.ps-shell .btn-sm { font-size: 12px; }
         <input type="text" id="f-part" placeholder="Front, Back, Top…" oninput="edLive()">
         <div class="sugg" id="sugg-part"></div>
       </div>
-      <div class="field">
-        <label for="f-moq">Minimum order qty</label>
-        <input type="number" id="f-moq" placeholder="e.g. 12" min="1" step="1">
-      </div>
-      <div class="field">
+      <div class="field form-full">
         <label for="f-link">Purchase link</label>
         <input type="url" id="f-link" placeholder="https://...">
       </div>
@@ -647,16 +653,17 @@ function renderTable() {
     return;
   }
   var h = '';
-  Plume.pkGroups(list).forEach(function (g) {
+  Plume.pkGroups(list).forEach(function (g, gi) {
     var t = GROUP_TAG[g.section] || GROUP_TAG.sort;
-    h += '<tr class="pk-g"><td colspan="6"><span class="gn">' + esc(g.name) + '</span>' +
+    if (gi) h += '<tr class="pk-gap" aria-hidden="true"><td colspan="6"></td></tr>';
+    h += '<tr class="pk-g"><td colspan="6"><span class="pk-g-in"><span class="pk-thumb pk-g-ic">' + Plume.pkIcon(g.kind || 'other', '') + '</span><span class="gn">' + esc(g.name) + '</span>' +
       '<span class="type-badge ' + t[0] + '">' + t[1] + '</span>' +
       '<span class="gc">' + g.items.length + (g.items.length === 1 ? ' item' : ' items') + '</span>' +
-      (g.section === 'sort' ? '<button type="button" class="pk-g-act" onclick="setPkView(\'tidy\')">Tidy up names</button>' : '') + '</td></tr>';
-    g.items.forEach(function (i) {
+      '</span>' + (g.section === 'sort' ? '<button type="button" class="pk-g-act" onclick="setPkView(\'tidy\')">Tidy up names</button>' : '') + '</td></tr>';
+    g.items.forEach(function (i, n) {
       var stock = calcStock(i);
       var cpu = latestCostPerUnit(i);
-      h += '<tr class="pk-row' + (stock > 0 ? ' has-stock' : '') + '" data-id="' + esc(i.id) + '" onclick="openEdit(\'' + esc(i.id) + '\')">' +
+      h += '<tr class="pk-row' + (stock > 0 ? ' has-stock' : '') + (n === g.items.length - 1 ? ' last' : '') + '" data-id="' + esc(i.id) + '" onclick="openEdit(\'' + esc(i.id) + '\')">' +
         '<td><span class="pk-cell"><span class="pk-thumb">' + Plume.pkIconFor(i) + '</span><span class="pk-size">' + esc(i.capacity || '—') + '</span></span></td>' +
         '<td>' + Plume.pkDetailHtml(i) + '</td>' +
         '<td class="hide-sm ps-muted">' + esc(i.supplier || '—') + '</td>' +
@@ -753,6 +760,7 @@ function applyTidy() {
     var it = items.find(function (i) { return i.id === r.id; });
     if (!it || it.kind) return;
     applyKindFields(it, r.g);
+    if (it.moq) { it.notes = notesWithMoq(it); delete it.moq; }
     n++;
   });
   if (!saveData()) return;
@@ -1052,6 +1060,16 @@ function setFields(f) {
   fillProducts(f.forProduct || '');
 }
 
+// Minimum order qty was its own field until 2026-10-18; Heide had it removed
+// ("if needed, it could be added to the notes"). An item that still has
+// one shows it as a line in its notes, and saving moves it there for good.
+function notesWithMoq(it) {
+  var notes = String(it.notes || '');
+  var moq = String(it.moq || '').trim();
+  if (!moq || /minimum order/i.test(notes)) return notes;
+  return (notes ? notes + '\n' : '') + 'Minimum order: ' + moq;
+}
+
 // ── Modal open/close ──────────────────────────────────
 function resetPurchaseUi() {
   document.getElementById('purchase-rows').innerHTML = '<div id="purchase-empty" style="font-size:12px;color:var(--ink-lighter);padding:6px 0">No purchases recorded yet.</div>';
@@ -1064,7 +1082,7 @@ function openAdd() {
   document.getElementById('m-add-title').textContent = 'New packaging item';
   document.getElementById('m-delete-btn').style.display = 'none';
   document.getElementById('m-duplicate-btn').style.display = 'none';
-  ['f-supplier','f-moq','f-link','f-notes'].forEach(function(id){ document.getElementById(id).value=''; });
+  ['f-supplier','f-link','f-notes'].forEach(function(id){ document.getElementById(id).value=''; });
   setFields({});
   document.getElementById('ed-was').innerHTML = '';
   renderUsedIn(null);
@@ -1083,9 +1101,8 @@ function openEdit(id) {
   document.getElementById('m-delete-btn').style.display = 'inline-flex';
   document.getElementById('m-duplicate-btn').style.display = 'inline-flex';
   document.getElementById('f-supplier').value   = item.supplier || '';
-  document.getElementById('f-moq').value        = item.moq      || '';
   document.getElementById('f-link').value       = item.link     || '';
-  document.getElementById('f-notes').value      = item.notes    || '';
+  document.getElementById('f-notes').value      = notesWithMoq(item);
   // An item saved before kinds opens with Plume's reading of its old name,
   // to check and save. Nothing is written until Save.
   edWasGuess = !item.kind;
@@ -1124,7 +1141,7 @@ function saveItem() {
   data.id          = editingId || (Date.now().toString() + Math.random().toString(36).slice(2,6));
   data.supplier    = document.getElementById('f-supplier').value.trim();
   data.cost        = cpu !== null ? cpu.toFixed(4) : '';  // derived, for costing module
-  data.moq         = document.getElementById('f-moq').value;
+  delete data.moq;   // folded into notes (notesWithMoq), 2026-10-18
   data.link        = document.getElementById('f-link').value.trim();
   data.notes       = document.getElementById('f-notes').value.trim();
   data.image       = pendingImage || null;
