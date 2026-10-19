@@ -2379,3 +2379,15 @@ spec is in the backlog history and summarized here.
   capped at 840px with fixed widths for size, supplier, cost, stock and Buy,
   because at full width it left a wide gap between Supplier and Cost.
 - `test-packaging.js` (91 checks) is the 17th suite.
+
+### Session 19 (cont.) — Packaging edit panel tabs (core v1.24)
+
+Her report: entering stock meant scrolling past every detail field. The edit
+panel now has two tabs, Details and Stock and purchases (stock summary
+first, then purchases and adjustments). The tab used last is remembered
+while the page is open, so stock counts go item after item without
+switching; a new item always starts on Details. "12 in stock · $0.71 per
+unit" sits under the title on both tabs and updates as purchases are added.
+Once a kind is picked, the "What is it?" grid folds to one line with a
+Change button. The footer is pinned to the bottom of the panel.
+`test-packaging.js` is at 100 checks.

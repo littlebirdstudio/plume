@@ -211,11 +211,24 @@ table.pk th:nth-child(6) { width: 52px; }
 #m-add .modal-hdr { position: sticky; top: 0; z-index: 3; background: var(--white); margin: 0 -26px 16px; padding: 10px 18px; justify-content: flex-start; gap: 8px; }
 #m-add .modal-title { font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--ink-lighter); }
 #m-add .modal-foot .btn { display: inline-flex; align-items: center; }
+#m-add .modal.open, #m-add .modal { display: flex; flex-direction: column; }
+#m-add .modal > * { flex: none; }
+#m-add .modal-foot { margin-top: auto !important; }
 #m-add .modal-foot { position: sticky; bottom: 0; z-index: 3; background: var(--white); margin: 20px -26px 0; padding: 12px 26px; }
 #m-add .field label { font-size: 12px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--ink-light); }
 #m-add .field label span { color: var(--ink-lighter); }
 #m-add .field input, #m-add .field select, #m-add .field textarea { border-radius: 7px; font-size: 14px; padding: 6px 9px; }
 #m-add .form-grid { gap: 2px 14px; }
+.pk-ed-tabs { display: flex; gap: 6px; border-bottom: 1px solid var(--cream-border); margin: 0 0 16px; }
+.pk-ed-tabs .ps-tab { font-size: 14px; }
+.pk-stockline { margin: 3px 0 0; font-size: 13px; color: var(--ink-light); }
+.pk-stockline b { color: var(--sage-dark); font-weight: 600; font-variant-numeric: tabular-nums; }
+.pk-stockline b.out { color: var(--warning); }
+.pk-kind-chosen { display: flex; align-items: center; gap: 10px; border: 1px solid var(--cream-border); border-radius: 9px; padding: 5px 8px; background: var(--white); }
+.pk-kind-chosen .pk-thumb { width: 34px; height: 34px; }
+.pk-kind-chosen b { font-weight: 600; flex: 1; }
+.pk-kind-chosen button { font: inherit; font-size: 12.5px; border: 1px solid var(--cream-border); background: transparent; border-radius: 7px; padding: 2px 10px; cursor: pointer; color: var(--ink-light); }
+.pk-kind-chosen button:hover { background: var(--cream-dark); color: var(--ink); }
 .pk-ed-top { display: flex; gap: 14px; align-items: center; margin-bottom: 14px; }
 .pk-big { width: 64px; height: 64px; border-radius: 12px; background: #F6F3EE; display: grid; place-items: center; flex: none; border: 1px solid var(--cream-border); padding: 7px; }
 .pk-ed-top h2 { margin: 0 0 2px; font-size: 20px; font-weight: 600; line-height: 1.25; }
@@ -331,12 +344,24 @@ body.ps-shell .btn-sm { font-size: 12px; }
       <div>
         <h2 id="ed-title">New packaging item</h2>
         <p class="pk-as" id="ed-as"></p>
+        <p class="pk-stockline" id="ed-stockline"></p>
       </div>
     </div>
+
+    <!-- Two tabs so stock is one click away, not below every field (her ask,
+         2026-10-19). -->
+    <div class="pk-ed-tabs" role="tablist">
+      <button type="button" class="ps-tab on" id="et-details" role="tab" onclick="setEdTab('details')">Details</button>
+      <button type="button" class="ps-tab" id="et-stock" role="tab" onclick="setEdTab('stock')">Stock and purchases</button>
+    </div>
+
+    <div id="ed-pane-details">
     <div id="ed-was"></div>
 
     <div class="field form-full">
       <label>What is it?</label>
+      <!-- Once a kind is picked the grid folds to one line; Change reopens it. -->
+      <div id="e-kind-chosen" class="pk-kind-chosen" style="display:none"></div>
       <div id="e-kinds"></div>
     </div>
 
@@ -388,6 +413,22 @@ body.ps-shell .btn-sm { font-size: 12px; }
     </div>
     <div id="ed-photo"></div>
     <div id="ed-dup"></div>
+    </div>
+
+    <div id="ed-pane-stock" style="display:none">
+    <!-- Stock + cost summary -->
+    <div class="stock-total-bar" style="margin:0 0 6px">
+      <div>
+        <div style="font-size:10px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-lighter)">Stock on hand</div>
+        <div style="font-size:20px;font-weight:300;color:var(--bark-dark);font-variant-numeric:tabular-nums" id="modal-stock-total">0 units</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:10px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-lighter)">Current cost / unit</div>
+        <div style="font-size:20px;font-weight:300;color:var(--bark-dark);font-variant-numeric:tabular-nums" id="modal-cost-per-unit">&mdash;</div>
+        <div style="font-size:10px;color:var(--ink-lighter)" id="modal-cost-note">from most recent purchase</div>
+      </div>
+    </div>
+
 
     <!-- Purchase history -->
     <div class="modal-section">
@@ -422,18 +463,6 @@ body.ps-shell .btn-sm { font-size: 12px; }
     <div id="adj-log">
       <div id="adj-empty" style="font-size:12px;color:var(--ink-lighter);padding:6px 0">No adjustments recorded.</div>
     </div>
-
-    <!-- Stock + cost summary -->
-    <div class="stock-total-bar">
-      <div>
-        <div style="font-size:10px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-lighter)">Stock on hand</div>
-        <div style="font-size:20px;font-weight:300;color:var(--bark-dark);font-variant-numeric:tabular-nums" id="modal-stock-total">0 units</div>
-      </div>
-      <div style="text-align:right">
-        <div style="font-size:10px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-lighter)">Current cost / unit</div>
-        <div style="font-size:20px;font-weight:300;color:var(--bark-dark);font-variant-numeric:tabular-nums" id="modal-cost-per-unit">&mdash;</div>
-        <div style="font-size:10px;color:var(--ink-lighter)" id="modal-cost-note">from most recent purchase</div>
-      </div>
     </div>
 
     <div class="modal-foot">
@@ -944,6 +973,7 @@ function updateModalSummary() {
   if (!rows.length) {
     cpuEl.textContent  = '\u2014';
     noteEl.textContent = 'from most recent purchase';
+    renderStockLine(stock, null);
     return;
   }
   rows.sort(function(a,b){ return b.date.localeCompare(a.date); });
@@ -951,6 +981,7 @@ function updateModalSummary() {
   var cpu = (latest.totalCost + latest.shipping) / latest.qty;
   cpuEl.textContent  = '$' + cpu.toFixed(4);
   noteEl.textContent = 'from most recent purchase' + (latest.shipping > 0 ? ' (incl. shipping)' : '');
+  renderStockLine(stock, cpu);
 }
 
 // ── Edit panel: "What is it?" ─────────────────────────
@@ -961,8 +992,18 @@ function updateModalSummary() {
 var edKind = '';
 var edWasGuess = false;   // true while an old item shows Plume's reading of its name
 
+var kindOpen = true;      // the "What is it?" grid, open until a kind is picked
 function renderKinds() {
   var color = document.getElementById('f-color').value;
+  var chosen = document.getElementById('e-kind-chosen');
+  var showGrid = kindOpen || !edKind;
+  chosen.style.display = showGrid ? 'none' : '';
+  document.getElementById('e-kinds').style.display = showGrid ? '' : 'none';
+  if (!showGrid) {
+    var k = Plume.pkKind(edKind);
+    chosen.innerHTML = '<span class="pk-thumb">' + Plume.pkIcon(edKind, Plume.pkColored(edKind) ? color : '') + '</span><b>' + esc(k ? k.label : '') + '</b>' +
+      '<button type="button" onclick="kindOpen=true;renderKinds()">Change</button>';
+  }
   var h = '';
   Plume.PK_GROUPS.forEach(function (g) {
     h += '<div class="kind-sec">' + esc(g.label) + '</div><div class="icon-grid">';
@@ -976,6 +1017,7 @@ function renderKinds() {
 }
 function setKind(k) {
   edKind = k;
+  kindOpen = false;
   renderKinds();
   edForm();
   var first = document.getElementById(Plume.pkIsOther(k) ? 'f-other' : 'f-capacity');
@@ -1079,6 +1121,29 @@ function notesWithMoq(it) {
   return (notes ? notes + '\n' : '') + 'Minimum order: ' + moq;
 }
 
+// ── Tabs in the edit panel ────────────────────────────
+// The last tab used is remembered while the page is open, so working
+// through stock counts stays on Stock and purchases item after item. A new
+// item always starts on Details, since it needs a kind first.
+var edTab = 'details';
+function setEdTab(t) {
+  edTab = t;
+  document.getElementById('ed-pane-details').style.display = t === 'details' ? '' : 'none';
+  document.getElementById('ed-pane-stock').style.display = t === 'stock' ? '' : 'none';
+  document.getElementById('et-details').classList.toggle('on', t === 'details');
+  document.getElementById('et-stock').classList.toggle('on', t === 'stock');
+  document.getElementById('et-details').setAttribute('aria-selected', t === 'details');
+  document.getElementById('et-stock').setAttribute('aria-selected', t === 'stock');
+  var m = document.querySelector('#m-add .modal'); if (m) m.scrollTop = 0;
+}
+// "48 in stock · $0.62 per unit", under the title on both tabs.
+function renderStockLine(stock, cpu) {
+  var el = document.getElementById('ed-stockline');
+  if (!el) return;
+  el.innerHTML = '<b' + (stock > 0 ? '' : ' class="out"') + '>' + stock + '</b> in stock' +
+    (cpu !== null && cpu !== undefined ? ' \u00b7 $' + cpu.toFixed(cpu < 0.1 ? 3 : 2) + ' per unit' : '');
+}
+
 // ── Modal open/close ──────────────────────────────────
 function resetPurchaseUi() {
   document.getElementById('purchase-rows').innerHTML = '<div id="purchase-empty" style="font-size:12px;color:var(--ink-lighter);padding:6px 0">No purchases recorded yet.</div>';
@@ -1087,7 +1152,7 @@ function resetPurchaseUi() {
   document.getElementById('adj-form').style.display = 'none';
 }
 function openAdd() {
-  editingId = null; pendingImage = null; pendingAdjustments = []; edKind = ''; edWasGuess = false;
+  editingId = null; pendingImage = null; pendingAdjustments = []; edKind = ''; edWasGuess = false; kindOpen = true;
   document.getElementById('m-add-title').textContent = 'New packaging item';
   document.getElementById('m-delete-btn').style.display = 'none';
   document.getElementById('m-duplicate-btn').style.display = 'none';
@@ -1097,6 +1162,7 @@ function openAdd() {
   renderUsedIn(null);
   resetPurchaseUi();
   renderKinds(); edForm(); renderPhotoNote();
+  var keepTab = edTab; setEdTab('details'); edTab = keepTab;   // new items start on Details
   openModal('m-add');
   var m = document.querySelector('#m-add .modal'); if (m) m.scrollTop = 0;
 }
@@ -1115,6 +1181,7 @@ function openEdit(id) {
   // An item saved before kinds opens with Plume's reading of its old name,
   // to check and save. Nothing is written until Save.
   edWasGuess = !item.kind;
+  kindOpen = false;
   var f = item.kind ? item : Plume.pkGuess(item.name || '');
   edKind = f.kind || '';
   setFields(f);
@@ -1127,6 +1194,7 @@ function openEdit(id) {
   purchases.slice().sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); }).forEach(function(p) { addPurchaseRow(p); });
   updateModalSummary();
   renderKinds(); edForm(); renderPhotoNote();
+  setEdTab(edTab);
   openModal('m-add');
   var m = document.querySelector('#m-add .modal'); if (m) m.scrollTop = 0;
 }
@@ -1196,6 +1264,7 @@ function duplicateItem() {
   resetPurchaseUi();
   renderPhotoNote();
   edLive();
+  setEdTab('details');
   var modal = document.querySelector('#m-add .modal');
   if (modal) modal.scrollTop = 0;
   var el = document.getElementById(Plume.pkIsOther(edKind) ? 'f-other' : 'f-capacity');

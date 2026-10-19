@@ -181,6 +181,7 @@ const PRODUCTS = [
     await page.evaluate("saveItem()");
     ok('saving without a kind says to pick one', dialogs.some(t => /Pick what it is/.test(t)), dialogs);
     await page.click('#e-kinds button[data-kind="dropper"]');
+    ok('picking a kind folds the grid to one line with a Change button', await page.evaluate("document.getElementById('e-kinds').style.display === 'none' && /Dropper bottle/.test(document.getElementById('e-kind-chosen').innerText) && !!document.querySelector('#e-kind-chosen button')"));
     ok('a bottle asks for size, color and material, not a product', await page.evaluate("['row-color','row-material'].every(function(i){return document.getElementById(i).style.display!=='none'}) && document.getElementById('row-for').style.display==='none' && document.getElementById('row-other').style.display==='none'"));
     await page.fill('#f-capacity', '1 oz');
     await page.click('#sugg-color button:has-text("Blue")');
@@ -198,6 +199,8 @@ const PRODUCTS = [
 
     await page.evaluate("openAdd()");
     await page.click('#e-kinds button[data-kind="label"]');
+    await page.click('#e-kind-chosen button');
+    ok('Change opens the grid again', await page.evaluate("document.getElementById('e-kinds').style.display !== 'none'"));
     ok('a label asks for a product and part, not a color', await page.evaluate("document.getElementById('row-for').style.display!=='none' && document.getElementById('row-part').style.display!=='none' && document.getElementById('row-color').style.display==='none'"));
     ok('the product list comes from Products & Costing', await page.evaluate("Array.from(document.querySelectorAll('#f-for option')).map(function(o){return o.textContent}).join('|')") === 'Any product|Glow face oil|Hydrating facial serum');
     await page.click('#e-kinds button[data-kind="other"]');
@@ -228,6 +231,18 @@ const PRODUCTS = [
 
     await page.evaluate("openEdit('p1')");
     await page.waitForTimeout(100);
+    ok('an existing item opens with its kind folded to one line', await page.evaluate("document.getElementById('e-kinds').style.display === 'none'"));
+    ok('the stock count shows under the title', /24 in stock \u00b7 \$0\.62 per unit/.test(await page.evaluate("document.getElementById('ed-stockline').innerText")), await page.evaluate("document.getElementById('ed-stockline').innerText"));
+    ok('Details is showing and Stock is one tab away', await page.evaluate("document.getElementById('ed-pane-stock').style.display === 'none' && document.getElementById('ed-pane-details').style.display !== 'none'"));
+    await page.click('#et-stock');
+    ok('the Stock tab shows stock, purchases and adjustments without the detail fields', await page.evaluate("document.getElementById('ed-pane-details').style.display === 'none' && document.querySelectorAll('#ed-pane-stock .purchase-row').length === 1 && !!document.querySelector('#ed-pane-stock #modal-stock-total')"));
+    await page.evaluate("addPurchaseRow({ date: '2026-10-15', qty: 12, totalCost: '6.00', shipping: '' })");
+    ok('a new purchase updates the count under the title at once', /36 in stock \u00b7 \$0\.50 per unit/.test(await page.evaluate("document.getElementById('ed-stockline').innerText")), await page.evaluate("document.getElementById('ed-stockline').innerText"));
+    await page.evaluate("closeModal('m-add'); openEdit('p3')");
+    ok('the next item opens on the tab used last', await page.evaluate("document.getElementById('ed-pane-stock').style.display !== 'none'"));
+    await page.evaluate("closeModal('m-add'); openAdd()");
+    ok('a new item always starts on Details', await page.evaluate("document.getElementById('ed-pane-details').style.display !== 'none'"));
+    await page.evaluate("closeModal('m-add'); openEdit('p1'); setEdTab('details')");
     const used = await page.evaluate("Array.from(document.querySelectorAll('#e-used .pk-used')).map(function(e){return e.textContent})");
     ok('Used in lists the products whose packaging recipe has it', JSON.stringify(used) === '["Glow face oil","Hydrating facial serum"]', used);
     await page.evaluate("closeModal('m-add'); openEdit(" + JSON.stringify(nw.id) + "); duplicateItem()");
