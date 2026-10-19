@@ -2390,4 +2390,7 @@ switching; a new item always starts on Details. "12 in stock · $0.71 per
 unit" sits under the title on both tabs and updates as purchases are added.
 Once a kind is picked, the "What is it?" grid folds to one line with a
 Change button. The footer is pinned to the bottom of the panel.
+Same session: the list block (chips, search, table) is centered as one
+840px column, and the item indent under each kind heading is deeper (84px,
+size column 250px), which also closes the gap before Supplier.
 `test-packaging.js` is at 100 checks.

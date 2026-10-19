@@ -171,13 +171,16 @@ body.ps-shell .app-footer { background: transparent; }
 /* Sized to its content rather than the whole window (her ask, 2026-10-18:
    too much blank space between Supplier and Cost). */
 table.pk { font-size: 14px; width: 100%; max-width: 840px; }
-table.pk th:nth-child(1) { width: 200px; }
+table.pk th:nth-child(1) { width: 250px; }
 .pk .pk-size { white-space: nowrap; }
 table.pk th:nth-child(3) { width: 130px; }
 table.pk th:nth-child(4) { width: 80px; }
 table.pk th:nth-child(5) { width: 58px; }
 table.pk th:nth-child(6) { width: 52px; }
 .pk-sort-note, .pk-search .ps-search { max-width: 440px; }
+/* The list block (chips, search, table) is centered as one column, so the
+   search box stays lined up with the table's left edge (2026-10-19). */
+#pk-list-view { max-width: 840px; margin: 0 auto; }
 /* Each kind is a heading with its drawing; its items sit indented beneath
    it on a guide line, with a gap before the next kind (her ask, 2026-10-18:
    the kinds were hard to pick out in the list). */
@@ -191,10 +194,10 @@ table.pk th:nth-child(6) { width: 52px; }
 .pk-g .gc { color: var(--ink-lighter); font-size: 12.5px; margin-left: 8px; }
 .pk-g .type-badge { margin-left: 10px; text-transform: none; letter-spacing: 0; font-size: 11.5px; padding: 1px 8px; border-radius: 5px; }
 .pk-g-act { float: right; font: inherit; font-size: 12.5px; border: 1px solid var(--cream-border); background: var(--white); border-radius: 7px; padding: 1px 10px; cursor: pointer; color: var(--ink-light); }
-.pk-row td:first-child { padding-left: 58px; position: relative; }
-.pk-row td:first-child::before { content: ''; position: absolute; left: 25px; top: 0; bottom: 0; border-left: 2px solid var(--cream-border); }
+.pk-row td:first-child { padding-left: 84px; position: relative; }
+.pk-row td:first-child::before { content: ''; position: absolute; left: 34px; top: 0; bottom: 0; border-left: 2px solid var(--cream-border); }
 .pk-row.last td:first-child::before { bottom: 50%; }
-.pk-row td:first-child::after { content: ''; position: absolute; left: 25px; top: 50%; width: 22px; border-top: 2px solid var(--cream-border); }
+.pk-row td:first-child::after { content: ''; position: absolute; left: 34px; top: 50%; width: 40px; border-top: 2px solid var(--cream-border); }
 .pk-row td { padding-top: 7px; padding-bottom: 7px; }
 .pk-cell { display: inline-flex; gap: 10px; align-items: center; }
 .pk-row .pk-thumb { width: 38px; height: 38px; }
