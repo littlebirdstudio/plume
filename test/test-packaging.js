@@ -287,7 +287,7 @@ const PRODUCTS = [
     const data = { 'aerie-packaging-v2': tidy, 'plume-products-v1': PRODUCTS, 'aerie-batches-v1': [batch] };
     {
       const { ctx, page, errors } = await open('batchlog', data);
-      await page.evaluate("openBatchDetail('b1'); pendingRunReset();");
+      await page.evaluate("openBatchDetail('b1'); setBatchTab('runs'); pendingRunReset();");
       await page.waitForTimeout(150);
       ok('Batches: the run builder shows the picker, the select hidden behind it',
          await page.evaluate("!!document.querySelector('#d-pkg-builder-comps .pk-pick-btn') && document.querySelector('#d-pkg-builder-comps select').style.display === 'none'"));

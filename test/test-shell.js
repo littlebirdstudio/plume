@@ -308,6 +308,88 @@ ok('an unknown icon name gives nothing rather than breaking', P.icon('nope') ===
     await phone.close();
   }
 
+  console.log('\n4d. Batches in the shell (2026-10-19)');
+  {
+    const page = await open('batchlog');
+    const today = await page.evaluate("Plume.todayISO()");
+    const plus = (d) => page.evaluate("(function(){var x=Plume.parseLocalDate(Plume.todayISO());x.setDate(x.getDate()+" + d + ");return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');})()");
+    const f = [
+      { id: 'fb', name: 'Body butter', type: 'Body butter', status: 'approved', lines: [{ ingId: 'a1', pct: 100 }] },
+      { id: 'fs', name: 'Oat soap', type: 'Cold Process Soap', status: 'approved', lines: [{ ingId: 'a1', gramsFixed: 500 }] },
+      { id: 'ft', name: 'Serum trial', type: 'Facial serum', status: 'testing', lines: [{ ingId: 'a1', pct: 100 }] }];
+    const ingsWithCost = [{ id: 'a1', name: 'Aloe vera juice', inci: 'Aloe', lots: [{ id: 'l1', costPerG: 0.02, qtyPurchased: 1000, qtyUnit: 'g' }], activeLotId: 'l1' }];
+    const b = [
+      { id: 'b1', date: today, formulaId: 'fb', formulaName: 'Body butter', formulaType: 'Body butter', batchName: 'Spring', batchType: 'production', actualYield: 400, status: 'ready', notes: '',
+        ingredientSnapshot: [{ ingredientId: 'a1', ingredientName: 'Aloe vera juice', grams: 400 }],
+        packagingRuns: [{ id: 'r1', date: today, components: [{ packagingId: 'x', packagingName: 'Jar', quantity: 6 }, { packagingId: 'y', packagingName: 'Label', quantity: 6 }], committed: true }], committed: true },
+      { id: 'b2', date: await plus(-10), formulaId: 'fs', formulaName: 'Oat soap', formulaType: 'Cold Process Soap', batchName: '', batchType: 'production', actualYield: 1000, status: 'curing', cureWeeks: 4, readyDate: await plus(18), ingredientSnapshot: [], packagingRuns: [], committed: true },
+      { id: 'b3', date: '2026-01-05', formulaId: 'ft', formulaName: 'Serum trial', formulaType: 'Facial serum', batchName: 'Trial', batchType: 'test', actualYield: 100, status: 'depleted', ingredientSnapshot: [], packagingRuns: [], committed: true }];
+    await page.evaluate("localStorage.setItem('aerie-formulations-v1', " + JSON.stringify(JSON.stringify(f)) + ");" +
+      "localStorage.setItem('aerie-ingredients-v2', " + JSON.stringify(JSON.stringify(ingsWithCost)) + ");" +
+      "localStorage.setItem('aerie-batches-v1', " + JSON.stringify(JSON.stringify(b)) + ");");
+    await page.reload(); await page.waitForTimeout(500);
+
+    ok('the sidebar marks Batches', (await page.evaluate("document.querySelector('#ps-side .ps-nav.on').textContent")).indexOf('Batches') !== -1);
+    ok('the old dark header and stat cards are gone', (await page.evaluate("!document.querySelector('.app-header') && !document.getElementById('s-total')")));
+    const sum = await page.evaluate("document.getElementById('bl-summary').innerText");
+    ok('the summary counts batches, curing, ready and this month', /3 batches[\s\S]*1 curing[\s\S]*1 ready[\s\S]*[12] this month/.test(sum), sum);
+    const names = () => page.evaluate("Array.from(document.querySelectorAll('#tbody tr')).map(function(r){return r.classList.contains('group-row') ? 'G:' + r.innerText.trim().split('\\n')[0] : r.querySelector('.ps-name').textContent;}).join('|')");
+    ok('Recent lists newest first', (await names()) === 'Spring|Oat soap|Trial', await names());
+    await page.click('[data-bl-view="status"]');
+    ok('the By status tab groups, curing first', (await names()) === 'G:Curing|Oat soap|G:Ready|Spring|G:Depleted|Trial', await names());
+    ok('and drives the old view select', (await page.evaluate("document.getElementById('f-view').value")) === 'status');
+    await page.click('[data-bl-view="recent"]');
+    await page.click('[data-bl-pill="f-type:test"]');
+    ok('the Tests chip filters', (await names()) === 'Trial', await names());
+    await page.click('[data-bl-pill="f-type:"]');
+    const curing = await page.evaluate("Array.from(document.querySelectorAll('#tbody tr')).find(r => r.innerText.indexOf('Oat soap') !== -1).innerText");
+    ok('a curing batch shows its ready date and days left', /Curing[\s\S]*ready[\s\S]*18 days/.test(curing), curing);
+    ok('with a progress bar', await page.evaluate("!!document.querySelector('#tbody .cure-bar i')"));
+    ok('packaged shows units, not components added up', /1 run[\s\S]*6 units/.test(await page.evaluate("document.querySelector('#tbody tr').innerText")));
+
+    await page.evaluate("openBatchDetail('b1')"); await page.waitForTimeout(400);
+    ok('a batch slides in at the right edge', await page.evaluate(
+      "var r=document.querySelector('#m-detail .modal').getBoundingClientRect(); Math.round(r.right) === window.innerWidth && r.top === 0"));
+    ok('Details is the first tab', await page.evaluate("!document.getElementById('bp-details').hidden && document.getElementById('bp-ings').hidden && document.getElementById('bp-runs').hidden"));
+    ok('the tabs show counts', (await page.evaluate("document.getElementById('bt-ings-ct').textContent + '/' + document.getElementById('bt-runs-ct').textContent")) === '1/1');
+    ok('the header links to the formulation', (await page.evaluate("document.querySelector('#d-meta a').getAttribute('href')")) === 'plume-formulations.html#f=fb');
+    ok('a clean batch reads Saved', /Saved/.test(await page.evaluate("document.getElementById('d-save-state').textContent")) && await page.evaluate("document.getElementById('d-save-btn').hidden"));
+    await page.click('[data-bl-pill="d-type-sel:test"]');
+    ok('a pill sets the batch type and shows Save changes', (await page.evaluate("document.getElementById('d-type-sel').value")) === 'test' && !(await page.evaluate("document.getElementById('d-save-btn').hidden")));
+    await page.evaluate("PLUME_TEST_ANSWER = false; closeDetail();");
+    ok('closing with unsaved changes asks, and No keeps it open', await page.evaluate("document.getElementById('m-detail').classList.contains('open')"));
+    await page.evaluate("PLUME_TEST_ANSWER = undefined; saveBatchEdits();");
+    ok('Save changes saves and goes back to Saved', (await page.evaluate("findBatch('b1').batchType")) === 'test' && /Saved/.test(await page.evaluate("document.getElementById('d-save-state').textContent")));
+    await page.evaluate("setBatchTab('ings')");
+    const ings = await page.evaluate("document.getElementById('d-snapshot').innerText");
+    ok('Ingredients lists each line with its cost and a total', /Aloe vera juice[\s\S]*400\.0[\s\S]*\$8\.00[\s\S]*Ingredient cost for 400 g[\s\S]*\$8\.00/.test(ings), ings);
+    await page.evaluate("setBatchTab('runs')");
+    ok('the run button says Commit this run', (await page.evaluate("document.getElementById('d-run-commit').textContent")) === 'Commit this run');
+    await page.keyboard.press('Escape'); await page.waitForTimeout(100);
+    ok('Escape closes a saved batch', await page.evaluate("!document.getElementById('m-detail').classList.contains('open')"));
+
+    await page.evaluate("openBatchDetail('b2')"); await page.waitForTimeout(150);
+    ok('a curing batch shows cure pills and Mark ready now', await page.evaluate(
+      "document.getElementById('d-cure-row').style.display === '' && document.querySelector('[data-bl-pill=\"d-cure:4\"]').classList.contains('on') && document.getElementById('d-curing-note').style.display === '' && document.getElementById('d-mark-ready-btn').style.display === ''"));
+    ok('an unnamed batch shows the formulation as its title', (await page.evaluate("document.getElementById('d-name').placeholder")) === 'Oat soap');
+    await page.evaluate("closeDetail()");
+
+    await page.evaluate("openNewBatch()"); await page.waitForTimeout(400);
+    ok('New batch slides in from the right', await page.evaluate("var r=document.querySelector('#m-new .modal').getBoundingClientRect(); Math.round(r.right) === window.innerWidth"));
+    await page.evaluate("document.getElementById('f-formula').value='ft'; onFormulaChange();");
+    ok('a testing formulation selects the Test pill', await page.evaluate("document.querySelector('[data-bl-pill=\"f-type-sel:test\"]').classList.contains('on') && document.getElementById('f-type-sel').value === 'test'"));
+    await page.evaluate("document.getElementById('f-formula').value='fs'; onFormulaChange();");
+    ok('a soap shows the cure pills', await page.evaluate("document.getElementById('f-cure-row').style.display === '' && document.querySelector('[data-bl-pill=\"f-type-sel:production\"]').classList.contains('on')"));
+    await page.close();
+
+    const phone = await open('batchlog', { width: 390, height: 844 });
+    await phone.evaluate("localStorage.setItem('aerie-batches-v1', " + JSON.stringify(JSON.stringify(b)) + ");");
+    await phone.reload(); await phone.waitForTimeout(400);
+    await phone.evaluate("openBatchDetail('b1'); setBatchTab('runs')"); await phone.waitForTimeout(150);
+    ok('a batch fits a phone without sideways scroll', await phone.evaluate("document.documentElement.scrollWidth <= window.innerWidth + 1"));
+    await phone.close();
+  }
+
   console.log('\n5. Phone width');
   {
     const page = await open('ingredients', { width: 390, height: 844 });
