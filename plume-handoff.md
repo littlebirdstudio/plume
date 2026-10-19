@@ -2399,3 +2399,53 @@ saying to open and save one; the edit panel still fills in Plume's reading
 of the old name (`Plume.pkGuess` stays in core, and drives the drawing for
 unsorted items). `test-packaging.js` is at 95 checks.
 `test-packaging.js` is at 100 checks.
+
+### Session 20 (19 October 2026) — Products & Costing in the shell (core v1.25)
+
+Previewed with Heide first ("Products & Costing Redesign", four versions),
+then built. Her calls, in order:
+
+- **Editor: two columns** (offered against today's single column). What
+  she changes sits on the left; Cost per unit, Prices (with margin and
+  profit beside each price) and Price from cost stay pinned on the right
+  (`.ed-side`, sticky), the way batch size and cost do in Formulations.
+  Changing a weight, a packaging quantity or a price updates the margin in
+  view.
+- **List: product type is the parent.** Type > formulation > products
+  (offered against type pills over the old formulation groups; she chose
+  headings and declined pills on top). The type is the linked
+  formulation's `f.type`, read live (`prodTypeKey`), so it needs no data
+  entry and follows a formulation that is retyped. Packs and kits keep
+  their own group, last ("Sample packs & kits"); a formulation with no
+  type files under "No type set". Clicking a type heading folds it for
+  the visit (`foldedTypes`, not saved); a search ignores folding.
+  Search also matches the type ("face oil").
+- **Colours of the two heading levels:** type bars are the palette's MAIN
+  colour (`--bark`, the New button's colour) with white lettering; the
+  formulation bars beneath are a light tint of it. Her correction: she
+  meant the palette's strongest tone, not the near-black heading colour
+  (`--bark-dark`), so the bars change with the palette. Each formulation
+  bar links to that formulation (`#f=<id>`).
+- Wholesale got its own Margin column now that the formulation is a
+  heading rather than a repeated column.
+
+**Editor details.** Breadcrumb, Saved / Save, Barcode label and a ⋯ menu
+(Duplicate, Delete) along the top, as in Formulations. The colour block
+holds the name, the label weight line (`p-netwt-display`), SKU, Barcode
+value, Status and "Made from" (two buttons that drive the old hidden
+radios, so `onKindChange` is unchanged). Label, Production runs (with a
+count) and Notes are tabs under Packaging (`setEdTab`). The label mode
+radios are styled as chips. Save stays explicit: `markDirty` shows a Save
+button in place of "Saved".
+
+**Kept on purpose:** every field ID, the cost functions, drag-to-reorder
+within a formulation (array order, as before), the barcode tool, the New
+product modal. Tests that reach into the editor (archive, INCI, packaging
+picker) pass unchanged.
+
+**Tests:** `test-shell.js` section 4c (34 checks): nesting order, palette
+colour of the type bar, the formulation link, folding, type search,
+status chips, row margins, breadcrumb, colour block, sticky right column,
+live margin, Save / Saved, tabs, Made from, menu, phone width.
+
+**Next:** Batches, previewed first, the same way.
