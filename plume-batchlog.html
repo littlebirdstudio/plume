@@ -1468,10 +1468,11 @@ function packagingOptionsHTML(selectedId) {
   var html = '<option value="">-- Pick packaging --</option>';
   pkgPickerCache.forEach(function(p) {
     var stock = calcPkgStock(p);
-    var cap = p.capacity ? ' -- ' + esc(p.capacity) : '';
+    // Items with a kind already carry their size in the display name.
+    var cap = p.capacity && !p.kind ? ' -- ' + esc(p.capacity) : '';
     var sel = (p.id === selectedId) ? ' selected' : '';
     html += '<option value="' + p.id + '"' + sel + '>' +
-      esc(p.name || '(unnamed)') + cap + ' (' + stock + ' in stock)</option>';
+      esc(Plume.pkDisplay(p)) + cap + ' (' + stock + ' in stock)</option>';
   });
   return html;
 }
@@ -1524,7 +1525,7 @@ function renderPackagingRuns(b) {
       // Resolve packaging name from id if not stored (or stored stale)
       var pkg = null;
       for (var i = 0; i < pkgs.length; i++) if (pkgs[i].id === c.packagingId) { pkg = pkgs[i]; break; }
-      var nm = (pkg && pkg.name) || c.packagingName || '(missing)';
+      var nm = (pkg && Plume.pkDisplay(pkg)) || c.packagingName || '(missing)';
       var qty = parseInt(c.quantity, 10) || 0;
       compHTML += '<li class="pkg-run-card-comp">' +
         '<span class="prc-name">' + esc(nm) + '</span>' +
@@ -1606,7 +1607,7 @@ function renderPendingRunBuilder() {
   var html = '';
   pendingRun.components.forEach(function(c, idx) {
     html += '<div class="pkg-builder-comp">' +
-      '<select onchange="pendingRunOnComponentChange(' + idx + ', \'packagingId\', this.value)">' +
+      '<select data-pk-pick onchange="pendingRunOnComponentChange(' + idx + ', \'packagingId\', this.value)">' +
         packagingOptionsHTML(c.packagingId) +
       '</select>' +
       '<input type="number" min="1" step="1" placeholder="Qty" value="' + esc(c.quantity || '') +
@@ -1615,6 +1616,10 @@ function renderPendingRunBuilder() {
       '</div>';
   });
   wrap.innerHTML = html;
+  // Core's packaging picker (v1.22): grouped by kind, with the drawing,
+  // size, color or product and stock on each line. The select stays and
+  // keeps its onchange.
+  Plume.pkPickers(wrap, pkgPickerCache);
 }
 
 // Commit the pending run: validate atomically across all components,
@@ -1648,7 +1653,7 @@ function pendingRunCommit() {
     if (!pkg) { shortages.push({ name:'(missing item)', need:aggregated[pid], have:0 }); return; }
     var have = calcPkgStock(pkg);
     if (have < aggregated[pid]) {
-      shortages.push({ name:pkg.name, need:aggregated[pid], have:have });
+      shortages.push({ name:Plume.pkDisplay(pkg), need:aggregated[pid], have:have });
     }
   });
   if (shortages.length) {
@@ -1667,7 +1672,7 @@ function pendingRunCommit() {
     for (var i = 0; i < pkgs.length; i++) if (pkgs[i].id === c.packagingId) { pkg = pkgs[i]; break; }
     return {
       packagingId:   c.packagingId,
-      packagingName: pkg ? pkg.name : '',
+      packagingName: pkg ? Plume.pkDisplay(pkg) : '',
       quantity:      parseInt(c.quantity, 10) || 0
     };
   });
@@ -1730,7 +1735,7 @@ function deletePackagingRun(runId) {
   var lines = comps.map(function(c) {
     var pkg = null;
     for (var j = 0; j < pkgs.length; j++) if (pkgs[j].id === c.packagingId) { pkg = pkgs[j]; break; }
-    var nm = (pkg && pkg.name) || c.packagingName || '(unknown)';
+    var nm = (pkg && Plume.pkDisplay(pkg)) || c.packagingName || '(unknown)';
     return '  ' + c.quantity + ' x ' + nm;
   });
   var title = 'Delete this packaging run from ' + fmtDate(run.date) + '?';

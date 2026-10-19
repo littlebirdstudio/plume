@@ -1813,16 +1813,16 @@ function computeProductCost(p) {
     var pkg = findPkg(r.packagingId);
     var qty = parseInt(r.quantity, 10) || 0;
     if (!pkg || qty <= 0) {
-      pkgRows.push({ name:(pkg && pkg.name) || '(missing)', qty:qty, unitCost:null, subtotal:0, missing:!pkg });
+      pkgRows.push({ name:(pkg && Plume.pkDisplay(pkg)) || '(missing)', qty:qty, unitCost:null, subtotal:0, missing:!pkg });
       return;
     }
     var uc = pkgUnitCost(pkg);
     if (uc === null) {
-      pkgRows.push({ name:pkg.name, qty:qty, unitCost:null, subtotal:0, missing:false });
+      pkgRows.push({ name:Plume.pkDisplay(pkg), qty:qty, unitCost:null, subtotal:0, missing:false });
     } else {
       var sub = uc * qty;
       pkgCost += sub;
-      pkgRows.push({ name:pkg.name, qty:qty, unitCost:uc, subtotal:sub, missing:false });
+      pkgRows.push({ name:Plume.pkDisplay(pkg), qty:qty, unitCost:uc, subtotal:sub, missing:false });
     }
   });
 
@@ -2217,11 +2217,11 @@ function renderPkgRecipe(p) {
     var uc = pkg ? pkgUnitCost(pkg) : null;
     var ucDisplay = uc !== null ? '$' + uc.toFixed(3) : '--';
     html += '<div class="pkg-recipe-row">' +
-      '<select onchange="onPkgRecipeChange(' + idx + ', this.value, null)">' +
+      '<select data-pk-pick onchange="onPkgRecipeChange(' + idx + ', this.value, null)">' +
         '<option value="">-- Pick packaging --</option>' +
-        pkgs.slice().sort(function(a,b) { return (a.name||'').localeCompare(b.name||''); }).map(function(pk) {
+        pkgs.slice().sort(function(a,b) { return Plume.pkDisplay(a).localeCompare(Plume.pkDisplay(b)); }).map(function(pk) {
           var sel = pk.id === r.packagingId ? ' selected' : '';
-          return '<option value="' + pk.id + '"' + sel + '>' + esc(pk.name || '(unnamed)') + '</option>';
+          return '<option value="' + pk.id + '"' + sel + '>' + esc(Plume.pkDisplay(pk)) + '</option>';
         }).join('') +
       '</select>' +
       '<input type="number" min="1" step="1" value="' + (r.quantity || 1) + '" onchange="onPkgRecipeChange(' + idx + ', null, this.value)">' +
@@ -2230,6 +2230,8 @@ function renderPkgRecipe(p) {
       '</div>';
   });
   body.innerHTML = html;
+  // Core's packaging picker (v1.22), same as in Batches.
+  Plume.pkPickers(body, pkgs);
 }
 
 function addPkgRecipeRow() {

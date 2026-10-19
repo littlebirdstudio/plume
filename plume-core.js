@@ -35,7 +35,7 @@ var Plume = (function () {
 // (v0.4 / v0.5 / v0.6 across five modules). BUMP IT IN EVERY PULL REQUEST,
 // core change or not: it is how "is this the update I just merged?" is
 // answered by looking, and browsers cache .js files stubbornly.
-var VERSION = '1.21';
+var VERSION = '1.22';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -802,7 +802,8 @@ var ICONS = {
   trash:        ['0 0 24 24', '<path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/>'],
   note:         ['0 0 24 24', '<path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4"/><path d="M9 12h7M9 16h5"/>'],
   archive:      ['0 0 24 24', '<rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9"/><path d="M10 13h4"/>'],
-  external:     ['0 0 24 24', '<path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>']
+  external:     ['0 0 24 24', '<path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>'],
+  chevron:      ['0 0 24 24', '<path d="M6 9l6 6 6-6"/>']
 };
 function icon(name, cls) {
   var d = ICONS[name]; if (!d) return '';
@@ -2123,6 +2124,474 @@ function inciMerged(entries) {
   return (entries || []).filter(function (e) { return e.sources.length > 1; });
 }
 
+// ── Packaging kinds, drawings, colors (core v1.22, 2026-10-18) ──────────
+// An item's KIND is one pick that sets its name, its drawing and its type.
+// Nothing to type, so "Dropper bottle" is always spelled the same way, and
+// every list groups on it. Only "Other" asks for a name. Agreed with Heide
+// in the "Packaging Redesign" preview (version 5); the backlog has the spec.
+//
+// Drawings stand in for photos: no upload, no storage. The colors are the
+// packaging's own colors, written as literal hex in the SVG, because dark
+// mode remaps every CSS variable by role and would shift them.
+//
+// Items saved before v1.22 have no kind. They keep working everywhere (the
+// display falls back to their old name) and group under "Needs sorting"
+// until the Tidy screen gives them one. item.name is still written on every
+// save, as the display string, so any reader that only knows .name is fine.
+var PK_COLORS = [
+  { key: 'amber',  label: 'Amber',  fill: '#9A5B1E' },
+  { key: 'blue',   label: 'Blue',   fill: '#2D4E8C' },
+  { key: 'green',  label: 'Green',  fill: '#3E6B3A' },
+  { key: 'red',    label: 'Red',    fill: '#A8322A' },
+  { key: 'pink',   label: 'Pink',   fill: '#E3A3B5' },
+  { key: 'purple', label: 'Purple', fill: '#6B4A8C' },
+  { key: 'clear',  label: 'Clear',  fill: '#E8F1F4', clear: true },
+  { key: 'frost',  label: 'Frost',  fill: '#DDE3E6' },
+  { key: 'white',  label: 'White',  fill: '#FFFFFF' },
+  { key: 'black',  label: 'Black',  fill: '#2A2A2A' },
+  { key: 'silver', label: 'Silver', fill: '#B9BEC3' },
+  { key: 'gold',   label: 'Gold',   fill: '#C9A445' },
+  { key: 'kraft',  label: 'Kraft',  fill: '#B08A5A' }
+];
+var PK_MATERIALS = ['Glass', 'Plastic', 'Aluminum', 'Paperboard', 'Corrugated', 'Paper'];
+var PK_PARTS = ['Front', 'Back', 'Top', 'Wrap'];
+
+// group decides which fields the form asks for; type is what the rest of
+// the app already read before kinds existed (container / box / label ...).
+var PK_GROUPS = [
+  { key: 'bottles', label: 'Bottles, jars and tubes', short: 'Bottles and jars', type: 'container' },
+  { key: 'boxes',   label: 'Boxes and bags',          short: 'Boxes and bags',   type: 'box' },
+  { key: 'labels',  label: 'Labels and stickers',     short: 'Labels',           type: 'label' },
+  { key: 'bands',   label: 'Bands and wraps',         short: 'Bands and wraps',  type: 'other' },
+  { key: 'other',   label: 'Caps and other',          short: 'Caps and other',   type: 'closure' }
+];
+var PK_KINDS = [
+  { key: 'dropper', label: 'Dropper bottle',      group: 'bottles' },
+  { key: 'pump',    label: 'Pump bottle',         group: 'bottles' },
+  { key: 'mist',    label: 'Spray bottle',        group: 'bottles' },
+  { key: 'airless', label: 'Airless pump bottle', group: 'bottles' },
+  { key: 'bottle',  label: 'Bottle with cap',     group: 'bottles' },
+  { key: 'roller',  label: 'Roller bottle',       group: 'bottles' },
+  { key: 'jar',     label: 'Jar',                 group: 'bottles' },
+  { key: 'tin',     label: 'Tin',                 group: 'bottles' },
+  { key: 'lipTube', label: 'Lip balm tube',       group: 'bottles' },
+  { key: 'squeeze', label: 'Squeeze tube',        group: 'bottles' },
+  { key: 'box',     label: 'Box',                 group: 'boxes' },
+  { key: 'mailer',  label: 'Mailer box',          group: 'boxes' },
+  { key: 'pouch',   label: 'Bag / pouch',         group: 'boxes' },
+  { key: 'label',   label: 'Product label',       group: 'labels' },
+  { key: 'square',  label: 'Square sticker',      group: 'labels' },
+  { key: 'round',   label: 'Round sticker',       group: 'labels' },
+  { key: 'barcode', label: 'Barcode sticker',     group: 'labels' },
+  { key: 'shrink',  label: 'Shrink band',         group: 'bands' },
+  { key: 'sleeve',  label: 'Soap sleeve',         group: 'bands' },
+  { key: 'belly',   label: 'Belly band',          group: 'bands' },
+  { key: 'cap',     label: 'Cap / closure',       group: 'other' },
+  { key: 'other',   label: 'Other',               group: 'other', other: true }
+];
+var PK_LEGACY_GROUP = { container: 'bottles', box: 'boxes', label: 'labels', closure: 'other', other: 'other' };
+
+function pkColor(c) {
+  c = String(c || '').toLowerCase().trim();
+  if (c === 'cobalt' || c === 'cobalt blue') c = 'blue';
+  if (c === 'frosted') c = 'frost';
+  for (var i = 0; i < PK_COLORS.length; i++) if (PK_COLORS[i].key === c) return PK_COLORS[i];
+  return null;
+}
+function pkSwatch(c) {
+  var k = pkColor(c);
+  return k ? '<i class="pk-sw" style="background:' + k.fill + '"></i>' : '';
+}
+// A known kind, or null. pkKindOf(item) is the item's kind, or null for an
+// item saved before kinds.
+function pkKind(k) { for (var i = 0; i < PK_KINDS.length; i++) if (PK_KINDS[i].key === k) return PK_KINDS[i]; return null; }
+function pkKindOf(it) { return it && it.kind ? pkKind(it.kind) : null; }
+function pkGroupKey(it) {
+  var k = pkKindOf(it);
+  return k ? k.group : (PK_LEGACY_GROUP[it && it.type] || 'other');
+}
+function pkGroup(key) { for (var i = 0; i < PK_GROUPS.length; i++) if (PK_GROUPS[i].key === key) return PK_GROUPS[i]; return PK_GROUPS[4]; }
+function pkTypeFor(kind) { var k = pkKind(kind); return k ? pkGroup(k.group).type : 'other'; }
+// Labels and stickers are for a product and never take a color; bands and
+// wraps may have both; bottles and boxes have a color and a material.
+function pkForProduct(kind) { var k = pkKind(kind); return !!k && (k.group === 'labels' || k.group === 'bands'); }
+function pkColored(kind) { var k = pkKind(kind); return !k || k.group !== 'labels'; }
+function pkIsOther(kind) { var k = pkKind(kind); return !!(k && k.other); }
+
+var PK_DARK = '#3A3A3A';   // caps, pumps, bulbs, sprayers
+var PK_EDGE = '#4A4540';   // outline on every body
+function pkBody(d, f, o) { return '<path d="' + d + '" fill="' + f + '" fill-opacity="' + o + '" stroke="' + PK_EDGE + '" stroke-width="1.2" stroke-linejoin="round"/>'; }
+var PK_BOTTLE = 'M12 12.5h8v1.5c3 1 4.5 2.6 4.5 5v9a2 2 0 0 1-2 2H9.5a2 2 0 0 1-2-2v-9c0-2.4 1.5-4 4.5-5z';
+var PK_DRAW = {
+  dropper: function (f, o) { return '<ellipse cx="16" cy="5" rx="2.8" ry="3.2" fill="' + PK_DARK + '"/><rect x="12.5" y="7.6" width="7" height="4.9" rx="1" fill="' + PK_DARK + '"/>' + pkBody(PK_BOTTLE, f, o); },
+  pump:    function (f, o) { return '<path d="M14.6 2.5h12.4v2.6h-9.8v4.4h-2.6z" fill="' + PK_DARK + '"/><rect x="12.5" y="9.5" width="7" height="3" rx="1" fill="' + PK_DARK + '"/>' + pkBody(PK_BOTTLE, f, o); },
+  mist:    function (f, o) { return '<path d="M10.5 12V7.5a5.5 5.5 0 0 1 11 0V12z" fill="#EAF2F5" fill-opacity=".7" stroke="' + PK_EDGE + '" stroke-width="1" stroke-dasharray="1.6 1.2"/><rect x="13.5" y="6.5" width="5" height="3.5" rx=".8" fill="' + PK_DARK + '"/><rect x="12.5" y="10" width="7" height="2.5" rx=".8" fill="' + PK_DARK + '"/>' + pkBody(PK_BOTTLE, f, o); },
+  airless: function (f, o) { return '<path d="M13 2.5h8v2.4h-4.5V7.5H13z" fill="' + PK_DARK + '"/><rect x="11" y="7.5" width="10" height="4" rx="1.2" fill="' + PK_DARK + '"/>' + pkBody('M10.5 11.5h11v16a2 2 0 0 1-2 2h-7a2 2 0 0 1-2-2z', f, o); },
+  bottle:  function (f, o) { return '<rect x="12" y="4" width="8" height="6.5" rx="1.2" fill="' + PK_DARK + '"/>' + pkBody('M12.5 10.5h7v1.5c3 1 4.5 2.6 4.5 5v10.5a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2V17c0-2.4 1.5-4 4.5-5z', f, o); },
+  roller:  function (f, o) { return '<rect x="12.5" y="2.5" width="7" height="8" rx="1.5" fill="' + PK_DARK + '"/>' + pkBody('M12 10.5h8v17a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2z', f, o); },
+  jar:     function (f, o) { return '<rect x="6" y="9" width="20" height="5" rx="1.5" fill="' + PK_DARK + '"/>' + pkBody('M7 14h18v12a3 3 0 0 1-3 3H10a3 3 0 0 1-3-3z', f, o); },
+  tin:     function (f, o) { return pkBody('M4 15.5v6c0 2.5 5.4 4.5 12 4.5s12-2 12-4.5v-6', f, o) + '<ellipse cx="16" cy="15.5" rx="12" ry="4.5" fill="' + f + '" fill-opacity="' + o + '" stroke="' + PK_EDGE + '" stroke-width="1.2"/><ellipse cx="16" cy="15.5" rx="8" ry="2.4" fill="none" stroke="' + PK_EDGE + '" stroke-width=".8" opacity=".6"/>'; },
+  lipTube: function (f, o) { return '<rect x="12" y="3" width="8" height="9" rx="1.6" fill="' + PK_DARK + '"/>' + pkBody('M12 12h8v16a1.6 1.6 0 0 1-1.6 1.6h-4.8A1.6 1.6 0 0 1 12 28z', f, o); },
+  squeeze: function (f, o) { return pkBody('M9 4h14l-1.5 3H10.5z', f, o) + pkBody('M10.5 7h11l1.5 17h-14z', f, o) + '<rect x="12.5" y="24" width="7" height="5.5" rx="1" fill="' + PK_DARK + '"/>'; },
+  box:     function (f, o) { return pkBody('M5 10l11-5.5L27 10v12.5L16 28 5 22.5z', f, o) + '<path d="M5 10l11 5.5L27 10M16 15.5V28" fill="none" stroke="' + PK_EDGE + '" stroke-width="1.2" stroke-linejoin="round"/>'; },
+  mailer:  function (f, o) { return pkBody('M3.5 12h25v13a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 25z', f, o) + pkBody('M3.5 12l4-5h17l4 5', f, o) + '<path d="M12 17h8" stroke="' + PK_EDGE + '" stroke-width="1.2"/>'; },
+  pouch:   function (f, o) { return pkBody('M8 6h16l1.5 21a2 2 0 0 1-2 2.2H8.5a2 2 0 0 1-2-2.2z', f, o) + '<path d="M8.5 10h15" stroke="' + PK_EDGE + '" stroke-width="1" stroke-dasharray="2 1.5"/>'; },
+  label:   function () { return '<rect x="3" y="10" width="26" height="12" rx="2" fill="#FFFFFF" stroke="' + PK_EDGE + '" stroke-width="1.2"/><path d="M7 14.5h13M7 17.5h9" stroke="' + PK_EDGE + '" stroke-width="1.2"/>'; },
+  square:  function () { return '<rect x="6" y="6" width="20" height="20" rx="2.5" fill="#FFFFFF" stroke="' + PK_EDGE + '" stroke-width="1.2"/><path d="M10 13h12M10 16.5h9M10 20h6" stroke="' + PK_EDGE + '" stroke-width="1.2"/>'; },
+  round:   function () { return '<circle cx="16" cy="16" r="11" fill="#FFFFFF" stroke="' + PK_EDGE + '" stroke-width="1.2"/><path d="M11 14.5h10M12.5 17.5h7" stroke="' + PK_EDGE + '" stroke-width="1.2"/>'; },
+  barcode: function () { return '<rect x="3" y="9" width="26" height="14" rx="2" fill="#FFFFFF" stroke="' + PK_EDGE + '" stroke-width="1.2"/><path d="M7 12v8M9 12v8M12 12v8M13.5 12v8M16 12v8M19 12v8M20.5 12v8M23 12v8M25 12v8" stroke="#222" stroke-width="1.1"/>'; },
+  shrink:  function (f) { return '<rect x="12" y="5" width="8" height="6" rx="1" fill="#CFCAC2"/>' + pkBody('M12.5 11h7v1.5c3 1 4.5 2.6 4.5 5v10a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2v-10c0-2.4 1.5-4 4.5-5z', '#E7E3DC', 1) + '<rect x="10.8" y="4" width="10.4" height="10" rx="1.5" fill="' + f + '" fill-opacity=".75" stroke="' + PK_EDGE + '" stroke-width="1.2"/><path d="M11 6.5h10M11 9h10M11 11.5h10" stroke="' + PK_EDGE + '" stroke-width=".7" opacity=".6"/>'; },
+  sleeve:  function (f, o) { return '<rect x="3" y="10" width="26" height="12" rx="3" fill="#E7E3DC" stroke="' + PK_EDGE + '" stroke-width="1"/>' + pkBody('M8 9h16v14H8z', f, o) + '<path d="M11 14h10M11 17h7" stroke="' + PK_EDGE + '" stroke-width="1"/>'; },
+  belly:   function (f, o) { return '<rect x="6" y="7" width="20" height="4.5" rx="1.5" fill="' + PK_DARK + '"/>' + pkBody('M7 11.5h18v14a3 3 0 0 1-3 3H10a3 3 0 0 1-3-3z', '#E7E3DC', 1) + pkBody('M6.5 16h19v5h-19z', f, o); },
+  cap:     function (f, o) { return pkBody('M8 9h16v12.5a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 8 21.5z', f, o) + '<path d="M11 9v15M14 9v15M17 9v15M20 9v15" stroke="' + PK_EDGE + '" stroke-width=".8" opacity=".5"/>'; },
+  other:   function (f, o) { return pkBody('M6 6h20v20H6z', f, o) + '<path d="M12 16h8M16 12v8" stroke="' + PK_EDGE + '" stroke-width="1.2"/>'; }
+};
+function pkIcon(kind, color) {
+  var draw = PK_DRAW[kind] || PK_DRAW.other;
+  var c = pkColored(kind) ? pkColor(color) : null;
+  var fill = c ? c.fill : '#E7E3DC';
+  var op = c && c.clear ? '0.55' : '1';
+  return '<svg class="pk-svg" viewBox="0 0 32 32" aria-hidden="true">' + draw(fill, op) + '</svg>';
+}
+// The drawing for an item. One saved before kinds gets the drawing its old
+// name suggests, so it is still recognisable before she tidies it.
+function pkIconFor(it) {
+  if (!it) return pkIcon('other', '');
+  if (it.kind) return pkIcon(it.kind, it.color);
+  var g = pkGuess(it.name);
+  return pkIcon(g.kind, g.color);
+}
+
+// Product names for labels, read from Products & Costing's store. Cached
+// for the current task only, so a list of 200 rows reads it once.
+var pkProdCache = null;
+function pkProducts() {
+  if (!pkProdCache) {
+    pkProdCache = (Store.getJSON('plume-products-v1', []) || []).filter(function (p) { return p && p.id; });
+    setTimeout(function () { pkProdCache = null; }, 0);
+  }
+  return pkProdCache;
+}
+function pkProductName(id) {
+  if (!id) return '';
+  var list = pkProducts();
+  for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i].name || '';
+  return '';
+}
+
+function pkKindName(it) {
+  var k = pkKindOf(it);
+  if (!k) return it && it.name ? it.name : '(unnamed)';
+  return k.other ? (String(it.other || '').trim() || 'Other') : k.label;
+}
+// "Amber glass", "Clear plastic", "Kraft paperboard"
+function pkLooks(it) {
+  var s = [String(it.color || '').trim(), it.material ? String(it.material).toLowerCase() : ''].filter(Boolean).join(' ');
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+// The one name used everywhere: "Dropper bottle · 1 oz · Blue glass", or
+// "Product label · 3.5 × 1.25 in · Hydrating facial serum · Front".
+function pkDisplay(it) {
+  if (!it) return '';
+  if (!it.kind) return it.name || '(unnamed)';
+  var bits = [pkKindName(it), String(it.capacity || '').trim()];
+  if (pkColored(it.kind)) bits.push(pkLooks(it));
+  if (pkForProduct(it.kind)) { bits.push(pkProductName(it.forProduct)); bits.push(String(it.part || '').trim()); }
+  return bits.filter(Boolean).join(' · ');
+}
+// The detail beside the size: swatch and looks, or product and part.
+function pkDetailHtml(it) {
+  if (!it.kind) return '<span class="pk-old">' + esc(it.name || '(unnamed)') + '</span>';
+  var parts = [];
+  if (pkColored(it.kind) && (it.color || it.material)) parts.push('<span class="pk-looks">' + pkSwatch(it.color) + esc(pkLooks(it)) + '</span>');
+  if (pkForProduct(it.kind)) {
+    var pn = pkProductName(it.forProduct);
+    if (pn) parts.push('<span class="pk-for"><b>' + esc(pn) + '</b>' + (it.part ? '<span class="pk-part">' + esc(it.part) + '</span>' : '') + '</span>');
+    else if (!pkColored(it.kind)) parts.push('<span class="pk-any">Any product</span>' + (it.part ? ' <span class="pk-part">' + esc(it.part) + '</span>' : ''));
+  }
+  if (pkIsOther(it.kind) && !parts.length && it.notes) parts.push('<span class="pk-any">' + esc(String(it.notes).slice(0, 60)) + '</span>');
+  return parts.join('<span class="pk-dot">·</span>');
+}
+function pkStock(it) {
+  var t = 0;
+  ((it && it.purchases) || []).forEach(function (p) { t += parseInt(p.qty, 10) || 0; });
+  ((it && it.adjustments) || []).forEach(function (a) { t += parseInt(a.qty, 10) || 0; });
+  return t;
+}
+function pkSizeNum(s) { var m = String(s || '').match(/\d+(?:\.\d+)?|\.\d+/); return m ? parseFloat(m[0]) : 0; }
+var PK_GROUP_ORDER = { bottles: 0, boxes: 1, labels: 2, bands: 3, other: 4, sort: 5 };
+// Items grouped by kind, in section order: sizes small to large, then color.
+// Labels sort by product, then size, then part. Items without a kind come
+// last, under "Needs sorting".
+function pkGroups(list) {
+  var g = {}, order = [];
+  list.forEach(function (it) {
+    var sec = it.kind ? pkKindOf(it).group : 'sort';
+    var name = it.kind ? pkKindName(it) : 'Needs sorting';
+    var k = sec + '|' + name;
+    if (!g[k]) { g[k] = { section: sec, name: name, kind: it.kind || '', items: [] }; order.push(k); }
+    g[k].items.push(it);
+  });
+  var kindIdx = function (grp) {
+    if (!grp.kind) return 999;
+    for (var i = 0; i < PK_KINDS.length; i++) if (PK_KINDS[i].key === grp.kind) return i;
+    return 998;
+  };
+  return order.map(function (k) { return g[k]; }).sort(function (a, b) {
+    return (PK_GROUP_ORDER[a.section] - PK_GROUP_ORDER[b.section]) || (kindIdx(a) - kindIdx(b)) || a.name.localeCompare(b.name);
+  }).map(function (grp) {
+    grp.items.sort(function (a, b) {
+      if (!a.kind) return String(a.name || '').localeCompare(String(b.name || ''));
+      if (pkForProduct(a.kind) && !pkColored(a.kind)) {
+        return pkProductName(a.forProduct).localeCompare(pkProductName(b.forProduct)) ||
+               pkSizeNum(a.capacity) - pkSizeNum(b.capacity) || String(a.part || '').localeCompare(String(b.part || ''));
+      }
+      return pkSizeNum(a.capacity) - pkSizeNum(b.capacity) || String(a.capacity || '').localeCompare(String(b.capacity || '')) ||
+             String(a.color || '').localeCompare(String(b.color || '')) || String(a.material || '').localeCompare(String(b.material || ''));
+    });
+    return grp;
+  });
+}
+// Every word typed must appear somewhere: kind, size (with or without its
+// space, so "1oz" finds "1 oz"), color, material, product, part, supplier.
+function pkMatches(it, q) {
+  q = String(q || '').toLowerCase().trim();
+  if (!q) return true;
+  var hay = [pkKindName(it), it.capacity, String(it.capacity || '').replace(/\s/g, ''), it.color, it.material,
+             pkProductName(it.forProduct), it.part, it.supplier, it.name, it.other].join(' ').toLowerCase();
+  return q.split(/\s+/).every(function (w) { return hay.indexOf(w) !== -1; });
+}
+// Same thing twice? Used to warn before saving a duplicate.
+function pkSameKey(it) {
+  return [it.kind, String(it.other || '').toLowerCase().trim(), String(it.capacity || '').replace(/\s/g, '').toLowerCase(),
+          (pkColor(it.color) || {}).key || String(it.color || '').toLowerCase().trim(), String(it.material || '').toLowerCase(),
+          it.forProduct || '', String(it.part || '').toLowerCase().trim()].join('|');
+}
+
+// Reading an old free-text name into fields, for the Tidy screen: a guess
+// for her to confirm, never applied on its own.
+var PK_KIND_RULES = [
+  [/airless/i, 'airless'], [/dropper/i, 'dropper'], [/mist|spray|trigger/i, 'mist'],
+  [/pump/i, 'pump'], [/roll(er|-on)/i, 'roller'], [/lip.*tube|balm tube/i, 'lipTube'], [/tube/i, 'squeeze'],
+  [/jar/i, 'jar'], [/\btins?\b/i, 'tin'], [/barcode/i, 'barcode'], [/square/i, 'square'], [/round sticker|seal/i, 'round'],
+  [/shrink/i, 'shrink'], [/sleeve/i, 'sleeve'], [/belly/i, 'belly'], [/sticker/i, 'round'], [/label/i, 'label'],
+  [/mailer|shipper/i, 'mailer'], [/box|carton/i, 'box'], [/bag|pouch/i, 'pouch'], [/\bcaps?\b|\blids?\b|closure/i, 'cap'], [/bottle/i, 'bottle']
+];
+function pkGuess(oldName, products) {
+  var s = String(oldName || '');
+  var g = { kind: 'other', other: '', capacity: '', color: '', material: '', forProduct: '', part: '' };
+  for (var i = 0; i < PK_KIND_RULES.length; i++) if (PK_KIND_RULES[i][0].test(s)) { g.kind = PK_KIND_RULES[i][1]; break; }
+  if (g.kind === 'other') g.other = s.trim();
+  var N = '(\\d+(?:\\.\\d+)?|\\.\\d+)';
+  var z = function (v) { return v && v.charAt(0) === '.' ? '0' + v : v; };
+  var dim = s.match(new RegExp(N + '\\s*(?:in|")?\\s*[x×]\\s*' + N + '(?:\\s*(?:in|")?\\s*[x×]\\s*' + N + ')?', 'i'));
+  var vol = s.match(new RegExp(N + '\\s*(fl\\.?\\s*oz|oz|ml|mm|g|in)\\b', 'i'));
+  if (dim) g.capacity = z(dim[1]) + ' × ' + z(dim[2]) + (dim[3] ? ' × ' + z(dim[3]) : '') + ' in';
+  else if (vol) g.capacity = z(vol[1]) + ' ' + vol[2].toLowerCase().replace(/fl\.?\s*oz/, 'oz').replace(/^ml$/, 'ml');
+  if (pkColored(g.kind)) {
+    for (var k = 0; k < PK_COLORS.length; k++) if (new RegExp('\\b' + PK_COLORS[k].key + '\\b', 'i').test(s)) { g.color = PK_COLORS[k].label; break; }
+    if (!g.color && /cobalt/i.test(s)) g.color = 'Blue';
+    if (!g.color && /frosted/i.test(s)) g.color = 'Frost';
+  }
+  if (/glass/i.test(s)) g.material = 'Glass';
+  else if (/plastic|\bpet\b|hdpe|\bpp\b/i.test(s)) g.material = 'Plastic';
+  else if (/alumin|\btins?\b/i.test(s)) g.material = 'Aluminum';
+  else if (/mailer|shipper|corrugated/i.test(s)) g.material = 'Corrugated';
+  else if (/kraft|card|paper/i.test(s) && pkKind(g.kind).group === 'boxes') g.material = 'Paperboard';
+  if (/\bfront\b/i.test(s)) g.part = 'Front'; else if (/\bback\b/i.test(s)) g.part = 'Back';
+  if (pkForProduct(g.kind)) {
+    var best = null, bestScore = 0, low = s.toLowerCase();
+    (products || pkProducts()).forEach(function (p) {
+      var words = String(p.name || '').toLowerCase().split(/[\s,\-]+/).filter(function (w) { return w.length > 3; });
+      var score = words.filter(function (w) { return low.indexOf(w) !== -1; }).length;
+      if (score > bestScore) { best = p; bestScore = score; }
+    });
+    if (best) g.forProduct = best.id;
+  }
+  return g;
+}
+
+// ── The packaging picker ─────────────────────────────────────────────────
+// Turns a plain <select> of packaging items into a button that opens a
+// searchable list, grouped by kind, with the drawing, size, color or product
+// and stock on each line. The <select> stays in the page (hidden) and keeps
+// its value, and picking fires its change event, so the module's own
+// onchange code runs exactly as before.
+//   Plume.pkPicker(selectEl, items)            one select
+//   Plume.pkPickers(rootEl, items)             every select[data-pk-pick] inside
+function pkCss() {
+  if (document.getElementById('plume-pk-css')) return;
+  var css =
+    '.pk-svg{width:100%;height:100%;display:block}' +
+    '.pk-sw{width:12px;height:12px;border-radius:50%;display:inline-block;box-shadow:inset 0 0 0 1px rgba(0,0,0,.28);flex:none;vertical-align:-1px}' +
+    '.pk-thumb{width:34px;height:34px;border-radius:7px;background:#F6F3EE;border:1px solid var(--cream-border);display:inline-grid;place-items:center;flex:none;padding:3px}' +
+    '.pk-looks,.pk-for{display:inline-flex;align-items:center;gap:6px}' +
+    '.pk-for b{font-weight:500}' +
+    '.pk-part{font-size:11.5px;padding:0 7px;border-radius:5px;background:var(--cream-dark);color:var(--ink-light)}' +
+    '.pk-any{color:var(--ink-lighter);font-style:italic}' +
+    '.pk-old{color:var(--ink-light)}' +
+    '.pk-dot{color:var(--ink-lighter);margin:0 7px}' +
+    '.pk-size{font-weight:600;font-variant-numeric:tabular-nums}' +
+    '.pk-pick-btn{font:inherit;font-size:13px;display:flex;align-items:center;gap:9px;width:100%;min-width:0;text-align:left;border:1px solid var(--cream-border);border-radius:7px;background:var(--white);color:var(--ink);padding:3px 8px 3px 4px;cursor:pointer;min-height:36px}' +
+    '.pk-pick-btn:hover{border-color:var(--bark-light)}' +
+    '.pk-pick-btn .pk-thumb{width:28px;height:28px;padding:2px}' +
+    '.pk-pick-btn .pk-pb-t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
+    '.pk-pick-btn .pk-pb-s{font-size:11.5px;color:var(--ink-lighter);white-space:nowrap}' +
+    '.pk-pick-btn .pk-pb-c{color:var(--ink-lighter);flex:none}' +
+    '.pk-pick-btn.empty .pk-pb-t{color:var(--ink-lighter)}' +
+    '.pk-pop{position:fixed;z-index:400;background:var(--white);color:var(--ink);border:1px solid var(--cream-border);border-radius:12px;box-shadow:0 14px 44px rgba(20,20,15,.2),0 2px 6px rgba(20,20,15,.08);display:flex;flex-direction:column;overflow:hidden;font-family:\'DM Sans\',sans-serif;font-size:13.5px}' +
+    '.pk-pop-search{display:flex;align-items:center;gap:6px;margin:8px;border-radius:7px;background:var(--cream);padding:0 10px;color:var(--ink-lighter)}' +
+    '.pk-pop-search input{border:0;background:transparent;outline:none;color:var(--ink);font:inherit;width:100%;padding:7px 0;box-shadow:none}' +
+    '.pk-pop-chips{display:flex;gap:5px;flex-wrap:wrap;padding:0 8px 8px}' +
+    '.pk-pop-chips button{font:inherit;font-size:12px;border:1px solid var(--cream-border);background:transparent;border-radius:999px;padding:1px 9px;color:var(--ink-light);cursor:pointer}' +
+    '.pk-pop-chips button.on{background:var(--ink);color:var(--white);border-color:var(--ink)}' +
+    '.pk-pop-list{overflow-y:auto;border-top:1px solid var(--cream-border);flex:1}' +
+    '.pk-pop-g{padding:7px 12px 3px;font-size:12px;font-weight:600;color:var(--ink-light);background:var(--cream);position:sticky;top:0}' +
+    '.pk-pop-i{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:10px;align-items:center;padding:6px 12px;cursor:pointer;border-bottom:1px solid var(--cream-border)}' +
+    '.pk-pop-i:hover,.pk-pop-i.hi{background:var(--cream-dark)}' +
+    '.pk-pop-i.sel{background:color-mix(in srgb,var(--bark) 13%,var(--white))}' +
+    '.pk-pop-i .l1{display:flex;gap:9px;align-items:center;flex-wrap:wrap;min-width:0}' +
+    '.pk-pop-i .st{font-size:12px;color:var(--ink-lighter);text-align:right;white-space:nowrap}' +
+    '.pk-pop-i .st b{color:var(--sage-dark);font-weight:600}' +
+    '.pk-pop-i .st.out b{color:var(--warning)}' +
+    '.pk-pop-none{padding:16px;color:var(--ink-lighter)}' +
+    '.pk-pop-clear{font:inherit;font-size:12.5px;border:0;background:none;color:var(--ink-lighter);cursor:pointer;padding:8px 12px;text-align:left;border-top:1px solid var(--cream-border)}' +
+    '.pk-pop-clear:hover{color:var(--ink)}';
+  var st = document.createElement('style');
+  st.id = 'plume-pk-css';
+  st.appendChild(document.createTextNode(css));
+  document.head.appendChild(st);
+}
+
+var pkPop = null;   // { el, select, items, group, hi }
+function pkStockHtml(it) {
+  var n = pkStock(it);
+  return '<span class="st' + (n > 0 ? '' : ' out') + '"><b>' + n + '</b> in stock</span>';
+}
+function pkButtonHtml(select, items) {
+  var it = null;
+  for (var i = 0; i < items.length; i++) if (items[i].id === select.value) { it = items[i]; break; }
+  if (!it) return '<span class="pk-thumb">' + pkIcon('other', '') + '</span><span class="pk-pb-t">Pick packaging</span><span class="pk-pb-c">' + icon('chevron') + '</span>';
+  return '<span class="pk-thumb">' + pkIconFor(it) + '</span><span class="pk-pb-t">' + esc(pkDisplay(it)) + '</span>' +
+         '<span class="pk-pb-s">' + pkStock(it) + ' in stock</span><span class="pk-pb-c">' + icon('chevron') + '</span>';
+}
+function pkPicker(select, items) {
+  if (!select || select.getAttribute('data-pk-done')) return;
+  pkCss();
+  items = items || [];
+  select.setAttribute('data-pk-done', '1');
+  select.style.display = 'none';
+  var b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'pk-pick-btn' + (select.value ? '' : ' empty');
+  b.setAttribute('aria-haspopup', 'listbox');
+  b.innerHTML = pkButtonHtml(select, items);
+  b.onclick = function (e) { e.stopPropagation(); pkOpen(select, items, b); };
+  select.parentNode.insertBefore(b, select.nextSibling);
+  select.__pkBtn = b;
+}
+function pkPickers(root, items) {
+  var list = (root || document).querySelectorAll('select[data-pk-pick]');
+  for (var i = 0; i < list.length; i++) pkPicker(list[i], items);
+}
+function pkOpen(select, items, btn) {
+  pkClose();
+  var el = document.createElement('div');
+  el.className = 'pk-pop';
+  el.setAttribute('role', 'dialog');
+  el.innerHTML =
+    '<label class="pk-pop-search">' + icon('search') + '<input type="search" placeholder="Type to narrow: blue, 1 oz, serum…" aria-label="Search packaging"></label>' +
+    '<div class="pk-pop-chips"></div><div class="pk-pop-list" role="listbox"></div>' +
+    (select.value ? '<button type="button" class="pk-pop-clear">Clear the choice</button>' : '');
+  document.body.appendChild(el);
+  pkPop = { el: el, select: select, items: items, btn: btn, group: '', hi: -1 };
+  // Below the button, or above it when the window has no room underneath.
+  var r = btn.getBoundingClientRect();
+  var w = Math.min(Math.max(r.width, 380), window.innerWidth - 16);
+  var left = Math.max(8, Math.min(r.left, window.innerWidth - w - 8));
+  var below = window.innerHeight - r.bottom - 12, above = r.top - 12;
+  var h = Math.min(440, Math.max(below, above));
+  el.style.width = w + 'px'; el.style.left = left + 'px'; el.style.maxHeight = h + 'px';
+  if (below >= 260 || below >= above) el.style.top = (r.bottom + 4) + 'px';
+  else el.style.bottom = (window.innerHeight - r.top + 4) + 'px';
+  var input = el.querySelector('input');
+  input.oninput = function () { pkPop.hi = -1; pkRenderPop(); };
+  input.onkeydown = pkPopKey;
+  var clr = el.querySelector('.pk-pop-clear');
+  if (clr) clr.onclick = function () { pkChoose(''); };
+  el.addEventListener('click', function (e) { e.stopPropagation(); });
+  pkRenderPop();
+  setTimeout(function () { input.focus(); }, 0);
+}
+function pkRenderPop() {
+  if (!pkPop) return;
+  var p = pkPop, el = p.el;
+  var q = el.querySelector('input').value;
+  var present = {};
+  p.items.forEach(function (it) { present[it.kind ? pkKindOf(it).group : 'sort'] = 1; });
+  var ch = '<button type="button" data-g=""' + (p.group ? '' : ' class="on"') + '>All</button>';
+  PK_GROUPS.forEach(function (g) {
+    if (present[g.key]) ch += '<button type="button" data-g="' + g.key + '"' + (p.group === g.key ? ' class="on"' : '') + '>' + esc(g.short) + '</button>';
+  });
+  if (present.sort) ch += '<button type="button" data-g="sort"' + (p.group === 'sort' ? ' class="on"' : '') + '>Needs sorting</button>';
+  el.querySelector('.pk-pop-chips').innerHTML = ch;
+  var cb = el.querySelectorAll('.pk-pop-chips button');
+  for (var c = 0; c < cb.length; c++) cb[c].onclick = function () { pkPop.group = this.getAttribute('data-g'); pkPop.hi = -1; pkRenderPop(); };
+  var list = p.items.filter(function (it) {
+    return (!p.group || (it.kind ? pkKindOf(it).group : 'sort') === p.group) && pkMatches(it, q);
+  });
+  var h = '', n = 0;
+  pkGroups(list).forEach(function (g) {
+    h += '<div class="pk-pop-g">' + esc(g.name) + '</div>';
+    g.items.forEach(function (it) {
+      h += '<div class="pk-pop-i' + (it.id === p.select.value ? ' sel' : '') + (n === p.hi ? ' hi' : '') + '" role="option" data-id="' + esc(it.id) + '" data-n="' + n + '">' +
+        '<span class="pk-thumb">' + pkIconFor(it) + '</span>' +
+        '<span class="l1">' + (it.kind && it.capacity ? '<span class="pk-size">' + esc(it.capacity) + '</span>' : '') + pkDetailHtml(it) + '</span>' +
+        pkStockHtml(it) + '</div>';
+      n++;
+    });
+  });
+  var box = el.querySelector('.pk-pop-list');
+  box.innerHTML = h || '<div class="pk-pop-none">' + (p.items.length ? 'Nothing matches.' : 'No packaging items yet. Add them in Packaging.') + '</div>';
+  var rows = box.querySelectorAll('.pk-pop-i');
+  for (var i = 0; i < rows.length; i++) rows[i].onclick = function () { pkChoose(this.getAttribute('data-id')); };
+  var hi = box.querySelector('.pk-pop-i.hi');
+  if (hi && hi.scrollIntoView) hi.scrollIntoView({ block: 'nearest' });
+}
+function pkPopKey(e) {
+  if (!pkPop) return;
+  var rows = pkPop.el.querySelectorAll('.pk-pop-i');
+  if (e.key === 'ArrowDown') { e.preventDefault(); pkPop.hi = Math.min(rows.length - 1, pkPop.hi + 1); pkRenderPop(); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); pkPop.hi = Math.max(0, pkPop.hi - 1); pkRenderPop(); }
+  else if (e.key === 'Enter') {
+    e.preventDefault();
+    var r = rows[pkPop.hi >= 0 ? pkPop.hi : 0];
+    if (r) pkChoose(r.getAttribute('data-id'));
+  } else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); var b = pkPop.btn; pkClose(); if (b) b.focus(); }
+}
+function pkChoose(id) {
+  if (!pkPop) return;
+  var s = pkPop.select, items = pkPop.items, b = pkPop.btn;
+  pkClose();
+  s.value = id;
+  if (b && b.parentNode) { b.innerHTML = pkButtonHtml(s, items); b.classList.toggle('empty', !s.value); }
+  var ev;
+  try { ev = new Event('change', { bubbles: true }); } catch (x) { ev = document.createEvent('Event'); ev.initEvent('change', true, true); }
+  s.dispatchEvent(ev);
+}
+function pkClose() {
+  if (pkPop && pkPop.el.parentNode) pkPop.el.parentNode.removeChild(pkPop.el);
+  pkPop = null;
+}
+if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+  document.addEventListener('click', function () { if (pkPop) pkClose(); });
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', function () { if (pkPop) pkClose(); });
+    // A fixed list would drift from its button when the page scrolls.
+    window.addEventListener('scroll', function (e) { if (pkPop && !pkPop.el.contains(e.target)) pkClose(); }, true);
+  }
+}
+
 return {
   VERSION: VERSION,
   inciSplit: inciSplit, inciMerge: inciMerge, inciMerged: inciMerged,
@@ -2150,6 +2619,13 @@ return {
   tell: tell, ask: ask, askValue: askValue,
   parsePh: parsePh, phNum: phNum, phRange: phRange, phTargetText: phTargetText,
   isAqueous: isAqueous, phBadge: phBadge, phStepsHtml: phStepsHtml, phFinal: phFinal,
+  PK_COLORS: PK_COLORS, PK_MATERIALS: PK_MATERIALS, PK_PARTS: PK_PARTS, PK_GROUPS: PK_GROUPS, PK_KINDS: PK_KINDS,
+  pkColor: pkColor, pkSwatch: pkSwatch, pkKind: pkKind, pkKindOf: pkKindOf, pkGroup: pkGroup, pkGroupKey: pkGroupKey,
+  pkTypeFor: pkTypeFor, pkForProduct: pkForProduct, pkColored: pkColored, pkIsOther: pkIsOther,
+  pkIcon: pkIcon, pkIconFor: pkIconFor, pkProducts: pkProducts, pkProductName: pkProductName,
+  pkKindName: pkKindName, pkLooks: pkLooks, pkDisplay: pkDisplay, pkDetailHtml: pkDetailHtml, pkStock: pkStock,
+  pkGroups: pkGroups, pkMatches: pkMatches, pkSameKey: pkSameKey, pkGuess: pkGuess, pkCss: pkCss,
+  pkPicker: pkPicker, pkPickers: pkPickers, pkClose: pkClose,
   boot: boot
 };
 })();
