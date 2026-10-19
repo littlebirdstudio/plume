@@ -35,7 +35,7 @@ var Plume = (function () {
 // (v0.4 / v0.5 / v0.6 across five modules). BUMP IT IN EVERY PULL REQUEST,
 // core change or not: it is how "is this the update I just merged?" is
 // answered by looking, and browsers cache .js files stubbornly.
-var VERSION = '1.20';
+var VERSION = '1.21';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -1811,9 +1811,10 @@ var SHEET_CSS =
   'color:#666;border-bottom:1px solid #ccc;padding-bottom:4px;margin-bottom:8px}' +
   '.inci{font-size:11px;color:#666;line-height:1.8}' +
   // % is a reference beside the name; Grams is what goes on the scale.
-  'td.pc,th.pc{text-align:right;color:#777;font-size:11.5px;padding:5px 14px 5px 6px;white-space:nowrap;font-weight:400}' +
-  'td.gr{text-align:right;font-size:15px;font-weight:700;padding:5px 10px 5px 12px;white-space:nowrap;color:#111}' +
-  'th.gr{text-align:right;padding:0 10px 6px 12px}' +
+  // Grams lead the row, beside the tick box (her order, 2026-10-18).
+  'td.pc,th.pc{text-align:right;color:#777;font-size:11.5px;padding:5px 0 5px 14px;white-space:nowrap;font-weight:400}' +
+  'td.gr{text-align:right;font-size:15px;font-weight:700;padding:5px 8px 5px 0;white-space:nowrap;color:#111;width:1%}' +
+  'th.gr{text-align:right;padding:0 8px 6px 0;width:1%}' +
   '@media print{body{margin:20px}tr{page-break-inside:avoid}}';
 
 function findIngIn(ings, id) {
@@ -1865,51 +1866,46 @@ function buildSoapSheet(o) {
     var ing = findIngIn(ings, l.ingId); if (!ing) return;
     var pct = parseFloat(l.pct) || 0;
     var sap = ing.soap && ing.soap[lyeKey] ? ing.soap[lyeKey] : '\u2014';
-    rows += '<tr><td style="padding:5px 0;font-weight:500">' + esc(ing.name) + '</td>' +
-      '<td class="pc">' + pct.toFixed(2) + '%</td>' +
+    rows += '<tr><td class="gr">' + (pct / 100 * bs).toFixed(1) + 'g</td>' + tickTd() +
+      '<td style="padding:5px 8px 5px 10px;font-weight:500">' + esc(ing.name) + '</td>' +
       '<td style="padding:5px 8px;color:#666;font-size:11px;font-style:italic">' + esc(ing.inci) + '</td>' +
       '<td style="padding:5px 8px;text-align:right;color:#888;font-size:11px">' + sap + '</td>' +
-      '<td class="gr">' + (pct / 100 * bs).toFixed(1) + 'g</td>' +
-      tickTd() + '</tr>';
+      '<td class="pc">' + pct.toFixed(2) + '%</td></tr>';
   });
-  rows += '<tr style="background:#f9f9f9"><td style="padding:5px 0;font-weight:500">' + lyeLabel +
+  rows += '<tr style="background:#f9f9f9"><td class="gr">' + actualLye.toFixed(1) + 'g</td>' + tickTd() +
+    '<td style="padding:5px 8px 5px 10px;font-weight:500">' + lyeLabel +
     (lyeType === 'koh' ? ' (90% flakes)' : '') +
     ' <span style="font-size:10px;font-weight:400;color:#888">at ' + superfat + '% superfat</span></td>' +
-    '<td class="pc">\u2014</td>' +
     '<td style="padding:5px 8px;color:#666;font-size:11px;font-style:italic">' +
     (lyeType === 'koh' ? 'Potassium Hydroxide' : 'Sodium Hydroxide') + '</td>' +
     '<td style="padding:5px 8px;text-align:right;color:#888;font-size:11px">\u2014</td>' +
-    '<td class="gr">' + actualLye.toFixed(1) + 'g</td>' +
-    tickTd() + '</tr>';
-  rows += '<tr style="background:#f9f9f9"><td style="padding:5px 0;font-weight:500">Distilled water</td>' +
-    '<td class="pc">\u2014</td>' +
+    '<td class="pc">\u2014</td></tr>';
+  rows += '<tr style="background:#f9f9f9"><td class="gr">' + waterG.toFixed(1) + 'g</td>' + tickTd() +
+    '<td style="padding:5px 8px 5px 10px;font-weight:500">Distilled water</td>' +
     '<td style="padding:5px 8px;color:#666;font-size:11px;font-style:italic">Aqua</td>' +
     '<td style="padding:5px 8px;text-align:right;color:#888;font-size:11px">\u2014</td>' +
-    '<td class="gr">' + waterG.toFixed(1) + 'g</td>' +
-    tickTd() + '</tr>';
+    '<td class="pc">\u2014</td></tr>';
   rows += '<tr style="border-top:2px solid #333">' +
-    '<td colspan="4" style="padding:7px 0;font-weight:600;font-size:12px">Total batch weight</td>' +
-    '<td class="gr">' + totalBatch.toFixed(0) + 'g</td>' +
-    '<td></td></tr>';
+    '<td class="gr">' + totalBatch.toFixed(0) + 'g</td><td></td>' +
+    '<td colspan="4" style="padding:7px 8px 7px 10px;font-weight:600;font-size:12px">Total batch weight</td></tr>';
 
   var addinBlock = '';
   if (addins.length) {
     addinBlock = '<div class="sec"><div class="sec-title">Additives (not included in lye calc)</div>' +
       '<table><thead><tr>' +
-      '<th style="text-align:left;padding-bottom:6px;border-bottom:2px solid #333">Additive</th>' +
-      '<th class="pc" style="padding-bottom:6px;border-bottom:2px solid #333">% PPO</th>' +
+      '<th class="gr" style="border-bottom:2px solid #333">Grams</th>' + TICK_TH +
+      '<th style="text-align:left;padding:0 8px 6px 10px;border-bottom:2px solid #333">Additive</th>' +
       '<th style="text-align:left;padding-bottom:6px;border-bottom:2px solid #333">INCI</th>' +
-      '<th class="gr" style="border-bottom:2px solid #333">Grams</th>' +
-      TICK_TH + '</tr></thead><tbody>';
+      '<th class="pc" style="padding-bottom:6px;border-bottom:2px solid #333">% PPO</th>' +
+      '</tr></thead><tbody>';
     addins.forEach(function (l) {
       var ing = findIngIn(ings, l.ingId); if (!ing) return;
       var g   = parseFloat(l.gramsFixed) || 0;
       var ppo = totalOilG > 0 && g > 0 ? (g / totalOilG * 100).toFixed(2) + '%' : '\u2014';
-      addinBlock += '<tr><td style="padding:5px 0;font-weight:500">' + esc(ing.name) + '</td>' +
-        '<td class="pc">' + ppo + '</td>' +
+      addinBlock += '<tr><td class="gr">' + g.toFixed(1) + 'g</td>' + tickTd() +
+        '<td style="padding:5px 8px 5px 10px;font-weight:500">' + esc(ing.name) + '</td>' +
         '<td style="padding:5px 8px;color:#666;font-size:11px;font-style:italic">' + esc(ing.inci) + '</td>' +
-        '<td class="gr">' + g.toFixed(1) + 'g</td>' +
-        tickTd() + '</tr>';
+        '<td class="pc">' + ppo + '</td></tr>';
     });
     addinBlock += '</tbody></table></div>';
   }
@@ -1943,12 +1939,12 @@ function buildSoapSheet(o) {
   return {
     table: '<div class="sec"><div class="sec-title">Oils &amp; lye water</div>' +
       '<table><thead><tr>' +
-      '<th style="text-align:left;padding-bottom:6px;border-bottom:2px solid #333">Ingredient</th>' +
-      '<th class="pc" style="padding-bottom:6px;border-bottom:2px solid #333">%</th>' +
+      '<th class="gr" style="border-bottom:2px solid #333">Grams</th>' + TICK_TH +
+      '<th style="text-align:left;padding:0 8px 6px 10px;border-bottom:2px solid #333">Ingredient</th>' +
       '<th style="text-align:left;padding-bottom:6px;border-bottom:2px solid #333">INCI</th>' +
       '<th style="text-align:right;padding-bottom:6px;border-bottom:2px solid #333">SAP</th>' +
-      '<th class="gr" style="border-bottom:2px solid #333">Grams</th>' +
-      TICK_TH + '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
+      '<th class="pc" style="padding-bottom:6px;border-bottom:2px solid #333">%</th>' +
+      '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
       addinBlock + lyeSummary,
     inci: inci.join(', '),
     scaleLabel: 'Oil weight: ' + bs + 'g'
@@ -1987,23 +1983,21 @@ function buildSkincareSheet(o) {
       var g = r.l.pinned
         ? (parseFloat(r.l.gramsFixed) || 0).toFixed(2)
         : ((parseFloat(r.l.pct) || 0) / 100 * bs).toFixed(2);
-      rows += '<tr><td style="padding:5px 0;font-weight:500">' + esc(r.ing.name) + '</td>' +
-        '<td class="pc">' + pct + '%</td>' +
+      rows += '<tr><td class="gr">' + g + 'g</td>' + tickTd() +
+        '<td style="padding:5px 8px 5px 10px;font-weight:500">' + esc(r.ing.name) + '</td>' +
         '<td style="padding:5px 8px;color:#666;font-size:11px;font-style:italic">' + esc(r.ing.inci) + '</td>' +
-        '<td class="gr">' + g + 'g</td>' +
-        tickTd() + '</tr>';
+        '<td class="pc">' + pct + '%</td></tr>';
     });
   });
   addins.forEach(function (l) {
     var ing = findIngIn(ings, l.ingId); if (!ing) return;
     var g  = parseFloat(l.gramsFixed) || 0;
     var dr = g > 0 ? Math.round(g * (l.dropsPerG || 20)) : 0;
-    rows += '<tr><td style="padding:5px 0;font-weight:500">' + esc(ing.name) +
+    rows += '<tr><td class="gr">' + g + 'g' + (dr ? '<div style="font-size:11px;font-weight:400;color:#666">~' + dr + ' drops</div>' : '') + '</td>' + tickTd() +
+      '<td style="padding:5px 8px 5px 10px;font-weight:500">' + esc(ing.name) +
       ' <span style="font-size:10px;color:#888">(add-in)</span></td>' +
-      '<td class="pc">\u2014</td>' +
       '<td style="padding:5px 8px;color:#666;font-size:11px;font-style:italic">' + esc(ing.inci) + '</td>' +
-      '<td class="gr">' + g + 'g' + (dr ? ' <span style="font-size:11px;font-weight:400;color:#666">(~' + dr + ' drops)</span>' : '') + '</td>' +
-      tickTd() + '</tr>';
+      '<td class="pc">\u2014</td></tr>';
   });
 
   var fl = lines.filter(function (l) { return !l.addin && findIngIn(ings, l.ingId); });
@@ -2012,11 +2006,11 @@ function buildSkincareSheet(o) {
   return {
     table: '<div class="sec"><div class="sec-title">Ingredients</div>' +
       '<table><thead><tr>' +
-      '<th style="text-align:left;padding-bottom:6px;border-bottom:2px solid #333">Ingredient</th>' +
-      '<th class="pc" style="padding-bottom:6px;border-bottom:2px solid #333">%</th>' +
+      '<th class="gr" style="border-bottom:2px solid #333">Grams</th>' + TICK_TH +
+      '<th style="text-align:left;padding:0 8px 6px 10px;border-bottom:2px solid #333">Ingredient</th>' +
       '<th style="text-align:left;padding-bottom:6px;border-bottom:2px solid #333">INCI</th>' +
-      '<th class="gr" style="border-bottom:2px solid #333">Grams</th>' +
-      TICK_TH + '</tr></thead><tbody>' + rows + '</tbody></table></div>',
+      '<th class="pc" style="padding-bottom:6px;border-bottom:2px solid #333">%</th>' +
+      '</tr></thead><tbody>' + rows + '</tbody></table></div>',
     inci: fl.map(function (l) { return findIngIn(ings, l.ingId).inci; }).join(', '),
     scaleLabel: 'Batch: ' + bs + 'g'
   };

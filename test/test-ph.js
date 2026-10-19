@@ -94,15 +94,14 @@ ok('an anhydrous formula prints no pH section',
    !/sec-title"><span[^>]*>pH</.test(sheet({ lines: [{ ingId: 'o', pct: 100 }] })));
 ok('soap never prints one, even with water', !/sec-title"><span[^>]*>pH</.test(sheet({ isSoap: true, soapSettings: {} })));
 ok('the final line names both instruments', /strip \/ meter/.test(sheet({})));
-// % and grams used to sit side by side and get mixed up at the scale
-// (2026-10-18): % is now a grey reference beside the name, and grams is the
-// one bold number, next to the tick box.
+// % and grams used to sit side by side and get mixed up at the scale.
+// Her order (2026-10-18): Grams, tick box, Ingredient, INCI, then % last.
 {
-  const row = (sheet({}).match(/<tr><td[^>]*>Distilled water<\/td>[\s\S]*?<\/tr>/) || [''])[0];
-  ok('on the sheet, % comes straight after the name, before the INCI',
-     /Distilled water<\/td><td class="pc">90\.00%<\/td><td[^>]*font-style:italic/.test(row), row);
-  ok('and the grams to weigh are the bold column beside the tick box',
-     /<td class="gr">90\.00g<\/td><td[^>]*><span class="tickbox|<td class="gr">90\.00g<\/td><td/.test(row), row);
+  const row = (sheet({}).match(/<tr><td class="gr">90\.00g<\/td>[\s\S]*?<\/tr>/) || [''])[0];
+  ok('on the sheet, each row starts with the grams to weigh, bold',
+     row.indexOf('<td class="gr">90.00g</td>') === 4, row);
+  ok('then the tick box, then the name, then INCI, with % last',
+     /^<tr><td class="gr">90\.00g<\/td><td[^>]*><span[^>]*><\/span><\/td><td[^>]*>Distilled water<\/td><td[^>]*font-style:italic[^>]*>[^<]*<\/td><td class="pc">90\.00%<\/td><\/tr>$/.test(row), row);
 }
 
 // ── Browser fixtures ────────────────────────────────────────────
