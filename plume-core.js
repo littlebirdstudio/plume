@@ -35,7 +35,7 @@ var Plume = (function () {
 // (v0.4 / v0.5 / v0.6 across five modules). BUMP IT IN EVERY PULL REQUEST,
 // core change or not: it is how "is this the update I just merged?" is
 // answered by looking, and browsers cache .js files stubbornly.
-var VERSION = '1.33';
+var VERSION = '1.34';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -883,11 +883,13 @@ function countOf(key, keep) {
 }
 var notArchived = function (x) { return x && !x.archived; };
 // In the order of the work (2026-10-20): the supplies, then design the
-// formulation, make a batch, and set up and fill the products.
+// formulation, make a batch, and set up and fill the products. The start
+// page keeps this order. In the sidebar the supplies (lib: true) sit under
+// Library with Suppliers, below the work itself (Heide, 2026-10-20).
 var SHELL_MODULES = [
-  { key: 'ingredients',  label: 'Ingredients',        href: 'plume-ingredients.html',  icon: 'ingredients',
+  { key: 'ingredients',  label: 'Ingredients',        href: 'plume-ingredients.html',  icon: 'ingredients', lib: true,
     count: function () { return countOf('aerie-ingredients-v2', notArchived); } },
-  { key: 'packaging',    label: 'Packaging',          href: 'plume-packaging.html',    icon: 'packaging',
+  { key: 'packaging',    label: 'Packaging',          href: 'plume-packaging.html',    icon: 'packaging', lib: true,
     count: function () { return countOf('aerie-packaging-v2', notArchived); } },
   { key: 'formulations', label: 'Formulations',       href: 'plume-formulations.html', icon: 'formulations',
     count: function () { return countOf('aerie-formulations-v1', notArchived); } },
@@ -940,13 +942,14 @@ function shell(opts) {
   shellOpts = opts || {};
   var old = document.getElementById('ps-side');
   if (old) old.parentNode.removeChild(old);
-  var nav = SHELL_MODULES.map(function (m) {
+  var link = function (m) {
     var on = m.key === shellOpts.module;
     return '<a class="ps-nav' + (on ? ' on' : '') + '" href="' + m.href + '" target="plume-' + m.key + '"' +
       (on ? ' aria-current="page"' : '') + ' title="' + esc(m.label) + '">' + icon(m.icon) +
       '<span class="ps-nav-label">' + esc(m.label) + '</span><span class="ps-ct" data-ct="' + m.key + '"></span></a>';
-  }).join('');
-  var hasSuppliers = typeof window.openSuppliers === 'function';
+  };
+  var nav = SHELL_MODULES.filter(function (m) { return !m.lib; }).map(link).join('');
+  var lib = SHELL_MODULES.filter(function (m) { return m.lib; }).map(link).join('');
   var html =
     '<aside class="ps-side" id="ps-side" aria-label="Modules">' +
       '<div class="ps-ws">' +
@@ -958,9 +961,9 @@ function shell(opts) {
       '</div>' +
       '<nav class="ps-nav-list">' + nav + '</nav>' +
       '<div class="ps-nav-h">Library</div>' +
-      (hasSuppliers
-        ? '<button type="button" class="ps-nav" onclick="openSuppliers()" title="Suppliers">' + icon('suppliers') + '<span class="ps-nav-label">Suppliers</span><span class="ps-ct" data-ct="suppliers"></span></button>'
-        : '<a class="ps-nav" href="plume-ingredients.html#suppliers" target="plume-ingredients" title="Suppliers">' + icon('suppliers') + '<span class="ps-nav-label">Suppliers</span><span class="ps-ct" data-ct="suppliers"></span></a>') +
+      '<nav class="ps-nav-list" aria-label="Library">' + lib +
+        '<button type="button" class="ps-nav" id="ps-nav-suppliers" onclick="Plume.suppliers.open()" title="Suppliers">' + icon('suppliers') + '<span class="ps-nav-label">Suppliers</span><span class="ps-ct" data-ct="suppliers"></span></button>' +
+      '</nav>' +
       '<div class="ps-grow"></div>' +
       '<button type="button" class="ps-nav" onclick="if (typeof openSettings === \'function\') openSettings()" title="Settings">' + icon('settings') + '<span class="ps-nav-label">Settings</span></button>' +
     '</aside>';
@@ -1023,6 +1026,263 @@ function closePeek() {
   document.getElementById('ps-scrim').classList.remove('open');
   document.getElementById('ps-peek-body').innerHTML = '';
   if (cb) cb();
+}
+
+// ── Suppliers: a slide-in panel on every page (2026-10-20) ─────────────
+// It used to be a modal that only Ingredients had; every other page linked
+// over there to open it. Saved suppliers are still {id, name, webLink,
+// notes} under aerie-suppliers-v1. Ingredient lots and packaging items name
+// their supplier as plain text (l.supplier, item.supplier), so "what it
+// supplies" is matched by name, ignoring case and spacing.
+var SUP_KEY = 'aerie-suppliers-v1';
+var supEditId = null;   // a supplier's id while editing it, 'new' for a new one
+var supDraft = null;    // a name to prefill when saving one found on lots
+var supQuery = '';
+var libListeners = [];
+// Modules that hold ingredients or packaging in memory register here, so a
+// rename made from the panel reaches what they will save next.
+function onLibraryChange(fn) { if (typeof fn === 'function') libListeners.push(fn); }
+function libChanged() { libListeners.forEach(function (fn) { try { fn(); } catch (e) {} }); refreshShell(); }
+
+function supAll() { var l = Store.getJSON(SUP_KEY, []); return Array.isArray(l) ? l : []; }
+function supNorm(n) { return String(n == null ? '' : n).replace(/\s+/g, ' ').trim().toLowerCase(); }
+// Letters and digits only: "Lotion Crafter" and "Lotioncrafter" squash alike.
+function supSquash(n) { return supNorm(n).replace(/[^a-z0-9]/g, ''); }
+function supHref(u) {
+  u = String(u || '').trim();
+  if (!u) return '';
+  if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
+  return u;
+}
+function supHost(u) {
+  return String(u || '').replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(/\/.*$/, '');
+}
+// name (normalised) -> { name: as first written, ings: [names], pkgs: [names] }
+function supUsage() {
+  var map = {};
+  var add = function (name, kind, what) {
+    var k = supNorm(name);
+    if (!k) return;
+    if (!map[k]) map[k] = { name: String(name).trim(), ings: [], pkgs: [] };
+    if (map[k][kind].indexOf(what) === -1) map[k][kind].push(what);
+  };
+  (Store.getJSON('aerie-ingredients-v2', []) || []).forEach(function (i) {
+    if (!i || i.archived) return;
+    (i.lots || []).forEach(function (l) { if (l) add(l.supplier, 'ings', i.name || 'Unnamed'); });
+    if (!(i.lots || []).length && i.supplier) add(i.supplier, 'ings', i.name || 'Unnamed');
+  });
+  (Store.getJSON('aerie-packaging-v2', []) || []).forEach(function (it) {
+    if (!it || it.archived) return;
+    add(it.supplier, 'pkgs', pkDisplay(it));
+  });
+  return map;
+}
+function supUseText(u) {
+  if (!u || (!u.ings.length && !u.pkgs.length)) return '';
+  var parts = [];
+  if (u.ings.length) parts.push(u.ings.length + ' ingredient' + (u.ings.length === 1 ? '' : 's'));
+  if (u.pkgs.length) parts.push(u.pkgs.length + ' packaging item' + (u.pkgs.length === 1 ? '' : 's'));
+  return parts.join(' · ');
+}
+function supUseTitle(u) {
+  if (!u) return '';
+  return u.ings.concat(u.pkgs).slice().sort().join(', ');
+}
+
+function supFormHtml(s, u) {
+  var isNew = !s;
+  s = s || { name: supDraft || '', webLink: '', notes: '' };
+  return '<div class="sup-form" id="sup-form">' +
+    '<div class="sup-form-h">' + (isNew ? 'New supplier' : 'Edit supplier') + '</div>' +
+    '<label class="sup-f"><span>Name</span><input type="text" id="sup-name" value="' + esc(s.name || '') + '" placeholder="e.g. Lotioncrafter" autocomplete="off"' +
+      (u ? ' data-was="' + esc(s.name) + '" oninput="Plume.suppliers.nameTyped(this)"' : '') + '></label>' +
+    // Lots and items name a supplier as text, so a rename can follow it there.
+    (u ? '<label class="sup-rename" id="sup-rename" hidden><input type="checkbox" id="sup-rename-on" checked> Also rename it on your lots and items (' + esc(supUseText(u)) + ')</label>' : '') +
+    '<label class="sup-f"><span>Website</span><input type="text" id="sup-web" value="' + esc(s.webLink || '') + '" placeholder="lotioncrafter.com" autocomplete="off"></label>' +
+    '<label class="sup-f"><span>Notes</span><textarea id="sup-notes" rows="2" placeholder="e.g. Good for bulk oils, ships fast">' + esc(s.notes || '') + '</textarea></label>' +
+    '<div class="sup-err" id="sup-err"></div>' +
+    '<div class="sup-form-btns">' +
+      (isNew ? '' : '<button type="button" class="sup-del" onclick="Plume.suppliers.remove(\'' + esc(s.id) + '\')">Delete</button>') +
+      '<span class="ps-grow"></span>' +
+      '<button type="button" class="ps-link-btn" onclick="Plume.suppliers.cancel()">Cancel</button>' +
+      '<button type="button" class="ps-btn-primary" onclick="Plume.suppliers.save()">Save</button>' +
+    '</div></div>';
+}
+
+function supRowHtml(s, u) {
+  var use = supUseText(u);
+  var href = supHref(s.webLink);
+  return '<div class="sup-row" role="button" tabindex="0" data-sup="' + esc(s.id) + '" title="Click to edit"' +
+      ' onclick="Plume.suppliers.edit(\'' + esc(s.id) + '\')" onkeydown="if(event.key===\'Enter\'){Plume.suppliers.edit(\'' + esc(s.id) + '\')}">' +
+    '<div class="sup-top"><span class="sup-name">' + esc(s.name) + '</span>' +
+      (href ? '<a class="sup-web" href="' + esc(href) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()">' + esc(supHost(s.webLink)) + ' ↗</a>' : '') +
+    '</div>' +
+    (s.notes ? '<div class="sup-notes">' + esc(s.notes) + '</div>' : '') +
+    '<div class="sup-use' + (use ? '' : ' none') + '"' + (use ? ' title="' + esc(supUseTitle(u)) + '"' : '') + '>' +
+      (use ? esc(use) : 'Not on any lot or packaging item yet') + '</div>' +
+  '</div>';
+}
+
+function supBodyHtml() {
+  var list = supAll().slice().sort(function (a, b) { return supNorm(a.name).localeCompare(supNorm(b.name)); });
+  var usage = supUsage();
+  var q = supNorm(supQuery);
+  var shown = list.filter(function (s) {
+    return !q || supNorm(s.name).indexOf(q) !== -1 || supNorm(s.notes).indexOf(q) !== -1 || supNorm(s.webLink).indexOf(q) !== -1;
+  });
+  var html = '<div class="sup-head"><div class="sup-title">' + icon('suppliers') + '<h2>Suppliers</h2></div>' +
+    '<p class="sup-intro">Saved suppliers are offered when you record an ingredient lot or a packaging item.</p></div>';
+  html += '<div class="sup-tools">' +
+    (list.length > 6 ? '<label class="ps-search sup-search">' + icon('search') + '<input type="search" id="sup-q" placeholder="Search suppliers" value="' + esc(supQuery) + '" oninput="Plume.suppliers.search(this.value)" aria-label="Search suppliers"></label>' : '<span class="ps-grow"></span>') +
+    (supEditId === 'new' ? '' : '<button type="button" class="ps-btn-primary" onclick="Plume.suppliers.add()">' + icon('plus') + 'New supplier</button>') +
+  '</div>';
+  if (supEditId === 'new') html += supFormHtml(null);
+  if (!list.length && supEditId !== 'new') {
+    html += '<div class="sup-empty">No suppliers saved yet.</div>';
+  } else if (!shown.length && supEditId !== 'new') {
+    html += '<div class="sup-empty">No supplier matches “' + esc(supQuery) + '”.</div>';
+  }
+  html += '<div class="sup-list">' + shown.map(function (s) {
+    if (supEditId === s.id) return supFormHtml(s, usage[supNorm(s.name)]);
+    return supRowHtml(s, usage[supNorm(s.name)]);
+  }).join('') + '</div>';
+
+  // Names typed on lots or packaging items that are not saved here.
+  var saved = {};
+  list.forEach(function (s) { saved[supNorm(s.name)] = true; });
+  var loose = Object.keys(usage).filter(function (k) { return !saved[k]; })
+    .map(function (k) { return usage[k]; })
+    .sort(function (a, b) { return supNorm(a.name).localeCompare(supNorm(b.name)); });
+  // A spelling of a saved supplier ("Lotion Crafter" for "Lotioncrafter")
+  // gets a one-click match instead of a second supplier.
+  var bySquash = {};
+  list.forEach(function (s) { bySquash[supSquash(s.name)] = s; });
+  if (loose.length && !q) {
+    html += '<div class="sup-loose"><div class="sup-loose-h">Named on your lots and items, not saved here</div>' +
+      loose.map(function (u) {
+        var twin = bySquash[supSquash(u.name)];
+        return '<div class="sup-loose-row"><span class="sup-loose-name">' + esc(u.name) + '</span>' +
+          '<span class="sup-use" title="' + esc(supUseTitle(u)) + '">' + esc(supUseText(u)) + '</span>' +
+          (twin
+            ? '<button type="button" class="ps-link-btn" title="Rename it on those lots and items to ' + esc(twin.name) + '" onclick="Plume.suppliers.match(' + esc(JSON.stringify(u.name)) + ',\'' + esc(twin.id) + '\')">Same as ' + esc(twin.name) + '</button>'
+            : '<button type="button" class="ps-link-btn" onclick="Plume.suppliers.add(' + esc(JSON.stringify(u.name)) + ')">Save</button>') +
+          '</div>';
+      }).join('') + '</div>';
+  }
+  return html;
+}
+
+function supRender() {
+  var body = document.getElementById('ps-peek-body');
+  if (!body || !supOpen()) return;
+  body.innerHTML = supBodyHtml();
+  var f = document.getElementById('sup-name');
+  if (f && !f.value) f.focus();
+}
+function supOpen() { return peekIsOpen() && document.getElementById('ps-peek').getAttribute('data-panel') === 'suppliers'; }
+
+function openSuppliers() {
+  supEditId = null; supDraft = null; supQuery = '';
+  openPeek(supBodyHtml(), {
+    label: 'Library',
+    onClose: function () {
+      var p = document.getElementById('ps-peek');
+      if (p) p.removeAttribute('data-panel');
+      supEditId = null;
+      var b = document.getElementById('ps-nav-suppliers');
+      if (b) b.classList.remove('on');
+    }
+  });
+  document.getElementById('ps-peek').setAttribute('data-panel', 'suppliers');
+  var b = document.getElementById('ps-nav-suppliers');
+  if (b) b.classList.add('on');
+}
+function supAdd(name) { supEditId = 'new'; supDraft = name || null; supRender(); var f = document.getElementById('sup-name'); if (f) f.focus(); }
+function supEdit(id) { supEditId = id; supDraft = null; supRender(); var f = document.getElementById('sup-name'); if (f) { f.focus(); f.select(); } }
+function supCancel() { supEditId = null; supDraft = null; supRender(); }
+function supSearch(v) {
+  supQuery = v;
+  supRender();
+  var q = document.getElementById('sup-q');
+  if (q) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); }
+}
+
+// Rename the supplier on every lot and packaging item that names it.
+function supRenameEverywhere(oldName, newName) {
+  var k = supNorm(oldName), n = 0;
+  var ings = Store.getJSON('aerie-ingredients-v2', []) || [];
+  ings.forEach(function (i) {
+    (i.lots || []).forEach(function (l) { if (l && supNorm(l.supplier) === k) { l.supplier = newName; n++; } });
+    if (supNorm(i.supplier) === k) { i.supplier = newName; n++; }
+  });
+  var pk = Store.getJSON('aerie-packaging-v2', []) || [];
+  pk.forEach(function (it) { if (it && supNorm(it.supplier) === k) { it.supplier = newName; n++; } });
+  var ok = Store.setJSON('aerie-ingredients-v2', ings) !== false && Store.setJSON('aerie-packaging-v2', pk) !== false;
+  if (!ok) noteSaveFailed();
+  return ok;
+}
+
+function supSave() {
+  var name = (document.getElementById('sup-name').value || '').replace(/\s+/g, ' ').trim();
+  var web = (document.getElementById('sup-web').value || '').trim();
+  var notes = (document.getElementById('sup-notes').value || '').trim();
+  var err = document.getElementById('sup-err');
+  if (!name) { err.textContent = 'A supplier needs a name.'; document.getElementById('sup-name').focus(); return; }
+  var list = supAll();
+  var clash = list.filter(function (s) { return supNorm(s.name) === supNorm(name) && s.id !== supEditId; })[0];
+  if (clash) { err.textContent = clash.name + ' is already saved.'; return; }
+  var finish = function () {
+    if (Store.setJSON(SUP_KEY, list) === false) { noteSaveFailed(); return; }
+    supEditId = null; supDraft = null;
+    libChanged();
+    supRender();
+  };
+  if (supEditId === 'new' || !supEditId) {
+    list.push({ id: String(Date.now()) + Math.random().toString(36).slice(2, 6), name: name, webLink: web, notes: notes });
+    finish();
+    return;
+  }
+  var s = list.filter(function (x) { return x.id === supEditId; })[0];
+  if (!s) { supEditId = null; supRender(); return; }
+  var oldName = s.name;
+  s.name = name; s.webLink = web; s.notes = notes;
+  var box = document.getElementById('sup-rename-on');
+  if (oldName !== name && supUsage()[supNorm(oldName)] &&
+      (supNorm(oldName) === supNorm(name) || (box && box.checked))) {
+    if (!supRenameEverywhere(oldName, name)) return;
+  }
+  finish();
+}
+// Show the rename tick box only once the name differs from the saved one.
+function supNameTyped(el) {
+  var r = document.getElementById('sup-rename');
+  if (!r) return;
+  var was = el.getAttribute('data-was') || '';
+  r.hidden = supNorm(el.value) === supNorm(was) || !el.value.trim();
+}
+
+// Put a saved supplier's name on the lots and items that spell it differently.
+function supMatch(looseName, id) {
+  var s = supAll().filter(function (x) { return x.id === id; })[0];
+  if (!s) return;
+  if (!supRenameEverywhere(looseName, s.name)) return;
+  libChanged();
+  supRender();
+}
+
+function supRemove(id) {
+  var list = supAll();
+  var s = list.filter(function (x) { return x.id === id; })[0];
+  if (!s) return;
+  var u = supUsage()[supNorm(s.name)];
+  ask(u ? 'Your lots and items keep the name (' + supUseText(u) + '); it will show under “not saved here” at the bottom of this list.' : '',
+    function () {
+      list = list.filter(function (x) { return x.id !== id; });
+      if (Store.setJSON(SUP_KEY, list) === false) { noteSaveFailed(); return; }
+      supEditId = null;
+      libChanged();
+      supRender();
+    }, { title: 'Delete ' + s.name + '?', yes: 'Delete', danger: true });
 }
 
 // Overflow menus: <div class="ps-menu-wrap"><button data-ps-menu>...</button>
@@ -1360,6 +1620,45 @@ function injectStyles() {
     '.ps-peek-body{padding:22px 26px 30px;overflow-y:auto;flex:1}' +
     '.ps-link-btn{font:inherit;font-size:13px;border:1px solid var(--cream-border);background:transparent;border-radius:7px;padding:5px 11px;cursor:pointer;color:var(--ink-light);display:inline-flex;gap:6px;align-items:center;white-space:nowrap}' +
     '.ps-link-btn:hover{background:var(--cream-dark);color:var(--ink)}' +
+    '' +
+    // Suppliers panel (2026-10-20).
+    '.sup-head{margin-bottom:14px}' +
+    '.sup-title{display:flex;align-items:center;gap:10px;color:var(--bark)}' +
+    '.sup-title .ps-i{width:24px;height:24px}' +
+    ".sup-title h2{margin:0;font-family:'DM Sans',sans-serif;font-size:22px;font-weight:600;color:var(--ink);letter-spacing:-.01em}" +
+    '.sup-intro{margin:6px 0 0;font-size:13px;color:var(--ink-light);line-height:1.45}' +
+    '.sup-tools{display:flex;align-items:center;gap:8px;margin:0 0 12px}' +
+    '.sup-search{flex:1;border:1px solid var(--cream-border)}.sup-search input{width:100%}' +
+    '.sup-list{display:flex;flex-direction:column;border-top:1.5px solid var(--cream-border)}' +
+    '.sup-row{padding:11px 10px;border-bottom:1px solid var(--cream-border);cursor:pointer;border-radius:0;transition:background .1s}' +
+    '.sup-row:hover{background:var(--cream-dark)}' +
+    '.sup-top{display:flex;align-items:baseline;gap:10px}' +
+    '.sup-name{font-weight:600;color:var(--ink);font-size:14.5px}' +
+    '.sup-web{margin-left:auto;font-size:12.5px;color:var(--bark);text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:55%}' +
+    '.sup-web:hover{text-decoration:underline}' +
+    '.sup-notes{font-size:13px;color:var(--ink-light);margin-top:3px;line-height:1.4;white-space:pre-wrap}' +
+    '.sup-use{font-size:12.5px;color:var(--ink-light);margin-top:4px;font-variant-numeric:tabular-nums}' +
+    '.sup-use.none{color:var(--ink-lighter)}' +
+    '.sup-empty{padding:22px 4px;color:var(--ink-lighter);font-size:13.5px}' +
+    '.sup-form{border:1.5px solid var(--bark);border-radius:10px;padding:14px 14px 12px;margin:8px 0 10px;background:color-mix(in srgb,var(--bark) 5%,var(--white))}' +
+    '.sup-form-h{font-size:12.5px;font-weight:600;color:var(--bark);margin-bottom:8px}' +
+    '.sup-f{display:block;margin-bottom:9px}' +
+    '.sup-f span{display:block;font-size:12.5px;color:var(--ink-light);margin-bottom:3px}' +
+    '.sup-f input,.sup-f textarea{width:100%;box-sizing:border-box;font:inherit;font-size:14px;padding:7px 9px;border:1px solid var(--cream-border);border-radius:7px;background:var(--white);color:var(--ink)}' +
+    '.sup-f textarea{resize:vertical}' +
+    '.sup-rename{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--ink);margin:-2px 0 10px;line-height:1.4}' +
+    '.sup-rename[hidden]{display:none}' +
+    '.sup-err{color:var(--danger);font-size:13px;min-height:0}' +
+    '.sup-err:not(:empty){margin-bottom:8px}' +
+    '.sup-form-btns{display:flex;gap:8px;align-items:center}' +
+    '.sup-del{font:inherit;font-size:13px;border:0;background:none;color:var(--danger);cursor:pointer;padding:5px 2px}' +
+    '.sup-del:hover{text-decoration:underline}' +
+    '.sup-loose{margin-top:22px}' +
+    '.sup-loose-h{font-size:12.5px;font-weight:600;color:var(--ink-light);margin-bottom:6px}' +
+    '.sup-loose-row{display:flex;align-items:center;gap:10px;padding:7px 10px;border-bottom:1px dashed var(--cream-border)}' +
+    '.sup-loose-name{font-size:14px;color:var(--ink)}' +
+    '.sup-loose-row .sup-use{margin:0 0 0 auto}' +
+    '.sup-loose-row .ps-link-btn{padding:3px 10px}' +
     '' +
     '@media (max-width:760px){' +
     '  body.ps-shell,body.ps-shell.ps-collapsed{padding-left:0}' +
@@ -2945,6 +3244,9 @@ return {
   buildSheet: buildSheet, openSheet: openSheet, stampVersion: stampVersion,
   shell: shell, refreshShell: refreshShell, toggleSide: toggleSide, icon: icon, BRAND: BRAND,
   peek: { open: openPeek, close: closePeek, isOpen: peekIsOpen },
+  suppliers: { open: openSuppliers, add: supAdd, edit: supEdit, cancel: supCancel, save: supSave,
+               remove: supRemove, match: supMatch, search: supSearch, nameTyped: supNameTyped, usage: supUsage, list: supAll },
+  onLibraryChange: onLibraryChange,
   isInstalled: isInstalled, install: install, openPage: openPage, resetAppCache: resetAppCache,
   zoom: zoom, setSize: setSize, sizeChoice: sizeChoice, applySize: applySize,
   tipsOn: tipsOn, setTips: setTips, applyTips: applyTips, nextStep: nextStep,

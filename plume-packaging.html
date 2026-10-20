@@ -353,7 +353,8 @@ body.ps-shell .btn-sm { font-size: 12px; }
       </div>
       <div class="field">
         <label for="f-supplier">Supplier</label>
-        <input type="text" id="f-supplier" placeholder="e.g. SKS Bottle">
+        <input type="text" id="f-supplier" placeholder="e.g. SKS Bottle" list="pk-sup-list" autocomplete="off">
+        <datalist id="pk-sup-list"></datalist>
       </div>
       <div class="field form-full" id="row-color">
         <label for="f-color">Color</label>
@@ -1050,7 +1051,25 @@ function resetPurchaseUi() {
   updateModalSummary();
   document.getElementById('adj-form').style.display = 'none';
 }
+// Suggestions for the supplier field: the saved suppliers (Library >
+// Suppliers) and any name already typed on another item.
+function fillSupplierChoices() {
+  var dl = document.getElementById('pk-sup-list');
+  if (!dl) return;
+  var seen = {}, names = [];
+  var add = function (n) {
+    n = String(n || '').trim();
+    var k = n.toLowerCase();
+    if (n && !seen[k]) { seen[k] = true; names.push(n); }
+  };
+  Plume.suppliers.list().forEach(function (x) { add(x.name); });
+  items.forEach(function (it) { add(it.supplier); });
+  names.sort(function (a, b) { return a.toLowerCase().localeCompare(b.toLowerCase()); });
+  dl.innerHTML = names.map(function (n) { return '<option value="' + esc(n) + '">'; }).join('');
+}
+
 function openAdd() {
+  fillSupplierChoices();
   editingId = null; pendingImage = null; pendingAdjustments = []; edKind = ''; edWasGuess = false; kindOpen = true;
   document.getElementById('m-add-title').textContent = 'New packaging item';
   document.getElementById('m-delete-btn').style.display = 'none';
@@ -1067,6 +1086,7 @@ function openAdd() {
 }
 
 function openEdit(id) {
+  fillSupplierChoices();
   var item = items.find(function(i){ return i.id === id; });
   if (!item) return;
   editingId = id; pendingImage = item.image || null;
@@ -1204,6 +1224,9 @@ if (typeof Plume === 'undefined') {
   Plume.boot(function () {
     // The 2026-10-18 shell: sidebar, icons in the title and toolbar.
     Plume.shell({ module: 'packaging' });
+    // A supplier renamed from the Suppliers panel changes the names on lots
+    // and items; take the fresh copy so the next save does not undo it.
+    Plume.onLibraryChange(function () { items = Store.getJSON(PKG_KEY, []) || []; renderTable(); fillSupplierChoices(); });
     Plume.pkCss();
     var ic = document.querySelectorAll('[data-ps-icon]');
     for (var k = 0; k < ic.length; k++) ic[k].innerHTML = Plume.icon(ic[k].getAttribute('data-ps-icon'));
