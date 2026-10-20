@@ -4073,6 +4073,9 @@ if (typeof Plume === 'undefined') {
   Plume.setModule('formulations');
   Plume.boot(function () {
     Plume.shell({ module: 'formulations' });
+    // A supplier renamed from the Suppliers panel changes the names on lots
+    // and items; take the fresh copy so the next save does not undo it.
+    Plume.onLibraryChange(function () { ings = Store.getJSON(ING_KEY, []) || []; });
     var icons = document.querySelectorAll('[data-ps-icon]');
     for (var ii = 0; ii < icons.length; ii++) icons[ii].innerHTML = Plume.icon(icons[ii].getAttribute('data-ps-icon'));
     loadAll();

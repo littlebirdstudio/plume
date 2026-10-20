@@ -1109,31 +1109,6 @@
   /* ── Import/Export ── */
   .io-row { display: flex; gap: 8px; align-items: center; }
 
-  /* ── Supplier database ── */
-  .supplier-list { display: flex; flex-direction: column; gap: 8px; max-height: 380px; overflow-y: auto; margin-bottom: 1rem; }
-  .supplier-card {
-    background: var(--cream);
-    border: 1px solid var(--cream-border);
-    border-radius: 4px;
-    padding: 0.75rem 1rem;
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr auto;
-    gap: 10px;
-    align-items: center;
-  }
-  .supplier-card .sf label { font-size: 9px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-lighter); display: block; margin-bottom: 2px; }
-  .supplier-card .sf p { font-size: 13px; color: var(--ink); }
-  .supplier-card .sf a { font-size: 12px; color: var(--sage); text-decoration: underline; }
-  .supplier-empty { text-align: center; padding: 2rem; color: var(--ink-lighter); font-size: 13px; }
-  .supplier-form {
-    background: var(--cream);
-    border: 1px solid var(--cream-border);
-    border-radius: 4px;
-    padding: 1rem;
-    margin-bottom: 1rem;
-  }
-  .supplier-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
-  .supplier-form-full { grid-column: 1/-1; }
   .lot-supplier-select {
     font-family: 'DM Sans', sans-serif;
     font-size: 12px;
@@ -1503,35 +1478,6 @@
   </div>
 </div>
 
-<!-- Suppliers modal -->
-<div class="modal-overlay" id="modal-suppliers">
-  <div class="modal" style="max-width:680px">
-    <div class="modal-header">
-      <div class="modal-title">Supplier database</div>
-      <button class="modal-close" onclick="closeModal('modal-suppliers')">×</button>
-    </div>
-    <div style="font-size:13px;color:var(--ink-light);margin-bottom:1rem">Your saved suppliers auto-fill into ingredient lot rows. Add each supplier once and reuse everywhere.</div>
-
-    <div class="supplier-form" id="supplier-form">
-      <div style="font-size:11px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-lighter);margin-bottom:10px" id="supplier-form-title">Add new supplier</div>
-      <div class="supplier-form-grid">
-        <div class="field"><label>Supplier name *</label><input type="text" id="sf-name" placeholder="e.g. Lotioncrafter"></div>
-        <div class="field"><label>Website</label><input type="url" id="sf-web" placeholder="https://lotioncrafter.com"></div>
-        <div class="field supplier-form-full"><label>Notes</label><input type="text" id="sf-notes" placeholder="e.g. Good for bulk oils, fast shipping"></div>
-      </div>
-      <div style="display:flex;gap:8px;justify-content:flex-end">
-        <button class="btn btn-sm" onclick="cancelSupplierEdit()">Cancel</button>
-        <button class="btn btn-primary btn-sm" onclick="saveSupplier()">Save supplier</button>
-      </div>
-    </div>
-
-    <div class="supplier-list" id="supplier-list"></div>
-
-    <div style="display:flex;justify-content:flex-end;padding-top:1rem;border-top:1px solid var(--cream-border)">
-      <button class="btn" onclick="closeModal('modal-suppliers')">Done</button>
-    </div>
-  </div>
-</div>
 
 <!-- Seeder modal -->
 <div class="modal-overlay" id="modal-seeder">
@@ -1665,7 +1611,6 @@ var suppliers         = [];
 var brands            = [];
 var editingId         = null;
 var viewingId         = null;
-var editingSupplierId = null;
 var soapSectionOpen   = false;
 var propsSectionOpen  = false;
 var FA_FIELDS = ['lauric','myristic','palmitic','stearic','ricinoleic','oleic','linoleic','linolenic'];
@@ -4020,82 +3965,10 @@ function getLots() {
   });
 }
 
-// ── Supplier database ─────────────────────────────────
-function openSuppliers() {
-  editingSupplierId = null;
-  document.getElementById('supplier-form-title').textContent = 'Add new supplier';
-  ['sf-name','sf-web','sf-notes'].forEach(function(id) { document.getElementById(id).value = ''; });
-  renderSupplierList();
-  openModal('modal-suppliers');
-}
-
-function renderSupplierList() {
-  var el = document.getElementById('supplier-list');
-  if (!suppliers.length) {
-    el.innerHTML = '<div class="supplier-empty">No suppliers yet — add your first one above.</div>';
-    return;
-  }
-  el.innerHTML = suppliers.map(function(s) {
-    return '<div class="supplier-card">' +
-      '<div class="sf"><label>Name</label><p>' + s.name + '</p></div>' +
-      '<div class="sf"><label>Website</label><p>' + (s.webLink ? '<a href="' + s.webLink + '" target="_blank" rel="noopener">Open &#8599;</a>' : '—') + '</p></div>' +
-      '<div class="sf"><label>Notes</label><p style="color:var(--ink-light);font-size:12px">' + (s.notes || '—') + '</p></div>' +
-      '<div style="display:flex;gap:6px;align-items:center">' +
-        '<button class="btn btn-sm" onclick="editSupplier(\'' + s.id + '\')">Edit</button>' +
-        '<button class="btn btn-sm btn-danger" onclick="deleteSupplier(\'' + s.id + '\')">\u00d7</button>' +
-      '</div></div>';
-  }).join('');
-}
-
-function saveSupplier() {
-  var name = document.getElementById('sf-name').value.trim();
-  if (!name) { Plume.tell('Supplier name is required.'); return; }
-  var data = {
-    name:    name,
-    webLink: document.getElementById('sf-web').value.trim(),
-    notes:   document.getElementById('sf-notes').value.trim()
-  };
-  if (editingSupplierId) {
-    var idx = suppliers.findIndex(function(s) { return s.id === editingSupplierId; });
-    if (idx > -1) suppliers[idx] = Object.assign({}, suppliers[idx], data);
-    editingSupplierId = null;
-    document.getElementById('supplier-form-title').textContent = 'Add new supplier';
-  } else {
-    data.id = Date.now().toString() + Math.random().toString(36).slice(2,6);
-    suppliers.push(data);
-  }
-  ['sf-name','sf-web','sf-notes'].forEach(function(id) { document.getElementById(id).value = ''; });
-  saveSuppliers();
-  renderSupplierList();
-  renderStats();
-}
-
-function editSupplier(id) {
-  var s = suppliers.find(function(x) { return x.id === id; });
-  if (!s) return;
-  editingSupplierId = id;
-  document.getElementById('supplier-form-title').textContent = 'Edit supplier';
-  document.getElementById('sf-name').value  = s.name;
-  document.getElementById('sf-web').value   = s.webLink || '';
-  document.getElementById('sf-notes').value = s.notes   || '';
-  document.getElementById('supplier-form').scrollIntoView({ behavior: 'smooth' });
-}
-
-function cancelSupplierEdit() {
-  editingSupplierId = null;
-  document.getElementById('supplier-form-title').textContent = 'Add new supplier';
-  ['sf-name','sf-web','sf-notes'].forEach(function(id) { document.getElementById(id).value = ''; });
-}
-
-function deleteSupplier(id) {
-  // Removal runs on the answer (the dialog does not block).
-  Plume.ask('', function () {
-    suppliers = suppliers.filter(function(s) { return s.id !== id; });
-    saveSuppliers();
-    renderSupplierList();
-    renderStats();
-  }, { title: 'Remove this supplier from your database?', yes: 'Remove', danger: true });
-}
+// ── Suppliers ─────────────────────────────────────────
+// The supplier list is a slide-in panel in core now (2026-10-20), so every
+// page has it. Anything that still calls openSuppliers() gets the panel.
+function openSuppliers() { Plume.suppliers.open(); }
 
 // ── Modal helpers ─────────────────────────────────────
 function openModal(id)  {
@@ -4480,6 +4353,13 @@ if (typeof Plume === 'undefined') {
   Plume.boot(function () {
     // The 2026-10-18 shell: sidebar, icons in the title and toolbar.
     Plume.shell({ module: 'ingredients' });
+    // A supplier renamed from the Suppliers panel changes the names on lots
+    // and items; take the fresh copy so the next save does not undo it.
+    Plume.onLibraryChange(function () {
+      ingredients = Store.getJSON(STORE_KEY, []) || [];
+      suppliers   = Store.getJSON(SUPPLIERS_KEY, []) || [];
+      renderTable(); renderStats();
+    });
     document.getElementById('ing-title-icon').innerHTML = Plume.icon('ingredients');
     document.getElementById('ing-search-icon').innerHTML = Plume.icon('search');
     document.getElementById('ing-new-icon').innerHTML = Plume.icon('plus');
@@ -4490,7 +4370,7 @@ if (typeof Plume === 'undefined') {
     fillFunctionFilter();
     loadData();
     if (Store.get('plume_ing_view') === 'cheat') setIngView('cheat');
-    // Other modules' sidebars link Suppliers here.
+    // Older links and bookmarks to Suppliers land here.
     if (location.hash === '#suppliers') openSuppliers();
   });
 }

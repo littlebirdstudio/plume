@@ -3812,6 +3812,9 @@ if (typeof Plume === 'undefined') {
   Plume.boot(function () {
     // The 2026-10-19 shell: sidebar, icons in the title and toolbar.
     Plume.shell({ module: 'costing' });
+    // A supplier renamed from the Suppliers panel changes the names on lots
+    // and items; take the fresh copy so the next save does not undo it.
+    Plume.onLibraryChange(function () { ings = Store.getJSON(ING_KEY, []) || []; pkgs = Store.getJSON(PKG_KEY, []) || []; });
     var ic = document.querySelectorAll('[data-ps-icon]');
     for (var k = 0; k < ic.length; k++) ic[k].innerHTML = Plume.icon(ic[k].getAttribute('data-ps-icon'));
     loadData();
