@@ -27,7 +27,9 @@ function buildPreview(module) {
     const tag = '<script src="' + dep + '"></script>';
     if (page.indexOf(tag) === -1) continue;
     const js = fs.readFileSync(path.join(ROOT, dep), 'utf8');
-    page = page.replace(tag, '<script>\n' + js + '\n</script>');
+    // A function, not a string: in a replacement string, $' and $& are
+    // patterns, and core's own text could contain them.
+    page = page.replace(tag, () => '<script>\n' + js + '\n</script>');
   }
 
   if (/<script src="plume-/.test(page)) {

@@ -906,6 +906,7 @@ var ICONS = {
   packaging:    ['0 0 48 48', '<path d="M20 8 L 28 8 L 28 14 L 32 18 L 32 40 Q 24 43, 16 40 L 16 18 L 20 14 Z"/><path d="M19 26 L 29 26"/>'],
   costing:      ['0 0 48 48', '<path d="M24 10 L 24 38"/><path d="M16 38 L 32 38"/><path d="M10 18 L 24 14 L 38 18"/><path d="M6 26 Q 10 18, 14 26 Q 10 30, 6 26 Z"/><path d="M34 26 Q 38 18, 42 26 Q 38 30, 34 26 Z"/>'],
   batches:      ['0 0 48 48', '<path d="M10 28 L 10 42 L 22 42 L 22 28"/><path d="M12 24 L 20 24 L 20 28 L 12 28 Z"/><path d="M26 14 L 26 28 L 38 28 L 38 14"/><path d="M28 10 L 36 10 L 36 14 L 28 14 Z"/><path d="M26 30 L 38 30 L 38 42 L 26 42 Z"/>'],
+  history:      ['0 0 24 24', '<path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v4h4"/><path d="M12 8v4l3 2"/>'],
   stock:        ['0 0 24 24', '<path d="M4 8h16v12H4z"/><path d="M7 8V5h10v3"/><path d="m9 14 2 2 4-4"/>'],
   suppliers:    ['0 0 24 24', '<path d="M3 21h18"/><path d="M5 21V8l7-4 7 4v13"/><path d="M9 21v-6h6v6"/>'],
   settings:     ['0 0 24 24', '<circle cx="12" cy="12" r="3"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6"/>'],
@@ -960,13 +961,20 @@ function shell(opts) {
         '</a>' +
         '<button type="button" class="ps-icon-btn ps-collapse" onclick="Plume.toggleSide()" title="Collapse or expand the sidebar" aria-label="Collapse or expand the sidebar">' + icon('collapse', 'ps-when-open') + icon('expand', 'ps-when-closed') + '</button>' +
       '</div>' +
-      '<nav class="ps-nav-list">' + nav + '</nav>' +
+      // Order (her call, 2026-10-20): Library, Actions, Stock.
       '<div class="ps-nav-h">Library</div>' +
       '<nav class="ps-nav-list" aria-label="Library">' + lib +
         '<button type="button" class="ps-nav" id="ps-nav-suppliers" onclick="Plume.suppliers.open()" title="Suppliers">' + icon('suppliers') + '<span class="ps-nav-label">Suppliers</span><span class="ps-ct" data-ct="suppliers"></span></button>' +
       '</nav>' +
+      '<div class="ps-nav-h">Actions</div>' +
+      '<nav class="ps-nav-list" aria-label="Actions">' + nav + '</nav>' +
+      // Stock (2026-10-20): quick tasks from any page, as slide-in panels.
+      '<div class="ps-nav-h">Stock</div>' +
+      '<nav class="ps-nav-list" aria-label="Stock">' +
+        '<button type="button" class="ps-nav" id="ps-nav-stock" onclick="Plume.stock.open()" title="Sold, gifted, marketing, damaged, returned, or reconcile to a count">' + icon('stock') + '<span class="ps-nav-label">Update stock</span></button>' +
+        '<button type="button" class="ps-nav" id="ps-nav-history" onclick="Plume.stock.history()" title="Where your stock went: by market or event, month or product, and what it cost">' + icon('history') + '<span class="ps-nav-label">Stock history</span></button>' +
+      '</nav>' +
       '<div class="ps-grow"></div>' +
-      '<button type="button" class="ps-nav" id="ps-nav-stock" onclick="Plume.stock.open()" title="Update stock: sold, gifted, marketing, damaged, or reconcile to a count">' + icon('stock') + '<span class="ps-nav-label">Update stock</span></button>' +
       '<button type="button" class="ps-nav" onclick="if (typeof openSettings === \'function\') openSettings()" title="Settings">' + icon('settings') + '<span class="ps-nav-label">Settings</span></button>' +
     '</aside>';
   document.body.insertAdjacentHTML('afterbegin', html);
@@ -1539,7 +1547,8 @@ function injectStyles() {
     '.ps-nav.on .ps-i{color:var(--bark)}' +
     '.ps-ct{margin-left:auto;font-size:12px;color:var(--ink-lighter);font-variant-numeric:tabular-nums;font-weight:400}' +
     '.ps-nav.on .ps-ct{color:var(--bark);font-weight:600}' +
-    '.ps-nav-h{font-size:11.5px;font-weight:500;color:var(--ink-lighter);padding:16px 8px 4px;white-space:nowrap}' +
+    // Headings in the palette's main colour (her call, 2026-10-20), same size.
+    '.ps-nav-h{font-size:11.5px;font-weight:500;color:var(--bark);padding:16px 8px 4px;white-space:nowrap}' +
     '.ps-grow{flex:1}' +
     '.ps-collapse{margin-left:auto;opacity:.55}' +
     '.ps-collapse:hover{opacity:1}' +
@@ -1689,6 +1698,35 @@ function injectStyles() {
     '.st-panel .st-empty{padding:14px 4px;color:var(--ink-lighter);font-size:13.5px}' +
     '.st-panel .st-foot{position:sticky;bottom:-30px;background:var(--white);padding:12px 0 8px;display:flex;gap:10px;align-items:center;border-top:1px solid var(--cream-border);margin-top:12px}' +
     '.st-panel .st-ct{font-size:13px;color:var(--ink-light)}' +
+    '' +
+    // Stock history panel (2026-10-20).
+    '.sh-panel .sh-ranges{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0 12px}' +
+    '.sh-panel .sh-tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}' +
+    '.sh-panel .sh-tile{border:1.5px solid var(--cream-border);border-radius:10px;padding:9px 11px}' +
+    '.sh-panel .sh-k{font-size:12.5px;color:var(--ink-light)}' +
+    '.sh-panel .sh-n{font-size:21px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}' +
+    '.sh-panel .sh-c{font-size:12.5px;color:var(--ink-light);font-variant-numeric:tabular-nums}' +
+    '.sh-panel .sh-give{margin:10px 0 4px;padding:9px 11px;border-radius:9px;background:color-mix(in srgb,var(--bark) 9%,var(--white));font-size:13.5px;color:var(--ink)}' +
+    '.sh-panel .sh-bar{border-bottom:1px solid var(--cream-border);margin:14px 0 8px}' +
+    '.sh-panel .sh-search{border:1px solid var(--cream-border);margin-bottom:8px}.sh-panel .sh-search input{width:100%}' +
+    '.sh-panel .sh-grp{border-bottom:1px solid var(--cream-border)}' +
+    '.sh-panel .sh-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;width:100%;text-align:left;border:0;background:none;padding:9px 4px;cursor:pointer;font:inherit;color:var(--ink);align-items:center}' +
+    '.sh-panel .sh-head:hover{background:var(--cream-dark)}' +
+    '.sh-panel .sh-title{font-size:14px;font-weight:600;min-width:0}' +
+    '.sh-panel .sh-title small{display:block;font-weight:400;font-size:12px;color:var(--ink-lighter)}' +
+    '.sh-panel .sh-chev{grid-row:1;grid-column:2;color:var(--ink-lighter);transition:transform .15s}' +
+    '.sh-panel .sh-chev .ps-i{width:16px;height:16px}' +
+    '.sh-panel .sh-grp.open .sh-chev{transform:rotate(180deg)}' +
+    '.sh-panel .sh-sum{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:5px}' +
+    '.sh-panel .sh-pill{font-size:12px;padding:1px 8px;border-radius:999px;background:color-mix(in srgb,var(--ink) 7%,transparent);color:var(--ink-light);font-variant-numeric:tabular-nums;white-space:nowrap}' +
+    '.sh-panel .sh-pill b{color:var(--ink)}' +
+    '.sh-panel .sh-detail{padding:2px 4px 10px}' +
+    '.sh-panel .sh-line{display:grid;grid-template-columns:minmax(0,1fr) auto 64px;gap:10px;font-size:13px;padding:4px 0;color:var(--ink-light);border-top:1px dashed var(--cream-border)}' +
+    '.sh-panel .sh-line span:last-child{text-align:right;font-variant-numeric:tabular-nums}' +
+    '.sh-panel .sh-line b{color:var(--ink)}' +
+    '.sh-panel .sh-foot{font-size:12px;color:var(--ink-lighter);line-height:1.5;margin:12px 0 0}' +
+    '.sh-panel .sh-actions{margin-top:10px}' +
+    '.sh-panel .st-empty{padding:14px 4px;color:var(--ink-lighter);font-size:13.5px}' +
     '' +
     '@media (max-width:760px){' +
     '  body.ps-shell,body.ps-shell.ps-collapsed{padding-left:0}' +
@@ -3268,8 +3306,11 @@ var STOCK_REASONS = [
   { key: 'sold',      label: 'Sold',      hint: 'at a market, a shop or online' },
   { key: 'gifted',    label: 'Gifted',    hint: 'given to friends or family' },
   { key: 'marketing', label: 'Marketing', hint: 'giveaways, demos, samples for shops' },
-  { key: 'damaged',   label: 'Damaged',   hint: 'broken, spoiled or spilled' }
+  { key: 'damaged',   label: 'Damaged',   hint: 'broken, spoiled or spilled' },
+  // Adds units back (2026-10-20): consignment that did not sell, a return.
+  { key: 'returned',  label: 'Returned',  hint: 'back from a shop or consignment', back: true }
 ];
+function reasonBack(k) { for (var i = 0; i < STOCK_REASONS.length; i++) if (STOCK_REASONS[i].key === k) return !!STOCK_REASONS[i].back; return false; }
 function stockReasonLabel(k) {
   for (var i = 0; i < STOCK_REASONS.length; i++) if (STOCK_REASONS[i].key === k) return STOCK_REASONS[i].label;
   return 'Taken out';
@@ -3385,7 +3426,7 @@ function stockPass(products, entries, opts) {
     if (e.kind === 'out' && opts.reason) e.reason = opts.reason;
     if (cd) { var uc = productUnitCost(pr, cd); if (uc > 0) e.unitCost = Math.round(uc * 10000) / 10000; }
     if (e.kind === 'count') { e.counted = v; e.qty = v - onHand(pr); }
-    else e.qty = -v;
+    else e.qty = reasonBack(opts.reason) ? v : -v;
     if (!pr.stockLog) pr.stockLog = [];
     pr.stockLog.push(e);
     pr.updatedAt = new Date().toISOString();
@@ -3509,14 +3550,14 @@ function stHtml() {
       '<button type="button" class="ps-chip' + (stMode === 'count' ? ' on' : '') + '" onclick="Plume.stock.mode(\'count\')">Reconcile<span class="st-mct" data-m="count"></span></button></div>' +
     '<p class="st-help">' + (stMode === 'count'
       ? 'How many are on the shelf now. Plume records the difference from what it had. Use this to set real numbers.'
-      : '<b>' + m.label + '</b>: ' + m.hint + '. These come off what is on hand. Switch reasons to enter more; Save records them all.') + '</p>' +
+      : '<b>' + m.label + '</b>: ' + m.hint + '. ' + (m.back ? 'These go back on hand.' : 'These come off what is on hand.') + ' Switch reasons to enter more; Save records them all.') + '</p>' +
     '<div class="st-fields"><div><label for="st-date">Date</label><input type="date" id="st-date"></div>' +
       '<div><label for="st-note">Note</label><input type="text" id="st-note" placeholder="e.g. Market, Oct 18"></div></div>' +
     '<label class="ps-search st-search">' + icon('search') + '<input type="search" id="st-q" placeholder="Search products" value="' + esc(stQ) + '" oninput="Plume.stock.search(this.value)" aria-label="Search products"></label>' +
     '<div class="st-cols"><span>Product</span><span>On hand</span><span>' + esc(m.label) + '</span></div>' +
     '<div id="st-rows">' + stRowsHtml() + '</div>' +
     '<div class="st-over" id="st-over" hidden></div>' +
-    '<p class="st-rp"><a href="plume-costing.html#stock-report" target="plume-costing" onclick="if (typeof openReport === \'function\') { Plume.peek.close(); openReport(); return false; }">See the stock report</a>: where units went over time, and what they cost.</p>' +
+    '<p class="st-rp"><a href="#" onclick="Plume.stock.history(); return false">Stock history</a>: where units went, by market, month or product, and what they cost.</p>' +
     '<div class="st-foot"><span class="st-ct" id="st-ct">Nothing entered yet</span><span class="ps-grow"></span>' +
       '<button type="button" class="ps-link-btn" onclick="Plume.peek.close()">Cancel</button>' +
       '<button type="button" class="ps-btn-primary" id="st-save" onclick="Plume.stock.save()" disabled>Save</button></div></div>';
@@ -3550,7 +3591,7 @@ function stOver(en) {
   var prods = stProducts(), tot = {}, counted = {}, out = [];
   (en.count || []).forEach(function (e) { counted[e.productId] = true; });
   STOCK_REASONS.forEach(function (r) {
-    (en[r.key] || []).forEach(function (e) { tot[e.productId] = (tot[e.productId] || 0) + (parseFloat(e.value) || 0); });
+    (en[r.key] || []).forEach(function (e) { tot[e.productId] = (tot[e.productId] || 0) + (r.back ? -1 : 1) * (parseFloat(e.value) || 0); });
   });
   Object.keys(tot).forEach(function (id) {
     var p = fillFind(prods, id), have = p ? onHand(p) : 0;
@@ -3594,6 +3635,7 @@ function stockOpen() {
   });
   document.getElementById('ps-peek').setAttribute('data-panel', 'stock');
   var b = document.getElementById('ps-nav-stock'); if (b) b.classList.add('on');
+  var h = document.getElementById('ps-nav-history'); if (h) h.classList.remove('on');
   document.getElementById('st-date').value = todayISO();
 }
 function stockMode(m) {
@@ -3623,6 +3665,149 @@ function stockSave() {
   libChanged();
   closePeek();
   tell(n + ' stock change' + (n === 1 ? '' : 's') + ' saved.', { title: 'Stock updated' });
+}
+
+// ── Stock history: a slide-in panel on every page (2026-10-20) ─────────
+// What Update stock recorded, read back: how much sold at a market or in a
+// month, and what giveaways and marketing cost over a period. Each change
+// carries the unit cost on the day it was saved; one saved before that
+// uses today's unit cost and is marked ~. Reconcile differences count as
+// Unaccounted (fewer on the shelf than Plume had). Units built into kits
+// are not here: they are still stock, inside the kit.
+var shRange = 'year', shGroup = 'event', shQ = '', shOpen = {};
+var SH_RANGES = [['month', 'This month'], ['last', 'Last month'], ['year', 'This year'], ['12', 'Last 12 months'], ['all', 'All time']];
+function shBounds() {
+  var d = new Date(), y = d.getFullYear(), m = d.getMonth();
+  var iso = function (Y, M) { var x = new Date(Y, M, 1); return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-01'; };
+  if (shRange === 'month') return [iso(y, m), ''];
+  if (shRange === 'last') return [iso(y, m - 1), iso(y, m)];
+  if (shRange === 'year') return [y + '-01-01', ''];
+  if (shRange === '12') return [iso(y, m - 11), ''];
+  return ['', ''];
+}
+function shKeys() { return STOCK_REASONS.map(function (r) { return r.key; }).concat(['out', 'count']); }
+function shLabel(k) { return k === 'count' ? 'Unaccounted' : k === 'out' ? 'Other' : stockReasonLabel(k); }
+// Every change in range: { p, e, key, units, cost, est }. Units are always
+// counted in the reason's own direction (12 sold, 2 returned).
+function shRows() {
+  var b = shBounds(), q = shQ.toLowerCase().trim(), d = costData(), out = [];
+  d.products.forEach(function (p) {
+    ((p && p.stockLog) || []).forEach(function (e) {
+      if (e.kind === 'kit') return;
+      if (b[0] && (e.date || '') < b[0]) return;
+      if (b[1] && (e.date || '') >= b[1]) return;
+      if (q && ((e.note || '') + ' ' + (p.name || '') + ' ' + (p.sku || '')).toLowerCase().indexOf(q) === -1) return;
+      var key = e.kind === 'count' ? 'count' : (e.reason || 'out');
+      var qty = parseFloat(e.qty) || 0;
+      var units = reasonBack(key) ? qty : -qty;
+      var est = !(e.unitCost > 0);
+      var uc = est ? productUnitCost(p, d) : e.unitCost;
+      out.push({ p: p, e: e, key: key, units: units, cost: units * uc, est: est && units !== 0 });
+    });
+  });
+  return out;
+}
+function shBlank() { var o = {}; shKeys().forEach(function (k) { o[k] = { units: 0, cost: 0, est: false }; }); return o; }
+function shAdd(t, r) { t.units += r.units; t.cost += r.cost; t.est = t.est || r.est; }
+// The dollar sign is written as \u0024: a literal $ next to a quote is
+// read as a special pattern when a page or preview inlines this file with
+// String.replace, which garbles the script.
+function shMoney(v, est) { return (est ? '~' : '') + (v < 0 ? '-' : '') + '\u0024' + Math.abs(v).toFixed(2); }
+function shSummary(t) {
+  return shKeys().filter(function (k) { return t[k].units; }).map(function (k) {
+    return '<span class="sh-pill sh-' + k + '">' + esc(shLabel(k)) + ' <b>' + t[k].units + '</b> ' + shMoney(t[k].cost, t[k].est) + '</span>';
+  }).join('');
+}
+function shMonthName(m) { var a = m.split('-'); return a.length === 2 ? new Date(+a[0], +a[1] - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : m; }
+function shGroups(rows) {
+  var g = {}, order = [];
+  rows.forEach(function (r) {
+    var k, title, sub, sort;
+    if (shGroup === 'month') { k = (r.e.date || '').slice(0, 7) || 'none'; title = k === 'none' ? 'No date' : shMonthName(k); sub = ''; sort = k; }
+    else if (shGroup === 'product') { k = r.p.id; title = r.p.name || '(unnamed)'; sub = r.p.netWtDisplay || ''; sort = title.toLowerCase(); }
+    else { k = (r.e.date || '') + '|' + (r.e.note || ''); title = r.e.note || 'No note'; sub = r.e.date ? fmtDate(r.e.date) : ''; sort = (r.e.date || '') + '|' + (r.e.note || ''); }
+    if (!g[k]) { g[k] = { key: k, title: title, sub: sub, sort: sort, t: shBlank(), rows: [] }; order.push(k); }
+    shAdd(g[k].t[r.key], r);
+    g[k].rows.push(r);
+  });
+  var list = order.map(function (k) { return g[k]; });
+  list.sort(function (a, b) { return shGroup === 'product' ? a.sort.localeCompare(b.sort) : b.sort.localeCompare(a.sort); });
+  return list;
+}
+function shDetail(gr) {
+  // Inside an event or a month: one line per product and reason. Inside a
+  // product: one line per change.
+  if (shGroup === 'product') {
+    return gr.rows.slice().sort(function (a, b) { return (b.e.date || '').localeCompare(a.e.date || ''); }).map(function (r) {
+      return '<div class="sh-line"><span>' + (r.e.date ? fmtDate(r.e.date) : '') + (r.e.note ? ' · ' + esc(r.e.note) : '') + '</span><span>' + esc(shLabel(r.key)) + ' <b>' + r.units + '</b></span><span>' + shMoney(r.cost, r.est) + '</span></div>';
+    }).join('');
+  }
+  var m = {}, order = [];
+  gr.rows.forEach(function (r) {
+    var k = r.p.id + '|' + r.key;
+    if (!m[k]) { m[k] = { p: r.p, key: r.key, units: 0, cost: 0, est: false }; order.push(k); }
+    shAdd(m[k], r);
+  });
+  return order.map(function (k) { return m[k]; }).sort(function (a, b) { return (a.p.name || '').localeCompare(b.p.name || ''); }).map(function (x) {
+    return '<div class="sh-line"><span>' + esc(x.p.name || '(unnamed)') + '</span><span>' + esc(shLabel(x.key)) + ' <b>' + x.units + '</b></span><span>' + shMoney(x.cost, x.est) + '</span></div>';
+  }).join('');
+}
+function shHtml() {
+  var rows = shRows(), tot = shBlank();
+  rows.forEach(function (r) { shAdd(tot[r.key], r); });
+  var shown = shKeys().filter(function (k) { return ['sold', 'gifted', 'marketing', 'damaged'].indexOf(k) !== -1 || tot[k].units; });
+  var give = { units: tot.gifted.units + tot.marketing.units, cost: tot.gifted.cost + tot.marketing.cost, est: tot.gifted.est || tot.marketing.est };
+  var groups = shGroups(rows);
+  return '<div class="sh-panel"><div class="sup-title">' + icon('history') + '<h2>Stock history</h2></div>' +
+    '<div class="sh-ranges">' + SH_RANGES.map(function (r) {
+      return '<button type="button" class="ps-chip' + (shRange === r[0] ? ' on' : '') + '" onclick="Plume.stock.range(\'' + r[0] + '\')">' + r[1] + '</button>';
+    }).join('') + '</div>' +
+    '<div class="sh-tiles">' + shown.map(function (k) {
+      return '<div class="sh-tile"><div class="sh-k">' + esc(shLabel(k)) + '</div><div class="sh-n">' + tot[k].units + '</div><div class="sh-c">' + shMoney(tot[k].cost, tot[k].est) + ' at cost</div></div>';
+    }).join('') + '</div>' +
+    '<div class="sh-give"><b>Giveaways and marketing:</b> ' + give.units + ' unit' + (give.units === 1 ? '' : 's') + ', ' + shMoney(give.cost, give.est) + ' at cost</div>' +
+    '<div class="sh-bar"><div class="sh-tabs">' + [['event', 'By event'], ['month', 'By month'], ['product', 'By product']].map(function (t) {
+      return '<button type="button" class="ps-tab' + (shGroup === t[0] ? ' on' : '') + '" onclick="Plume.stock.group(\'' + t[0] + '\')">' + t[1] + '</button>';
+    }).join('') + '</div></div>' +
+    '<label class="ps-search sh-search">' + icon('search') + '<input type="search" id="sh-q" placeholder="Search notes or products, e.g. market" value="' + esc(shQ) + '" oninput="Plume.stock.find(this.value)" aria-label="Search stock history"></label>' +
+    '<div class="sh-list">' + (groups.length ? groups.map(function (gr) {
+      var open = !!shOpen[shGroup + ':' + gr.key];
+      return '<div class="sh-grp' + (open ? ' open' : '') + '"><button type="button" class="sh-head" aria-expanded="' + open + '" onclick="Plume.stock.toggle(' + esc(JSON.stringify(shGroup + ':' + gr.key)) + ')">' +
+        '<span class="sh-title">' + esc(gr.title) + (gr.sub ? '<small>' + esc(gr.sub) + '</small>' : '') + '</span>' +
+        '<span class="sh-sum">' + shSummary(gr.t) + '</span><span class="sh-chev">' + icon('chevron') + '</span></button>' +
+        (open ? '<div class="sh-detail">' + shDetail(gr) + '</div>' : '') + '</div>';
+    }).join('') : '<div class="st-empty">' + (shQ ? 'Nothing matches “' + esc(shQ) + '” in this range.' : 'Nothing recorded in this range. Update stock records sales, giveaways and returns.') + '</div>') + '</div>' +
+    '<p class="sh-foot">Costs are each product’s unit cost on the day the change was saved' + (rows.some(function (r) { return r.est; }) ? '; ~ marks changes from before costs were recorded, which use today’s unit cost' : '') +
+      '. Units built into kits are not counted here; the kit carries them.' + (tot.count.units ? ' Unaccounted is what reconciling found missing (negative: found extra).' : '') + '</p>' +
+    (rows.length ? '<div class="sh-actions"><button type="button" class="ps-link-btn" onclick="Plume.stock.copy()">' + icon('copy') + 'Copy as a table</button></div>' : '') +
+  '</div>';
+}
+function shRender() { var b = document.getElementById('ps-peek-body'); if (b) b.innerHTML = shHtml(); }
+function stockHistory() {
+  shRange = 'year'; shGroup = 'event'; shQ = ''; shOpen = {};
+  openPeek(shHtml(), {
+    label: 'Stock history',
+    onClose: function () { var b = document.getElementById('ps-nav-history'); if (b) b.classList.remove('on'); }
+  });
+  var b = document.getElementById('ps-nav-history'); if (b) b.classList.add('on');
+  var s = document.getElementById('ps-nav-stock'); if (s) s.classList.remove('on');
+}
+function shRangeSet(r) { shRange = r; shRender(); }
+function shGroupSet(g) { shGroup = g; shRender(); }
+function shToggle(k) { shOpen[k] = !shOpen[k]; shRender(); }
+function shFind(v) {
+  shQ = v; shRender();
+  var i = document.getElementById('sh-q'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); }
+}
+// Every change in range, one per line, for a spreadsheet or the books.
+function shCopy() {
+  var lines = [['Date', 'Note', 'Product', 'Reason', 'Units', 'Unit cost', 'Cost'].join('\t')];
+  shRows().sort(function (a, b) { return (a.e.date || '').localeCompare(b.e.date || ''); }).forEach(function (r) {
+    lines.push([r.e.date || '', r.e.note || '', r.p.name || '', shLabel(r.key), r.units, (r.units ? Math.abs(r.cost / r.units) : 0).toFixed(2), r.cost.toFixed(2)].join('\t'));
+  });
+  var text = lines.join('\n'), done = function () { tell('Copied ' + (lines.length - 1) + ' line' + (lines.length === 2 ? '' : 's') + '. Paste into a spreadsheet.', { title: 'Copied' }); };
+  try { navigator.clipboard.writeText(text).then(done, function () { tell(text, { title: 'Copy these lines' }); }); }
+  catch (e) { tell(text, { title: 'Copy these lines' }); }
 }
 
 // Removes one taken-out or counted entry. Kit entries go with their build.
@@ -3672,7 +3857,8 @@ return {
   kitNeeds: kitNeeds, kitShortages: kitShortages, buildKit: buildKit, undoKitBuild: undoKitBuild,
   undoKitText: undoKitText, kitsUsing: kitsUsing, stockPass: stockPass, undoStock: undoStock,
   STOCK_REASONS: STOCK_REASONS, productUnitCost: productUnitCost, stockReasonLabel: stockReasonLabel, fillUndoBlock: fillUndoBlock,
-  stock: { open: stockOpen, mode: stockMode, search: stockSearch, typed: stTyped, save: stockSave, entries: stEntries },
+  stock: { open: stockOpen, mode: stockMode, search: stockSearch, typed: stTyped, save: stockSave, entries: stEntries,
+           history: stockHistory, range: shRangeSet, group: shGroupSet, toggle: shToggle, find: shFind, copy: shCopy, rows: shRows },
   pkTypeFor: pkTypeFor, pkForProduct: pkForProduct, pkColored: pkColored, pkIsOther: pkIsOther,
   pkIcon: pkIcon, pkIconFor: pkIconFor, pkProducts: pkProducts, pkProductName: pkProductName,
   pkKindName: pkKindName, pkLooks: pkLooks, pkDisplay: pkDisplay, pkDetailHtml: pkDetailHtml, pkStock: pkStock,

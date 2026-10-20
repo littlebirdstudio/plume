@@ -473,21 +473,6 @@ details.bc-tips .bc-note { border: 0; padding: 6px 0 0; margin: 0; font-size: 12
 #m-barcode .modal-foot .ps-grow { flex: 1; }
 
 /* Line sheet */
-.rp-range { margin-top: 18px; }
-.rp-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 14px 0 26px; }
-.rp-tile { border: 1.5px solid var(--cream-border); border-radius: 12px; padding: 12px 14px; background: var(--white); }
-.rp-tile .rp-k { font-size: 12.5px; color: var(--ink-light); }
-.rp-tile .rp-n { font-size: 24px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; margin-top: 2px; }
-.rp-tile .rp-c { font-size: 13px; color: var(--ink-light); font-variant-numeric: tabular-nums; }
-.rp-tile.loss { border-color: color-mix(in srgb, var(--bark) 35%, var(--cream-border)); }
-.rp-sec { margin-bottom: 26px; }
-.rp-table td, .rp-table th { white-space: nowrap; }
-.rp-table tbody tr { cursor: default; }
-.rp-table td small { display: block; color: var(--ink-lighter); font-size: 12px; }
-.rp-table tr.rp-total td { font-weight: 600; border-top: 1.5px solid var(--cream-border); }
-.rp-table a { color: var(--ink); text-decoration: none; }
-.rp-table a:hover { color: var(--bark); text-decoration: underline; }
-.rp-foot { font-size: 12.5px; color: var(--ink-lighter); max-width: 70ch; line-height: 1.5; }
 .ls-layout { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 28px; margin-top: 20px; align-items: start; }
 .ls-side { display: flex; flex-direction: column; gap: 20px; position: sticky; top: 16px; min-width: 0; }
 .ls-side .field { margin: 0; }
@@ -587,7 +572,6 @@ details.bc-tips .bc-note { border: 0; padding: 6px 0 0; margin: 0; font-size: 12
     <div class="ps-toolbar">
       <span class="ps-tab on">All products</span>
       <div class="ps-tools">
-        <button type="button" class="ps-link-btn" onclick="openReport()" title="Where your stock went over time: sold, gifted, marketing, damaged, and what it cost"><span data-ps-icon="stock"></span>Stock report</button>
         <button type="button" class="ps-link-btn" onclick="openLineSheet()" title="A wholesale line sheet for a shop: pick the products, then print or save as PDF"><span data-ps-icon="note"></span>Line sheet</button>
         <button type="button" class="ps-link-btn" onclick="openBarcode('')" title="Generate printable barcode labels"><span data-ps-icon="print"></span>Barcodes</button>
         <button type="button" class="ps-btn-primary" onclick="openNewProduct()"><span data-ps-icon="plus"></span>New</button>
@@ -830,33 +814,6 @@ details.bc-tips .bc-note { border: 0; padding: 6px 0 0; margin: 0; font-size: 12
         </div>
       </aside>
     </div>
-  </div>
-
-  <!-- Stock report: where units went, by month and by product (2026-10-20) -->
-  <div id="view-report" style="display:none">
-    <div class="fe-top">
-      <div class="fe-crumb"><button type="button" onclick="closeReport()"><span data-ps-icon="costing"></span>Products &amp; Costing</button><span aria-hidden="true">/</span><span class="cur">Stock report</span></div>
-      <span class="ps-grow"></span>
-      <button type="button" class="ps-link-btn" onclick="Plume.stock.open()"><span data-ps-icon="stock"></span>Update stock</button>
-      <button type="button" class="ps-link-btn" onclick="copyReport()"><span data-ps-icon="copy"></span>Copy as a table</button>
-    </div>
-    <div class="ps-page-head">
-      <div>
-        <div class="ps-title"><span class="ps-title-icon" data-ps-icon="stock"></span><h1>Stock report</h1></div>
-        <div class="ps-summary"><span>Where your stock went, from Update stock: units and what they cost you.</span></div>
-      </div>
-    </div>
-    <div class="ps-chips rp-range" id="rp-range"></div>
-    <div class="rp-tiles" id="rp-tiles"></div>
-    <section class="rp-sec">
-      <div class="sec-h"><h2>By month</h2></div>
-      <div class="ps-table-wrap"><table class="ps-table rp-table" id="rp-months"></table></div>
-    </section>
-    <section class="rp-sec">
-      <div class="sec-h"><h2>By product</h2></div>
-      <div class="ps-table-wrap"><table class="ps-table rp-table" id="rp-prods"></table></div>
-    </section>
-    <p class="rp-foot" id="rp-foot"></p>
   </div>
 
   <!-- Line sheet: pick products, then print or copy (2026-10-19) -->
@@ -2664,7 +2621,7 @@ function onHandTitle(p, oh) {
   var kit = Plume.isKit(p);
   var bits = [oh.filled + (kit ? ' built' : ' filled')];
   if (oh.kits) bits.push((-oh.kits) + ' into kits');
-  Object.keys(oh.byReason).forEach(function(r) { bits.push((-oh.byReason[r]) + ' ' + Plume.stockReasonLabel(r).toLowerCase()); });
+  Object.keys(oh.byReason).forEach(function(r) { bits.push(Math.abs(oh.byReason[r]) + ' ' + Plume.stockReasonLabel(r).toLowerCase()); });
   if (oh.counted) bits.push((oh.counted > 0 ? '+' : '') + oh.counted + ' reconciled');
   return bits.join(', ');
 }
@@ -2788,7 +2745,6 @@ function openProduct(id) {
   renderSaveState();
   renderPkgSave();
   document.getElementById('view-list').style.display = 'none';
-  document.getElementById('view-report').style.display = 'none';
   document.getElementById('view-editor').style.display = '';
   document.documentElement.scrollTop = 0;
 }
@@ -2813,7 +2769,6 @@ function leaveEditor() {
     for (var i = 0; i < products.length; i++) if (products[i].id === curId && sp) { products[i] = sp; break; }
   }
   document.getElementById('view-sheet').style.display = 'none';
-  document.getElementById('view-report').style.display = 'none';
   document.getElementById('view-list').style.display = '';
   document.getElementById('view-editor').style.display = 'none';
   curId = null; dirty = false;
@@ -3579,7 +3534,7 @@ function renderOnHand(p) {
   var oh = Plume.onHandParts(p), kit = Plume.isKit(p);
   var bits = ['<span>' + oh.filled + (kit ? ' built' : ' filled') + '</span>'];
   if (oh.kits) bits.push('<span>' + (-oh.kits) + ' into kits</span>');
-  Object.keys(oh.byReason).forEach(function(r) { bits.push('<span>' + (-oh.byReason[r]) + ' ' + Plume.stockReasonLabel(r).toLowerCase() + '</span>'); });
+  Object.keys(oh.byReason).forEach(function(r) { bits.push('<span>' + Math.abs(oh.byReason[r]) + ' ' + Plume.stockReasonLabel(r).toLowerCase() + '</span>'); });
   if (oh.counted) bits.push('<span>' + (oh.counted > 0 ? '+' : '') + oh.counted + ' reconciled</span>');
   var into = Plume.kitsUsing(p.id, products);
   document.getElementById('onhand-box').innerHTML =
@@ -3914,11 +3869,6 @@ function deleteRun(rid) {
 window.addEventListener('plume-settings', function() { if (curId && findProduct(curId)) renderRuns(findProduct(curId)); });
 
 function handleFillLink() {
-  if (location.hash === '#stock-report') {
-    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
-    openReport();
-    return;
-  }
   var n = /^#new=(.+)$/.exec(location.hash || '');
   if (n) {
     var fid = '';
@@ -3947,113 +3897,6 @@ function handleFillLink() {
   setTimeout(function() { var u = document.getElementById('run-units'); if (u) u.focus(); }, 0);
 }
 
-
-// ──────────────────────────────────────────────────────────────────────
-// Stock report (2026-10-20): where units went, from Update stock. Each
-// change carries the unit cost on the day it was saved; one saved before
-// costs were recorded uses today's unit cost and is marked ~.
-// Reconcile differences count too: a count below what Plume had is units
-// unaccounted for (a loss); above is units found.
-// ──────────────────────────────────────────────────────────────────────
-var rpRange = 'year';
-var RP_COLS = [['sold', 'Sold'], ['gifted', 'Gifted'], ['marketing', 'Marketing'], ['damaged', 'Damaged'], ['out', 'Other'], ['count', 'Reconciled']];
-function openReport() {
-  products = storedProducts();
-  document.getElementById('view-list').style.display = 'none';
-  document.getElementById('view-editor').style.display = 'none';
-  document.getElementById('view-sheet').style.display = 'none';
-  document.getElementById('view-report').style.display = '';
-  renderReport();
-  document.documentElement.scrollTop = 0;
-}
-function closeReport() {
-  document.getElementById('view-report').style.display = 'none';
-  document.getElementById('view-list').style.display = '';
-  renderList();
-}
-function rpStart() {
-  var d = new Date();
-  if (rpRange === 'year') return d.getFullYear() + '-01-01';
-  if (rpRange === '12') { var s = new Date(d.getFullYear(), d.getMonth() - 11, 1); return s.getFullYear() + '-' + String(s.getMonth() + 1).padStart(2, '0') + '-01'; }
-  return '';
-}
-// Every stock change in the range: { p, e, key, units, cost, est }.
-function rpRows() {
-  var from = rpStart(), out = [];
-  products.forEach(function(p) {
-    (p.stockLog || []).forEach(function(e) {
-      if (e.kind === 'kit') return;
-      if (from && (e.date || '') < from) return;
-      var key = e.kind === 'count' ? 'count' : (e.reason || 'out');
-      var units = -(parseFloat(e.qty) || 0);   // positive = left the shelf
-      var est = !(e.unitCost > 0);
-      var uc = est ? computeProductCost(p).totalCost : e.unitCost;
-      out.push({ p: p, e: e, key: key, units: units, cost: units * uc, est: est && units !== 0 });
-    });
-  });
-  return out;
-}
-function rpMoney(v, est) { return (est ? '~' : '') + (v < 0 ? '-$' : '$') + Math.abs(v).toFixed(2); }
-function rpCell(t) {
-  if (!t || (!t.units && !t.cost)) return '<td class="ps-num ps-muted">--</td>';
-  return '<td class="ps-num">' + t.units + '<small>' + rpMoney(t.cost, t.est) + '</small></td>';
-}
-function rpAdd(t, r) { t.units += r.units; t.cost += r.cost; t.est = t.est || r.est; }
-function rpBlank() { var o = {}; RP_COLS.forEach(function(c) { o[c[0]] = { units: 0, cost: 0, est: false }; }); return o; }
-function rpUsedCols(rows) {
-  return RP_COLS.filter(function(c) { return c[0] === 'sold' || c[0] === 'gifted' || c[0] === 'marketing' || c[0] === 'damaged' || rows.some(function(r) { return r.key === c[0]; }); });
-}
-function renderReport() {
-  document.getElementById('rp-range').innerHTML = [['year', 'This year'], ['12', 'Last 12 months'], ['all', 'All time']].map(function(r) {
-    return '<button type="button" class="ps-chip' + (rpRange === r[0] ? ' on' : '') + '" onclick="rpRange=\'' + r[0] + '\';renderReport()">' + r[1] + '</button>';
-  }).join('');
-  var rows = rpRows(), cols = rpUsedCols(rows), tot = rpBlank();
-  rows.forEach(function(r) { rpAdd(tot[r.key], r); });
-  document.getElementById('rp-tiles').innerHTML = cols.map(function(c) {
-    var t = tot[c[0]], name = c[0] === 'count' ? 'Unaccounted for' : c[1];
-    return '<div class="rp-tile' + (c[0] !== 'sold' ? ' loss' : '') + '"><div class="rp-k">' + name + '</div><div class="rp-n">' + t.units + '</div><div class="rp-c">' + rpMoney(t.cost, t.est) + ' at cost</div></div>';
-  }).join('');
-  if (!rows.length) {
-    document.getElementById('rp-months').innerHTML = '<tbody><tr><td class="ps-muted" style="padding:16px 10px">Nothing recorded ' + (rpRange === 'all' ? 'yet' : 'in this range') + '. Use Update stock, in the sidebar, after a market or a giveaway.</td></tr></tbody>';
-    document.getElementById('rp-prods').innerHTML = '';
-    document.getElementById('rp-foot').textContent = '';
-    return;
-  }
-  var head = '<thead><tr><th>%s</th>' + cols.map(function(c) { return '<th class="ps-num">' + (c[0] === 'count' ? 'Unaccounted' : c[1]) + '</th>'; }).join('') + '</tr></thead>';
-  // By month, newest first
-  var months = {}, mk = [];
-  rows.forEach(function(r) { var m = (r.e.date || '').slice(0, 7) || 'No date'; if (!months[m]) { months[m] = rpBlank(); mk.push(m); } rpAdd(months[m][r.key], r); });
-  mk.sort().reverse();
-  var mName = function(m) { var a = m.split('-'); return a.length === 2 ? new Date(+a[0], +a[1] - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : m; };
-  document.getElementById('rp-months').innerHTML = head.replace('%s', 'Month') + '<tbody>' + mk.map(function(m) {
-    return '<tr><td>' + esc(mName(m)) + '</td>' + cols.map(function(c) { return rpCell(months[m][c[0]]); }).join('') + '</tr>';
-  }).join('') + '<tr class="rp-total"><td>Total</td>' + cols.map(function(c) { return rpCell(tot[c[0]]); }).join('') + '</tr></tbody>';
-  // By product, most units out first
-  var pr = {}, pk = [];
-  rows.forEach(function(r) { if (!pr[r.p.id]) { pr[r.p.id] = { p: r.p, t: rpBlank(), n: 0 }; pk.push(r.p.id); } rpAdd(pr[r.p.id].t[r.key], r); pr[r.p.id].n += r.units; });
-  pk.sort(function(a, b) { return pr[b].n - pr[a].n || (pr[a].p.name || '').localeCompare(pr[b].p.name || ''); });
-  document.getElementById('rp-prods').innerHTML = head.replace('%s', 'Product') + '<tbody>' + pk.map(function(id) {
-    var x = pr[id];
-    return '<tr><td><a href="#" onclick="openProduct(\'' + esc(id) + '\');setEdTab(\'runs\');return false">' + esc(x.p.name || '(unnamed)') + '</a></td>' + cols.map(function(c) { return rpCell(x.t[c[0]]); }).join('') + '</tr>';
-  }).join('') + '</tbody>';
-  var anyEst = rows.some(function(r) { return r.est; });
-  document.getElementById('rp-foot').innerHTML = 'Costs are each product’s unit cost on the day the change was saved' +
-    (anyEst ? '; ~ marks changes saved before costs were recorded, which use today’s unit cost' : '') + '. ' +
-    (cols.some(function(c) { return c[0] === 'count'; }) ? 'Unaccounted is the difference when you reconcile: fewer on the shelf than Plume had (a negative number means you found more). ' : '') +
-    'Units built into kits are not counted here; the kit carries them.';
-}
-function copyReport() {
-  var rows = rpRows(), cols = rpUsedCols(rows), months = {}, mk = [];
-  rows.forEach(function(r) { var m = (r.e.date || '').slice(0, 7) || 'No date'; if (!months[m]) { months[m] = rpBlank(); mk.push(m); } rpAdd(months[m][r.key], r); });
-  mk.sort().reverse();
-  var lines = [['Month'].concat(cols.map(function(c) { return (c[0] === 'count' ? 'Unaccounted' : c[1]) + ' units'; }), cols.map(function(c) { return (c[0] === 'count' ? 'Unaccounted' : c[1]) + ' cost'; })).join('\t')];
-  mk.forEach(function(m) {
-    lines.push([m].concat(cols.map(function(c) { return months[m][c[0]].units; }), cols.map(function(c) { return months[m][c[0]].cost.toFixed(2); })).join('\t'));
-  });
-  var text = lines.join('\n');
-  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(function() { toast('Copied'); }, function() { fallbackCopy(text); });
-  else fallbackCopy(text);
-}
 
 // Update stock moved to core and the sidebar (2026-10-20), so it opens
 // from any page. A save there calls libChanged(); see the listener in boot.
@@ -4318,7 +4161,6 @@ if (typeof Plume === 'undefined') {
       products = storedProducts().map(function (x) { return open && x.id === open.id ? Object.assign(open, { stockLog: x.stockLog }) : x; });
       if (open) renderRuns(findProduct(curId));
       renderList();
-      if (document.getElementById('view-report').style.display !== 'none') renderReport();
     });
     var ic = document.querySelectorAll('[data-ps-icon]');
     for (var k = 0; k < ic.length; k++) ic[k].innerHTML = Plume.icon(ic[k].getAttribute('data-ps-icon'));

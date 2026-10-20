@@ -1143,6 +1143,16 @@
   border-top: 1px solid var(--cream-border);
   letter-spacing: 0.06em;
 }
+
+  /* Rounded rows (2026-10-20, her ask): each ingredient a softly rounded
+     tile with a small gap, matching the rounded rows elsewhere. Rows
+     without stock keep a light outline. */
+  #ing-table { border-collapse: separate; border-spacing: 0 4px; }
+  #ing-table tbody td { border-top: 1px solid var(--cream-border); border-bottom: 1px solid var(--cream-border); }
+  #ing-table tbody td:first-child { border-left: 1px solid var(--cream-border); border-radius: 9px 0 0 9px; }
+  #ing-table tbody td:last-child { border-right: 1px solid var(--cream-border); border-radius: 0 9px 9px 0; }
+  #ing-table tbody td:first-child:last-child { border-radius: 9px; }
+  #ing-table tbody tr.has-stock td { border-color: color-mix(in srgb, var(--clay-hover) 70%, var(--cream-border)); }
 </style>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#404834">

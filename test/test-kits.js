@@ -159,15 +159,17 @@ console.log('\n1. Units on hand and kits, in core');
 
   console.log('\n6. Update stock, from the sidebar');
   await page.evaluate("leaveEditor()");
-  ok('the sidebar has Update stock, above Settings', await page.evaluate(
-    "var b=document.getElementById('ps-nav-stock'); b && b.nextElementSibling && /Settings/.test(b.nextElementSibling.textContent)"));
+  ok('the sidebar runs Library, Actions, Stock; Stock holds Update stock and Stock history', await page.evaluate(
+    "var h=Array.from(document.querySelectorAll('#ps-side .ps-nav-h')).map(function(x){return x.textContent;}).join(','); var l=document.getElementById('ps-nav-stock').parentNode; h==='Library,Actions,Stock' && l.previousElementSibling.textContent==='Stock' && l.textContent.indexOf('Stock history')!==-1"));
+  ok('the headings are in the palette\'s main colour', await page.evaluate(
+    "getComputedStyle(document.querySelector('#ps-side .ps-nav-h')).color === getComputedStyle(document.querySelector('.ps-btn-primary')).backgroundColor"));
   ok('Products & Costing no longer has its own button', await page.evaluate("!document.getElementById('stock-open')"));
   await page.click('#ps-nav-stock');
   await page.waitForTimeout(200);
   ok('it opens the panel with every active product and what is on hand', await page.evaluate(
     "document.querySelectorAll('#st-rows .st-row').length === 5 && document.querySelector('#st-rows .st-row[data-pid=\"full\"] .st-have').textContent === '8'"));
-  ok('the reasons are Sold, Gifted, Marketing, Damaged, then Reconcile', (await page.evaluate(
-    "Array.from(document.querySelectorAll('.st-modes .ps-chip')).map(function(b){return b.firstChild.textContent;}).join(',')")) === 'Sold,Gifted,Marketing,Damaged,Reconcile');
+  ok('the reasons are Sold, Gifted, Marketing, Damaged, Returned, then Reconcile', (await page.evaluate(
+    "Array.from(document.querySelectorAll('.st-modes .ps-chip')).map(function(b){return b.firstChild.textContent;}).join(',')")) === 'Sold,Gifted,Marketing,Damaged,Returned,Reconcile');
   ok('Save waits until something is entered', await page.evaluate("document.getElementById('st-save').disabled"));
   const type = async (pid, v) => { await page.fill('#st-rows input[data-pid="' + pid + '"]', v); await page.dispatchEvent('#st-rows input[data-pid="' + pid + '"]', 'input'); };
   await type('full', '3');
@@ -238,29 +240,55 @@ console.log('\n1. Units on hand and kits, in core');
   const said = await page.evaluate("var m=''; var real=Plume.tell; Plume.tell=function(t){ m=t; }; deleteRun('r1'); Plume.tell=real; m");
   ok('a fill whose units went into kits cannot be reversed, and says why', /into kits/.test(said) && (await stored()).find(x => x.id === 'mo').productionRuns.length === 1, said);
 
-  console.log('\n6c. Unit cost recorded, and the stock report');
+  console.log('\n6c. Unit cost recorded, Returned, and Stock history');
   ok('core works out the same unit cost as Products & Costing, for every product (single, kit, older pack, not for sale)', await page.evaluate(
     "products.every(function(p){ return Math.abs(Plume.productUnitCost(p, { ings: ings, forms: forms, pkgs: pkgs, products: products }) - computeProductCost(p).totalCost) < 1e-9; })"));
   const outs = (await stored()).find(x => x.id === 'full').stockLog.filter(e => e.kind === 'out');
   // Face Oil 1 oz: 28 g x $0.10, no packaging
   ok('each stock change carries the unit cost on the day it was saved', outs.length && outs.every(e => Math.abs(e.unitCost - 2.8) < 1e-9), outs);
-  await page.evaluate("Plume.peek.close(); leaveEditor(); openReport()");
-  ok('the report opens from the list', await page.evaluate("document.getElementById('view-report').style.display === '' && document.getElementById('view-list').style.display === 'none'"));
-  const tiles = await page.evaluate("Array.from(document.querySelectorAll('.rp-tile')).map(function(t){return t.querySelector('.rp-k').textContent+':'+t.querySelector('.rp-n').textContent;}).join(',')");
-  // Sold: 3 of Face Oil 1 oz and 1 Oil mini earlier in this test; the 2 damaged were removed again.
-  ok('the totals add up each reason: 4 sold, 1 gifted, none damaged', /Sold:4/.test(tiles) && /Damaged:0/.test(tiles) && /Gifted:1/.test(tiles) && /Marketing:0/.test(tiles), tiles);
-  ok('sold at cost: 3 x $2.80 + 1 x $1.00', (await page.evaluate("Array.from(document.querySelectorAll('.rp-tile')).find(function(t){return /Sold/.test(t.textContent);}).querySelector('.rp-c').textContent")) === '$9.40 at cost');
-  ok('there is a row for this month', /October 2026/.test(await page.evaluate("document.getElementById('rp-months').textContent")));
-  ok('and a row per product, most units out first', (await page.evaluate("document.querySelector('#rp-prods tbody tr td').textContent")) === 'Face Oil 1 oz');
-  // An entry from before costs were recorded uses today's cost, marked ~
-  await page.evaluate("var ps=JSON.parse(localStorage.getItem('plume-products-v1')); ps.find(function(p){return p.id==='mo';}).stockLog.push({id:'old1',date:'2026-09-02',qty:-2,kind:'out',reason:'marketing',note:''}); localStorage.setItem('plume-products-v1', JSON.stringify(ps)); Plume.Store.init(function(){ openReport(); });");
+  const fullBefore = await onHandOf('full');
+  await page.evaluate("Plume.peek.close(); leaveEditor(); Plume.stock.open(); Plume.stock.mode('returned')");
+  ok('Returned says it adds back', /go back on hand/.test(await page.evaluate("document.querySelector('.st-help').textContent")));
+  await type('full', '2');
+  await page.fill('#st-note', 'Consignment back from Moose Shop');
+  await page.dispatchEvent('#st-note', 'input');
+  await page.evaluate("Plume.stock.save()");
   await page.waitForTimeout(150);
-  ok('an older change without a recorded cost is estimated and marked ~', /~\$/.test(await page.evaluate("document.getElementById('rp-months').textContent")) &&
-     /before costs were recorded/.test(await page.evaluate("document.getElementById('rp-foot').textContent")));
-  ok('September gets its own row', /September 2026/.test(await page.evaluate("document.getElementById('rp-months').textContent")));
-  await page.evaluate("rpRange='all'; renderReport()");
-  ok('All time is a range choice', await page.evaluate("Array.from(document.querySelectorAll('#rp-range .ps-chip')).some(function(b){return b.classList.contains('on') && b.textContent==='All time';})"));
-  await page.evaluate("closeReport()");
+  ok('Returned puts units back on hand', (await onHandOf('full')) === fullBefore + 2);
+  await page.evaluate("Plume.stock.open(); Plume.stock.mode('returned')");
+  await type('full', '1');
+  await page.evaluate("Plume.stock.mode('sold')");
+  await type('full', String(fullBefore + 3));
+  ok('a return in the same pass counts toward what can be sold', await page.evaluate("!document.getElementById('st-save').disabled"));
+  await page.evaluate("Plume.peek.close()");
+
+  await page.click('#ps-nav-history');
+  await page.waitForTimeout(150);
+  ok('Stock history opens from the sidebar, on any page', await page.evaluate("document.getElementById('ps-peek').classList.contains('open') && !!document.querySelector('.sh-panel')"));
+  const tiles = await page.evaluate("Array.from(document.querySelectorAll('.sh-tile')).map(function(t){return t.querySelector('.sh-k').textContent+':'+t.querySelector('.sh-n').textContent;}).join(',')");
+  // Sold: 3 of Face Oil 1 oz and 1 Oil mini earlier; the 2 damaged were removed again.
+  ok('the totals add up each reason: 4 sold, 1 gifted, none damaged, 2 returned', /Sold:4/.test(tiles) && /Gifted:1/.test(tiles) && /Damaged:0/.test(tiles) && /Returned:2/.test(tiles), tiles);
+  ok('sold at cost: 3 x $2.80 + 1 x $1.00', (await page.evaluate("Array.from(document.querySelectorAll('.sh-tile')).find(function(t){return /Sold/.test(t.textContent);}).querySelector('.sh-c').textContent")) === '$9.40 at cost');
+  ok('giveaways and marketing together: 1 gifted at $2.80', /1 unit, \$2\.80/.test(await page.evaluate("document.querySelector('.sh-give').textContent")));
+  const events = await page.evaluate("Array.from(document.querySelectorAll('.sh-title')).map(function(t){return t.firstChild.textContent;})");
+  ok('by event: each note and date is one row', events.indexOf('Market, Oct 18') !== -1 && events.indexOf('Consignment back from Moose Shop') !== -1, events);
+  await page.evaluate("Plume.stock.find('market')");
+  ok('a search finds the market', (await page.evaluate("Array.from(document.querySelectorAll('.sh-title')).map(function(t){return t.firstChild.textContent;}).join(',')")) === 'Market, Oct 18');
+  await page.evaluate("document.querySelector('.sh-head').click()");
+  ok('opening it lists each product sold there', /Face Oil 1 oz[\s\S]*Sold 3/.test(await page.evaluate("document.querySelector('.sh-detail').textContent")));
+  await page.evaluate("Plume.stock.find(''); Plume.stock.group('month')");
+  ok('by month: this month is a row', /October 2026/.test(await page.evaluate("document.querySelector('.sh-list').textContent")));
+  // An entry from before costs were recorded uses today's cost, marked ~
+  await page.evaluate("var ps=JSON.parse(localStorage.getItem('plume-products-v1')); ps.find(function(p){return p.id==='mo';}).stockLog.push({id:'old1',date:'2026-09-02',qty:-2,kind:'out',reason:'marketing',note:'Fall fair'}); localStorage.setItem('plume-products-v1', JSON.stringify(ps)); Plume.Store.init(function(){ Plume.stock.history(); Plume.stock.group('month'); });");
+  await page.waitForTimeout(150);
+  ok('an older change without a recorded cost is estimated and marked ~', /~\$/.test(await page.evaluate("document.querySelector('.sh-list').textContent")) &&
+     /before costs were recorded/.test(await page.evaluate("document.querySelector('.sh-foot').textContent")));
+  ok('September gets its own month', /September 2026/.test(await page.evaluate("document.querySelector('.sh-list').textContent")));
+  await page.evaluate("Plume.stock.range('month')");
+  ok('This month leaves September out', !/September 2026/.test(await page.evaluate("document.querySelector('.sh-list').textContent")));
+  await page.evaluate("Plume.stock.range('all'); Plume.stock.group('product')");
+  ok('by product: a row per product', /Oil mini/.test(await page.evaluate("document.querySelector('.sh-list').textContent")));
+  await page.evaluate("Plume.peek.close()");
 
   console.log('\n7. Older packs and the rest');
   await page.evaluate("openProduct('old')");

@@ -78,9 +78,9 @@ ok('an unknown icon name gives nothing rather than breaking', P.icon('nope') ===
     ok('the old header is gone and the sidebar is in', await page.evaluate(
       "!document.querySelector('.app-header') && !!document.getElementById('ps-side') && document.body.classList.contains('ps-shell')"));
     const nav = await page.evaluate("Array.from(document.querySelectorAll('#ps-side a.ps-nav[target]')).map(function(a){var c=a.querySelector('.ps-ct');return a.textContent.replace(c?c.textContent:'','').trim()+' '+(c?c.textContent.trim():'');})");
-    // 2026-10-20: the work first, then the supplies under Library.
-    ok('it lists the work in order, then Ingredients and Packaging under Library, with counts (archived ingredient left out)',
-       JSON.stringify(nav) === '["Formulations 2","Batches 0","Products & Costing 0","Ingredients 3","Packaging 0"]', nav);
+    // 2026-10-20: Library (the supplies) first, then Actions (the work).
+    ok('it lists Ingredients and Packaging under Library, then the work under Actions, with counts (archived ingredient left out)',
+       JSON.stringify(nav) === '["Ingredients 3","Packaging 0","Formulations 2","Batches 0","Products & Costing 0"]', nav);
     ok('Library holds Ingredients, Packaging and Suppliers', await page.evaluate(
       "var h=Array.from(document.querySelectorAll('#ps-side .ps-nav-h')).find(function(x){return x.textContent==='Library';});" +
       "var l=h&&h.nextElementSibling; l&&Array.from(l.querySelectorAll('.ps-nav-label')).map(function(x){return x.textContent;}).join(',')==='Ingredients,Packaging,Suppliers'"));
