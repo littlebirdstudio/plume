@@ -241,6 +241,9 @@ body.ps-shell .field input:focus, body.ps-shell .field select:focus, body.ps-she
 .prod-row.drag-over-bottom td { box-shadow: inset 0 -2px 0 0 var(--bark); }
 .prod-row.dim td { color: var(--ink-lighter); }
 .cost-flag { color: var(--warning); font-size: 11px; margin-left: 3px; }
+.at-least { font-size: 11px; color: var(--warning); font-weight: 400; }
+.cost-panel-big .at-least, .big .at-least { font-size: 13px; margin-right: 4px; }
+.marg-note { font-size: 11.5px; color: var(--warning); margin-top: 6px; line-height: 1.4; }
 .st { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 5px; line-height: 1.6; white-space: nowrap; }
 .st-active { background: var(--sage-light); color: var(--sage-dark); }
 .st-discontinued { background: transparent; color: var(--ink-lighter); box-shadow: inset 0 0 0 1px var(--cream-border); }
@@ -2448,11 +2451,12 @@ function importData(e) {
 // panel can show *why* a cost was zero -- which ingredients are missing
 // cost/g data in the Ingredients library.
 function formulationCostDetail(f) {
-  if (!f || !f.lines || !f.lines.length) return { perG:null, lines:[] };
+  if (!f || !f.lines || !f.lines.length) return { perG:null, lines:[], missing:[], complete:false };
   var lineInfo = [];
   var totalCost = 0;
   var totalMass = 0;
   var anyCost = false;
+  var missing = [];
   f.lines.forEach(function(line) {
     if (line.soapAddin) return;  // skip add-ins from %-of-finished calc
     var ing = findIng(line.ingId);
@@ -2467,6 +2471,7 @@ function formulationCostDetail(f) {
     totalMass += contribMass;
     var contribCost = (cpg !== null) ? cpg * contribMass : 0;
     if (cpg !== null) { totalCost += contribCost; anyCost = true; }
+    else missing.push((ing && (ing.name || ing.inci)) || '(a deleted ingredient)');
     lineInfo.push({
       name:    (ing && (ing.name || ing.inci)) || '(unknown)',
       pct:     pct,
@@ -2476,7 +2481,11 @@ function formulationCostDetail(f) {
     });
   });
   var perG = (anyCost && totalMass > 0) ? (totalCost / totalMass) : null;
-  return { perG:perG, lines:lineInfo, totalMass:totalMass };
+  // complete (2026-10-20): every line has a price. A line without one counts
+  // as free in perG, so perG is then a floor, and everything built on it
+  // (product cost, margins, packs, kits) has to say so. It used to say so
+  // only when EVERY line lacked a price.
+  return { perG:perG, lines:lineInfo, totalMass:totalMass, missing:missing, complete:(perG !== null && !missing.length) };
 }
 
 function formulationCostPerG(f) {
@@ -2518,7 +2527,7 @@ function computeProductCost(p) {
     Plume.kitParts(p, products).forEach(function(k) {
       var pr = k.product;
       var pc = (pr && Plume.kitPartOk(pr)) ? computeProductCost(pr) : null;
-      var known = !!pc && pc.ingCostKnown && pc.totalCost > 0;
+      var known = !!pc && pc.costComplete && pc.totalCost > 0;
       var sub = pc ? pc.totalCost * k.qty : 0;
       if (!known) ingCostKnown = false;
       ingCost += sub;
@@ -2531,25 +2540,30 @@ function computeProductCost(p) {
     // "not fully known" so the rollup can flag it.
     (p.components || []).forEach(function(c) {
       var cf  = findForm(c.formulaId);
-      var cpg = formulationCostPerG(cf);
+      var cd  = formulationCostDetail(cf);
+      var cpg = cd.perG;
       var wt  = parseFloat(c.netWtG) || 0;
-      var known = (cpg !== null && wt > 0);
-      var sub = known ? cpg * wt : 0;
+      // A partly priced formulation still counts what it can (a floor, as
+      // core's productUnitCost always did), but is not "known".
+      var known = (cd.complete && wt > 0);
+      var sub = (cpg !== null && wt > 0) ? cpg * wt : 0;
       if (!known) ingCostKnown = false;
       ingCost += sub;
       compRows.push({
         label: c.label || (cf && cf.name) || '(no formula)',
         formulaName: (cf && cf.name) || '(no formula)',
-        cpg: cpg, netWtG: wt, subtotal: sub, known: known
+        cpg: cpg, netWtG: wt, subtotal: sub, known: known, missing: cd.missing
       });
     });
     if (!(p.components || []).length) ingCostKnown = false;
   } else {
     var f = findForm(p.formulaId);
-    fcpg = formulationCostPerG(f);
+    var fd = formulationCostDetail(f);
+    fcpg = fd.perG;
     netWtG = parseFloat(p.netWtG) || 0;
     ingCost = (fcpg !== null && netWtG > 0) ? fcpg * netWtG : 0;
-    ingCostKnown = (fcpg !== null);
+    ingCostKnown = fd.complete;
+    var ingMissing = fd.missing;
   }
 
   var pkgRows = [];
@@ -2572,6 +2586,10 @@ function computeProductCost(p) {
   });
 
   var totalCost = ingCost + pkgCost;
+  // The whole cost is known only when every ingredient AND every packaging
+  // item has a price; otherwise totalCost is a floor ("at least").
+  var pkgCostKnown = pkgRows.every(function(r) { return r.unitCost !== null; });
+  var costComplete = ingCostKnown && pkgCostKnown;
   var retail    = p.notForSale ? 0 : (parseFloat(p.retail)    || 0);
   var wholesale = p.notForSale ? 0 : (parseFloat(p.wholesale) || 0);
   var retailMargin    = retail    > 0 ? (retail    - totalCost) / retail    : null;
@@ -2585,6 +2603,9 @@ function computeProductCost(p) {
     netWtG: netWtG,
     ingCost: ingCost,
     ingCostKnown: ingCostKnown,
+    ingMissing: ingMissing || [],
+    pkgCostKnown: pkgCostKnown,
+    costComplete: costComplete,
     compRows: compRows,
     pkgRows: pkgRows,
     pkgCost: pkgCost,
@@ -2686,8 +2707,8 @@ function prodRowHtml(p, key, nested) {
         (sub ? '<div class="ps-sub">' + esc(sub) + '</div>' : '') + '</div>' +
     '</div></td>' +
     '<td class="ps-num hide-sm">' + unitsCell + '</td>' +
-    '<td class="ps-num">' + (c.totalCost > 0 ? '$' + c.totalCost.toFixed(2) : dash) +
-      (c.ingCostKnown ? '' : '<span class="cost-flag" title="Some ingredient costs are missing, so this is low">&#9679;</span>') + '</td>' +
+    '<td class="ps-num">' + (c.totalCost > 0 ? (c.costComplete ? '' : '<span class="at-least">at least </span>') + '$' + c.totalCost.toFixed(2) : dash) +
+      (c.costComplete ? '' : '<span class="cost-flag" title="Some costs are missing, so this is low and the margins high">&#9679;</span>') + '</td>' +
     '<td class="ps-num hide-sm">' + (c.retail > 0 ? '$' + c.retail.toFixed(2) : dash) + '</td>' +
     '<td class="ps-num">' + (c.retailMargin === null ? dash : marginCell(c.retailMargin)) + '</td>' +
     '<td class="ps-num hide-sm">' + (c.wholesale > 0 ? '$' + c.wholesale.toFixed(2) : dash) + '</td>' +
@@ -3164,10 +3185,11 @@ function renderComponents(p) {
     // archived ones unless this row already uses it.
     var rowOpts = formOpts.filter(function(f) { return !f.archived || f.id === c.formulaId; });
     var cf  = findForm(c.formulaId);
-    var cpg = formulationCostPerG(cf);
+    var cdt = formulationCostDetail(cf);
+    var cpg = cdt.perG;
     var wt  = parseFloat(c.netWtG) || 0;
     var sub = (cpg !== null && wt > 0) ? cpg * wt : null;
-    var subTxt = sub !== null ? '$' + sub.toFixed(3) : '--';
+    var subTxt = sub !== null ? (cdt.complete ? '' : '&ge; ') + '$' + sub.toFixed(3) : '--';
     html += '<div class="comp-recipe-row">' +
       '<select onchange="onComponentChange(' + idx + ', \'formulaId\', this.value)">' +
         '<option value="">-- Pick formula --</option>' +
@@ -3299,7 +3321,7 @@ function recalcCost() {
   if (hint) {
     var hf = isMulti ? null : findForm(p.formulaId);
     hint.textContent = hf
-      ? [hf.type, c.formulaCostPerG !== null ? 'ingredients cost $' + c.formulaCostPerG.toFixed(4) + ' per gram' : 'ingredient costs incomplete'].filter(function(x) { return x; }).join(' · ')
+      ? [hf.type, c.formulaCostPerG !== null ? 'ingredients cost ' + (c.ingCostKnown ? '' : 'at least ') + '$' + c.formulaCostPerG.toFixed(4) + ' per gram' : 'ingredient costs incomplete'].filter(function(x) { return x; }).join(' · ')
       : '';
   }
 
@@ -3336,22 +3358,28 @@ function recalcCost() {
     var missingComp = c.compRows.filter(function(r) { return !r.known; });
     if (missingComp.length) {
       warn = '<div class="warn-line"><strong>Incomplete cost for</strong> ' +
-        missingComp.map(function(r) { return esc(r.label); }).join(', ') +
+        missingComp.map(function(r) {
+          return esc(r.label) + (r.missing && r.missing.length ? ' (no price for ' + r.missing.map(esc).join(', ') + ')' : '');
+        }).join('; ') +
         '. Each component needs a formulation and a weight, and its ingredients need a cost per gram.</div>';
     }
   } else if (!c.ingCostKnown) {
     var detail = formulationCostDetail(findForm(p.formulaId));
-    var missing = detail.lines.filter(function(l) { return !l.hasCost; });
-    if (missing.length) {
-      warn = '<div class="warn-line"><strong>Missing a cost per gram for</strong> ' +
-        missing.map(function(l) { return esc(l.name); }).join(', ') +
-        ', so this is low. Add a lot price in <a href="plume-ingredients.html" target="plume-ingredients">Ingredients</a>.</div>';
+    if (detail.missing.length) {
+      warn = '<div class="warn-line"><strong>No cost per gram for</strong> ' +
+        detail.missing.map(esc).join(', ') +
+        (detail.missing.length === 1 ? ', so it counts' : ', so they count') + ' as free and this is low. Add a lot price in <a href="plume-ingredients.html" target="plume-ingredients">Ingredients</a>, or mark it made in-house there to count it as $0 on purpose.</div>';
     }
+  }
+  var unpriced = c.pkgRows.filter(function(r) { return r.unitCost === null && !r.missing; });
+  if (unpriced.length) {
+    warn += '<div class="warn-line"><strong>No price for</strong> ' + unpriced.map(function(r) { return esc(r.name); }).join(', ') +
+      ', so it counts as free. Add a purchase in <a href="plume-packaging.html" target="plume-packaging">Packaging</a>.</div>';
   }
 
   document.getElementById('cost-panel').innerHTML =
     '<div class="card-h"><span>Cost per unit</span></div>' +
-    '<div class="big">$' + c.totalCost.toFixed(2) + '</div>' +
+    '<div class="big">' + (c.costComplete ? '' : '<span class="at-least">at least</span>') + '$' + c.totalCost.toFixed(2) + '</div>' +
     '<div class="cl-list">' + lines + '</div>' + warn;
 
   var marg = function(m, profit) {
@@ -3359,8 +3387,10 @@ function recalcCost() {
     var cls = m < 0 ? 'margin-neg' : (m < 0.30 ? 'margin-low' : 'margin-pos');
     return '<b class="' + cls + '">' + (m * 100).toFixed(0) + '%</b><br>$' + (profit || 0).toFixed(2) + ' profit';
   };
-  document.getElementById('marg-retail').innerHTML    = marg(c.retailMargin, c.retailProfit);
-  document.getElementById('marg-wholesale').innerHTML = marg(c.wholesaleMargin, c.wholesaleProfit);
+  // With a cost that is only a floor, the margins are a ceiling.
+  var atMost = c.costComplete ? '' : '<div class="marg-note">at most, until the missing costs are in</div>';
+  document.getElementById('marg-retail').innerHTML    = marg(c.retailMargin, c.retailProfit) + (c.retailMargin !== null ? atMost : '');
+  document.getElementById('marg-wholesale').innerHTML = marg(c.wholesaleMargin, c.wholesaleProfit) + (c.wholesaleMargin !== null ? atMost : '');
 
   // The pricing helper depends on totalCost too, so refresh it alongside
   renderPricingHelper(c.totalCost);

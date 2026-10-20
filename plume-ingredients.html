@@ -1479,6 +1479,7 @@
       <div style="font-size:12px;color:var(--ink-lighter)" id="lots-summary">No lots added yet.</div>
       <button class="btn btn-sm" onclick="openLotsDrawer()">Manage lots &rsaquo;</button>
     </div>
+    <label class="restrict-toggle" style="margin:4px 0 2px"><input type="checkbox" id="f-nocost"> Made in-house or free: count it as $0 <span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:10px">&mdash; when it has no lot price, so costs are not flagged as missing</span></label>
 
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modal-add')">Cancel</button>
@@ -2441,7 +2442,7 @@ function renderTable() {
       '<td>' + (i.phase ? '<span class="ps-tag ' + phaseClass(i.phase) + '">' + esc(PH[i.phase] || i.phase) + '</span>' : '<span class="ps-muted">\u2014</span>') + '</td>' +
       '<td>' + (cats.length ? cats.map(function (c) { return '<span class="ps-tag">' + esc(c) + '</span>'; }).join('') : '<span class="ps-muted">\u2014</span>') + '</td>' +
       '<td class="ps-muted" style="white-space:nowrap">' + (i.min || i.max ? esc((i.min || '0') + '\u2013' + (i.max || '100')) + '%' : '\u2014') + '</td>' +
-      '<td class="ps-num">' + (cost !== null ? '$' + cost.toFixed(4) : '<span class="ps-muted">\u2014</span>') + '</td>' +
+      '<td class="ps-num">' + (cost === 0 && i.noCost ? '<span class="ps-muted" title="Made in-house or free: counts as $0">in-house</span>' : cost !== null ? '$' + cost.toFixed(4) : '<span class="ps-muted">\u2014</span>') + '</td>' +
       '<td>' + stockCell + '</td>' +
       '</tr>';
   }).join('');
@@ -2510,7 +2511,7 @@ function quickLookHtml(i) {
       '<dt>Phase</dt><dd>' + (i.phase ? '<span class="ps-tag ' + phaseClass(i.phase) + '">' + esc(PH[i.phase] || i.phase) + '</span>' : '\u2014') + '</dd>' +
       '<dt>Function</dt><dd>' + (cats.length ? cats.map(function (c) { return '<span class="ps-tag">' + esc(c) + '</span>'; }).join('') : '\u2014') + '</dd>' +
       '<dt>Use rate</dt><dd>' + (i.min || i.max ? esc((i.min || '0') + '\u2013' + (i.max || '100')) + '%' : '\u2014') + '</dd>' +
-      '<dt>Price / g</dt><dd>' + (cost !== null ? '$' + cost.toFixed(4) : '\u2014') + '</dd>' +
+      '<dt>Price / g</dt><dd>' + (cost === 0 && i.noCost ? 'Made in-house or free ($0)' : cost !== null ? '$' + cost.toFixed(4) : '\u2014') + '</dd>' +
       '<dt>On hand</dt><dd>' + (hasStock(i) ? stock + (isLowStock(i) ? ' <span style="color:var(--warning)">\u00b7 running low</span>' : '') : '<span class="ps-muted">None</span>') + '</dd>' +
       (lot ? '<dt>Active lot</dt><dd>' + esc([lot.supplier, lot.purchaseDate ? 'bought ' + formatDateShort(lot.purchaseDate) : ''].filter(Boolean).join(' \u00b7 ') || 'Set') + '</dd>' : '') +
       '<dt>Used in</dt><dd>' + (typeof PlumeCheat !== 'undefined' ? PlumeCheat.usedInHtml(used, 4) : '\u2014') + '</dd>' +
@@ -3011,6 +3012,7 @@ function openAdd() {
   renderBrandDatalist();
   document.getElementById('f-phase').value = 'water';
   document.getElementById('f-restricted').checked = false;
+  document.getElementById('f-nocost').checked = false;
   syncRestrictField();
   document.getElementById('lots-container').innerHTML = '';
   clearSoapFields();
@@ -3029,6 +3031,7 @@ function editCurrent() {
   document.getElementById('f-inci').value     = i.inci;
   document.getElementById('f-phase').value    = i.phase;
   document.getElementById('f-restricted').checked = i.flag === 'yes';
+  document.getElementById('f-nocost').checked = !!i.noCost;
   document.getElementById('f-min').value      = i.min      || '';
   document.getElementById('f-max').value      = i.max      || '';
   document.getElementById('f-purpose').value = i.purpose || '';
@@ -3086,6 +3089,7 @@ function saveIngredient(keepOpen) {
     inci:     inci,
     phase:    document.getElementById('f-phase').value,
     flag:     document.getElementById('f-restricted').checked ? 'yes' : 'no',
+    noCost:   document.getElementById('f-nocost').checked,
     min:      document.getElementById('f-min').value,
     max:      document.getElementById('f-max').value,
     functionCategory: readFuncChips(),
@@ -4057,6 +4061,8 @@ function serializeEditForm() {
   parts.push(readFuncChips().join('|'));
   var rc = document.getElementById('f-restricted');
   parts.push(rc && rc.checked ? 'R' : '');
+  var nc = document.getElementById('f-nocost');
+  parts.push(nc && nc.checked ? 'N' : '');
   // Lots — read from the DOM rows; this picks up any in-flight edits.
   try {
     var lots = getLots();

@@ -54,6 +54,7 @@ version, run the suites, and commit the new lockfile together.
 | `test-kits.js` | 88 | Kits built from filled products, units on hand, Not for individual sale, Update stock (reasons, Returned, Reconcile, the over-limit stop), unit cost on the day, Stock history, and fills that cannot be reversed below zero |
 | `test-lots.js` | 76 | Lot codes and the formulation log: the code from the date with a letter for a second batch that day, codes for older batches in made-time order, no two batches sharing one, fills keeping a copy; the version a batch was made from; log entries linked to one batch by hand, in two sections (Making, How it turned out), never empty, never two for one batch; older entries; Trace back to supplier lots and forward to fills and kits; the lot sticker |
 | `test-effective-ph.js` | 23 | Effective pH ranges: reading free-text ranges (open sides, the first range in a sentence); the warning when a version's target or a batch's final pH falls outside an ingredient's range, and the note for a preservative with none; the relabelled field; the starter preservatives' ranges and sources; the review that fills them in |
+| `test-costs.js` | 27 | Incomplete costs: in Products & Costing a missing ingredient or packaging price makes a cost a floor ("at least"), flagged in the list and named, margins "at most"; packs and kits inherit it; core's unit cost still agrees. Formulations names what is not counted, quietly (soap too). Made in-house or free counts as $0 and flags nothing |
 
 ## How they run
 

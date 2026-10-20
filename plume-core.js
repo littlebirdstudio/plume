@@ -35,7 +35,7 @@ var Plume = (function () {
 // (v0.4 / v0.5 / v0.6 across five modules). BUMP IT IN EVERY PULL REQUEST,
 // core change or not: it is how "is this the update I just merged?" is
 // answered by looking, and browsers cache .js files stubbornly.
-var VERSION = '1.37';
+var VERSION = '1.38';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -259,7 +259,16 @@ function fmtBytes(b) {
 // referenceOnly lots are watchlist entries — prices noted but never
 // bought. They are excluded from cost AND stock. Including them in step 3
 // is exactly the bug that made Formulations disagree with Costing.
+// Made in-house or free (2026-10-20, her call): an ingredient she makes
+// herself (a hydrosol, a hyaluronic acid solution) may have no price she can
+// put on it, and that must not hold anything up. With noCost set and no
+// priced lot, it counts as $0 on purpose, so nothing flags it as missing.
+// A priced lot still wins.
 function costPerG(ing) {
+  var c = costPerGFromLots(ing);
+  return (c === null && ing && ing.noCost) ? 0 : c;
+}
+function costPerGFromLots(ing) {
   if (!ing) return null;
   var lots = (ing.lots || []).filter(function (l) { return !l.referenceOnly; });
 
