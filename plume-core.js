@@ -132,8 +132,8 @@ var Store = (function () {
   }
 
   // Re-read one key from storage into the cache, for data another window
-  // may have written since boot (2026-10-20: Batches writes journal entries
-  // onto formulations). A driver without peek keeps the cached copy.
+  // may have written since boot (2026-10-20: the log reads batches made in
+  // another window). A driver without peek keeps the cached copy.
   function refresh(key) {
     if (!DRIVER.peek) return;
     var v = DRIVER.peek(key);
@@ -3204,7 +3204,7 @@ function fillDefaultBatch(batches, formulaId, products) {
 }
 function batchLabel(b) { return (b && (b.batchName || b.formulaName)) || 'Batch'; }
 
-// ══ Lot codes and the journal (2026-10-20) ════════════
+// ══ Lot codes and the formulation log (2026-10-20) ════
 // The lot is the BATCH (her call). Its code is the date made as YYMMDD,
 // with a letter only for a second batch that day: 261020, 261020B,
 // 261020C. Plume assigns it when the batch is made; she can change it, but
@@ -3299,35 +3299,22 @@ function migrateBatches(batches, forms, products) {
   return changed;
 }
 
-// Writes a journal entry onto a formulation's version, reading the
-// formulations fresh from storage first: this runs in Batches, and the
-// formulation may have been edited in another window since that page
-// loaded. Returns the formulations as saved (the caller replaces its
-// copy), or null when the formulation or version is gone or the save
-// failed. The TRAP from session 11 applies: write to the variant, never
-// to the top-level mirror.
-function journalAdd(formId, vid, entry) {
-  Store.refresh(KEYS.forms);
-  var forms = Store.getJSON(KEYS.forms, []) || [];
-  var f = fillFind(forms, formId);
-  var v = findVariant(f, vid);
-  if (!v) return null;
-  v.usageLog = (v.usageLog || []).concat([entry]);
-  return Store.setJSON(KEYS.forms, forms) ? forms : null;
+// The formulation log entry for a batch, wherever it is: { form, variant,
+// entry } or null. One entry per batch (her call, 2026-10-20): she links an
+// entry to a batch by hand, and a batch that has one opens it rather than
+// starting a second. Entries live on a version's usageLog (field name kept).
+function logEntryFor(forms, batchId) {
+  if (!batchId) return null;
+  for (var i = 0; i < (forms || []).length; i++) {
+    var vs = (forms[i] && forms[i].variants) || [];
+    for (var j = 0; j < vs.length; j++) {
+      var log = vs[j].usageLog || [];
+      for (var k = 0; k < log.length; k++) if (log[k] && log[k].batchId === batchId) return { form: forms[i], variant: vs[j], entry: log[k] };
+    }
+  }
+  return null;
 }
-// The entry Make batch writes. Empty notes: the journal is where her
-// thinking about the batch goes, written when she has it.
-function journalEntryFor(b) {
-  return {
-    id:      'j' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-    date:    b.date,
-    batch:   String(b.actualYield || b.targetYield || ''),
-    version: b.variantLabel || '',
-    notes:   '',
-    batchId: b.id,
-    lot:     b.lotCode || ''
-  };
-}
+
 // The parts a fill draws on: one for a single product, one per component
 // of a sample pack. [{ formulaId, g, label }]
 function fillParts(p, forms) {
@@ -4040,7 +4027,7 @@ return {
   makeFill: makeFill, undoFill: undoFill, undoFillText: undoFillText, fmtG: fmtG,
   lotBase: lotBase, lotNorm: lotNorm, lotsInUse: lotsInUse, nextLotCode: nextLotCode, lotCheck: lotCheck,
   batchLot: batchLot, lotChip: lotChip, drawLot: drawLot, varTitle: varTitle, findVariant: findVariant, batchVersion: batchVersion,
-  migrateBatches: migrateBatches, journalAdd: journalAdd, journalEntryFor: journalEntryFor,
+  migrateBatches: migrateBatches, logEntryFor: logEntryFor,
   boot: boot
 };
 })();

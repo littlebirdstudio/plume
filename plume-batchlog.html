@@ -1557,14 +1557,6 @@ function saveBatch() {
   batches.push(b);
   saveIngredients();
   savePackaging();
-  // The journal entry on the version it was made from (her pick,
-  // 2026-10-20): it identifies the batch in the journal, and the journal
-  // holds the thinking the batch record does not need.
-  if (nv) {
-    var entry = Plume.journalEntryFor(b);
-    var saved = Plume.journalAdd(b.formulaId, nv.vid, entry);
-    if (saved) { forms = saved; b.journalId = entry.id; }
-  }
   saveBatches();
   closeModal('m-new');
   renderStats();
@@ -1692,16 +1684,24 @@ function renderDetailMeta(b) {
   parts.push('<span class="d-ver">' + (b.variantLabel ? esc(b.variantLabel) : '<span class="ps-muted">version not recorded</span>') + '</span>');
   parts.push('<span>' + fmtDate(b.date) + '</span>');
   parts.push(statusBadgeHtml(b));
-  var acts = [];
-  if (journalLink(b)) acts.push('<a class="bp-lnk" id="d-journal" href="' + journalLink(b) + '" target="plume-formulations">' + Plume.icon('note') + 'Journal entry</a>');
+  var acts = [], lg = logLink(b);
+  if (lg) acts.push('<a class="bp-lnk" id="d-log" href="' + lg.href + '" target="plume-formulations">' + Plume.icon('note') + (lg.has ? 'Log entry' : 'Write a log entry') + '</a>');
   if (b.lotCode) acts.push('<a class="bp-lnk" id="d-lot-sticker" href="plume-costing.html#lot=' + encodeURIComponent(b.id) + '" target="plume-costing">' + Plume.icon('print') + 'Lot sticker</a>');
   document.getElementById('d-meta').innerHTML = parts.join('<span aria-hidden="true">&middot;</span>') +
     (acts.length ? '<div class="bp-acts" style="flex-basis:100%">' + acts.join('') + '</div>' : '');
 }
-// The journal entry Make batch wrote, when the batch has one.
-function journalLink(b) {
-  if (!b || !b.journalId || !b.variantId || !findFormula(b.formulaId)) return '';
-  return 'plume-formulations.html#f=' + encodeURIComponent(b.formulaId) + '&v=' + encodeURIComponent(b.variantId) + '&j=' + encodeURIComponent(b.journalId);
+// The formulation log entry for this batch (one per batch, linked by hand
+// in Formulations), or a link that starts one with this batch chosen.
+// Formulations are read fresh: the entry may have been written in another
+// window since this page loaded.
+function logLink(b) {
+  if (!b || !findFormula(b.formulaId)) return null;
+  Store.refresh(FORM_KEY);
+  forms = Store.getJSON(FORM_KEY, []) || [];
+  var hit = Plume.logEntryFor(forms, b.id);
+  var base = 'plume-formulations.html#f=' + encodeURIComponent(b.formulaId);
+  if (hit) return { has: true, href: base + '&v=' + encodeURIComponent(hit.variant.vid) + '&j=' + encodeURIComponent(hit.entry.id) };
+  return { has: false, href: base + (b.variantId ? '&v=' + encodeURIComponent(b.variantId) : '') + '&b=' + encodeURIComponent(b.id) };
 }
 function checkDetLot() {
   var r = Plume.lotCheck(document.getElementById('d-lot').value, batches, editingBatchId);
@@ -2872,7 +2872,7 @@ function deleteBatch() {
       ' on ' + (fills.length === 1 ? 'its product' : 'their products') + ', and the packaging stays out of stock' +
       (b.lotCode ? '. ' + (fills.length === 1 ? 'It keeps' : 'They keep') + ' lot code ' + b.lotCode : '') + '.\n\n';
   }
-  if (b.journalId) msg += 'Its journal entry stays on the formulation, marked as from a deleted batch.\n\n';
+  if (Plume.logEntryFor(forms, b.id)) msg += 'Its formulation log entry stays, marked as from a deleted batch.\n\n';
   msg += 'This cannot be undone.';
 
   var id = b.id;

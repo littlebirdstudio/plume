@@ -1,10 +1,11 @@
-// Lot codes and the journal (2026-10-20, v1.36). The lot is the BATCH: its
+// Lot codes and the formulation log (2026-10-20, v1.36). The lot is the BATCH: its
 // code is the date made as YYMMDD, with a letter only for a second batch
 // that day (261020, 261020B). Plume assigns it, she can change it, and no two
 // batches may share one. Fills keep a copy of the code. A batch records the
-// version it was made from, and making one writes a journal entry on that
-// version (the journal was the usage log). Trace runs back to supplier lots
-// and forward to fills. A lot sticker prints the code as plain text.
+// version it was made from. The formulation log (was the usage log) holds one
+// entry per batch, linked by hand, in two sections: Making and How it turned
+// out. Trace runs back to supplier lots and forward to fills. A lot sticker
+// prints the code as plain text.
 const { chromium } = require('playwright');
 const { previewUrl, trackDialogs } = require('./helpers');
 
@@ -30,7 +31,9 @@ const F = (id, name, type, variants, active) => {
 };
 const toner = [{ ingId: 'iw', pct: 90 }, { ingId: 'ig', pct: 10 }];
 const FORMS = [
-  F('fa', 'Rose toner', 'Toner / mist', [V('va', 1, '', toner, { usageLog: [{ id: 'm1', date: '2026-07-01', batch: '50', version: 'Version 1', notes: 'Hand logged before batches', ph: [{ v: '6.2', m: 'strip', add: '2 drops citric' }, { v: '5.1', m: 'meter' }] }] })], 'va'),
+  F('fa', 'Rose toner', 'Toner / mist', [V('va', 1, '', toner, { usageLog: [{ id: 'm1', date: '2026-07-01', batch: '50', version: 'Version 1', notes: 'Hand logged before batches', ph: [{ v: '6.2', m: 'strip', add: '2 drops citric' }, { v: '5.1', m: 'meter' }] },
+    { id: 'e2', date: '2026-10-01', batch: '300', version: 'Version 1', batchId: 'b2', lot: '261001B', making: 'Hydrosol from the August still.', notes: '' },
+    { id: 'x1', date: '2026-10-19', batch: '120', version: 'Version 1', batchId: 'gone', lot: '261019', notes: 'Sprayed unevenly.' }] })], 'va'),
   F('fb', 'Face oil', 'Face oil', [V('vb1', 1, 'Jojoba', [{ ingId: 'io', pct: 100 }]), V('vb2', 2, 'Squalane sub', [{ ingId: 'io', pct: 100 }], { status: 'testing' })], 'vb1')
 ];
 const B = (o) => Object.assign({ batchType: 'production', status: 'ready', ingredientSnapshot: [], packagingRuns: [], committed: true, lotDraws: [], packagingDraws: [] }, o);
@@ -130,20 +133,19 @@ const SEED = `
   ok('her own code is saved, in capitals', nb.lotCode === 'FO-261005', nb.lotCode);
   ok('the batch records the version it was made from', nb.variantId === 'vb1' && nb.variantLabel === 'Jojoba', [nb.variantId, nb.variantLabel]);
   const fbS = (await stored('aerie-formulations-v1')).filter(f => f.id === 'fb')[0];
-  const je = (fbS.variants[0].usageLog || [])[0] || {};
-  ok('making it wrote a journal entry on that version', je.batchId === nb.id && je.lot === 'FO-261005' && je.notes === '' && je.batch === '250' && nb.journalId === je.id, je);
-  ok('and not on the other version or the top-level copy', !(fbS.variants[1].usageLog || []).length && !(fbS.usageLog || []).length);
+  ok('making a batch writes nothing in the formulation log (she links entries herself)', !(fbS.variants[0].usageLog || []).length && !(fbS.variants[1].usageLog || []).length && !nb.journalId);
 
   console.log('\n4. A batch: header, lot code, trace');
   await page.evaluate(`openBatchDetail(${JSON.stringify(nb.id)})`); await page.waitForTimeout(300);
   const meta = await page.evaluate("document.getElementById('d-meta').innerText.replace(/\\s+/g, ' ')");
   ok('the header shows the lot code and the version', /LOT ?FO-261005/.test(meta) && /Jojoba/.test(meta), meta);
-  const jl = await page.evaluate("(document.getElementById('d-journal') || {}).getAttribute ? document.getElementById('d-journal').getAttribute('href') : ''");
-  ok('Journal entry links to the entry on its version', jl === 'plume-formulations.html#f=fb&v=vb1&j=' + encodeURIComponent(je.id), jl);
+  const wl = await page.evaluate("[document.getElementById('d-log').innerText.trim(), document.getElementById('d-log').getAttribute('href')]");
+  ok('with no entry yet, Write a log entry starts one on its version with this batch', wl[0] === 'Write a log entry' && wl[1] === 'plume-formulations.html#f=fb&v=vb1&b=' + encodeURIComponent(nb.id), wl);
   ok('Lot sticker opens the sticker tool with this batch', await page.evaluate("document.getElementById('d-lot-sticker').getAttribute('href')") === 'plume-costing.html#lot=' + encodeURIComponent(nb.id));
   await page.evaluate("closeDetail()"); await page.waitForTimeout(250);
   await page.evaluate("openBatchDetail('b0')"); await page.waitForTimeout(300);
-  ok('an older batch says its version was not recorded, with no journal link', /version not recorded/.test(await page.evaluate("document.getElementById('d-meta').innerText")) && await page.evaluate("!document.getElementById('d-journal')"));
+  ok('an older batch says its version was not recorded; its log link names no version', /version not recorded/.test(await page.evaluate("document.getElementById('d-meta').innerText")) &&
+     await page.evaluate("document.getElementById('d-log').getAttribute('href')") === 'plume-formulations.html#f=fb&b=b0');
   await page.fill('#d-lot', '261001'); await page.waitForTimeout(100);
   await page.evaluate("saveBatchEdits()"); await page.waitForTimeout(200);
   ok('editing to a code in use does not save', (await batch('b0')).lotCode === '260912' && /already/.test(await page.evaluate("document.getElementById('d-lot-err').textContent")));
@@ -159,61 +161,77 @@ const SEED = `
   ok('it says the record is first-in-first-out, not what was on the bench', /first-in-first-out/.test(tr) && /mixed lots/.test(tr));
   ok('forward: the fills from it, and the kits those products go into', /Rose toner 100 mL 2 200 g/.test(tr) && /Travel kit/.test(tr) && /may hold this lot/.test(tr), tr);
   ok('the Ingredients tab points to Trace instead of its old fold-out', await page.evaluate("!document.getElementById('d-trace-pointer').hidden && !document.getElementById('d-receipt')"));
+  ok('a batch with an entry links to it as Log entry', await page.evaluate("[document.getElementById('d-log').innerText.trim(), document.getElementById('d-log').getAttribute('href')].join(' ')") === 'Log entry plume-formulations.html#f=fa&v=va&j=e2');
   await page.evaluate("setBatchTab('runs')"); await page.waitForTimeout(100);
   ok('the Filled tab shows the lot beside bulk left', /LOT ?261001B/.test(await page.evaluate("document.querySelector('#d-fills .bulk-card').innerText.replace(/\\s+/g, '')")));
   dialogs.length = 0;
   await page.evaluate("window.PLUME_TEST_ANSWER = false; deleteBatch(); window.PLUME_TEST_ANSWER = undefined;"); await page.waitForTimeout(150);
-  ok('deleting says fills keep the lot code', /keeps lot code 261001B/.test(dialogs.join(' ')), dialogs);
+  ok('deleting says fills keep the lot code, and the log entry stays', /keeps lot code 261001B/.test(dialogs.join(' ')) && /log entry stays/.test(dialogs.join(' ')), dialogs);
   await page.evaluate("closeDetail()"); await page.waitForTimeout(250);
   await page.evaluate(`openBatchDetail(${JSON.stringify(nb.id)})`); await page.waitForTimeout(250);
   dialogs.length = 0;
   await page.evaluate("window.PLUME_TEST_ANSWER = false; deleteBatch(); window.PLUME_TEST_ANSWER = undefined;"); await page.waitForTimeout(150);
-  ok('and that the journal entry stays', /journal entry stays on the formulation/.test(dialogs.join(' ')), dialogs);
+  ok('a batch with no entry says nothing about one', dialogs.length === 1 && !/log entry/.test(dialogs[0]), dialogs);
   await page.evaluate("closeDetail()"); await page.waitForTimeout(250);
 
-  console.log('\n5. Formulations: the journal');
-  await page.goto(previewUrl('formulations') + '#f=fb&v=vb1&j=' + encodeURIComponent(je.id)); await page.reload(); await page.waitForTimeout(700);
-  ok('a journal link opens the formulation on Journal', (await page.evaluate("document.getElementById('et-log').innerText")).indexOf('Journal') === 0 &&
-     await page.evaluate("document.getElementById('et-log').classList.contains('on')"));
-  ok('with the entry picked out', await page.evaluate(`!!document.querySelector('#je-${je.id}.hl')`));
-  const ent = await page.evaluate(`document.getElementById('je-${je.id}').innerText.replace(/\\s+/g, ' ')`);
-  ok('a batch\'s entry shows its lot, kind and size, and asks for notes', /LOT ?FO-261005/.test(ent) && /Production batch · 250 g/.test(ent) && /No notes yet/.test(ent), ent);
-  ok('the lot links to the batch', await page.evaluate(`document.querySelector('#je-${je.id} a.ps-lot').getAttribute('href')`) === 'plume-batchlog.html#b=' + encodeURIComponent(nb.id));
-  await page.evaluate(`openUsage(${JSON.stringify(je.id)})`); await page.waitForTimeout(150);
-  ok('Edit opens the entry, showing the batch in place of date and size', await page.evaluate("document.getElementById('ul-own').hidden && !document.getElementById('ul-linked').hidden && /From batch/.test(document.getElementById('ul-linked').innerText)"));
-  await page.fill('#ul-notes', 'Absorbs fast. Try 2% squalane next time.');
+  console.log('\n5. Formulations: the formulation log');
+  const fbLog = async () => (await stored('aerie-formulations-v1')).filter(f => f.id === 'fb')[0].variants[0].usageLog || [];
+  await page.goto(previewUrl('formulations') + '#f=fb&v=vb1&b=' + encodeURIComponent(nb.id)); await page.reload(); await page.waitForTimeout(700);
+  ok('the tabs read Instructions, Formulation log, Change history', await page.evaluate("['et-method','et-log','et-hist'].map(function(i){return document.getElementById(i).innerText.replace(/\\d+$/,'').trim();}).join(' | ')") === 'Instructions | Formulation log | Change history');
+  ok('Write a log entry opens a new entry with that batch chosen', await page.evaluate("document.getElementById('m-use').classList.contains('open') && document.getElementById('et-log').classList.contains('on')") &&
+     await page.inputValue('#ul-bsel') === nb.id);
+  ok('the batch stands in for date and size', await page.evaluate("document.getElementById('ul-own').hidden && /FO-261005/.test(document.getElementById('ul-linked').innerText) && /250 g/.test(document.getElementById('ul-linked').innerText)"));
+  ok('the batches offered are this version\'s, plus older ones with no version, then Not tied to a batch',
+     await page.evaluate("Array.from(document.getElementById('ul-bsel').options).map(o => o.value).join(',')") === nb.id + ',b0,');
+  ok('two sections: Making and How it turned out', await page.evaluate("Array.from(document.querySelectorAll('#m-use .ul-sec-h')).map(h => h.firstChild.textContent.trim()).join('|')") === 'Making|How it turned out');
   ok('an oil has no pH readings to fill in', await page.evaluate("document.getElementById('ul-ph-wrap').style.display === 'none'"));
+  await page.evaluate("saveUseEntry()"); await page.waitForTimeout(150);
+  ok('an empty entry is not saved, and the form says why', !(await fbLog()).length && /Write something/.test(await page.evaluate("document.getElementById('ul-err').textContent")));
+  await page.fill('#ul-making', 'Warmed the jojoba to 40 C first.');
   await page.evaluate("saveUseEntry()"); await page.waitForTimeout(200);
-  const je2 = (await stored('aerie-formulations-v1')).filter(f => f.id === 'fb')[0].variants[0].usageLog.filter(e => e.id === je.id)[0];
-  ok('editing saves the notes on the same entry', je2.notes === 'Absorbs fast. Try 2% squalane next time.' && je2.batchId === nb.id && je2.lot === 'FO-261005', je2);
-  ok('it is not doubled', (await stored('aerie-formulations-v1')).filter(f => f.id === 'fb')[0].variants[0].usageLog.length === 1);
-  await page.evaluate("openFormula('fa'); setEdTab('log')"); await page.waitForTimeout(250);
-  ok('an entry added by hand still shows, with its size', /Jul 1, 2026 50g/.test(await page.evaluate("document.getElementById('je-m1').innerText.replace(/\\s+/g, ' ')")));
+  let e1 = (await fbLog())[0] || {};
+  ok('a linked entry takes the batch\'s lot, date and size', e1.batchId === nb.id && e1.lot === 'FO-261005' && e1.date === '2026-10-05' && e1.batch === '250' && e1.making === 'Warmed the jojoba to 40 C first.' && !e1.notes, e1);
+  const ent = await page.evaluate(`document.getElementById('je-${e1.id}').innerText.replace(/\\s+/g, ' ')`);
+  ok('it shows the lot, the batch, and Making, with a way to add how it turned out', /LOT ?FO-261005/.test(ent) && /Production batch · 250 g/.test(ent) && /Making Warmed the jojoba/i.test(ent) && /\+ How it turned out/.test(ent), ent);
+  ok('the lot links to the batch', await page.evaluate(`document.querySelector('#je-${e1.id} a.ps-lot').getAttribute('href')`) === 'plume-batchlog.html#b=' + encodeURIComponent(nb.id));
+  await page.evaluate("openUsage()"); await page.waitForTimeout(150);
+  ok('a new entry starts on the newest batch without one', await page.inputValue('#ul-bsel') === 'b0');
+  ok('and marks the batch that has one', await page.evaluate(`document.querySelector('#ul-bsel option[value="${nb.id}"]').textContent`).then(t => /has an entry/.test(t)));
+  await page.selectOption('#ul-bsel', nb.id); await page.waitForTimeout(200);
+  ok('picking a batch that has an entry opens that entry instead', await page.inputValue('#ul-id') === e1.id && await page.inputValue('#ul-making') === 'Warmed the jojoba to 40 C first.');
+  await page.fill('#ul-notes', 'Absorbs fast. Try 2% squalane next time.');
+  await page.evaluate("saveUseEntry()"); await page.waitForTimeout(200);
+  e1 = (await fbLog())[0];
+  ok('later notes go on the same entry, and it is not doubled', (await fbLog()).length === 1 && e1.notes === 'Absorbs fast. Try 2% squalane next time.' && e1.making === 'Warmed the jojoba to 40 C first.', await fbLog());
+  ok('both sections show', /Making Warmed.*How it turned out Absorbs fast/i.test(await page.evaluate(`document.getElementById('je-${e1.id}').innerText.replace(/\\s+/g, ' ')`)));
+  await page.evaluate("openUsage()"); await page.waitForTimeout(150);
+  await page.evaluate(`document.getElementById('ul-bsel').value = ${JSON.stringify(nb.id)};`);
+  await page.fill('#ul-notes', 'A second note'); await page.evaluate("saveUseEntry()"); await page.waitForTimeout(150);
+  ok('saving a second entry for a batch is refused', (await fbLog()).length === 1 && /already has a log entry/.test(await page.evaluate("document.getElementById('ul-err').textContent")));
+  await page.evaluate("closeModal('m-use')");
+  await page.goto(previewUrl('formulations') + '#f=fb&v=vb1&j=' + encodeURIComponent(e1.id)); await page.reload(); await page.waitForTimeout(700);
+  ok('a Log entry link opens it picked out', await page.evaluate(`!!document.querySelector('#je-${e1.id}.hl') && document.getElementById('et-log').classList.contains('on')`));
+  await page.goto(previewUrl('formulations') + '#f=fb&b=' + encodeURIComponent(nb.id)); await page.reload(); await page.waitForTimeout(700);
+  ok('Write a log entry for a batch that has one meanwhile opens that one', await page.evaluate("document.getElementById('m-use').classList.contains('open')") && await page.inputValue('#ul-id') === e1.id);
+  await page.evaluate("closeModal('m-use'); openFormula('fa'); setEdTab('log')"); await page.waitForTimeout(250);
+  const m1t = await page.evaluate("document.getElementById('je-m1').innerText.replace(/\\s+/g, ' ')");
+  ok('an older entry shows its readings under Making and its notes under How it turned out', /Jul 1, 2026 50g/.test(m1t) && /Making pH 6\.2/i.test(m1t) && /How it turned out Hand logged/i.test(m1t), m1t);
   await page.evaluate("openUsage('m1')"); await page.waitForTimeout(100);
-  ok('editing a hand entry offers its date and size', await page.evaluate("!document.getElementById('ul-own').hidden && document.getElementById('ul-date').value === '2026-07-01' && document.getElementById('ul-batch').value === '50'"));
-  ok('and its pH readings, in order, with what was added', await page.evaluate("Array.from(document.querySelectorAll('#ul-ph-steps .ph-step')).map(r => r.querySelector('.ph-v').value + '/' + r.querySelector('.ph-m').value + '/' + r.querySelector('.ph-a').value).join(' ')") === '6.2/strip/2 drops citric 5.1/meter/');
+  ok('editing it keeps it untied, with its date, size and readings', await page.inputValue('#ul-bsel') === '' && await page.evaluate("!document.getElementById('ul-own').hidden && document.getElementById('ul-date').value === '2026-07-01' && document.getElementById('ul-batch').value === '50'") &&
+     await page.evaluate("Array.from(document.querySelectorAll('#ul-ph-steps .ph-step')).map(r => r.querySelector('.ph-v').value + '/' + r.querySelector('.ph-m').value + '/' + r.querySelector('.ph-a').value).join(' ')") === '6.2/strip/2 drops citric 5.1/meter/');
   await page.fill('#ul-date', '2026-07-02'); await page.evaluate("saveUseEntry()"); await page.waitForTimeout(150);
-  const m1 = (await stored('aerie-formulations-v1')).filter(f => f.id === 'fa')[0].variants[0].usageLog[0];
-  ok('and saves them, readings kept', m1.date === '2026-07-02' && m1.ph.length === 2 && m1.ph[1].v === '5.1' && m1.ph[0].add === '2 drops citric', m1);
-  await page.evaluate("openUsage()"); await page.waitForTimeout(100);
+  const faLog = async () => (await stored('aerie-formulations-v1')).filter(f => f.id === 'fa')[0].variants[0].usageLog;
+  const m1 = (await faLog()).filter(e => e.id === 'm1')[0];
+  ok('and saves them, readings kept', m1.date === '2026-07-02' && m1.ph.length === 2 && m1.ph[1].v === '5.1' && m1.ph[0].add === '2 drops citric' && !m1.batchId, m1);
+  const x1t = await page.evaluate("document.getElementById('je-x1').innerText.replace(/\\s+/g, ' ')");
+  ok('an entry for a deleted batch keeps its lot and says so', /LOT ?261019/.test(x1t) && /batch deleted/.test(x1t), x1t);
+  await page.evaluate("openUsage('x1')"); await page.waitForTimeout(100);
+  ok('editing it keeps the link to the deleted batch', await page.inputValue('#ul-bsel') === 'gone' && /deleted/.test(await page.evaluate("document.getElementById('ul-linked').innerText")));
+  await page.evaluate("closeModal('m-use'); openUsage()"); await page.waitForTimeout(100);
+  await page.selectOption('#ul-bsel', ''); await page.waitForTimeout(100);
+  ok('Not tied to a batch asks for a date and size', await page.evaluate("!document.getElementById('ul-own').hidden"));
   await page.fill('#ul-notes', 'Scent faded by week 3.'); await page.evaluate("saveUseEntry()"); await page.waitForTimeout(150);
-  ok('Add entry still adds one by hand', (await stored('aerie-formulations-v1')).filter(f => f.id === 'fa')[0].variants[0].usageLog.length === 2);
-  // Another window (Batches) writes an entry while this page is open.
-  await page.evaluate(`(function () {
-    var fs = JSON.parse(localStorage.getItem('aerie-formulations-v1'));
-    fs.filter(function (f) { return f.id === 'fa'; })[0].variants[0].usageLog.push({ id: 'x1', date: '2026-10-19', batch: '120', version: 'Version 1', notes: '', batchId: 'gone', lot: '261019' });
-    localStorage.setItem('aerie-formulations-v1', JSON.stringify(fs));
-    window.dispatchEvent(new StorageEvent('storage', { key: 'aerie-formulations-v1' }));
-  })()`); await page.waitForTimeout(200);
-  ok('an entry written from another window appears here', await page.evaluate("!!document.getElementById('je-x1')"));
-  ok('an entry from a deleted batch keeps its lot and says so', /LOT ?261019/.test(await page.evaluate("document.getElementById('je-x1').innerText.replace(/\\s+/g, '')")) &&
-     /batch deleted/.test(await page.evaluate("document.getElementById('je-x1').innerText")));
-  await page.evaluate("openFormula('fa'); setEdTab('log')"); await page.waitForTimeout(150);
-  await page.evaluate("document.querySelector('#je-m1 .use-del').click()"); await page.waitForTimeout(200);
-  await page.evaluate("window.dispatchEvent(new StorageEvent('storage', { key: 'aerie-formulations-v1' }))"); await page.waitForTimeout(150);
-  await page.evaluate("saveAll()");
-  ok('an entry removed here is not brought back by a later merge', !(await stored('aerie-formulations-v1')).filter(f => f.id === 'fa')[0].variants[0].usageLog.some(e => e.id === 'm1') &&
-     (await stored('aerie-formulations-v1')).filter(f => f.id === 'fa')[0].variants[0].usageLog.some(e => e.id === 'x1'));
+  ok('and saves an entry with no batch', (await faLog()).some(e => e.notes === 'Scent faded by week 3.' && !e.batchId));
 
   console.log('\n6. Products & Costing: fills and the lot sticker');
   await page.goto(previewUrl('costing')); await page.waitForTimeout(500);
