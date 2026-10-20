@@ -390,7 +390,7 @@ ok('an unknown icon name gives nothing rather than breaking', P.icon('nope') ===
     const ings = await page.evaluate("document.getElementById('d-snapshot').innerText");
     ok('Ingredients lists each line with its cost and a total', /Aloe vera juice[\s\S]*400\.0[\s\S]*\$8\.00[\s\S]*Ingredient cost for 400 g[\s\S]*\$8\.00/.test(ings), ings);
     await page.evaluate("setBatchTab('runs')");
-    ok('the Filled tab shows the bulk left and Fill from this batch', /Bulk left[\s\S]*400 g[\s\S]*Fill from this batch/.test(await page.evaluate("document.getElementById('d-fills').innerText")));
+    ok('the Filled tab shows the bulk left, and points to setting up products (none yet)', /Bulk left[\s\S]*400 g[\s\S]*Next: set up what you will sell from it/.test(await page.evaluate("document.getElementById('d-fills').innerText")));
     await page.keyboard.press('Escape'); await page.waitForTimeout(100);
     ok('Escape closes a saved batch', await page.evaluate("!document.getElementById('m-detail').classList.contains('open')"));
 

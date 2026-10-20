@@ -709,6 +709,7 @@ details.bc-tips .bc-note { border: 0; padding: 6px 0 0; margin: 0; font-size: 12
             <div class="runs-sum" id="runs-summary"></div>
             <div class="runs-list" id="runs-list"></div>
             <div class="run-add">
+              <div id="run-next"></div>
               <div class="run-add-row" id="run-add-row">
                 <div class="field">
                   <label for="run-date">Date</label>
@@ -2463,7 +2464,10 @@ function renderList() {
   renderSummary();
   var body = document.getElementById('list-body');
   if (!products.length) {
-    body.innerHTML = '<tr><td colspan="8" class="empty-state">No products yet. Click <strong>New</strong> to add the first one.</td></tr>';
+    body.innerHTML = '<tr><td colspan="8" style="padding:14px 0">' + Plume.nextStep({ icon: 'costing',
+      text: '<b>Set up each product you sell:</b> its formulation, size, packaging and prices. Each size is its own product (3 mL, 5 mL, 10 mL), and all of them can fill from the same batch.',
+      go: 'New product', onclick: 'openNewProduct()',
+      off: '<div class="empty-state">No products yet. Click <strong>New</strong> to add the first one.</div>' }) + '</td></tr>';
     return;
   }
   var q = (document.getElementById('search').value || '').toLowerCase().trim();
@@ -2792,7 +2796,10 @@ function renderPkgRecipe(p) {
   var body = document.getElementById('pkg-recipe-body');
   var rows = p.packagingRecipe || [];
   if (!rows.length) {
-    body.innerHTML = '<div class="empty-row">No packaging yet. Add a jar, bottle, label, lid and so on.</div>';
+    body.innerHTML = '<div style="padding:10px 12px">' + Plume.nextStep({ icon: 'packaging',
+      text: '<b>Add what goes around each unit:</b> the bottle, cap, label. ' + (Plume.pkgTracked() ? 'Each fill takes these from packaging stock, and they count in the cost.' : 'They count in the cost.'),
+      go: 'Add packaging', onclick: 'addPkgRecipeRow()',
+      off: '<div class="empty-row" style="padding:0">No packaging yet. Add a jar, bottle, label, lid and so on.</div>' }) + '</div>';
     return;
   }
   var html = '';
@@ -3336,7 +3343,7 @@ function renderRuns(p) {
       var qty = parseInt(r.units, 10) || 0;
       totalUnits += qty;
       var pk = r.fill
-        ? ((r.packaging || []).length ? r.packaging.map(function(c) { return '<span class="rr-pk">' + c.quantity + ' &times; ' + esc(c.packagingName) + '</span>'; }).join('') : '<span class="rr-old">none on its packaging list</span>')
+        ? (r.pkgUntracked ? '<span class="rr-old">packaging stock not tracked</span>' : (r.packaging || []).length ? r.packaging.map(function(c) { return '<span class="rr-pk">' + c.quantity + ' &times; ' + esc(c.packagingName) + '</span>'; }).join('') : '<span class="rr-old">none on its packaging list</span>')
         : '<span class="rr-old">logged before packaging was taken</span>';
       html += '<div class="run-row">' +
         '<span class="rr-date">' + fmtDate(r.date) + '</span>' +
@@ -3388,6 +3395,12 @@ function renderFillRow(p) {
     cell.innerHTML = '<label for="run-b0">From batch</label>' + fillBatchSelect('run-b0', parts.length ? parts[0].formulaId : '', '', pick);
   }
   if (!document.getElementById('run-date').value) document.getElementById('run-date').value = todayISO();
+  // What's next (2026-10-20): a part whose formulation has no batch yet.
+  var unmade = parts.filter(function(c) { return !Plume.fillBatches(batches, c.formulaId).length; });
+  document.getElementById('run-next').innerHTML = unmade.length ? '<div style="margin-bottom:10px">' + Plume.nextStep({ icon: 'batches',
+    title: 'No batch of ' + esc(unmade.map(function(c) { return c.label || 'this formulation'; }).join(' or ')) + ' yet.',
+    text: 'Fills take their grams from a batch. Make one first, or fill from bulk not logged in Plume.',
+    go: 'Make a batch', href: 'plume-batchlog.html#new=' + encodeURIComponent(unmade[0].formulaId) }) + '</div>' : '';
   fillTakes();
 }
 // The line under the row: what Add fill will take. Short packaging stops it.
@@ -3411,7 +3424,8 @@ function fillTakes() {
     var cell = document.getElementById('run-g' + i);
     if (cell) cell.textContent = d.batchId && plan.units ? Plume.fmtG(d.grams) : '--';
   });
-  if (pkgChanged()) {
+  var tracked = Plume.pkgTracked();
+  if (tracked && pkgChanged()) {
     box.innerHTML = '<div class="stop">Save packaging first. A fill takes the packaging list as saved, and this one has changes.</div>';
     btn.disabled = true;
     return;
@@ -3434,7 +3448,8 @@ function fillTakes() {
     var left = Plume.batchLeftG(b, products);
     if (d.grams > left + 1e-9) warn.push(esc(Plume.batchLabel(b)) + ' has ' + Plume.fmtG(Math.max(0, left)) + ' left by the numbers; this takes ' + Plume.fmtG(d.grams) + '. You can still add it.');
   });
-  box.innerHTML = (pk ? 'Takes from packaging:<div class="takes-pk">' + pk + '</div>' : 'Nothing from packaging (no packaging list on this product).') +
+  if (!tracked) pk = '';
+  box.innerHTML = (pk ? 'Takes from packaging:<div class="takes-pk">' + pk + '</div>' : (tracked ? 'Nothing from packaging (no packaging list on this product).' : 'Packaging stock is not tracked (Settings), so nothing is taken from it.')) +
     (grams.length ? '<div style="margin-top:4px">' + (pk ? 'and ' : 'Takes ') + grams.join(', ') + '.</div>' : '') +
     (dirty ? '<div class="ps-muted" style="margin-top:4px">Uses the product as saved; your unsaved changes are not included.</div>' : '') +
     (warn.length ? '<div class="warn">' + warn.join('<br>') + '</div>' : '') +
@@ -3450,7 +3465,7 @@ function addRun() {
   pkgs = Store.getJSON(PKG_KEY, []) || [];
   var plan = fillPlan();
   if (!plan || !plan.units) { Plume.tell('Enter how many you filled.'); return; }
-  if (plan.short.length || pkgChanged()) { fillTakes(); return; }
+  if (plan.short.length || (Plume.pkgTracked() && pkgChanged())) { fillTakes(); return; }
   var run = Plume.makeFill(sp, {
     date:  document.getElementById('run-date').value || todayISO(),
     units: plan.units,
@@ -3494,7 +3509,20 @@ function deleteRun(rid) {
 // list, also chooses that batch:
 // open the product on its Fills tab with that batch chosen, the cursor in
 // Units, and a link back to the batch.
+// A Settings change (packaging stock tracking) redraws the open fill row.
+window.addEventListener('plume-settings', function() { if (curId && findProduct(curId)) renderRuns(findProduct(curId)); });
+
 function handleFillLink() {
+  var n = /^#new=(.+)$/.exec(location.hash || '');
+  if (n) {
+    var fid = '';
+    try { fid = decodeURIComponent(n[1]); } catch (e) { return; }
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+    openNewProduct();
+    var sel = document.getElementById('n-formula');
+    if (findIn(forms, fid)) sel.value = fid;
+    return;
+  }
   var m = /^#p=([^&]+)(?:&fill=(.+))?$/.exec(location.hash || '');
   if (!m) return;
   var pid, bid;
