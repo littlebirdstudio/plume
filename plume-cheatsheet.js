@@ -311,12 +311,17 @@ function print(ings) {
     // The Ingredients page sets table-layout:fixed on every table (columns
     // share the width evenly -- right for its list). A comparison chart needs
     // columns sized to their content, so it switches back to auto layout.
-    '.cs-table{width:100%;border-collapse:collapse;font-size:12px;line-height:1.45;background:var(--white);border:1px solid var(--cream-border);border-radius:6px;table-layout:auto}' +
+    // Rounded rows (2026-10-20): each ingredient a rounded tile, as in the list.
+    '.cs-table{width:100%;border-collapse:separate;border-spacing:0 3px;font-size:12px;line-height:1.45;table-layout:auto}' +
     '.cs-table th{text-align:left;font-weight:400;font-size:10.5px;color:var(--ink-lighter);padding:7px 8px;border-bottom:1px solid var(--cream-border);vertical-align:bottom;line-height:1.3}' +
     '.cs-table th.cs-choose{color:var(--bark-dark);font-weight:500}' +
     // The Ingredients page styles every td as one line cut off with an
     // ellipsis (right for its list, wrong here) -- undo that for the chart.
-    '.cs-table td{padding:7px 8px;border-top:1px solid var(--cream-dark);vertical-align:top;color:var(--ink);white-space:normal;overflow:visible;text-overflow:clip}' +
+    '.cs-table td{padding:7px 8px;border-top:1px solid var(--cream-border);border-bottom:1px solid var(--cream-border);background:var(--white);vertical-align:top;color:var(--ink);white-space:normal;overflow:visible;text-overflow:clip}' +
+    '.cs-table th:first-child{border-radius:8px 0 0 8px}.cs-table th:last-child{border-radius:0 8px 8px 0}' +
+    '.cs-table td:first-child{border-left:1px solid var(--cream-border);border-radius:8px 0 0 8px}' +
+    '.cs-table td:last-child{border-right:1px solid var(--cream-border);border-radius:0 8px 8px 0}' +
+    '.cs-table tbody tr.has-stock td{border-color:color-mix(in srgb,var(--clay-hover) 70%,var(--cream-border))}' +
     '.cs-table tbody tr.has-stock td{background:var(--clay-light)}.cs-table tbody tr.has-stock:hover td{background:var(--clay-hover)}' +
     '.cs-table tbody tr{cursor:pointer}.cs-table tbody tr:hover td{background:var(--cream)}' +
     '.cs-table th.cs-name{width:130px}.cs-name b{font-weight:500;color:var(--bark-dark)}' +

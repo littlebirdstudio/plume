@@ -35,7 +35,7 @@ var Plume = (function () {
 // (v0.4 / v0.5 / v0.6 across five modules). BUMP IT IN EVERY PULL REQUEST,
 // core change or not: it is how "is this the update I just merged?" is
 // answered by looking, and browsers cache .js files stubbornly.
-var VERSION = '1.34';
+var VERSION = '1.35';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -906,6 +906,8 @@ var ICONS = {
   packaging:    ['0 0 48 48', '<path d="M20 8 L 28 8 L 28 14 L 32 18 L 32 40 Q 24 43, 16 40 L 16 18 L 20 14 Z"/><path d="M19 26 L 29 26"/>'],
   costing:      ['0 0 48 48', '<path d="M24 10 L 24 38"/><path d="M16 38 L 32 38"/><path d="M10 18 L 24 14 L 38 18"/><path d="M6 26 Q 10 18, 14 26 Q 10 30, 6 26 Z"/><path d="M34 26 Q 38 18, 42 26 Q 38 30, 34 26 Z"/>'],
   batches:      ['0 0 48 48', '<path d="M10 28 L 10 42 L 22 42 L 22 28"/><path d="M12 24 L 20 24 L 20 28 L 12 28 Z"/><path d="M26 14 L 26 28 L 38 28 L 38 14"/><path d="M28 10 L 36 10 L 36 14 L 28 14 Z"/><path d="M26 30 L 38 30 L 38 42 L 26 42 Z"/>'],
+  history:      ['0 0 24 24', '<path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v4h4"/><path d="M12 8v4l3 2"/>'],
+  stock:        ['0 0 24 24', '<path d="M4 8h16v12H4z"/><path d="M7 8V5h10v3"/><path d="m9 14 2 2 4-4"/>'],
   suppliers:    ['0 0 24 24', '<path d="M3 21h18"/><path d="M5 21V8l7-4 7 4v13"/><path d="M9 21v-6h6v6"/>'],
   settings:     ['0 0 24 24', '<circle cx="12" cy="12" r="3"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6"/>'],
   search:       ['0 0 24 24', '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>'],
@@ -959,10 +961,18 @@ function shell(opts) {
         '</a>' +
         '<button type="button" class="ps-icon-btn ps-collapse" onclick="Plume.toggleSide()" title="Collapse or expand the sidebar" aria-label="Collapse or expand the sidebar">' + icon('collapse', 'ps-when-open') + icon('expand', 'ps-when-closed') + '</button>' +
       '</div>' +
-      '<nav class="ps-nav-list">' + nav + '</nav>' +
+      // Order (her call, 2026-10-20): Library, Actions, Stock.
       '<div class="ps-nav-h">Library</div>' +
       '<nav class="ps-nav-list" aria-label="Library">' + lib +
         '<button type="button" class="ps-nav" id="ps-nav-suppliers" onclick="Plume.suppliers.open()" title="Suppliers">' + icon('suppliers') + '<span class="ps-nav-label">Suppliers</span><span class="ps-ct" data-ct="suppliers"></span></button>' +
+      '</nav>' +
+      '<div class="ps-nav-h">Actions</div>' +
+      '<nav class="ps-nav-list" aria-label="Actions">' + nav + '</nav>' +
+      // Stock (2026-10-20): quick tasks from any page, as slide-in panels.
+      '<div class="ps-nav-h">Stock</div>' +
+      '<nav class="ps-nav-list" aria-label="Stock">' +
+        '<button type="button" class="ps-nav" id="ps-nav-stock" onclick="Plume.stock.open()" title="Sold, gifted, marketing, damaged, returned, or reconcile to a count">' + icon('stock') + '<span class="ps-nav-label">Update stock</span></button>' +
+        '<button type="button" class="ps-nav" id="ps-nav-history" onclick="Plume.stock.history()" title="Where your stock went: by market or event, month or product, and what it cost">' + icon('history') + '<span class="ps-nav-label">Stock history</span></button>' +
       '</nav>' +
       '<div class="ps-grow"></div>' +
       '<button type="button" class="ps-nav" onclick="if (typeof openSettings === \'function\') openSettings()" title="Settings">' + icon('settings') + '<span class="ps-nav-label">Settings</span></button>' +
@@ -1537,7 +1547,8 @@ function injectStyles() {
     '.ps-nav.on .ps-i{color:var(--bark)}' +
     '.ps-ct{margin-left:auto;font-size:12px;color:var(--ink-lighter);font-variant-numeric:tabular-nums;font-weight:400}' +
     '.ps-nav.on .ps-ct{color:var(--bark);font-weight:600}' +
-    '.ps-nav-h{font-size:11.5px;font-weight:500;color:var(--ink-lighter);padding:16px 8px 4px;white-space:nowrap}' +
+    // Headings in the palette's main colour (her call, 2026-10-20), same size.
+    '.ps-nav-h{font-size:11.5px;font-weight:500;color:var(--bark);padding:16px 8px 4px;white-space:nowrap}' +
     '.ps-grow{flex:1}' +
     '.ps-collapse{margin-left:auto;opacity:.55}' +
     '.ps-collapse:hover{opacity:1}' +
@@ -1659,6 +1670,68 @@ function injectStyles() {
     '.sup-loose-name{font-size:14px;color:var(--ink)}' +
     '.sup-loose-row .sup-use{margin:0 0 0 auto}' +
     '.sup-loose-row .ps-link-btn{padding:3px 10px}' +
+    '' +
+    // Update stock panel (2026-10-20).
+    '.st-panel .st-modes{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0 10px;align-items:center}' +
+    '.st-panel .st-mct{font-variant-numeric:tabular-nums;opacity:.75}' +
+    '.st-panel .st-help{font-size:13px;color:var(--ink-light);margin:0 0 12px;line-height:1.45}' +
+    '.st-panel .st-fields{display:grid;grid-template-columns:150px minmax(0,1fr);gap:10px;margin-bottom:12px}' +
+    '.st-panel .st-fields label{display:block;font-size:12.5px;color:var(--ink-light);margin-bottom:3px}' +
+    '.st-panel .st-fields input{width:100%;box-sizing:border-box;font:inherit;font-size:14px;padding:6px 8px;border:1px solid var(--cream-border);border-radius:7px;background:var(--white);color:var(--ink)}' +
+    '.st-panel .st-search{border:1px solid var(--cream-border);margin-bottom:6px}.st-panel .st-search input{width:100%}' +
+    '.st-panel .st-type{font-size:12.5px;font-weight:600;color:var(--white);background:var(--bark);border-radius:6px;padding:4px 10px;margin:14px 0 2px}' +
+    '.st-panel .st-row,.st-panel .st-cols{display:grid;grid-template-columns:minmax(0,1fr) 64px 76px;gap:10px;align-items:center}' +
+    '.st-panel .st-row{padding:7px 4px;border-bottom:1px solid var(--cream-border)}' +
+    '.st-panel .st-row.on{background:var(--clay-light)}' +
+    '.st-panel .st-row.over{background:color-mix(in srgb,var(--danger) 10%,var(--white))}' +
+    '.st-panel .st-row.over input{border-color:var(--danger)}' +
+    '.st-panel .st-rp{font-size:13px;color:var(--ink-light);margin:12px 0 0}.st-panel .st-rp a{color:var(--bark)}' +
+    '.st-panel .st-over{margin-top:12px;font-size:13px;color:var(--danger);line-height:1.45}' +
+    '.st-panel .st-name{font-size:14px;color:var(--ink);min-width:0}' +
+    '.st-panel .st-name small{display:block;font-size:12px;color:var(--ink-lighter)}' +
+    '.st-panel .st-nfs{display:inline-block;font-size:11.5px;padding:0 7px;border-radius:5px;margin-left:6px;background:color-mix(in srgb,var(--ink) 8%,transparent);color:var(--ink-light);white-space:nowrap}' +
+    '.st-panel .st-have{text-align:right;font-variant-numeric:tabular-nums;font-size:13.5px;color:var(--ink-light)}' +
+    '.st-panel .st-neg{color:var(--danger);font-weight:600}' +
+    '.st-panel .st-row input{width:100%;box-sizing:border-box;font:inherit;font-size:14px;padding:5px 7px;border:1px solid var(--cream-border);border-radius:7px;text-align:right;background:var(--white);color:var(--ink)}' +
+    '.st-panel .st-cols{font-size:12px;color:var(--ink-lighter);padding:0 4px 4px;text-align:right}' +
+    '.st-panel .st-cols span:first-child{text-align:left}' +
+    '.st-panel .st-empty{padding:14px 4px;color:var(--ink-lighter);font-size:13.5px}' +
+    '.st-panel .st-foot{position:sticky;bottom:-30px;background:var(--white);padding:12px 0 8px;display:flex;gap:10px;align-items:center;border-top:1px solid var(--cream-border);margin-top:12px}' +
+    '.st-panel .st-ct{font-size:13px;color:var(--ink-light)}' +
+    '' +
+    // Stock history panel (2026-10-20).
+    '.sh-panel .sh-ranges{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0 12px}' +
+    '.sh-panel .sh-tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}' +
+    '.sh-panel .sh-tile{border:1.5px solid var(--cream-border);border-radius:10px;padding:9px 11px;background:var(--white);font:inherit;text-align:left;cursor:pointer;color:inherit;transition:border-color .12s,background .12s}' +
+    '.sh-panel .sh-tile:hover{border-color:var(--bark)}' +
+    '.sh-panel .sh-tile.on{border-color:var(--bark);background:color-mix(in srgb,var(--bark) 9%,var(--white))}' +
+    '.sh-panel .sh-showing{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin:4px 0 8px;font-size:13.5px;color:var(--ink)}' +
+    '.sh-panel .sh-showing .ps-link-btn{margin-left:auto;padding:3px 10px}' +
+    '.sh-panel .sh-k{font-size:12.5px;color:var(--ink-light)}' +
+    '.sh-panel .sh-n{font-size:21px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}' +
+    '.sh-panel .sh-c{font-size:12.5px;color:var(--ink-light);font-variant-numeric:tabular-nums}' +
+    '.sh-panel .sh-give{display:block;width:100%;text-align:left;font:inherit;cursor:pointer;border:1.5px solid transparent;margin:10px 0 4px;padding:9px 11px;border-radius:9px;background:color-mix(in srgb,var(--bark) 9%,var(--white));font-size:13.5px;color:var(--ink)}' +
+    '.sh-panel .sh-give:hover,.sh-panel .sh-give.on{border-color:var(--bark)}' +
+    '.sh-panel .sh-bar{border-bottom:1px solid var(--cream-border);margin:14px 0 8px}' +
+    '.sh-panel .sh-search{border:1px solid var(--cream-border);margin-bottom:8px}.sh-panel .sh-search input{width:100%}' +
+    '.sh-panel .sh-grp{border-bottom:1px solid var(--cream-border)}' +
+    '.sh-panel .sh-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;width:100%;text-align:left;border:0;background:none;padding:9px 4px;cursor:pointer;font:inherit;color:var(--ink);align-items:center}' +
+    '.sh-panel .sh-head:hover{background:var(--cream-dark)}' +
+    '.sh-panel .sh-title{font-size:14px;font-weight:600;min-width:0}' +
+    '.sh-panel .sh-title small{display:block;font-weight:400;font-size:12px;color:var(--ink-lighter)}' +
+    '.sh-panel .sh-chev{grid-row:1;grid-column:2;color:var(--ink-lighter);transition:transform .15s}' +
+    '.sh-panel .sh-chev .ps-i{width:16px;height:16px}' +
+    '.sh-panel .sh-grp.open .sh-chev{transform:rotate(180deg)}' +
+    '.sh-panel .sh-sum{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:5px}' +
+    '.sh-panel .sh-pill{font-size:12px;padding:1px 8px;border-radius:999px;background:color-mix(in srgb,var(--ink) 7%,transparent);color:var(--ink-light);font-variant-numeric:tabular-nums;white-space:nowrap}' +
+    '.sh-panel .sh-pill b{color:var(--ink)}' +
+    '.sh-panel .sh-detail{padding:2px 4px 10px}' +
+    '.sh-panel .sh-line{display:grid;grid-template-columns:minmax(0,1fr) auto 64px;gap:10px;font-size:13px;padding:4px 0;color:var(--ink-light);border-top:1px dashed var(--cream-border)}' +
+    '.sh-panel .sh-line span:last-child{text-align:right;font-variant-numeric:tabular-nums}' +
+    '.sh-panel .sh-line b{color:var(--ink)}' +
+    '.sh-panel .sh-foot{font-size:12px;color:var(--ink-lighter);line-height:1.5;margin:12px 0 0}' +
+    '.sh-panel .sh-actions{margin-top:10px}' +
+    '.sh-panel .st-empty{padding:14px 4px;color:var(--ink-lighter);font-size:13.5px}' +
     '' +
     '@media (max-width:760px){' +
     '  body.ps-shell,body.ps-shell.ps-collapsed{padding-left:0}' +
@@ -3151,14 +3224,14 @@ function fillShortages(pkgs, p, units) {
   return out;
 }
 // Takes the packaging out of stock and records it on the run.
-function fillPull(pkgs, p, run) {
+function fillPull(pkgs, p, run, verb) {
   run.packaging = [];
   if (!pkgTracked()) { run.pkgUntracked = true; return; }
   fillPkgNeeds(p, parseInt(run.units, 10) || 0).forEach(function (n) {
     var it = fillFind(pkgs, n.packagingId);
     if (!it) return;
     if (!it.adjustments) it.adjustments = [];
-    var why = 'Filled: ' + (p.name || 'a product');
+    var why = (verb || 'Filled') + ': ' + (p.name || 'a product');
     it.adjustments.push({ id: 'fill-' + run.id + '-' + it.id, qty: -n.quantity, date: run.date, note: why, reason: why, productId: p.id, fillId: run.id });
     run.packaging.push({ packagingId: it.id, packagingName: pkDisplay(it), quantity: n.quantity });
   });
@@ -3222,6 +3295,553 @@ function fmtG(g) {
   return (Math.abs(g) >= 1000 ? g.toLocaleString('en-US') : String(g)) + ' g';
 }
 
+// ══ Units on hand and kits (2026-10-20) ═══════════════
+// Her way of working: fill products (minis included) from batches, then
+// build kits from what is filled, adding the kit's own packaging. So a
+// product has units on hand:
+//   filled (every fill and older run; for a kit, every kit built)
+//   + its stock log: taken out (sold, given away), counted (a recount, the
+//     difference from what Plume thought), and units put into kits.
+// Plume is not a point of sale; taking out is optional.
+// p.stockLog: [{ id, date, qty (signed), kind: 'out' | 'count' | 'kit',
+//   note, counted (count only), kitId and buildId (kit only) }]
+// Why units left the shelf (her list, 2026-10-20). Each lowers on hand;
+// the reason is kept so losses can be counted apart from sales later.
+var STOCK_REASONS = [
+  { key: 'sold',      label: 'Sold',      hint: 'at a market, a shop or online' },
+  { key: 'gifted',    label: 'Gifted',    hint: 'given to friends or family' },
+  { key: 'marketing', label: 'Marketing', hint: 'giveaways, demos, samples for shops' },
+  { key: 'damaged',   label: 'Damaged',   hint: 'broken, spoiled or spilled' },
+  // Adds units back (2026-10-20): consignment that did not sell, a return.
+  { key: 'returned',  label: 'Returned',  hint: 'back from a shop or consignment', back: true }
+];
+function reasonBack(k) { for (var i = 0; i < STOCK_REASONS.length; i++) if (STOCK_REASONS[i].key === k) return !!STOCK_REASONS[i].back; return false; }
+function stockReasonLabel(k) {
+  for (var i = 0; i < STOCK_REASONS.length; i++) if (STOCK_REASONS[i].key === k) return STOCK_REASONS[i].label;
+  return 'Taken out';
+}
+function onHandParts(p) {
+  var o = { filled: 0, out: 0, kits: 0, counted: 0, total: 0, byReason: {} };
+  ((p && p.productionRuns) || []).forEach(function (r) { o.filled += parseInt(r.units, 10) || 0; });
+  ((p && p.stockLog) || []).forEach(function (e) {
+    var q = parseFloat(e.qty) || 0;
+    if (e.kind === 'kit') o.kits += q; else if (e.kind === 'count') o.counted += q;
+    else { o.out += q; var r = e.reason || 'out'; o.byReason[r] = (o.byReason[r] || 0) + q; }
+  });
+  o.total = o.filled + o.out + o.kits + o.counted;
+  return o;
+}
+function onHand(p) { return onHandParts(p).total; }
+function isKit(p) { return !!p && p.productKind === 'kit'; }
+// What a product can go into a kit as: a product made from one
+// formulation. Kits are not parts of kits; older formulation packs neither.
+function kitPartOk(p) { return !!p && p.productKind !== 'kit' && p.productKind !== 'multi'; }
+// [{ productId, qty, product }] with a positive whole qty.
+function kitParts(kit, products) {
+  return ((kit && kit.kitParts) || []).map(function (k) {
+    return { productId: k.productId, qty: parseInt(k.qty, 10) || 0, product: fillFind(products, k.productId) };
+  }).filter(function (k) { return k.productId && k.qty > 0; });
+}
+// Each part's units for `units` kits, added up per product.
+function kitNeeds(kit, units, products) {
+  var need = {}, order = [];
+  kitParts(kit, products).forEach(function (k) {
+    if (!(k.productId in need)) { need[k.productId] = 0; order.push(k.productId); }
+    need[k.productId] += k.qty * units;
+  });
+  return order.map(function (id) {
+    var pr = fillFind(products, id);
+    return { productId: id, name: pr ? (pr.name || '(unnamed)') : '(a deleted product)', need: need[id], have: pr ? onHand(pr) : 0, missing: !pr };
+  });
+}
+// A build is not allowed while a part is short (her rule, as for packaging:
+// short means a fill was not logged).
+function kitShortages(kit, units, products) {
+  return kitNeeds(kit, units, products).filter(function (n) { return n.missing || n.need > n.have; });
+}
+// Builds `f.units` kits: takes each part's units from its product, the
+// kit's packaging list from stock, and records the build on the kit.
+// f: { date, units, notes }. Changes products and pkgs; the page saves.
+function buildKit(products, kit, f, pkgs) {
+  var run = {
+    id:      Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+    date:    f.date || todayISO(),
+    units:   parseInt(f.units, 10) || 0,
+    notes:   f.notes || '',
+    addedAt: new Date().toISOString(),
+    fill:    true,
+    kit:     true,
+    parts:   []
+  };
+  kitNeeds(kit, run.units, products).forEach(function (n) {
+    var pr = fillFind(products, n.productId);
+    if (!pr) return;
+    if (!pr.stockLog) pr.stockLog = [];
+    pr.stockLog.push({ id: 'kit-' + run.id + '-' + pr.id, date: run.date, qty: -n.need, kind: 'kit',
+      note: 'Into kit: ' + (kit.name || 'a kit'), kitId: kit.id, buildId: run.id });
+    run.parts.push({ productId: pr.id, productName: pr.name || '', quantity: n.need });
+  });
+  fillPull(pkgs, kit, run, 'Kit built');
+  if (!kit.productionRuns) kit.productionRuns = [];
+  kit.productionRuns.push(run);
+  kit.updatedAt = run.addedAt;
+  return run;
+}
+// Reverses a build: the parts' units come back, the packaging goes back
+// to stock, the build leaves the kit. Returns the run, or null.
+function undoKitBuild(products, kit, runId, pkgs) {
+  var run = null;
+  ((kit && kit.productionRuns) || []).forEach(function (r) { if (r.id === runId) run = r; });
+  if (!run) return null;
+  (products || []).forEach(function (pr) {
+    if (pr && pr.stockLog) pr.stockLog = pr.stockLog.filter(function (e) { return e.buildId !== runId; });
+  });
+  fillReturn(pkgs, runId);
+  kit.productionRuns = kit.productionRuns.filter(function (r) { return r.id !== runId; });
+  return run;
+}
+function undoKitText(run) {
+  var bits = [];
+  if (run.parts && run.parts.length) bits.push('These go back on hand:\n' + run.parts.map(function (c) { return '  ' + c.quantity + ' x ' + c.productName; }).join('\n'));
+  if (run.packaging && run.packaging.length) bits.push('This puts back into packaging stock:\n' + run.packaging.map(function (c) { return '  ' + c.quantity + ' x ' + c.packagingName; }).join('\n'));
+  return bits.join('\n\n');
+}
+// Kits a product goes into (by id), for "Used in" notes and delete warnings.
+function kitsUsing(productId, products) {
+  return (products || []).filter(function (k) {
+    return isKit(k) && (k.kitParts || []).some(function (x) { return x.productId === productId; });
+  });
+}
+// The stock panel: one pass over many products. entries: [{ productId,
+// value }]; opts: { mode: 'out' | 'count', date, note }. Taken out records
+// -value; counted records the difference from on hand (kept even when it
+// is 0, so the count shows in the history). Returns how many changed.
+function stockPass(products, entries, opts) {
+  opts = opts || {};
+  var n = 0, stamp = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  // What each unit cost on the day (her call): a report keeps that month's
+  // prices, as batches keep theirs. Not for units into kits (not a loss).
+  var cd = opts.costs === false ? null : costData({ products: products });
+  (entries || []).forEach(function (en, i) {
+    var pr = fillFind(products, en.productId);
+    var v = parseFloat(en.value);
+    if (!pr || isNaN(v) || v < 0) return;
+    if (opts.mode === 'out' && v === 0) return;
+    var e = { id: 'st-' + stamp + '-' + i, date: opts.date || todayISO(), kind: opts.mode === 'count' ? 'count' : 'out', note: opts.note || '' };
+    if (e.kind === 'out' && opts.reason) e.reason = opts.reason;
+    if (cd) { var uc = productUnitCost(pr, cd); if (uc > 0) e.unitCost = Math.round(uc * 10000) / 10000; }
+    if (e.kind === 'count') { e.counted = v; e.qty = v - onHand(pr); }
+    else e.qty = reasonBack(opts.reason) ? v : -v;
+    if (!pr.stockLog) pr.stockLog = [];
+    pr.stockLog.push(e);
+    pr.updatedAt = new Date().toISOString();
+    n++;
+  });
+  return n;
+}
+// Reversing a fill takes its units off hand again. Not allowed when that
+// would leave the product below zero: some of those units already went
+// into kits or off the shelf (her call, 2026-10-20).
+function fillUndoBlock(p, run) {
+  if (!p || !run || isKit(p)) return '';
+  var after = onHand(p) - (parseInt(run.units, 10) || 0);
+  if (after >= 0) return '';
+  var o = onHandParts(p), went = [];
+  if (o.kits) went.push((-o.kits) + ' into kits');
+  if (o.out) went.push((-o.out) + ' off the shelf');
+  return 'Only ' + Math.max(0, onHand(p)) + ' of these are on hand' + (went.length ? ' (' + went.join(', ') + ')' : '') +
+    ', so reversing this fill of ' + run.units + ' would leave ' + after + '. Reverse the kit builds that used them, or remove the stock changes, first.';
+}
+// ── A product's unit cost, from any page (2026-10-20) ─────────────────
+// Transcribed from Products & Costing (formulationCostDetail, pkgUnitCost,
+// computeProductCost) so Update stock can record what each unit cost when
+// it left the shelf. test-kits.js checks the two agree on every product.
+// d: { ings, forms, pkgs, products }; anything missing is read from Store.
+function costData(d) {
+  d = d || {};
+  var g = function (k) { var l = Store.getJSON(k, []); return Array.isArray(l) ? l : []; };
+  return { ings: d.ings || g('aerie-ingredients-v2'), forms: d.forms || g('aerie-formulations-v1'),
+           pkgs: d.pkgs || g('aerie-packaging-v2'), products: d.products || g('plume-products-v1') };
+}
+function formCostPerG(f, d) {
+  if (!f || !f.lines || !f.lines.length) return null;
+  var cost = 0, mass = 0, any = false;
+  f.lines.forEach(function (line) {
+    if (line.soapAddin) return;
+    var cpg = costPerG(fillFind(d.ings, line.ingId));
+    var grams = parseFloat(line.gramsFixed) || 0, pct = parseFloat(line.pct) || 0;
+    var m = grams > 0 ? grams : (pct > 0 ? pct : 0);
+    if (m <= 0) return;
+    mass += m;
+    if (cpg !== null) { cost += cpg * m; any = true; }
+  });
+  return (any && mass > 0) ? cost / mass : null;
+}
+function pkgUnitCostOf(pkg) {
+  if (!pkg || !(pkg.purchases || []).length) return null;
+  var sorted = pkg.purchases.slice().sort(function (a, b) { return (b.date || '').localeCompare(a.date || ''); });
+  for (var i = 0; i < sorted.length; i++) {
+    var total = parseFloat(sorted[i].totalCost) || 0, ship = parseFloat(sorted[i].shipping) || 0, qty = parseInt(sorted[i].qty, 10) || 0;
+    if (qty > 0 && total > 0) return (total + ship) / qty;
+  }
+  return null;
+}
+function productUnitCost(p, d) {
+  if (!p) return 0;
+  d = costData(d);
+  var c = 0;
+  if (p.productKind === 'kit') {
+    kitParts(p, d.products).forEach(function (k) {
+      if (k.product && kitPartOk(k.product)) c += productUnitCost(k.product, d) * k.qty;
+    });
+  } else if (p.productKind === 'multi') {
+    (p.components || []).forEach(function (cm) {
+      var cpg = formCostPerG(fillFind(d.forms, cm.formulaId), d), wt = parseFloat(cm.netWtG) || 0;
+      if (cpg !== null && wt > 0) c += cpg * wt;
+    });
+  } else {
+    var cpg = formCostPerG(fillFind(d.forms, p.formulaId), d), nw = parseFloat(p.netWtG) || 0;
+    if (cpg !== null && nw > 0) c += cpg * nw;
+  }
+  (p.packagingRecipe || []).forEach(function (r) {
+    var qty = parseInt(r.quantity, 10) || 0, uc = pkgUnitCostOf(fillFind(d.pkgs, r.packagingId));
+    if (qty > 0 && uc !== null) c += uc * qty;
+  });
+  return c;
+}
+
+// ── Update stock: a slide-in panel on every page (2026-10-20) ───────────
+// From the sidebar, so it is a quick task from anywhere. Reasons lower on
+// hand (Sold, Gifted, Marketing, Damaged); each keeps its own numbers while
+// she switches between them, and one Save records them all. Reconcile is
+// what is on the shelf now; in the same pass it is applied after the
+// reasons. A date and a note cover the whole pass. Units go into kits by
+// building the kit in Products & Costing, not here.
+var stMode = 'sold', stQ = '', stVals = {};
+function stProducts() { var l = Store.getJSON('plume-products-v1', []); return Array.isArray(l) ? l : []; }
+function stTypeKey(p, forms) {
+  if (p.productKind === 'multi' || p.productKind === 'kit') return 'Sample packs & kits';
+  var f = fillFind(forms, p.formulaId);
+  return f ? (f.type || 'No type set') : 'No formulation';
+}
+function stModes() { return STOCK_REASONS.concat([{ key: 'count', label: 'Reconcile', hint: 'how many are on the shelf now' }]); }
+function stLabel(m) { var l = stModes(); for (var i = 0; i < l.length; i++) if (l[i].key === m) return l[i]; return l[0]; }
+function stRowsHtml() {
+  var prods = stProducts(), forms = Store.getJSON('aerie-formulations-v1', []) || [];
+  var q = stQ.toLowerCase().trim();
+  var list = prods.filter(function (p) { return (p.status || 'active') !== 'discontinued'; })
+    .filter(function (p) { return !q || ((p.name || '') + ' ' + (p.sku || '')).toLowerCase().indexOf(q) !== -1; });
+  if (!list.length) return '<div class="st-empty">' + (q ? 'No product matches.' : 'No active products yet. They are set up in Products &amp; Costing.') + '</div>';
+  var by = {}, order = [];
+  list.forEach(function (p) { var t = stTypeKey(p, forms); if (!by[t]) { by[t] = []; order.push(t); } by[t].push(p); });
+  order.sort(function (a, b) { return a === 'Sample packs & kits' ? 1 : b === 'Sample packs & kits' ? -1 : a.localeCompare(b); });
+  var lbl = stLabel(stMode).label;
+  return order.map(function (t) {
+    return '<div class="st-type">' + esc(t) + '</div>' + by[t].map(function (p) {
+      var oh = onHand(p);
+      return '<div class="st-row" data-pid="' + esc(p.id) + '"><div class="st-name">' + esc(p.name || '(unnamed)') +
+        (p.notForSale ? '<span class="st-nfs">not for sale</span>' : '') + (p.netWtDisplay ? '<small>' + esc(p.netWtDisplay) + '</small>' : '') + '</div>' +
+        '<div class="st-have' + (oh < 0 ? ' st-neg' : '') + '">' + oh + '</div>' +
+        '<input type="number" min="0" step="1" inputmode="numeric" data-pid="' + esc(p.id) + '" aria-label="' + esc(lbl + ': ' + (p.name || '')) + '" oninput="Plume.stock.typed()"></div>';
+    }).join('');
+  }).join('');
+}
+function stHtml() {
+  var m = stLabel(stMode);
+  return '<div class="st-panel"><div class="sup-title">' + icon('stock') + '<h2>Update stock</h2></div>' +
+    '<div class="st-modes">' + STOCK_REASONS.map(function (r) {
+      return '<button type="button" class="ps-chip' + (stMode === r.key ? ' on' : '') + '" onclick="Plume.stock.mode(\'' + r.key + '\')">' + r.label + '<span class="st-mct" data-m="' + r.key + '"></span></button>';
+    }).join('') + '<span class="ps-chip-sep"></span>' +
+      '<button type="button" class="ps-chip' + (stMode === 'count' ? ' on' : '') + '" onclick="Plume.stock.mode(\'count\')">Reconcile<span class="st-mct" data-m="count"></span></button></div>' +
+    '<p class="st-help">' + (stMode === 'count'
+      ? 'How many are on the shelf now. Plume records the difference from what it had. Use this to set real numbers.'
+      : '<b>' + m.label + '</b>: ' + m.hint + '. ' + (m.back ? 'These go back on hand.' : 'These come off what is on hand.') + ' Switch reasons to enter more; Save records them all.') + '</p>' +
+    '<div class="st-fields"><div><label for="st-date">Date</label><input type="date" id="st-date"></div>' +
+      '<div><label for="st-note">Note</label><input type="text" id="st-note" placeholder="e.g. Market, Oct 18"></div></div>' +
+    '<label class="ps-search st-search">' + icon('search') + '<input type="search" id="st-q" placeholder="Search products" value="' + esc(stQ) + '" oninput="Plume.stock.search(this.value)" aria-label="Search products"></label>' +
+    '<div class="st-cols"><span>Product</span><span>On hand</span><span>' + esc(m.label) + '</span></div>' +
+    '<div id="st-rows">' + stRowsHtml() + '</div>' +
+    '<div class="st-over" id="st-over" hidden></div>' +
+    '<p class="st-rp"><a href="#" onclick="Plume.stock.history(); return false">Stock history</a>: where units went, by market, month or product, and what they cost.</p>' +
+    '<div class="st-foot"><span class="st-ct" id="st-ct">Nothing entered yet</span><span class="ps-grow"></span>' +
+      '<button type="button" class="ps-link-btn" onclick="Plume.peek.close()">Cancel</button>' +
+      '<button type="button" class="ps-btn-primary" id="st-save" onclick="Plume.stock.save()" disabled>Save</button></div></div>';
+}
+function stKeep() {
+  var vals = stVals[stMode] || (stVals[stMode] = {});
+  [].forEach.call(document.querySelectorAll('#st-rows input[data-pid]'), function (i) { vals[i.getAttribute('data-pid')] = i.value; });
+}
+function stRestore() {
+  var vals = stVals[stMode] || {};
+  [].forEach.call(document.querySelectorAll('#st-rows input[data-pid]'), function (i) {
+    var v = vals[i.getAttribute('data-pid')]; i.value = v != null ? v : '';
+  });
+  stTyped();
+}
+// { mode: [{ productId, value }] } for every mode with something typed.
+function stEntries() {
+  stKeep();
+  var prods = stProducts(), out = {};
+  Object.keys(stVals).forEach(function (m) {
+    var list = Object.keys(stVals[m]).filter(function (id) { return String(stVals[m][id]).trim() !== '' && fillFind(prods, id); })
+      .map(function (id) { return { productId: id, value: stVals[m][id] }; });
+    if (list.length) out[m] = list;
+  });
+  return out;
+}
+// Products whose reasons add up to more than is on hand. Not allowed (her
+// call): it means a fill was not logged, or the number is wrong. A product
+// reconciled in the same pass is fine, since the count wins.
+function stOver(en) {
+  var prods = stProducts(), tot = {}, counted = {}, out = [];
+  (en.count || []).forEach(function (e) { counted[e.productId] = true; });
+  STOCK_REASONS.forEach(function (r) {
+    (en[r.key] || []).forEach(function (e) { tot[e.productId] = (tot[e.productId] || 0) + (r.back ? -1 : 1) * (parseFloat(e.value) || 0); });
+  });
+  Object.keys(tot).forEach(function (id) {
+    var p = fillFind(prods, id), have = p ? onHand(p) : 0;
+    if (!counted[id] && tot[id] > have) out.push({ productId: id, name: p ? (p.name || '(unnamed)') : '', take: tot[id], have: have });
+  });
+  return out;
+}
+function stTyped() {
+  var en = stEntries(), bits = [], any = false, over = stOver(en), overIds = {};
+  over.forEach(function (o) { overIds[o.productId] = true; });
+  [].forEach.call(document.querySelectorAll('#st-rows .st-row'), function (r) {
+    var i = r.querySelector('input'); r.classList.toggle('on', !!i && i.value.trim() !== '');
+    r.classList.toggle('over', !!overIds[r.getAttribute('data-pid')]);
+  });
+  stModes().forEach(function (m) {
+    var list = en[m.key] || [], ct = document.querySelector('.st-mct[data-m="' + m.key + '"]');
+    var n = 0; list.forEach(function (e) { n += parseFloat(e.value) || 0; });
+    if (ct) ct.textContent = list.length ? (m.key === 'count' ? ' ' + list.length : ' ' + n) : '';
+    if (!list.length) return;
+    any = true;
+    bits.push(m.key === 'count' ? list.length + ' to reconcile' : m.label + ' ' + n);
+  });
+  var el = document.getElementById('st-ct');
+  if (el) el.textContent = any ? bits.join(' · ') : 'Nothing entered yet';
+  var warn = document.getElementById('st-over');
+  if (warn) {
+    warn.hidden = !over.length;
+    warn.textContent = over.length ? 'More than is on hand: ' + over.map(function (o) { return o.name + ' (' + o.take + ' of ' + o.have + ')'; }).join('; ') +
+      '. Log the fill first, or reconcile to what is on the shelf.' : '';
+  }
+  var b = document.getElementById('st-save'); if (b) b.disabled = !any || !!over.length;
+}
+function stockOpen() {
+  stMode = 'sold'; stQ = ''; stVals = {};
+  openPeek(stHtml(), {
+    label: 'Update stock',
+    onClose: function () {
+      var p = document.getElementById('ps-peek'); if (p) p.removeAttribute('data-panel');
+      var b = document.getElementById('ps-nav-stock'); if (b) b.classList.remove('on');
+    }
+  });
+  document.getElementById('ps-peek').setAttribute('data-panel', 'stock');
+  var b = document.getElementById('ps-nav-stock'); if (b) b.classList.add('on');
+  var h = document.getElementById('ps-nav-history'); if (h) h.classList.remove('on');
+  document.getElementById('st-date').value = todayISO();
+}
+function stockMode(m) {
+  stKeep();
+  var d = document.getElementById('st-date').value, n = document.getElementById('st-note').value;
+  stMode = m;
+  document.getElementById('ps-peek-body').innerHTML = stHtml();
+  document.getElementById('st-date').value = d; document.getElementById('st-note').value = n;
+  stRestore();
+}
+function stockSearch(v) {
+  stKeep(); stQ = v;
+  document.getElementById('st-rows').innerHTML = stRowsHtml();
+  stRestore();
+}
+function stockSave() {
+  var en = stEntries(), bad = false;
+  Object.keys(en).forEach(function (m) { en[m].forEach(function (e) { var v = parseFloat(e.value); if (isNaN(v) || v < 0 || Math.floor(v) !== v) bad = true; }); });
+  if (bad) { tell('Use whole numbers of units, 0 or more.'); return; }
+  if (stOver(en).length) { stTyped(); return; }
+  var prods = stProducts(), date = document.getElementById('st-date').value || todayISO(), note = document.getElementById('st-note').value.trim(), n = 0;
+  STOCK_REASONS.forEach(function (r) { if (en[r.key]) n += stockPass(prods, en[r.key], { mode: 'out', reason: r.key, date: date, note: note }); });
+  if (en.count) n += stockPass(prods, en.count, { mode: 'count', date: date, note: note });
+  if (!n) return;
+  if (Store.setJSON('plume-products-v1', prods) === false) { noteSaveFailed(); return; }
+  stVals = {};
+  libChanged();
+  closePeek();
+  tell(n + ' stock change' + (n === 1 ? '' : 's') + ' saved.', { title: 'Stock updated' });
+}
+
+// ── Stock history: a slide-in panel on every page (2026-10-20) ─────────
+// What Update stock recorded, read back: how much sold at a market or in a
+// month, and what giveaways and marketing cost over a period. Each change
+// carries the unit cost on the day it was saved; one saved before that
+// uses today's unit cost and is marked ~. Reconcile differences count as
+// Unaccounted (fewer on the shelf than Plume had). Units built into kits
+// are not here: they are still stock, inside the kit.
+var shRange = 'year', shGroup = 'event', shQ = '', shOpen = {}, shReason = '';
+// shReason: '' (everything), a reason key, or 'give' (gifted and marketing):
+// a block clicked to see what made up its number (her ask, 2026-10-20).
+function shPick(k) { return !shReason || k === shReason || (shReason === 'give' && (k === 'gifted' || k === 'marketing')); }
+var SH_RANGES = [['month', 'This month'], ['last', 'Last month'], ['year', 'This year'], ['12', 'Last 12 months'], ['all', 'All time']];
+function shBounds() {
+  var d = new Date(), y = d.getFullYear(), m = d.getMonth();
+  var iso = function (Y, M) { var x = new Date(Y, M, 1); return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-01'; };
+  if (shRange === 'month') return [iso(y, m), ''];
+  if (shRange === 'last') return [iso(y, m - 1), iso(y, m)];
+  if (shRange === 'year') return [y + '-01-01', ''];
+  if (shRange === '12') return [iso(y, m - 11), ''];
+  return ['', ''];
+}
+function shKeys() { return STOCK_REASONS.map(function (r) { return r.key; }).concat(['out', 'count']); }
+function shLabel(k) { return k === 'count' ? 'Unaccounted' : k === 'out' ? 'Other' : stockReasonLabel(k); }
+// Every change in range: { p, e, key, units, cost, est }. Units are always
+// counted in the reason's own direction (12 sold, 2 returned).
+function shRows() {
+  var b = shBounds(), q = shQ.toLowerCase().trim(), d = costData(), out = [];
+  d.products.forEach(function (p) {
+    ((p && p.stockLog) || []).forEach(function (e) {
+      if (e.kind === 'kit') return;
+      if (b[0] && (e.date || '') < b[0]) return;
+      if (b[1] && (e.date || '') >= b[1]) return;
+      if (q && ((e.note || '') + ' ' + (p.name || '') + ' ' + (p.sku || '')).toLowerCase().indexOf(q) === -1) return;
+      var key = e.kind === 'count' ? 'count' : (e.reason || 'out');
+      var qty = parseFloat(e.qty) || 0;
+      var units = reasonBack(key) ? qty : -qty;
+      var est = !(e.unitCost > 0);
+      var uc = est ? productUnitCost(p, d) : e.unitCost;
+      out.push({ p: p, e: e, key: key, units: units, cost: units * uc, est: est && units !== 0 });
+    });
+  });
+  return out;
+}
+function shBlank() { var o = {}; shKeys().forEach(function (k) { o[k] = { units: 0, cost: 0, est: false }; }); return o; }
+function shAdd(t, r) { t.units += r.units; t.cost += r.cost; t.est = t.est || r.est; }
+// The dollar sign is written as \u0024: a literal $ next to a quote is
+// read as a special pattern when a page or preview inlines this file with
+// String.replace, which garbles the script.
+function shMoney(v, est) { return (est ? '~' : '') + (v < 0 ? '-' : '') + '\u0024' + Math.abs(v).toFixed(2); }
+function shSummary(t) {
+  return shKeys().filter(function (k) { return t[k].units; }).map(function (k) {
+    return '<span class="sh-pill sh-' + k + '">' + esc(shLabel(k)) + ' <b>' + t[k].units + '</b> ' + shMoney(t[k].cost, t[k].est) + '</span>';
+  }).join('');
+}
+function shMonthName(m) { var a = m.split('-'); return a.length === 2 ? new Date(+a[0], +a[1] - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : m; }
+function shGroups(rows) {
+  var g = {}, order = [];
+  rows.forEach(function (r) {
+    var k, title, sub, sort;
+    if (shGroup === 'month') { k = (r.e.date || '').slice(0, 7) || 'none'; title = k === 'none' ? 'No date' : shMonthName(k); sub = ''; sort = k; }
+    else if (shGroup === 'product') { k = r.p.id; title = r.p.name || '(unnamed)'; sub = r.p.netWtDisplay || ''; sort = title.toLowerCase(); }
+    else { k = (r.e.date || '') + '|' + (r.e.note || ''); title = r.e.note || 'No note'; sub = r.e.date ? fmtDate(r.e.date) : ''; sort = (r.e.date || '') + '|' + (r.e.note || ''); }
+    if (!g[k]) { g[k] = { key: k, title: title, sub: sub, sort: sort, t: shBlank(), rows: [] }; order.push(k); }
+    shAdd(g[k].t[r.key], r);
+    g[k].rows.push(r);
+  });
+  var list = order.map(function (k) { return g[k]; });
+  list.sort(function (a, b) { return shGroup === 'product' ? a.sort.localeCompare(b.sort) : b.sort.localeCompare(a.sort); });
+  return list;
+}
+function shDetail(gr) {
+  // Inside an event or a month: one line per product and reason. Inside a
+  // product: one line per change.
+  if (shGroup === 'product') {
+    return gr.rows.slice().sort(function (a, b) { return (b.e.date || '').localeCompare(a.e.date || ''); }).map(function (r) {
+      return '<div class="sh-line"><span>' + (r.e.date ? fmtDate(r.e.date) : '') + (r.e.note ? ' · ' + esc(r.e.note) : '') + '</span><span>' + esc(shLabel(r.key)) + ' <b>' + r.units + '</b></span><span>' + shMoney(r.cost, r.est) + '</span></div>';
+    }).join('');
+  }
+  var m = {}, order = [];
+  gr.rows.forEach(function (r) {
+    var k = r.p.id + '|' + r.key;
+    if (!m[k]) { m[k] = { p: r.p, key: r.key, units: 0, cost: 0, est: false }; order.push(k); }
+    shAdd(m[k], r);
+  });
+  return order.map(function (k) { return m[k]; }).sort(function (a, b) { return (a.p.name || '').localeCompare(b.p.name || ''); }).map(function (x) {
+    return '<div class="sh-line"><span>' + esc(x.p.name || '(unnamed)') + '</span><span>' + esc(shLabel(x.key)) + ' <b>' + x.units + '</b></span><span>' + shMoney(x.cost, x.est) + '</span></div>';
+  }).join('');
+}
+function shHtml() {
+  var rows = shRows(), tot = shBlank();
+  rows.forEach(function (r) { shAdd(tot[r.key], r); });
+  var shown = shKeys().filter(function (k) { return ['sold', 'gifted', 'marketing', 'damaged'].indexOf(k) !== -1 || tot[k].units; });
+  var give = { units: tot.gifted.units + tot.marketing.units, cost: tot.gifted.cost + tot.marketing.cost, est: tot.gifted.est || tot.marketing.est };
+  var picked = rows.filter(function (r) { return shPick(r.key); });
+  var groups = shGroups(picked);
+  var pt = { units: 0, cost: 0, est: false };
+  picked.forEach(function (r) { shAdd(pt, r); });
+  var pName = shReason === 'give' ? 'Giveaways and marketing' : shReason ? shLabel(shReason) : '';
+  return '<div class="sh-panel"><div class="sup-title">' + icon('history') + '<h2>Stock history</h2></div>' +
+    '<div class="sh-ranges">' + SH_RANGES.map(function (r) {
+      return '<button type="button" class="ps-chip' + (shRange === r[0] ? ' on' : '') + '" onclick="Plume.stock.range(\'' + r[0] + '\')">' + r[1] + '</button>';
+    }).join('') + '</div>' +
+    '<div class="sh-tiles">' + shown.map(function (k) {
+      return '<button type="button" class="sh-tile' + (shReason === k ? ' on' : '') + '" aria-pressed="' + (shReason === k) + '" title="See what made up this number" onclick="Plume.stock.reason(\'' + k + '\')"><div class="sh-k">' + esc(shLabel(k)) + '</div><div class="sh-n">' + tot[k].units + '</div><div class="sh-c">' + shMoney(tot[k].cost, tot[k].est) + ' at cost</div></button>';
+    }).join('') + '</div>' +
+    '<button type="button" class="sh-give' + (shReason === 'give' ? ' on' : '') + '" aria-pressed="' + (shReason === 'give') + '" title="See what was given away or used for marketing" onclick="Plume.stock.reason(\'give\')"><b>Giveaways and marketing:</b> ' + give.units + ' unit' + (give.units === 1 ? '' : 's') + ', ' + shMoney(give.cost, give.est) + ' at cost</button>' +
+    '<div class="sh-bar"><div class="sh-tabs">' + [['event', 'By event'], ['month', 'By month'], ['product', 'By product']].map(function (t) {
+      return '<button type="button" class="ps-tab' + (shGroup === t[0] ? ' on' : '') + '" onclick="Plume.stock.group(\'' + t[0] + '\')">' + t[1] + '</button>';
+    }).join('') + '</div></div>' +
+    '<label class="ps-search sh-search">' + icon('search') + '<input type="search" id="sh-q" placeholder="Search notes or products, e.g. market" value="' + esc(shQ) + '" oninput="Plume.stock.find(this.value)" aria-label="Search stock history"></label>' +
+    (shReason ? '<div class="sh-showing" id="sh-showing"><span>Showing <b>' + esc(pName) + '</b>: ' + pt.units + ' unit' + (pt.units === 1 ? '' : 's') + ', ' + shMoney(pt.cost, pt.est) + ' at cost</span>' +
+      '<button type="button" class="ps-link-btn" onclick="Plume.stock.reason(\'\')">Show everything</button></div>' : '') +
+    '<div class="sh-list">' + (groups.length ? groups.map(function (gr) {
+      // While a block is picked, every row starts open: the point is to see what is in it.
+      var ok = shGroup + ':' + gr.key, open = shOpen[ok] === undefined ? !!shReason : !!shOpen[ok];
+      return '<div class="sh-grp' + (open ? ' open' : '') + '"><button type="button" class="sh-head" aria-expanded="' + open + '" onclick="Plume.stock.toggle(' + esc(JSON.stringify(shGroup + ':' + gr.key)) + ')">' +
+        '<span class="sh-title">' + esc(gr.title) + (gr.sub ? '<small>' + esc(gr.sub) + '</small>' : '') + '</span>' +
+        '<span class="sh-sum">' + shSummary(gr.t) + '</span><span class="sh-chev">' + icon('chevron') + '</span></button>' +
+        (open ? '<div class="sh-detail">' + shDetail(gr) + '</div>' : '') + '</div>';
+    }).join('') : '<div class="st-empty">' + (shReason && !shQ ? 'No ' + esc(pName.toLowerCase()) + ' in this range.' : shQ ? 'Nothing matches “' + esc(shQ) + '” in this range.' : 'Nothing recorded in this range. Update stock records sales, giveaways and returns.') + '</div>') + '</div>' +
+    '<p class="sh-foot">Costs are each product’s unit cost on the day the change was saved' + (rows.some(function (r) { return r.est; }) ? '; ~ marks changes from before costs were recorded, which use today’s unit cost' : '') +
+      '. Units built into kits are not counted here; the kit carries them.' + (tot.count.units ? ' Unaccounted is what reconciling found missing (negative: found extra).' : '') + '</p>' +
+    (rows.length ? '<div class="sh-actions"><button type="button" class="ps-link-btn" onclick="Plume.stock.copy()">' + icon('copy') + 'Copy as a table</button></div>' : '') +
+  '</div>';
+}
+function shRender() { var b = document.getElementById('ps-peek-body'); if (b) b.innerHTML = shHtml(); }
+function stockHistory() {
+  shRange = 'year'; shGroup = 'event'; shQ = ''; shOpen = {}; shReason = '';
+  openPeek(shHtml(), {
+    label: 'Stock history',
+    onClose: function () { var b = document.getElementById('ps-nav-history'); if (b) b.classList.remove('on'); }
+  });
+  var b = document.getElementById('ps-nav-history'); if (b) b.classList.add('on');
+  var s = document.getElementById('ps-nav-stock'); if (s) s.classList.remove('on');
+}
+function shRangeSet(r) { shRange = r; shRender(); }
+function shGroupSet(g) { shGroup = g; shRender(); }
+function shToggle(k) {
+  var was = shOpen[k] === undefined ? !!shReason : !!shOpen[k];
+  shOpen[k] = !was; shRender();
+}
+function shReasonSet(k) {
+  shReason = (k && k === shReason) ? '' : (k || ''); shOpen = {}; shRender();
+  // The details sit below the blocks; bring them into view.
+  var el = document.getElementById('sh-showing');
+  if (el && el.scrollIntoView) el.scrollIntoView({ block: 'start', behavior: 'smooth' });
+}
+function shFind(v) {
+  shQ = v; shRender();
+  var i = document.getElementById('sh-q'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); }
+}
+// Every change in range, one per line, for a spreadsheet or the books.
+function shCopy() {
+  var lines = [['Date', 'Note', 'Product', 'Reason', 'Units', 'Unit cost', 'Cost'].join('\t')];
+  shRows().filter(function (r) { return shPick(r.key); }).sort(function (a, b) { return (a.e.date || '').localeCompare(b.e.date || ''); }).forEach(function (r) {
+    lines.push([r.e.date || '', r.e.note || '', r.p.name || '', shLabel(r.key), r.units, (r.units ? Math.abs(r.cost / r.units) : 0).toFixed(2), r.cost.toFixed(2)].join('\t'));
+  });
+  var text = lines.join('\n'), done = function () { tell('Copied ' + (lines.length - 1) + ' line' + (lines.length === 2 ? '' : 's') + '. Paste into a spreadsheet.', { title: 'Copied' }); };
+  try { navigator.clipboard.writeText(text).then(done, function () { tell(text, { title: 'Copy these lines' }); }); }
+  catch (e) { tell(text, { title: 'Copy these lines' }); }
+}
+
+// Removes one taken-out or counted entry. Kit entries go with their build.
+function undoStock(p, id) {
+  if (!p || !p.stockLog) return false;
+  var before = p.stockLog.length;
+  p.stockLog = p.stockLog.filter(function (e) { return e.id !== id || e.kind === 'kit'; });
+  return p.stockLog.length !== before;
+}
+
 return {
   VERSION: VERSION,
   inciSplit: inciSplit, inciMerge: inciMerge, inciMerged: inciMerged,
@@ -3257,6 +3877,12 @@ return {
   isAqueous: isAqueous, phBadge: phBadge, phStepsHtml: phStepsHtml, phFinal: phFinal,
   PK_COLORS: PK_COLORS, PK_MATERIALS: PK_MATERIALS, PK_PARTS: PK_PARTS, PK_GROUPS: PK_GROUPS, PK_KINDS: PK_KINDS,
   pkColor: pkColor, pkSwatch: pkSwatch, pkKind: pkKind, pkKindOf: pkKindOf, pkGroup: pkGroup, pkGroupKey: pkGroupKey,
+  onHand: onHand, onHandParts: onHandParts, isKit: isKit, kitPartOk: kitPartOk, kitParts: kitParts,
+  kitNeeds: kitNeeds, kitShortages: kitShortages, buildKit: buildKit, undoKitBuild: undoKitBuild,
+  undoKitText: undoKitText, kitsUsing: kitsUsing, stockPass: stockPass, undoStock: undoStock,
+  STOCK_REASONS: STOCK_REASONS, productUnitCost: productUnitCost, stockReasonLabel: stockReasonLabel, fillUndoBlock: fillUndoBlock,
+  stock: { open: stockOpen, mode: stockMode, search: stockSearch, typed: stTyped, save: stockSave, entries: stEntries,
+           history: stockHistory, range: shRangeSet, group: shGroupSet, toggle: shToggle, reason: shReasonSet, find: shFind, copy: shCopy, rows: shRows },
   pkTypeFor: pkTypeFor, pkForProduct: pkForProduct, pkColored: pkColored, pkIsOther: pkIsOther,
   pkIcon: pkIcon, pkIconFor: pkIconFor, pkProducts: pkProducts, pkProductName: pkProductName,
   pkKindName: pkKindName, pkLooks: pkLooks, pkDisplay: pkDisplay, pkDetailHtml: pkDetailHtml, pkStock: pkStock,

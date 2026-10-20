@@ -78,9 +78,9 @@ ok('an unknown icon name gives nothing rather than breaking', P.icon('nope') ===
     ok('the old header is gone and the sidebar is in', await page.evaluate(
       "!document.querySelector('.app-header') && !!document.getElementById('ps-side') && document.body.classList.contains('ps-shell')"));
     const nav = await page.evaluate("Array.from(document.querySelectorAll('#ps-side a.ps-nav[target]')).map(function(a){var c=a.querySelector('.ps-ct');return a.textContent.replace(c?c.textContent:'','').trim()+' '+(c?c.textContent.trim():'');})");
-    // 2026-10-20: the work first, then the supplies under Library.
-    ok('it lists the work in order, then Ingredients and Packaging under Library, with counts (archived ingredient left out)',
-       JSON.stringify(nav) === '["Formulations 2","Batches 0","Products & Costing 0","Ingredients 3","Packaging 0"]', nav);
+    // 2026-10-20: Library (the supplies) first, then Actions (the work).
+    ok('it lists Ingredients and Packaging under Library, then the work under Actions, with counts (archived ingredient left out)',
+       JSON.stringify(nav) === '["Ingredients 3","Packaging 0","Formulations 2","Batches 0","Products & Costing 0"]', nav);
     ok('Library holds Ingredients, Packaging and Suppliers', await page.evaluate(
       "var h=Array.from(document.querySelectorAll('#ps-side .ps-nav-h')).find(function(x){return x.textContent==='Library';});" +
       "var l=h&&h.nextElementSibling; l&&Array.from(l.querySelectorAll('.ps-nav-label')).map(function(x){return x.textContent;}).join(',')==='Ingredients,Packaging,Suppliers'"));
@@ -250,7 +250,8 @@ ok('an unknown icon name gives nothing rather than breaking', P.icon('nope') ===
     ok('the sidebar marks Products & Costing', (await page.evaluate("document.querySelector('#ps-side .ps-nav.on').textContent")).indexOf('Products') !== -1);
     ok('the old dark header is gone', (await page.evaluate("document.querySelector('.app-hdr')")) === null);
     const sum = await page.evaluate("document.getElementById('pl-summary').innerText");
-    ok('the summary counts products, active (a draft became Active), units made and low margins', /6 products[\s\S]*5 active[\s\S]*6 units made[\s\S]*1 with a margin under 30%/.test(sum), sum);
+    // 2026-10-20: units made became units on hand (fills less kits and taken out).
+    ok('the summary counts products, active (a draft became Active), units on hand and low margins', /6 products[\s\S]*5 active[\s\S]*6 on hand[\s\S]*1 with a margin under 30%/.test(sum), sum);
     const outline = () => page.evaluate(`Array.from(document.querySelectorAll('#list-body tr')).map(function (r) {
       if (r.classList.contains('grp-type')) return 'T:' + r.querySelector('.type-bar').childNodes[1].textContent;
       if (r.classList.contains('grp-sub')) return 'F:' + r.querySelector('.sub-h').childNodes[1].textContent;
