@@ -115,7 +115,7 @@ main { max-width:1240px; margin:0 auto; padding:24px 22px 60px; }
 
 /* ── Production runs ── */
 .runs-list { background:var(--white); border:1px solid var(--cream-border); border-radius:3px; }
-.run-row { display:grid; grid-template-columns:100px 60px minmax(0,1.3fr) minmax(0,1fr) 30px; gap:10px; padding:7px 12px; border-bottom:1px solid var(--cream-dark); align-items:center; font-size:12px; }
+.run-row { display:grid; grid-template-columns:100px 56px minmax(0,1fr) minmax(0,1.4fr) 30px; gap:10px; padding:7px 12px; border-bottom:1px solid var(--cream-dark); align-items:center; font-size:12px; }
 .run-row:last-child { border-bottom:none; }
 .run-row .rr-date { color:var(--ink-light); font-variant-numeric:tabular-nums; }
 .run-row .rr-qty { font-variant-numeric:tabular-nums; color:var(--ink); font-weight:500; text-align:right; }
@@ -343,11 +343,35 @@ body.ps-shell .field input:focus, body.ps-shell .field select:focus, body.ps-she
 .et-ct { color: var(--ink-lighter); font-weight: 500; margin-left: 6px; font-size: 13px; }
 .et-ct:empty { display: none; }
 .ed-pane { padding-top: 14px; }
-.runs-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-.runs-head .ps-grow { flex: 1; }
-.runs-head .runs-sum { margin: 0; font-size: 13.5px; }
 .run-row .rr-batch small, .run-row .rr-notes small { display: block; color: var(--ink-lighter); font-size: 12px; }
-.run-row .rr-old { color: var(--ink-lighter); font-size: 12px; }
+.run-row .rr-pk { display: block; color: var(--ink-light); font-size: 13px; line-height: 1.45; }
+.run-row .rr-old { color: var(--ink-lighter); font-size: 12.5px; }
+/* The fill row (2026-10-19, v1.30): under the list, as before fills */
+.run-back { display: inline-flex; align-items: center; gap: 4px; font-size: 13.5px; color: var(--ink-light); text-decoration: none; padding: 3px 6px; margin: 0 0 8px -6px; border-radius: 6px; }
+.run-back:hover { background: var(--cream-dark); color: var(--ink); }
+.run-add { border: 1.5px solid var(--cream-border); border-radius: 0 0 10px 10px; background: var(--cream); padding: 10px 12px 12px; }
+.run-add .run-add-row { display: grid; grid-template-columns: 150px 84px minmax(0,1fr) auto; gap: 10px; align-items: end; padding: 0; margin: 0; border: 0; border-radius: 0; background: none; }
+/* One product: Date, Units, From batch on the first line; Notes and Add fill under them */
+.run-add .run-add-row:not(.pack) #run-from-cell { grid-column: 3 / 5; }
+.run-add .run-add-row:not(.pack) .field.grow { grid-column: 1 / 4; }
+.run-row.h .rr-qty { color: inherit; font-weight: 400; }
+.run-add .field { margin: 0; min-width: 0; }
+.run-add .field input, .run-add .field select { width: 100%; font-size: 13.5px; padding: 5px 8px; }
+.run-parts { margin-top: 10px; border: 1px solid var(--cream-border); border-radius: 9px; background: var(--white); overflow: hidden; }
+.run-part { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1.4fr) 70px; gap: 10px; align-items: center; padding: 7px 10px; border-top: 1px solid var(--cream-border); font-size: 14px; }
+.run-part:first-child { border-top: 0; }
+.run-part small { display: block; font-size: 12px; color: var(--ink-lighter); }
+.run-part select { width: 100%; font-size: 13.5px; border: 1px solid var(--cream-border); border-radius: 8px; padding: 5px 8px; background: var(--white); color: var(--ink); }
+.run-part .r { text-align: right; font-variant-numeric: tabular-nums; }
+.run-takes { margin-top: 10px; font-size: 13.5px; line-height: 1.5; color: var(--ink-light); }
+.run-takes:empty { display: none; }
+.run-takes b { color: var(--ink); font-weight: 600; }
+.takes-pk { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 4px; }
+.takes-pk > span { display: inline-flex; align-items: center; gap: 6px; }
+.takes-pk .pk-thumb { width: 28px; height: 28px; padding: 2px; }
+.run-takes .warn { color: var(--warning); margin-top: 6px; }
+.run-takes .stop { color: var(--danger); background: var(--danger-bg); border: 1px solid var(--danger-border); border-radius: 8px; padding: 8px 10px; margin-top: 8px; font-weight: 500; }
+#run-add[disabled] { opacity: .45; cursor: not-allowed; }
 .lbl-modes { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 10px; }
 .lbl-modes .ps-chip input { position: absolute; opacity: 0; pointer-events: none; }
 .lbl-modes .ps-chip:has(input:checked) { background: var(--ink); color: var(--white); border-color: var(--ink); }
@@ -359,15 +383,13 @@ body.ps-shell .label-box { border: 1.5px solid var(--cream-border); border-radiu
 body.ps-shell .label-box-hdr-l, body.ps-shell .label-section-name { font-size: 11.5px; letter-spacing: 0; text-transform: none; font-weight: 500; }
 body.ps-shell .label-content { font-family: 'DM Sans', sans-serif; font-size: 13.5px; line-height: 1.55; }
 body.ps-shell .label-merge-note { font-size: 12px; border-radius: 8px; }
-body.ps-shell .runs-list { border: 1.5px solid var(--cream-border); border-radius: 10px; overflow: hidden; }
+body.ps-shell .runs-list { border: 1.5px solid var(--cream-border); border-bottom: 0; border-radius: 10px 10px 0 0; overflow: hidden; }
 body.ps-shell .runs-list .empty-row { padding: 12px 14px; font-size: 13.5px; line-height: 1.5; color: var(--ink-lighter); }
 body.ps-shell .runs-list .run-row.h { background: var(--cream); font-size: 12px; color: var(--ink-lighter); padding: 6px 12px; }
 body.ps-shell .run-row { font-size: 14px; padding: 8px 12px; border-bottom: 1px solid var(--cream-border); }
 body.ps-shell .run-row .rr-batch, body.ps-shell .run-row .rr-notes { font-size: 13px; font-style: normal; }
-body.ps-shell .run-add-row { margin-top: 0; border: 1.5px solid var(--cream-border); border-radius: 0 0 10px 10px; background: var(--cream); }
-body.ps-shell .run-add-row .field { margin: 0; }
-body.ps-shell .run-add-row .field input, body.ps-shell .run-add-row .field select { font-size: 13.5px; padding: 4px 8px; }
-.runs-sum { font-size: 12.5px; color: var(--ink-lighter); margin-top: 6px; }
+.runs-sum { font-size: 13.5px; color: var(--ink-lighter); margin: 0 0 8px; }
+.runs-sum:empty { display: none; }
 #p-notes { width: 100%; min-height: 120px; font-family: 'DM Sans', sans-serif; font-size: 14px; line-height: 1.6; color: var(--ink); background: var(--white); border: 1px solid var(--cream-border); border-radius: 9px; padding: 10px 12px; resize: vertical; outline: none; }
 #p-notes:focus { border-color: var(--bark); }
 
@@ -471,8 +493,13 @@ details.bc-tips .bc-note { border: 0; padding: 6px 0 0; margin: 0; font-size: 12
   .pkg-recipe-row, .pkg-recipe-hdr { grid-template-columns: 1fr 56px 70px 26px; gap: 6px; }
   .comp-recipe-row, .comp-recipe-hdr { grid-template-columns: 1fr 60px 70px 26px; gap: 6px; }
   .comp-recipe-row > :nth-child(3), .comp-recipe-hdr > :nth-child(3) { display: none; }
-  .run-row { grid-template-columns: 84px 44px 1fr 26px !important; }
+  .run-row { grid-template-columns: 84px 40px 1fr 26px !important; }
   .run-row > .rr-notes { display: none; }
+  .run-add .run-add-row, .run-add .run-add-row.pack { grid-template-columns: 1fr 1fr; }
+  .run-add .run-add-row .field.grow, .run-add .run-add-row:not(.pack) #run-from-cell, .run-add .run-add-row:not(.pack) .field.grow { grid-column: 1 / -1; }
+  .run-add .run-add-row #run-add { grid-column: 1 / -1; justify-content: center; }
+  .run-part { grid-template-columns: minmax(0,1fr) 60px; }
+  .run-part select { grid-column: 1 / -1; grid-row: 2; }
   .ed-tabbar .ps-tab { font-size: 14px; padding: 7px 6px; }
 }
 @media print { .ps-side, .fe-top { display: none !important; } body.ps-shell { padding-left: 0 !important; } }
@@ -653,14 +680,32 @@ details.bc-tips .bc-note { border: 0; padding: 6px 0 0; margin: 0; font-size: 12
           </div>
 
           <div class="ed-pane" id="pp-runs" hidden>
-            <!-- A fill counts the units, takes the packaging list out of
-                 stock and the grams from the batch (2026-10-19). -->
-            <div class="runs-head">
-              <div class="runs-sum" id="runs-summary"></div>
-              <span class="ps-grow"></span>
-              <button type="button" class="ps-btn-primary" id="run-fill-btn" onclick="openProductFill()"><span data-ps-icon="plus"></span>Fill</button>
-            </div>
+            <!-- Fills (2026-10-19, v1.30): the list, then the row that adds
+                 one. A fill counts the units, takes the packaging list out of
+                 stock and the grams from the batch; the X reverses it. -->
+            <a class="run-back" id="run-back" hidden></a>
+            <div class="runs-sum" id="runs-summary"></div>
             <div class="runs-list" id="runs-list"></div>
+            <div class="run-add">
+              <div class="run-add-row" id="run-add-row">
+                <div class="field">
+                  <label for="run-date">Date</label>
+                  <input type="date" id="run-date">
+                </div>
+                <div class="field">
+                  <label for="run-units" id="run-units-lbl">Units</label>
+                  <input type="number" id="run-units" min="1" step="1" placeholder="e.g. 12" oninput="fillTakes()">
+                </div>
+                <div class="field" id="run-from-cell"></div>
+                <div class="field grow">
+                  <label for="run-notes">Notes</label>
+                  <input type="text" id="run-notes" placeholder="optional">
+                </div>
+                <button type="button" class="ps-btn-primary" id="run-add" onclick="addRun()"><span data-ps-icon="plus"></span>Add fill</button>
+              </div>
+              <div class="run-parts" id="run-parts" hidden></div>
+              <div class="run-takes" id="run-takes"></div>
+            </div>
           </div>
 
           <div class="ed-pane" id="pp-notes" hidden>
@@ -2465,6 +2510,7 @@ function createProduct() {
 function openProduct(id) {
   var p = findProduct(id);
   if (!p) { Plume.tell('Product not found.'); return; }
+  if (!fillPreset || fillPreset.pid !== id) { fillPreset = null; document.getElementById('run-back').hidden = true; }
   curId = id;
   dirty = false;
 
@@ -3147,21 +3193,42 @@ function fallbackCopy(text) {
 // ──────────────────────────────────────────────────────────────────────
 // Fills (production)
 // ──────────────────────────────────────────────────────────────────────
-// A fill counts units, takes this product's packaging list out of stock
-// and takes the grams from the batch it came from (core's Plume.openFill
-// does the work; Batches opens the same panel from a batch). Runs logged
-// before 2026-10-19 show as older runs: they took no packaging.
+// Filling happens here, in the row under the list (her model, 2026-10-19,
+// v1.30). A fill counts the units, takes the product's packaging list out
+// of stock and the grams from the batch; the X reverses both. The batch
+// starts on the oldest one with bulk left (FIFO); a sample pack picks a
+// batch per part. Short packaging stops the fill. A fill is written to the
+// SAVED product, so it never needs Save and never saves other edits; the
+// open editor gets the same runs. The Fill from this batch links in Batches
+// arrive as #p=<product>&fill=<batch>.
+var fillPreset = null;   // { pid, bid } from a Batches link
+
+function storedProducts() { return Store.getJSON(PRODUCT_KEY, []) || []; }
+function findIn(list, id) {
+  for (var i = 0; i < list.length; i++) if (list[i] && list[i].id === id) return list[i];
+  return null;
+}
+function savePkgs() {
+  if (Store.setJSON(PKG_KEY, pkgs)) { Plume.noteSaveOk(); return true; }
+  Plume.noteSaveFailed();
+  return false;
+}
+function saveStored(list) {
+  if (Store.setJSON(PRODUCT_KEY, list)) { Plume.noteSaveOk(); if (Plume.refreshShell) Plume.refreshShell(); return true; }
+  Plume.noteSaveFailed();
+  return false;
+}
+
 function runBatchText(r, p) {
   var draws = Plume.fillDraws(r, p);
   var ids = draws.length ? draws.map(function(d) { return d.batchId; }) : (r.batchId ? [r.batchId] : []);
   var g = 0;
   draws.forEach(function(d) { g += parseFloat(d.grams) || 0; });
   var names = ids.map(function(id) {
-    var b = null;
-    for (var i = 0; i < batches.length; i++) if (batches[i].id === id) { b = batches[i]; break; }
+    var b = findIn(batches, id);
     return b ? Plume.batchLabel(b) : '(deleted batch)';
   });
-  if (!names.length) return '<span style="color:var(--ink-lighter)">--</span>';
+  if (!names.length) return '<span class="rr-old">not from a logged batch</span>';
   return esc(names.join(' + ')) + (g > 0 ? '<small>' + Plume.fmtG(g) + '</small>' : '');
 }
 function renderRuns(p) {
@@ -3170,75 +3237,186 @@ function renderRuns(p) {
   var list = document.getElementById('runs-list');
   var summary = document.getElementById('runs-summary');
   if (!runs.length) {
-    list.innerHTML = '<div class="empty-row">Nothing filled yet. A fill counts the units, takes the packaging list out of stock, and takes the grams from the batch you poured from.</div>';
+    list.innerHTML = '<div class="empty-row">Nothing filled yet.</div>';
     summary.textContent = '';
-    setTabCounts();
-    return;
+  } else {
+    var totalUnits = 0;
+    var sorted = runs.slice().sort(function(a, b) { return (b.date || '').localeCompare(a.date || '') || (b.addedAt || '').localeCompare(a.addedAt || ''); });
+    var html = '<div class="run-row h"><span>Date</span><span class="rr-qty">Units</span><span>From batch</span><span>Packaging taken</span><span></span></div>';
+    sorted.forEach(function(r) {
+      var qty = parseInt(r.units, 10) || 0;
+      totalUnits += qty;
+      var pk = r.fill
+        ? ((r.packaging || []).length ? r.packaging.map(function(c) { return '<span class="rr-pk">' + c.quantity + ' &times; ' + esc(c.packagingName) + '</span>'; }).join('') : '<span class="rr-old">none on its packaging list</span>')
+        : '<span class="rr-old">logged before packaging was taken</span>';
+      html += '<div class="run-row">' +
+        '<span class="rr-date">' + fmtDate(r.date) + '</span>' +
+        '<span class="rr-qty">' + qty + '</span>' +
+        '<span class="rr-batch">' + runBatchText(r, p) + '</span>' +
+        '<span class="rr-notes">' + pk + (r.notes ? '<small>' + esc(r.notes) + '</small>' : '') + '</span>' +
+        '<button class="rr-del" title="Reverse: packaging back to stock, grams back to the batch" aria-label="Reverse this fill" onclick="deleteRun(\'' + r.id + '\')">&#x2715;</button>' +
+        '</div>';
+    });
+    list.innerHTML = html;
+    summary.textContent = totalUnits + ' units across ' + runs.length + ' fill' + (runs.length === 1 ? '' : 's');
   }
-  var totalUnits = 0;
-  var sorted = runs.slice().sort(function(a, b) { return (b.date || '').localeCompare(a.date || '') || (b.addedAt || '').localeCompare(a.addedAt || ''); });
-  var html = '<div class="run-row h"><span>Date</span><span class="rr-qty">Units</span><span>From</span><span>Notes</span><span></span></div>';
-  sorted.forEach(function(r) {
-    var qty = parseInt(r.units, 10) || 0;
-    totalUnits += qty;
-    var pk = (r.packaging || []).map(function(c) { return c.quantity + ' ' + c.packagingName; }).join(', ');
-    html += '<div class="run-row">' +
-      '<span class="rr-date">' + fmtDate(r.date) + '</span>' +
-      '<span class="rr-qty">' + qty + '</span>' +
-      '<span class="rr-batch">' + runBatchText(r, p) + '</span>' +
-      '<span class="rr-notes">' + esc(r.notes || '') +
-        (r.fill ? (pk ? '<small title="' + esc(pk) + '">took ' + (r.packaging.length === 1 ? '1 packaging item' : r.packaging.length + ' packaging items') + ' from stock</small>' : '')
-                : '<small class="rr-old">logged before fills; no packaging taken</small>') + '</span>' +
-      '<button class="rr-del" title="Undo this fill" aria-label="Undo this fill" onclick="deleteRun(\'' + r.id + '\')">&#x2715;</button>' +
-      '</div>';
-  });
-  list.innerHTML = html;
-  summary.textContent = totalUnits + ' units across ' + runs.length + ' fill' + (runs.length === 1 ? '' : 's');
   setTabCounts();
+  renderFillRow(p);
 }
 
-function openProductFill() {
-  var p = curId ? findProduct(curId) : null;
-  if (!p || dirty) {
-    Plume.tell('Save the product first, so the fill uses its packaging list and formulation as saved.', { title: 'Save first' });
-    return;
-  }
-  // Fresh copies, in case Batches or Packaging changed in another tab.
+// The row's batch choices. A batch picked in Batches wins when it fits.
+function fillBatchSelect(id, formulaId, label, pick) {
+  var list = Plume.fillBatches(batches, formulaId);
+  var sel = (pick && findIn(list, pick)) ? pick : Plume.fillDefaultBatch(batches, formulaId, products);
+  return '<select id="' + id + '" onchange="fillTakes()" aria-label="From batch' + (label ? ' for ' + esc(label) : '') + '">' +
+    list.map(function(b) {
+      return '<option value="' + esc(b.id) + '"' + (b.id === sel ? ' selected' : '') + '>' + esc(Plume.batchLabel(b)) + ' · ' +
+        Plume.fmtG(Plume.batchLeftG(b, products)) + ' left' + (b.status === 'curing' ? ' (curing)' : '') + '</option>';
+    }).join('') +
+    '<option value=""' + (sel ? '' : ' selected') + '>Not from a logged batch</option></select>';
+}
+function renderFillRow(p) {
+  // Fresh copies: Batches or Packaging may have changed in another tab.
   batches = Store.getJSON(BATCH_KEY, []) || [];
   pkgs    = Store.getJSON(PKG_KEY,   []) || [];
-  Plume.openFill({
-    mode: 'product', product: p,
-    products: products, batches: batches, pkgs: pkgs, forms: forms,
-    crumb: 'Products & Costing · ' + (p.name || '(unnamed)'),
-    onCommit: function(done) {
-      var okP = saveProducts(), okK = savePkgs();
-      if (curId === p.id) renderRuns(p);
-      renderList();
-      if (okP && okK) toast(done[0].run.units + ' filled');
-    }
-  });
+  var sp = findIn(storedProducts(), p.id) || p;
+  var pick = fillPreset && fillPreset.pid === p.id ? fillPreset.bid : '';
+  var parts = Plume.fillParts(sp, forms);
+  var multi = sp.productKind === 'multi';
+  document.getElementById('run-add-row').classList.toggle('pack', multi);
+  document.getElementById('run-units-lbl').textContent = multi ? 'Packs' : 'Units';
+  var cell = document.getElementById('run-from-cell'), box = document.getElementById('run-parts');
+  if (multi) {
+    cell.hidden = true; cell.innerHTML = '';
+    box.hidden = !parts.length;
+    box.innerHTML = parts.map(function(c, i) {
+      return '<div class="run-part"><span>' + esc(c.label || 'Part') + '<small>' + (c.g ? Plume.fmtG(c.g) + ' each' : 'no grams set') + '</small></span>' +
+        fillBatchSelect('run-b' + i, c.formulaId, c.label, pick) + '<span class="r" id="run-g' + i + '"></span></div>';
+    }).join('');
+  } else {
+    box.hidden = true; box.innerHTML = '';
+    cell.hidden = false;
+    cell.innerHTML = '<label for="run-b0">From batch</label>' + fillBatchSelect('run-b0', parts.length ? parts[0].formulaId : '', '', pick);
+  }
+  if (!document.getElementById('run-date').value) document.getElementById('run-date').value = todayISO();
+  fillTakes();
 }
-function savePkgs() {
-  if (Store.setJSON(PKG_KEY, pkgs)) { Plume.noteSaveOk(); return true; }
-  Plume.noteSaveFailed();
-  return false;
+// The line under the row: what Add fill will take. Short packaging stops it.
+function fillPlan() {
+  var p = curId ? findIn(storedProducts(), curId) : null;
+  if (!p) return null;
+  var u = parseInt(document.getElementById('run-units').value, 10) || 0;
+  var parts = Plume.fillParts(p, forms);
+  var draws = parts.map(function(c, i) {
+    var sel = document.getElementById('run-b' + i);
+    return { batchId: sel ? sel.value : '', formulaId: c.formulaId, grams: u * c.g, label: c.label };
+  });
+  return { p: p, units: u, draws: draws, needs: Plume.fillPkgNeeds(p, u), short: Plume.fillShortages(pkgs, p, u) };
+}
+function fillTakes() {
+  var box = document.getElementById('run-takes'), btn = document.getElementById('run-add');
+  var plan = fillPlan();
+  if (!plan) { box.innerHTML = ''; btn.disabled = true; return; }
+  var multi = plan.p.productKind === 'multi';
+  plan.draws.forEach(function(d, i) {
+    var cell = document.getElementById('run-g' + i);
+    if (cell) cell.textContent = d.batchId && plan.units ? Plume.fmtG(d.grams) : '--';
+  });
+  if (!plan.units) {
+    box.innerHTML = '<span class="ps-muted">Type the ' + (multi ? 'packs' : 'units') + ' to see what this takes.</span>';
+    btn.disabled = true;
+    return;
+  }
+  var pk = plan.needs.map(function(n) {
+    var it = findIn(pkgs, n.packagingId);
+    return '<span><span class="pk-thumb">' + Plume.pkIconFor(it) + '</span><b>' + n.quantity + '</b>&nbsp;&times; ' + esc(it ? Plume.pkDisplay(it) : '(a deleted item)') + '</span>';
+  }).join('');
+  var grams = [], warn = [];
+  plan.draws.forEach(function(d) {
+    var b = d.batchId ? findIn(batches, d.batchId) : null;
+    if (!b) { grams.push('no grams tracked' + (multi && d.label ? ' for ' + esc(d.label) : '') + ' (not from a logged batch)'); return; }
+    if (!d.grams) { grams.push('nothing from ' + esc(Plume.batchLabel(b)) + ' by weight (no net weight set; the batch is still recorded)'); return; }
+    grams.push('<b>' + Plume.fmtG(d.grams) + '</b> from ' + esc(Plume.batchLabel(b)));
+    var left = Plume.batchLeftG(b, products);
+    if (d.grams > left + 1e-9) warn.push(esc(Plume.batchLabel(b)) + ' has ' + Plume.fmtG(Math.max(0, left)) + ' left by the numbers; this takes ' + Plume.fmtG(d.grams) + '. You can still add it.');
+  });
+  box.innerHTML = (pk ? 'Takes from packaging:<div class="takes-pk">' + pk + '</div>' : 'Nothing from packaging (no packaging list on this product).') +
+    (grams.length ? '<div style="margin-top:4px">' + (pk ? 'and ' : 'Takes ') + grams.join(', ') + '.</div>' : '') +
+    (dirty ? '<div class="ps-muted" style="margin-top:4px">Uses the product as saved; your unsaved changes are not included.</div>' : '') +
+    (warn.length ? '<div class="warn">' + warn.join('<br>') + '</div>' : '') +
+    (plan.short.length ? '<div class="stop">Not enough in stock. ' + plan.short.map(function(s) { return esc(s.name) + ': needs ' + s.need + ', ' + s.have + ' in stock'; }).join('; ') +
+      '. Add the purchase in Packaging, or check the count and the product’s packaging list.</div>' : '');
+  btn.disabled = !!plan.short.length;
+}
+function addRun() {
+  if (!curId) return;
+  var p = findProduct(curId); if (!p) return;
+  var stored = storedProducts(), sp = findIn(stored, curId);
+  if (!sp) { Plume.tell('Save the new product first.', { title: 'Save first' }); return; }
+  pkgs = Store.getJSON(PKG_KEY, []) || [];
+  var plan = fillPlan();
+  if (!plan || !plan.units) { Plume.tell('Enter how many you filled.'); return; }
+  if (plan.short.length) { fillTakes(); return; }
+  var run = Plume.makeFill(sp, {
+    date:  document.getElementById('run-date').value || todayISO(),
+    units: plan.units,
+    notes: document.getElementById('run-notes').value.trim(),
+    draws: plan.draws.map(function(d) { return { batchId: d.batchId, formulaId: d.formulaId, grams: d.grams }; })
+  }, pkgs);
+  var okP = saveStored(stored), okK = savePkgs();
+  // The open editor gets the same runs, so a later Save keeps them.
+  p.productionRuns = JSON.parse(JSON.stringify(sp.productionRuns));
+  fillPreset = null;
+  document.getElementById('run-back').hidden = true;
+  document.getElementById('run-units').value = '';
+  document.getElementById('run-notes').value = '';
+  renderRuns(p);
+  renderList();
+  if (okP && okK) toast(run.units + ' filled');
 }
 
 function deleteRun(rid) {
   if (!curId) return;
   var p = findProduct(curId); if (!p) return;
+  var stored = storedProducts(), sp = findIn(stored, curId) || p;
   var run = null;
-  (p.productionRuns || []).forEach(function(r) { if (r.id === rid) run = r; });
+  (sp.productionRuns || []).forEach(function(r) { if (r.id === rid) run = r; });
   if (!run) return;
-  // The undo runs later, in the dialog's callback; p and rid are locals.
-  Plume.ask(Plume.undoFillText(p, run), function() {
+  // The reversal runs later, in the dialog's callback; p and rid are locals.
+  Plume.ask(Plume.undoFillText(sp, run), function() {
+    stored = storedProducts(); sp = findIn(stored, p.id);
     pkgs = Store.getJSON(PKG_KEY, []) || [];
-    Plume.undoFill(p, rid, pkgs);
-    saveProducts();
+    if (!sp || !Plume.undoFill(sp, rid, pkgs)) return;
+    saveStored(stored);
     if (run.fill) savePkgs();
+    p.productionRuns = JSON.parse(JSON.stringify(sp.productionRuns));
     if (curId === p.id) renderRuns(p);
     renderList();
-  }, { title: 'Undo this fill of ' + run.units + ' on ' + fmtDate(run.date) + '?', yes: 'Undo fill', danger: true });
+  }, { title: 'Reverse this fill of ' + run.units + ' on ' + fmtDate(run.date) + '?', yes: 'Reverse fill', danger: true });
+}
+
+// #p=<product> (a product named in a batch's Filled list) opens it on its
+// Fills tab. #p=<product>&fill=<batch>, from a batch's Fill from this batch
+// list, also chooses that batch:
+// open the product on its Fills tab with that batch chosen, the cursor in
+// Units, and a link back to the batch.
+function handleFillLink() {
+  var m = /^#p=([^&]+)(?:&fill=(.+))?$/.exec(location.hash || '');
+  if (!m) return;
+  var pid, bid;
+  try { pid = decodeURIComponent(m[1]); bid = m[2] ? decodeURIComponent(m[2]) : ''; } catch (e) { return; }
+  try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+  if (!findProduct(pid)) return;
+  fillPreset = { pid: pid, bid: bid };
+  edTab = 'runs';
+  openProduct(pid);
+  var b = findIn(batches, bid), back = document.getElementById('run-back');
+  if (b) {
+    back.href = 'plume-batchlog.html#b=' + encodeURIComponent(bid);
+    back.innerHTML = '&lsaquo; Back to ' + esc(Plume.batchLabel(b));
+    back.hidden = false;
+  }
+  setTimeout(function() { var u = document.getElementById('run-units'); if (u) u.focus(); }, 0);
 }
 
 
@@ -3493,6 +3671,7 @@ if (typeof Plume === 'undefined') {
     var ic = document.querySelectorAll('[data-ps-icon]');
     for (var k = 0; k < ic.length; k++) ic[k].innerHTML = Plume.icon(ic[k].getAttribute('data-ps-icon'));
     loadData();
+    handleFillLink();
   });
 }
 </script>

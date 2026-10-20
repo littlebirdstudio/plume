@@ -276,13 +276,24 @@ body.ps-shell .field input:focus, body.ps-shell .field select:focus, body.ps-she
 .bulk-card .big.neg { color: var(--warning); }
 .bulk-card .left-bar { width: 170px; height: 6px; border-radius: 3px; }
 .fills-tbl { border: 1.5px solid var(--cream-border); border-radius: 10px; overflow: hidden; }
-.fill-it { display: grid; grid-template-columns: 96px minmax(0,1fr) 56px 70px 28px; gap: 10px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--cream-border); font-size: 14px; }
+.fill-it { display: grid; grid-template-columns: 100px minmax(0,1fr) 56px 70px; gap: 10px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--cream-border); font-size: 14px; }
 .fill-it:last-child { border-bottom: 0; }
 .fill-it.h { background: var(--cream); font-size: 12px; color: var(--ink-lighter); padding: 6px 12px; }
 .fill-it .r { text-align: right; font-variant-numeric: tabular-nums; }
 .fill-it small { display: block; font-size: 12px; color: var(--ink-lighter); }
-.fill-it .x { background: none; border: 0; cursor: pointer; color: var(--ink-lighter); font-size: 14px; padding: 2px 4px; }
-.fill-it .x:hover { color: var(--danger); }
+.fill-it a { color: var(--bark-dark); }
+.fill-go { border: 1.5px solid var(--cream-border); border-radius: 10px; overflow: hidden; }
+.fill-go-h { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; padding: 9px 12px; background: color-mix(in srgb, var(--bark) 13%, var(--white)); font-weight: 600; font-size: 14px; color: var(--bark-dark); }
+.fill-go-h span { font-weight: 400; font-size: 12.5px; color: var(--ink-light); }
+.fill-go-l { display: flex; flex-direction: column; }
+.go-btn { display: flex; align-items: center; gap: 10px; border-top: 1px solid var(--cream-border); background: var(--white); color: var(--ink); font-size: 14px; padding: 9px 12px; text-decoration: none; }
+.go-btn:first-child { border-top: 0; }
+.go-btn:hover { background: color-mix(in srgb, var(--bark) 7%, var(--white)); }
+.go-btn .ps-i { width: 18px; height: 18px; color: var(--bark); flex: none; }
+.go-btn small { color: var(--ink-lighter); font-size: 12px; }
+.go-btn .arr { margin-left: auto; font-size: 20px; line-height: 1; color: var(--ink-lighter); }
+.fill-go-none { padding: 10px 12px; font-size: 13.5px; color: var(--ink-lighter); background: var(--white); }
+.fill-go-none a { color: var(--bark-dark); }
 .bp-legacy .pkg-run-card .pr-del { display: none; }
 .bp-foot .bp-del { color: var(--danger); border: 1px solid var(--danger-border); border-radius: 7px; padding: 5px 10px; }
 .bp-foot .bp-del:hover { background: var(--danger-bg); color: var(--danger); }
@@ -552,7 +563,7 @@ body.ps-shell .pkg-builder-hdr .field input { width: 100%; min-width: 0; }
       <div class="bp-tabs">
         <button type="button" class="ps-tab on" id="bt-details" onclick="setBatchTab('details')">Details</button>
         <button type="button" class="ps-tab" id="bt-ings" onclick="setBatchTab('ings')">Ingredients<span class="bp-ct" id="bt-ings-ct"></span></button>
-        <button type="button" class="ps-tab" id="bt-runs" onclick="setBatchTab('runs')">Fills<span class="bp-ct" id="bt-runs-ct"></span></button>
+        <button type="button" class="ps-tab" id="bt-runs" onclick="setBatchTab('runs')">Filled<span class="bp-ct" id="bt-runs-ct"></span></button>
       </div>
 
       <div class="bp-pane" id="bp-details">
@@ -625,9 +636,10 @@ body.ps-shell .pkg-builder-hdr .field input { width: 100%; min-width: 0; }
       </div>
 
       <div class="bp-pane" id="bp-runs" hidden>
-        <!-- Fills (2026-10-19): the bulk left, what was filled from it, and
-             Fill from this batch. The packaging run builder below is retired
-             (hidden); runs made with it show as history in d-pkg-list. -->
+        <!-- Filled (2026-10-19, v1.30): the bulk left, links to fill each
+             product in Products & Costing, and what was filled from it, read
+             only. The packaging run builder below is retired (hidden); runs
+             made with it show as history in d-pkg-list. -->
         <div id="d-fills"></div>
         <div class="bp-legacy" id="d-legacy" hidden>
           <div class="bp-h3"><h3>Packaging runs from before fills</h3><span class="ps-muted">kept as history</span></div>
@@ -703,7 +715,7 @@ var ings    = [];
 var forms   = [];
 var pkgs    = [];
 var batches = [];
-var products = [];   // read for fills: what was filled from each batch
+var products = [];   // read only: what was filled from each batch
 
 // New-batch form state
 var newPreview = []; // [{ ingredientId, ingredientName, grams, available }]
@@ -846,11 +858,6 @@ function gramsToLotQty(g, unit, density) {
 // tab since this page loaded. Reloading before committing avoids it.
 function saveIngredients() {
   if (Store.setJSON(ING_KEY, ings)) { Plume.noteSaveOk(); return true; }
-  Plume.noteSaveFailed();
-  return false;
-}
-function saveProducts() {
-  if (Store.setJSON(PRODUCT_KEY, products)) { Plume.noteSaveOk(); return true; }
   Plume.noteSaveFailed();
   return false;
 }
@@ -1895,80 +1902,64 @@ function renderPackagingRuns(b) {
 }
 
 // ──────────────────────────────────────────────────────────────────────
-// Fills (2026-10-19)
+// Filled (2026-10-19, v1.30)
 // ──────────────────────────────────────────────────────────────────────
-// The batch is bulk; fills are what was made from it. Each fill lives on
-// its product (Products & Costing) and draws grams from here. Grams left
-// is an estimate: what stays in the bowl is never filled, so she still
-// marks a batch Used up when it is really gone.
+// The batch is bulk and only reports: bulk left, and where it went. Fills
+// are logged on each product in Products & Costing; the links below open a
+// product there with this batch already chosen. Grams left is an estimate
+// (what stays in the bowl is never filled), so Used up reads 0 g.
+function costingLink(pid, bid) {
+  return 'plume-costing.html#p=' + encodeURIComponent(pid) + (bid ? '&fill=' + encodeURIComponent(bid) : '');
+}
 function renderFills(b) {
   var box = document.getElementById('d-fills');
-  var made = Plume.batchMadeG(b), left = Plume.batchLeftG(b, products);
+  var made = Plume.batchMadeG(b), left = Plume.batchLeftG(b, products), numbers = Plume.batchNumbersG(b, products);
   var fills = Plume.batchFills(b.id, products);
   var closed = b.status === 'discarded' || b.status === 'depleted';
   var pct = made ? Math.max(0, Math.min(100, Math.round(left / made * 100))) : 0;
   var html = '<div class="bulk-card"><div><div class="lbl">Bulk left</div>' +
       '<div class="big' + (left < 0 ? ' neg' : '') + '">' + Plume.fmtG(left) + ' <small>of ' + Plume.fmtG(made) + ' made</small></div>' +
-      '<span class="left-bar" aria-hidden="true"><i style="width:' + pct + '%"></i></span></div>' +
-      '<span class="ps-grow"></span>' +
-      (closed ? '' : '<button type="button" class="ps-btn-primary" id="d-fill-btn" onclick="openBatchFill()">' + Plume.icon('plus') + 'Fill from this batch</button>') +
-    '</div>';
-  html += '<div class="bp-note">' + (closed
-    ? (b.status === 'discarded' ? 'Discarded, so it is not offered for fills.' : 'Marked Used up, so it is not offered for fills. Set it back to Ready to fill from it again.')
-    : 'An estimate: what stays in the bowl never shows up here. Mark the batch Used up when it is really gone.' + (left < 0 ? ' More has been filled than the yield says; check the yield on Details.' : '')) + '</div>';
+      '<span class="left-bar" aria-hidden="true"><i style="width:' + pct + '%"></i></span></div></div>';
+  if (b.status === 'depleted') {
+    html += '<div class="bp-note">Marked Used up, so bulk left reads 0 g.' + (numbers > 0 ? ' By the numbers ' + Plume.fmtG(numbers) + ' was left: what stayed in the bowl.' : '') + ' Set it back to Ready and the number returns.</div>';
+  } else if (b.status === 'discarded') {
+    html += '<div class="bp-note">Discarded, so it is not offered for fills.</div>';
+  } else if (left < 0) {
+    html += '<div class="bp-note">More has been filled than the yield says. Check the yield on Details.</div>';
+  }
+  if (!closed) {
+    // Every product made from this formulation, and any pack with a part from it.
+    var prods = products.filter(function(p) {
+      if (p.status === 'discontinued') return false;
+      return p.productKind === 'multi'
+        ? (p.components || []).some(function(c) { return c.formulaId === b.formulaId; })
+        : p.formulaId === b.formulaId;
+    });
+    html += '<div class="fill-go"><div class="fill-go-h">Fill from this batch<span>opens the product in Products &amp; Costing, with this batch chosen</span></div>' +
+      (prods.length
+        ? '<div class="fill-go-l">' + prods.map(function(p) {
+            var part = '';
+            if (p.productKind === 'multi') {
+              var c = (p.components || []).filter(function(x) { return x.formulaId === b.formulaId; })[0];
+              part = '<small>' + esc((c && c.label) || 'one part') + '</small>';
+            }
+            return '<a class="go-btn" href="' + costingLink(p.id, b.id) + '">' + Plume.icon('costing') + '<span>' + esc(p.name || '(unnamed)') + '</span>' + part + '<span class="arr" aria-hidden="true">&rsaquo;</span></a>';
+          }).join('') + '</div>'
+        : '<div class="fill-go-none">No products are made from this formulation yet. Add one in <a href="plume-costing.html">Products &amp; Costing</a>.</div>') +
+      '</div>';
+  }
   if (fills.length) {
-    html += '<div class="fills-tbl"><div class="fill-it h"><span>Date</span><span>Product</span><span class="r">Units</span><span class="r">Grams</span><span></span></div>' +
+    html += '<div class="fills-tbl"><div class="fill-it h"><span>Date</span><span>Product</span><span class="r">Units</span><span class="r">Grams</span></div>' +
       fills.map(function(f) {
-        return '<div class="fill-it"><span>' + fmtDate(f.run.date) + '</span><span>' + esc(f.product.name || '(unnamed)') +
-          (f.run.fill ? (f.run.notes ? '<small>' + esc(f.run.notes) + '</small>' : '') : '<small>logged before fills</small>') + '</span>' +
-          '<span class="r">' + (parseInt(f.run.units, 10) || 0) + '</span><span class="r">' + (f.grams ? Plume.fmtG(f.grams) : '--') + '</span>' +
-          '<button type="button" class="x" title="Undo this fill" aria-label="Undo this fill" onclick="undoBatchFill(\'' + esc(f.product.id) + '\',\'' + esc(f.run.id) + '\')">&#x2715;</button></div>';
+        var sub = !f.run.fill ? 'logged before fills' : (f.product.productKind === 'multi' ? 'one part of the pack' : '');
+        return '<div class="fill-it"><span>' + fmtDate(f.run.date) + '</span><span><a href="' + costingLink(f.product.id) + '">' + esc(f.product.name || '(unnamed)') + '</a>' +
+          (sub ? '<small>' + sub + '</small>' : '') + (f.run.notes ? '<small>' + esc(f.run.notes) + '</small>' : '') + '</span>' +
+          '<span class="r">' + (parseInt(f.run.units, 10) || 0) + '</span><span class="r">' + (f.grams ? Plume.fmtG(f.grams) : '--') + '</span></div>';
       }).join('') + '</div>';
   } else if (!(b.packagingRuns || []).length) {
     html += '<div class="pkg-empty">Nothing filled from this batch yet.</div>';
   }
   box.innerHTML = html;
-}
-function refreshAfterFill(b) {
-  renderFills(b);
-  setBatchTabCounts(b);
-  renderList();
-}
-function openBatchFill() {
-  if (!editingBatchId) return;
-  var b = findBatch(editingBatchId);
-  if (!b) return;
-  // Fresh copies, in case Products or Packaging changed in another tab.
-  products = Store.getJSON(PRODUCT_KEY, []) || [];
-  pkgs = Store.getJSON(PKG_KEY, []) || [];
-  Plume.openFill({
-    mode: 'batch', batch: b,
-    products: products, batches: batches, pkgs: pkgs, forms: forms,
-    crumb: 'Batches \u00b7 ' + Plume.batchLabel(b),
-    onCommit: function() {
-      saveProducts();
-      savePackaging();
-      if (editingBatchId === b.id) refreshAfterFill(b);
-      else renderList();
-    }
-  });
-}
-function undoBatchFill(pid, rid) {
-  var b = editingBatchId ? findBatch(editingBatchId) : null;
-  products = Store.getJSON(PRODUCT_KEY, []) || [];
-  var p = null;
-  for (var i = 0; i < products.length; i++) if (products[i].id === pid) { p = products[i]; break; }
-  var run = null;
-  if (p) (p.productionRuns || []).forEach(function(r) { if (r.id === rid) run = r; });
-  if (!p || !run) { if (b) refreshAfterFill(b); return; }
-  Plume.ask(Plume.undoFillText(p, run) + '\n\nIt comes off ' + (p.name || 'the product') + ' too.', function() {
-    pkgs = Store.getJSON(PKG_KEY, []) || [];
-    Plume.undoFill(p, rid, pkgs);
-    saveProducts();
-    if (run.fill) savePackaging();
-    if (b && editingBatchId === b.id) refreshAfterFill(b);
-    else renderList();
-  }, { title: 'Undo this fill of ' + run.units + ' on ' + fmtDate(run.date) + '?', yes: 'Undo fill', danger: true });
 }
 
 // ──────────────────────────────────────────────────────────────────────
@@ -2756,6 +2747,14 @@ function deleteBatch() {
 // ── Deep-link: if URL ends in #new=<formulaId> (optionally &y=<yieldG>),
 // auto-open new-batch with that formula pre-selected and yield prefilled.
 function handleDeepLink() {
+  // #b=<batch>: Products & Costing's "Back to" link after a fill.
+  if (location.hash && location.hash.indexOf('#b=') === 0) {
+    var bid = location.hash.slice(3);
+    try { bid = decodeURIComponent(bid); } catch (e) {}
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+    if (findBatch(bid)) { openBatchDetail(bid); setBatchTab('runs'); }
+    return;
+  }
   if (!location.hash || location.hash.indexOf('#new=') !== 0) return;
   var raw = location.hash.slice(5);
   var fid, suggestedYield = null;

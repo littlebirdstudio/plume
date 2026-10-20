@@ -2620,3 +2620,50 @@ largest component. She proposed the model; preview approved 2026-10-19.
 **Tests:** new `test/test-fills.js` (46 checks). `test-shell.js` 4d and 4e
 updated; `test-packaging.js` section 6 now checks the picker in a product's
 packaging list. 19 suites.
+
+### Session 20 (cont.): Fills, pared back to the inline row (core v1.30)
+
+In real use the v1.29 slide-in fill panel was too much: "Save first" in
+Products & Costing, a fill that lost its batch when the product had no net
+weight, notes that read "took 1 packaging item from stock", and two places
+to fill. Heide set the target: the batch records bulk and reports where it
+went; filling happens in Products & Costing, in the row she liked before,
+with a batch link and packaging pulled on commit and returned on reverse.
+
+- **Products & Costing, Fills tab:** the list, then the inline row (Date,
+  Units, From batch, Notes, Add fill), built by `renderFillRow`. A line under
+  it (`fillTakes`) shows what Add fill will take: each packaging item and the
+  grams from each batch. The list shows the batch and grams and the actual
+  packaging taken; the X reverses (`deleteRun`, via `Plume.undoFill`).
+- **FIFO:** `Plume.fillBatches` lists the formulation's batches oldest first
+  (not Used up or Discarded). `Plume.fillDefaultBatch` starts on the oldest
+  ready batch with bulk left, then curing with bulk, then the oldest of any.
+  "Not from a logged batch" is last and never the default. Her note: leave
+  that option out of Formula Finch.
+- **Sample packs:** the row says Packs, and each part gets its own batch
+  pick (`Plume.fillParts`), each defaulting the same way.
+- **Short packaging stops the fill** (her call: it means stock was not
+  entered, entered wrong, or the wrong thing was picked). `Plume.fillShortages`;
+  the Add button disables and the line names the item and the counts. Grams
+  over what a batch has left only warn (the yield is an estimate).
+- **No Save first.** A fill is written to the SAVED product (`storedProducts`,
+  `saveStored`), so it never saves other open edits; the editor's in-memory
+  product gets the same runs so a later Save keeps them. The line says when
+  the saved version differs from what is on screen.
+- **Batch always recorded:** `makeFill` keeps each part's batch in `draws`
+  even when grams are 0 (no net weight). v1.29 dropped it.
+- **Batches, Filled tab** (was Fills): bulk left; "Fill from this batch", a
+  list of every product of that formulation and any pack with a part from
+  it, each a link to `plume-costing.html#p=<id>&fill=<batch>`; and the read
+  only list of what was filled, each product linking to `#p=<id>`. No fill
+  button or undo on the batch. **Used up reads 0 g** (`Plume.batchLeftG`);
+  `Plume.batchNumbersG` keeps the arithmetic, shown in the note.
+- **Links:** Products & Costing's `handleFillLink` reads `#p=` (and `&fill=`),
+  opens the product on Fills with that batch chosen and the cursor in Units,
+  and shows "Back to <batch>" (`plume-batchlog.html#b=<id>`, read by
+  Batches' `handleDeepLink`).
+- **Removed:** core's `openFill` panel and its CSS; Batches' `openBatchFill`,
+  `undoBatchFill` and its products save.
+
+**Tests:** `test/test-fills.js` rewritten (49 checks); `test-shell.js`
+updated. 19 suites.

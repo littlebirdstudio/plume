@@ -366,7 +366,7 @@ ok('an unknown icon name gives nothing rather than breaking', P.icon('nope') ===
     const ings = await page.evaluate("document.getElementById('d-snapshot').innerText");
     ok('Ingredients lists each line with its cost and a total', /Aloe vera juice[\s\S]*400\.0[\s\S]*\$8\.00[\s\S]*Ingredient cost for 400 g[\s\S]*\$8\.00/.test(ings), ings);
     await page.evaluate("setBatchTab('runs')");
-    ok('the Fills tab shows the bulk left and Fill from this batch', /Bulk left[\s\S]*400 g/.test(await page.evaluate("document.getElementById('d-fills').innerText")) && await page.evaluate("!!document.getElementById('d-fill-btn')"));
+    ok('the Filled tab shows the bulk left and Fill from this batch', /Bulk left[\s\S]*400 g[\s\S]*Fill from this batch/.test(await page.evaluate("document.getElementById('d-fills').innerText")));
     await page.keyboard.press('Escape'); await page.waitForTimeout(100);
     ok('Escape closes a saved batch', await page.evaluate("!document.getElementById('m-detail').classList.contains('open')"));
 
@@ -438,8 +438,8 @@ ok('an unknown icon name gives nothing rather than breaking', P.icon('nope') ===
       "localStorage.setItem('plume-products-v1', " + JSON.stringify(JSON.stringify([{ id: 'pm', name: 'Rose mist 2 oz', status: 'active', formulaId: 'fm', packagingRecipe: [] }])) + ");" +
       "localStorage.setItem('plume_costing_listorder_v1', '1');");
     await cost.reload(); await cost.waitForTimeout(500);
-    await cost.evaluate("openProduct('pm'); setEdTab('runs'); openProductFill()"); await cost.waitForTimeout(300);
-    const opts = await cost.evaluate("Array.from(document.querySelector('[data-fl-b]').options).map(function(o){return o.textContent;}).join('|')");
+    await cost.evaluate("openProduct('pm'); setEdTab('runs')"); await cost.waitForTimeout(300);
+    const opts = await cost.evaluate("Array.from(document.getElementById('run-b0').options).map(function(o){return o.textContent;}).join('|')");
     ok('a fill does not offer a discarded batch', !/Mist trial/.test(opts) && /Mist good/.test(opts), opts);
     await cost.close();
   }
