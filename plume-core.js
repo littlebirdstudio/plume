@@ -3368,6 +3368,55 @@ function lotCheck(code, batches, exceptId) {
   return { code: c };
 }
 function batchLot(b) { return (b && b.lotCode) || ''; }
+// Lot stickers (2026-10-20; moved here from the barcode tool the same day,
+// her call: the sticker stays with the batch). Plain text, no barcode:
+// "LOT 261020" as large as fits, an optional second line beneath. SVG in
+// mils so it prints at exact size, one sticker per page like a sticker roll.
+var LOT_STICKER_KEY = 'plume-lot-sticker';
+function lotStickerSize() {
+  var s = null;
+  try { s = JSON.parse(localStorage.getItem(LOT_STICKER_KEY) || 'null'); } catch (e) {}
+  return { w: (s && s.w) || 1.5, h: (s && s.h) || 0.5 };
+}
+function lotStickerRemember(w, h) {
+  try { localStorage.setItem(LOT_STICKER_KEY, JSON.stringify({ w: w, h: h })); } catch (e) {}
+}
+function lotStickerSvg(code, line2, wIn, hIn) {
+  var W = wIn * 1000, H = hIn * 1000, pad = Math.min(W, H) * 0.08;
+  var main = 'LOT ' + code;
+  var mainH = line2 ? (H - 2 * pad) * 0.62 : (H - 2 * pad) * 0.8;
+  var mainSize = Math.min(mainH, (W - 2 * pad) / (main.length * 0.62));
+  var subSize = line2 ? Math.min((H - 2 * pad) * 0.26, (W - 2 * pad) / (line2.length * 0.55)) : 0;
+  var gap = line2 ? subSize * 0.35 : 0;
+  var block = mainSize * 0.78 + (line2 ? gap + subSize * 0.78 : 0);
+  var y0 = (H - block) / 2 + mainSize * 0.78;
+  var out = '<text x="' + (W / 2).toFixed(1) + '" y="' + y0.toFixed(1) + '" font-family="Helvetica,Arial,sans-serif" font-size="' + mainSize.toFixed(1) +
+    '" font-weight="700" text-anchor="middle" fill="#000" letter-spacing="' + (mainSize * 0.02).toFixed(1) + '">' + esc(main) + '</text>';
+  if (line2) {
+    out += '<text x="' + (W / 2).toFixed(1) + '" y="' + (y0 + gap + subSize * 0.78).toFixed(1) + '" font-family="Helvetica,Arial,sans-serif" font-size="' + subSize.toFixed(1) +
+      '" text-anchor="middle" fill="#000">' + esc(line2) + '</text>';
+  }
+  return '<svg xmlns="http://www.w3.org/2000/svg" class="bc-lot-svg" viewBox="0 0 ' + W.toFixed(1) + ' ' + H.toFixed(1) + '" width="' + wIn + 'in" height="' + hIn + 'in">' + out + '</svg>';
+}
+// Opens the print window. Returns false when the browser blocked it.
+function printLotStickers(code, line2, wIn, hIn, copies) {
+  copies = Math.max(1, Math.min(500, parseInt(copies, 10) || 1));
+  var svg = lotStickerSvg(code, line2, wIn, hIn), labels = '';
+  for (var i = 0; i < copies; i++) labels += '<div class="lbl">' + svg + '</div>';
+  var css = '@page { size: ' + wIn + 'in ' + hIn + 'in; margin: 0; }' +
+    'html, body { margin:0; padding:0; }' +
+    '.lbl { width:' + wIn + 'in; height:' + hIn + 'in; display:flex; align-items:center; justify-content:center; overflow:hidden; ' +
+      'page-break-after:always; break-after:page; box-sizing:border-box; }' +
+    '.lbl:last-child { page-break-after:auto; break-after:auto; }' +
+    '.lbl svg { display:block; }';
+  var win = window.open('', '_blank');
+  if (!win) return false;
+  win.document.write('<!DOCTYPE html><html><head><title>' + esc('Lot ' + code + ' stickers') + '</title><style>' + css + '</style></head><body>' + labels +
+    '<scr' + 'ipt>window.onload=function(){window.print();};<\/scr' + 'ipt></body></html>');
+  win.document.close();
+  return true;
+}
+
 // The chip: "LOT 261020", a link when href is given.
 function lotChip(code, href) {
   if (!code) return '';
@@ -4143,7 +4192,7 @@ return {
   fillShortages: fillShortages, fillPull: fillPull, fillReturn: fillReturn,
   makeFill: makeFill, undoFill: undoFill, undoFillText: undoFillText, fmtG: fmtG,
   lotBase: lotBase, lotNorm: lotNorm, lotsInUse: lotsInUse, nextLotCode: nextLotCode, lotCheck: lotCheck,
-  batchLot: batchLot, lotChip: lotChip, drawLot: drawLot, varTitle: varTitle, findVariant: findVariant, batchVersion: batchVersion,
+  batchLot: batchLot, lotChip: lotChip, lotStickerSvg: lotStickerSvg, printLotStickers: printLotStickers, lotStickerSize: lotStickerSize, lotStickerRemember: lotStickerRemember, drawLot: drawLot, varTitle: varTitle, findVariant: findVariant, batchVersion: batchVersion,
   migrateBatches: migrateBatches, logEntryFor: logEntryFor,
   boot: boot
 };

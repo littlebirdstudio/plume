@@ -1957,23 +1957,7 @@ function bcLotSettings() {
 }
 // Plain text in mils, like the barcode SVGs, so it prints at exact size.
 // The code is as large as fits; the second line is smaller beneath it.
-function bcLotSvg(code, line2, wIn, hIn) {
-  var W = wIn * 1000, H = hIn * 1000, pad = Math.min(W, H) * 0.08;
-  var main = 'LOT ' + code;
-  var mainH = line2 ? (H - 2 * pad) * 0.62 : (H - 2 * pad) * 0.8;
-  var mainSize = Math.min(mainH, (W - 2 * pad) / (main.length * 0.62));
-  var subSize = line2 ? Math.min((H - 2 * pad) * 0.26, (W - 2 * pad) / (line2.length * 0.55)) : 0;
-  var gap = line2 ? subSize * 0.35 : 0;
-  var block = mainSize * 0.78 + (line2 ? gap + subSize * 0.78 : 0);
-  var y0 = (H - block) / 2 + mainSize * 0.78;
-  var out = '<text x="' + (W / 2).toFixed(1) + '" y="' + y0.toFixed(1) + '" font-family="Helvetica,Arial,sans-serif" font-size="' + mainSize.toFixed(1) +
-    '" font-weight="700" text-anchor="middle" fill="#000" letter-spacing="' + (mainSize * 0.02).toFixed(1) + '">' + esc(main) + '</text>';
-  if (line2) {
-    out += '<text x="' + (W / 2).toFixed(1) + '" y="' + (y0 + gap + subSize * 0.78).toFixed(1) + '" font-family="Helvetica,Arial,sans-serif" font-size="' + subSize.toFixed(1) +
-      '" text-anchor="middle" fill="#000">' + esc(line2) + '</text>';
-  }
-  return '<svg xmlns="http://www.w3.org/2000/svg" class="bc-lot-svg" viewBox="0 0 ' + W.toFixed(1) + ' ' + H.toFixed(1) + '" width="' + wIn + 'in" height="' + hIn + 'in">' + out + '</svg>';
-}
+function bcLotSvg(code, line2, wIn, hIn) { return Plume.lotStickerSvg(code, line2, wIn, hIn); }
 function bcRefreshLot() {
   var s = bcLotSettings(), meta = document.getElementById('bc-meta');
   if (!s.code) { bcEmptyState('Pick a batch or type a lot code to preview'); meta.innerHTML = ''; return; }
@@ -1985,16 +1969,9 @@ function bcRefreshLot() {
 function bcPrintLot() {
   var s = bcLotSettings();
   if (!s.code) { Plume.tell('Pick a batch or type a lot code first.'); return; }
-  var copies = Math.max(1, Math.min(500, parseInt(document.getElementById('bc-lot-copies').value, 10) || 1));
-  var svg = bcLotSvg(s.code, s.line2, s.w, s.h), labels = '';
-  for (var i = 0; i < copies; i++) labels += '<div class="lbl">' + svg + '</div>';
-  var css = '@page { size: ' + s.w + 'in ' + s.h + 'in; margin: 0; }' +
-    'html, body { margin:0; padding:0; }' +
-    '.lbl { width:' + s.w + 'in; height:' + s.h + 'in; display:flex; align-items:center; justify-content:center; overflow:hidden; ' +
-      'page-break-after:always; break-after:page; box-sizing:border-box; }' +
-    '.lbl:last-child { page-break-after:auto; break-after:auto; }' +
-    '.lbl svg { display:block; }';
-  bcOpenPrintWindow('Lot ' + s.code + ' stickers', css, labels);
+  if (!Plume.printLotStickers(s.code, s.line2, s.w, s.h, document.getElementById('bc-lot-copies').value)) {
+    Plume.tell('Your browser blocked the print window. Allow pop-ups for this site and try again.');
+  }
 }
 
 function bcPrint() {

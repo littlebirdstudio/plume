@@ -3136,3 +3136,20 @@ twice. New suite `test/test-links.js` (12 checks). 27 suites.
 **Note:** in the artifact preview such links may still do nothing: the
 preview frame does not pass `#key=value` hashes.
 
+### Session 23 (cont.): The lot sticker stays with the batch (core v1.38)
+
+Her call: printing a lot sticker should not leave the batch. The drawing
+and printing moved to core (`Plume.lotStickerSvg`, `Plume.printLotStickers`,
+size remembered per device under `plume-lot-sticker`). The batch header's
+**Lot sticker** button opens a small block in the batch panel: second line
+(the formulation's name by default), width, height, copies (starting at the
+units filled from the batch), a preview, Print stickers. The Barcodes
+panel's Lot sticker mode uses the same core functions and stays, as does
+its `#lot=` link for anything bookmarked.
+
+**Consignment, decided so far:** shops as places stock can be; Consign moves
+units from the shelf to a shop; at a settle-up (hers are irregular) she
+enters what sold, returns go back to the shelf, the rest stays. **No payment
+field:** her point that Plume records no other selling prices, so a payout
+amount would be a mismatch. Not built yet.
+

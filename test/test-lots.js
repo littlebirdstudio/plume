@@ -141,7 +141,20 @@ const SEED = `
   ok('the header shows the lot code and the version', /LOT ?FO-261005/.test(meta) && /Jojoba/.test(meta), meta);
   const wl = await page.evaluate("[document.getElementById('d-log').innerText.trim(), document.getElementById('d-log').getAttribute('href')]");
   ok('with no entry yet, Write a log entry starts one on its version with this batch', wl[0] === 'Write a log entry' && wl[1] === 'plume-formulations.html#f=fb&v=vb1&b=' + encodeURIComponent(nb.id), wl);
-  ok('Lot sticker opens the sticker tool with this batch', await page.evaluate("document.getElementById('d-lot-sticker').getAttribute('href')") === 'plume-costing.html#lot=' + encodeURIComponent(nb.id));
+  ok('the lot sticker is closed until asked for', await page.evaluate("document.getElementById('d-sticker').hidden"));
+  await page.click('#d-lot-sticker'); await page.waitForTimeout(150);
+  ok('Lot sticker opens it right in the batch, with the code and the formulation', await page.evaluate("!document.getElementById('d-sticker').hidden && /LOT FO-261005/.test(document.querySelector('#d-st-prev svg').textContent)") &&
+     await page.inputValue('#d-st-line2') === 'Face oil');
+  await page.fill('#d-st-w', '2'); await page.dispatchEvent('#d-st-w', 'input');
+  ok('the size is remembered on this device', await page.evaluate("JSON.parse(localStorage.getItem('plume-lot-sticker')).w === 2"));
+  const printed = await page.evaluate(`(function () {
+    var html = '', w = { document: { write: function (h) { html += h; }, close: function () {} } };
+    var orig = window.open; window.open = function () { return w; };
+    document.getElementById('d-st-copies').value = '3'; printBatchSticker(); window.open = orig;
+    return { n: (html.match(/class="lbl"/g) || []).length, page: /@page \{ size: 2in 0\.5in/.test(html), code: /LOT FO-261005/.test(html) };
+  })()`);
+  ok('Print stickers prints one sticker per page at that size', printed.n === 3 && printed.page && printed.code, printed);
+  await page.evaluate("toggleSticker(false)");
   await page.evaluate("closeDetail()"); await page.waitForTimeout(250);
   await page.evaluate("openBatchDetail('b0')"); await page.waitForTimeout(300);
   ok('an older batch says its version was not recorded; its log link names no version', /version not recorded/.test(await page.evaluate("document.getElementById('d-meta').innerText")) &&

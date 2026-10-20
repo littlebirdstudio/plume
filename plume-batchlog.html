@@ -362,6 +362,15 @@ body.ps-shell .field input:focus, body.ps-shell .field select:focus, body.ps-she
 .tr-row.fw { grid-template-columns: 100px minmax(0,1fr) 56px 70px; }
 .tr-row a { color: var(--bark-dark); }
 .tr-kits { font-size: 12.5px; color: var(--ink-light); }
+.lot-st { border: 1.5px solid var(--cream-border); border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.lot-st-h { font-size: 14px; font-weight: 600; }
+.lot-st-h .ps-muted { font-weight: 400; font-size: 12.5px; margin-left: 6px; }
+.lot-st .field.n input { width: 90px; }
+.lot-st-prev { background: var(--cream); border-radius: 8px; padding: 14px; display: flex; justify-content: center; }
+.lot-st-prev .frame { background: #fff; border: 1px dashed #B8B0A4; border-radius: 3px; display: flex; align-items: center; justify-content: center; }
+.lot-st-prev svg { display: block; }
+.lot-st-acts { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.lot-st-acts .ps-muted { font-size: 12px; }
 .bp-acts { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 2px; }
 .bp-lnk { border: 0; background: none; color: var(--ink-light); font: inherit; font-size: 13px; padding: 4px 6px; border-radius: 6px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
 .bp-lnk:hover { background: var(--cream-dark); color: var(--ink); }
@@ -581,6 +590,23 @@ body.ps-shell .pkg-builder-hdr .field input { width: 100%; min-width: 0; }
           <input class="bp-name" type="text" id="d-name" aria-label="Batch name" oninput="detDirty()">
           <div class="bp-sub" id="d-meta"></div>
           <div id="d-title" hidden></div>
+        </div>
+      </div>
+
+      <!-- Lot sticker (2026-10-20, her call: it stays with the batch). -->
+      <div class="lot-st" id="d-sticker" hidden>
+        <div class="lot-st-h">Lot sticker <span class="ps-muted">plain text, one per sticker</span></div>
+        <div class="bp-fields">
+          <div class="field grow"><label for="d-st-line2">Second line</label><input type="text" id="d-st-line2" maxlength="40" placeholder="optional" oninput="renderSticker()"></div>
+          <div class="field n"><label for="d-st-w">Width (in)</label><input type="number" id="d-st-w" step="0.05" min="0.4" oninput="renderSticker(true)"></div>
+          <div class="field n"><label for="d-st-h">Height (in)</label><input type="number" id="d-st-h" step="0.05" min="0.2" oninput="renderSticker(true)"></div>
+          <div class="field n"><label for="d-st-copies">Copies</label><input type="number" id="d-st-copies" min="1" max="500"></div>
+        </div>
+        <div class="lot-st-prev" id="d-st-prev"></div>
+        <div class="lot-st-acts">
+          <button type="button" class="ps-btn-primary" onclick="printBatchSticker()">Print stickers</button>
+          <button type="button" class="bp-lnk" onclick="toggleSticker(false)">Close</button>
+          <span class="ps-muted">Set the printer to 100% scale, no margins.</span>
         </div>
       </div>
 
@@ -1637,6 +1663,7 @@ function openBatchDetail(id) {
   document.getElementById('d-name').value     = b.batchName || '';
   document.getElementById('d-name').placeholder = b.formulaName || 'Batch';
   document.getElementById('d-lot').value      = b.lotCode || '';
+  document.getElementById('d-sticker').hidden = true;
   document.getElementById('d-lot-err').textContent = '';
   document.getElementById('d-notes').value    = b.notes || '';
 
@@ -1696,7 +1723,7 @@ function renderDetailMeta(b) {
   parts.push(statusBadgeHtml(b));
   var acts = [], lg = logLink(b);
   if (lg) acts.push('<a class="bp-lnk" id="d-log" href="' + lg.href + '" target="plume-formulations">' + Plume.icon('note') + (lg.has ? 'Log entry' : 'Write a log entry') + '</a>');
-  if (b.lotCode) acts.push('<a class="bp-lnk" id="d-lot-sticker" href="plume-costing.html#lot=' + encodeURIComponent(b.id) + '" target="plume-costing">' + Plume.icon('print') + 'Lot sticker</a>');
+  if (b.lotCode) acts.push('<button type="button" class="bp-lnk" id="d-lot-sticker" onclick="toggleSticker()">' + Plume.icon('print') + 'Lot sticker</button>');
   document.getElementById('d-meta').innerHTML = parts.join('<span aria-hidden="true">&middot;</span>') +
     (acts.length ? '<div class="bp-acts" style="flex-basis:100%">' + acts.join('') + '</div>' : '');
 }
@@ -1713,6 +1740,48 @@ function logLink(b) {
   if (hit) return { has: true, href: base + '&v=' + encodeURIComponent(hit.variant.vid) + '&j=' + encodeURIComponent(hit.entry.id) };
   return { has: false, href: base + (b.variantId ? '&v=' + encodeURIComponent(b.variantId) : '') + '&b=' + encodeURIComponent(b.id) };
 }
+// The lot sticker, printed from the batch (core draws and prints it). The
+// size is remembered on this device; copies start at the units filled.
+function toggleSticker(show) {
+  var box = document.getElementById('d-sticker');
+  if (show === undefined) show = box.hidden;
+  box.hidden = !show;
+  if (!show) return;
+  var b = findBatch(editingBatchId);
+  if (!b) return;
+  var sz = Plume.lotStickerSize();
+  var f = findFormula(b.formulaId);
+  var units = 0;
+  Plume.batchFills(b.id, products).forEach(function(x) { units += parseInt(x.run.units, 10) || 0; });
+  document.getElementById('d-st-line2').value  = (f && f.name) || b.formulaName || '';
+  document.getElementById('d-st-w').value      = sz.w;
+  document.getElementById('d-st-h').value      = sz.h;
+  document.getElementById('d-st-copies').value = units || 1;
+  renderSticker();
+}
+function stickerSettings() {
+  return {
+    w: Math.max(0.4, parseFloat(document.getElementById('d-st-w').value) || 1.5),
+    h: Math.max(0.2, parseFloat(document.getElementById('d-st-h').value) || 0.5),
+    line2: document.getElementById('d-st-line2').value.trim()
+  };
+}
+function renderSticker(sizeChanged) {
+  var b = findBatch(editingBatchId);
+  if (!b || !b.lotCode) return;
+  var s = stickerSettings();
+  if (sizeChanged) Plume.lotStickerRemember(s.w, s.h);
+  document.getElementById('d-st-prev').innerHTML = '<div class="frame" style="width:' + s.w + 'in;height:' + s.h + 'in">' + Plume.lotStickerSvg(b.lotCode, s.line2, s.w, s.h) + '</div>';
+}
+function printBatchSticker() {
+  var b = findBatch(editingBatchId);
+  if (!b || !b.lotCode) return;
+  var s = stickerSettings();
+  if (!Plume.printLotStickers(b.lotCode, s.line2, s.w, s.h, document.getElementById('d-st-copies').value)) {
+    Plume.tell('Your browser blocked the print window. Allow pop-ups for this site and try again.');
+  }
+}
+
 function checkDetLot() {
   var r = Plume.lotCheck(document.getElementById('d-lot').value, batches, editingBatchId);
   document.getElementById('d-lot-err').textContent = r.error || '';

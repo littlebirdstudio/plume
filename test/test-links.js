@@ -32,7 +32,7 @@ const SEED = `
   const page = await (await browser.newContext({ viewport: { width: 1280, height: 900 } })).newPage();
   page.on('pageerror', e => errors.push(String(e)));
   await trackDialogs(page, dialogs);
-  const settle = () => page.waitForTimeout(700);
+  const settle = () => page.waitForTimeout(1000);
 
   console.log('\n1. Products & Costing, already open');
   await page.goto(previewUrl('costing')); await page.evaluate(SEED); await page.reload(); await settle();
@@ -46,8 +46,10 @@ const SEED = `
   await page.evaluate("window.PLUME_TEST_ANSWER = false; location.hash = '#lot=b1'"); await page.waitForTimeout(400);
   ok('with unsaved edits it asks first', /changes that are not saved/.test(dialogs.join(' ')), dialogs);
   ok('Stay here keeps the edits and clears the link', await page.inputValue('#p-name') === 'Mist 60 mL (renamed)' && await page.evaluate("location.hash === ''"));
-  await page.evaluate("window.PLUME_TEST_ANSWER = undefined; location.hash = '#lot=b1'"); await settle();
-  ok('following it anyway opens the sticker panel', await page.evaluate("document.getElementById('m-barcode').classList.contains('open')"));
+  await page.evaluate("window.PLUME_TEST_ANSWER = undefined; location.hash = '#lot=b1'");
+  // A reload follows; wait for the panel rather than a fixed time.
+  const opened = await page.waitForFunction("document.getElementById('m-barcode') && document.getElementById('m-barcode').classList.contains('open')", null, { timeout: 8000 }).then(() => true, () => false);
+  ok('following it anyway opens the sticker panel', opened);
 
   console.log('\n2. Batches, already open');
   await page.goto(previewUrl('batchlog')); await settle();
