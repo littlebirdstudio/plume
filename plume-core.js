@@ -1702,11 +1702,16 @@ function injectStyles() {
     // Stock history panel (2026-10-20).
     '.sh-panel .sh-ranges{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0 12px}' +
     '.sh-panel .sh-tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}' +
-    '.sh-panel .sh-tile{border:1.5px solid var(--cream-border);border-radius:10px;padding:9px 11px}' +
+    '.sh-panel .sh-tile{border:1.5px solid var(--cream-border);border-radius:10px;padding:9px 11px;background:var(--white);font:inherit;text-align:left;cursor:pointer;color:inherit;transition:border-color .12s,background .12s}' +
+    '.sh-panel .sh-tile:hover{border-color:var(--bark)}' +
+    '.sh-panel .sh-tile.on{border-color:var(--bark);background:color-mix(in srgb,var(--bark) 9%,var(--white))}' +
+    '.sh-panel .sh-showing{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin:4px 0 8px;font-size:13.5px;color:var(--ink)}' +
+    '.sh-panel .sh-showing .ps-link-btn{margin-left:auto;padding:3px 10px}' +
     '.sh-panel .sh-k{font-size:12.5px;color:var(--ink-light)}' +
     '.sh-panel .sh-n{font-size:21px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}' +
     '.sh-panel .sh-c{font-size:12.5px;color:var(--ink-light);font-variant-numeric:tabular-nums}' +
-    '.sh-panel .sh-give{margin:10px 0 4px;padding:9px 11px;border-radius:9px;background:color-mix(in srgb,var(--bark) 9%,var(--white));font-size:13.5px;color:var(--ink)}' +
+    '.sh-panel .sh-give{display:block;width:100%;text-align:left;font:inherit;cursor:pointer;border:1.5px solid transparent;margin:10px 0 4px;padding:9px 11px;border-radius:9px;background:color-mix(in srgb,var(--bark) 9%,var(--white));font-size:13.5px;color:var(--ink)}' +
+    '.sh-panel .sh-give:hover,.sh-panel .sh-give.on{border-color:var(--bark)}' +
     '.sh-panel .sh-bar{border-bottom:1px solid var(--cream-border);margin:14px 0 8px}' +
     '.sh-panel .sh-search{border:1px solid var(--cream-border);margin-bottom:8px}.sh-panel .sh-search input{width:100%}' +
     '.sh-panel .sh-grp{border-bottom:1px solid var(--cream-border)}' +
@@ -3674,7 +3679,10 @@ function stockSave() {
 // uses today's unit cost and is marked ~. Reconcile differences count as
 // Unaccounted (fewer on the shelf than Plume had). Units built into kits
 // are not here: they are still stock, inside the kit.
-var shRange = 'year', shGroup = 'event', shQ = '', shOpen = {};
+var shRange = 'year', shGroup = 'event', shQ = '', shOpen = {}, shReason = '';
+// shReason: '' (everything), a reason key, or 'give' (gifted and marketing):
+// a block clicked to see what made up its number (her ask, 2026-10-20).
+function shPick(k) { return !shReason || k === shReason || (shReason === 'give' && (k === 'gifted' || k === 'marketing')); }
 var SH_RANGES = [['month', 'This month'], ['last', 'Last month'], ['year', 'This year'], ['12', 'Last 12 months'], ['all', 'All time']];
 function shBounds() {
   var d = new Date(), y = d.getFullYear(), m = d.getMonth();
@@ -3757,26 +3765,33 @@ function shHtml() {
   rows.forEach(function (r) { shAdd(tot[r.key], r); });
   var shown = shKeys().filter(function (k) { return ['sold', 'gifted', 'marketing', 'damaged'].indexOf(k) !== -1 || tot[k].units; });
   var give = { units: tot.gifted.units + tot.marketing.units, cost: tot.gifted.cost + tot.marketing.cost, est: tot.gifted.est || tot.marketing.est };
-  var groups = shGroups(rows);
+  var picked = rows.filter(function (r) { return shPick(r.key); });
+  var groups = shGroups(picked);
+  var pt = { units: 0, cost: 0, est: false };
+  picked.forEach(function (r) { shAdd(pt, r); });
+  var pName = shReason === 'give' ? 'Giveaways and marketing' : shReason ? shLabel(shReason) : '';
   return '<div class="sh-panel"><div class="sup-title">' + icon('history') + '<h2>Stock history</h2></div>' +
     '<div class="sh-ranges">' + SH_RANGES.map(function (r) {
       return '<button type="button" class="ps-chip' + (shRange === r[0] ? ' on' : '') + '" onclick="Plume.stock.range(\'' + r[0] + '\')">' + r[1] + '</button>';
     }).join('') + '</div>' +
     '<div class="sh-tiles">' + shown.map(function (k) {
-      return '<div class="sh-tile"><div class="sh-k">' + esc(shLabel(k)) + '</div><div class="sh-n">' + tot[k].units + '</div><div class="sh-c">' + shMoney(tot[k].cost, tot[k].est) + ' at cost</div></div>';
+      return '<button type="button" class="sh-tile' + (shReason === k ? ' on' : '') + '" aria-pressed="' + (shReason === k) + '" title="See what made up this number" onclick="Plume.stock.reason(\'' + k + '\')"><div class="sh-k">' + esc(shLabel(k)) + '</div><div class="sh-n">' + tot[k].units + '</div><div class="sh-c">' + shMoney(tot[k].cost, tot[k].est) + ' at cost</div></button>';
     }).join('') + '</div>' +
-    '<div class="sh-give"><b>Giveaways and marketing:</b> ' + give.units + ' unit' + (give.units === 1 ? '' : 's') + ', ' + shMoney(give.cost, give.est) + ' at cost</div>' +
+    '<button type="button" class="sh-give' + (shReason === 'give' ? ' on' : '') + '" aria-pressed="' + (shReason === 'give') + '" title="See what was given away or used for marketing" onclick="Plume.stock.reason(\'give\')"><b>Giveaways and marketing:</b> ' + give.units + ' unit' + (give.units === 1 ? '' : 's') + ', ' + shMoney(give.cost, give.est) + ' at cost</button>' +
     '<div class="sh-bar"><div class="sh-tabs">' + [['event', 'By event'], ['month', 'By month'], ['product', 'By product']].map(function (t) {
       return '<button type="button" class="ps-tab' + (shGroup === t[0] ? ' on' : '') + '" onclick="Plume.stock.group(\'' + t[0] + '\')">' + t[1] + '</button>';
     }).join('') + '</div></div>' +
     '<label class="ps-search sh-search">' + icon('search') + '<input type="search" id="sh-q" placeholder="Search notes or products, e.g. market" value="' + esc(shQ) + '" oninput="Plume.stock.find(this.value)" aria-label="Search stock history"></label>' +
+    (shReason ? '<div class="sh-showing" id="sh-showing"><span>Showing <b>' + esc(pName) + '</b>: ' + pt.units + ' unit' + (pt.units === 1 ? '' : 's') + ', ' + shMoney(pt.cost, pt.est) + ' at cost</span>' +
+      '<button type="button" class="ps-link-btn" onclick="Plume.stock.reason(\'\')">Show everything</button></div>' : '') +
     '<div class="sh-list">' + (groups.length ? groups.map(function (gr) {
-      var open = !!shOpen[shGroup + ':' + gr.key];
+      // While a block is picked, every row starts open: the point is to see what is in it.
+      var ok = shGroup + ':' + gr.key, open = shOpen[ok] === undefined ? !!shReason : !!shOpen[ok];
       return '<div class="sh-grp' + (open ? ' open' : '') + '"><button type="button" class="sh-head" aria-expanded="' + open + '" onclick="Plume.stock.toggle(' + esc(JSON.stringify(shGroup + ':' + gr.key)) + ')">' +
         '<span class="sh-title">' + esc(gr.title) + (gr.sub ? '<small>' + esc(gr.sub) + '</small>' : '') + '</span>' +
         '<span class="sh-sum">' + shSummary(gr.t) + '</span><span class="sh-chev">' + icon('chevron') + '</span></button>' +
         (open ? '<div class="sh-detail">' + shDetail(gr) + '</div>' : '') + '</div>';
-    }).join('') : '<div class="st-empty">' + (shQ ? 'Nothing matches “' + esc(shQ) + '” in this range.' : 'Nothing recorded in this range. Update stock records sales, giveaways and returns.') + '</div>') + '</div>' +
+    }).join('') : '<div class="st-empty">' + (shReason && !shQ ? 'No ' + esc(pName.toLowerCase()) + ' in this range.' : shQ ? 'Nothing matches “' + esc(shQ) + '” in this range.' : 'Nothing recorded in this range. Update stock records sales, giveaways and returns.') + '</div>') + '</div>' +
     '<p class="sh-foot">Costs are each product’s unit cost on the day the change was saved' + (rows.some(function (r) { return r.est; }) ? '; ~ marks changes from before costs were recorded, which use today’s unit cost' : '') +
       '. Units built into kits are not counted here; the kit carries them.' + (tot.count.units ? ' Unaccounted is what reconciling found missing (negative: found extra).' : '') + '</p>' +
     (rows.length ? '<div class="sh-actions"><button type="button" class="ps-link-btn" onclick="Plume.stock.copy()">' + icon('copy') + 'Copy as a table</button></div>' : '') +
@@ -3784,7 +3799,7 @@ function shHtml() {
 }
 function shRender() { var b = document.getElementById('ps-peek-body'); if (b) b.innerHTML = shHtml(); }
 function stockHistory() {
-  shRange = 'year'; shGroup = 'event'; shQ = ''; shOpen = {};
+  shRange = 'year'; shGroup = 'event'; shQ = ''; shOpen = {}; shReason = '';
   openPeek(shHtml(), {
     label: 'Stock history',
     onClose: function () { var b = document.getElementById('ps-nav-history'); if (b) b.classList.remove('on'); }
@@ -3794,7 +3809,16 @@ function stockHistory() {
 }
 function shRangeSet(r) { shRange = r; shRender(); }
 function shGroupSet(g) { shGroup = g; shRender(); }
-function shToggle(k) { shOpen[k] = !shOpen[k]; shRender(); }
+function shToggle(k) {
+  var was = shOpen[k] === undefined ? !!shReason : !!shOpen[k];
+  shOpen[k] = !was; shRender();
+}
+function shReasonSet(k) {
+  shReason = (k && k === shReason) ? '' : (k || ''); shOpen = {}; shRender();
+  // The details sit below the blocks; bring them into view.
+  var el = document.getElementById('sh-showing');
+  if (el && el.scrollIntoView) el.scrollIntoView({ block: 'start', behavior: 'smooth' });
+}
 function shFind(v) {
   shQ = v; shRender();
   var i = document.getElementById('sh-q'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); }
@@ -3802,7 +3826,7 @@ function shFind(v) {
 // Every change in range, one per line, for a spreadsheet or the books.
 function shCopy() {
   var lines = [['Date', 'Note', 'Product', 'Reason', 'Units', 'Unit cost', 'Cost'].join('\t')];
-  shRows().sort(function (a, b) { return (a.e.date || '').localeCompare(b.e.date || ''); }).forEach(function (r) {
+  shRows().filter(function (r) { return shPick(r.key); }).sort(function (a, b) { return (a.e.date || '').localeCompare(b.e.date || ''); }).forEach(function (r) {
     lines.push([r.e.date || '', r.e.note || '', r.p.name || '', shLabel(r.key), r.units, (r.units ? Math.abs(r.cost / r.units) : 0).toFixed(2), r.cost.toFixed(2)].join('\t'));
   });
   var text = lines.join('\n'), done = function () { tell('Copied ' + (lines.length - 1) + ' line' + (lines.length === 2 ? '' : 's') + '. Paste into a spreadsheet.', { title: 'Copied' }); };
@@ -3858,7 +3882,7 @@ return {
   undoKitText: undoKitText, kitsUsing: kitsUsing, stockPass: stockPass, undoStock: undoStock,
   STOCK_REASONS: STOCK_REASONS, productUnitCost: productUnitCost, stockReasonLabel: stockReasonLabel, fillUndoBlock: fillUndoBlock,
   stock: { open: stockOpen, mode: stockMode, search: stockSearch, typed: stTyped, save: stockSave, entries: stEntries,
-           history: stockHistory, range: shRangeSet, group: shGroupSet, toggle: shToggle, find: shFind, copy: shCopy, rows: shRows },
+           history: stockHistory, range: shRangeSet, group: shGroupSet, toggle: shToggle, reason: shReasonSet, find: shFind, copy: shCopy, rows: shRows },
   pkTypeFor: pkTypeFor, pkForProduct: pkForProduct, pkColored: pkColored, pkIsOther: pkIsOther,
   pkIcon: pkIcon, pkIconFor: pkIconFor, pkProducts: pkProducts, pkProductName: pkProductName,
   pkKindName: pkKindName, pkLooks: pkLooks, pkDisplay: pkDisplay, pkDetailHtml: pkDetailHtml, pkStock: pkStock,

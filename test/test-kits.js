@@ -286,6 +286,16 @@ console.log('\n1. Units on hand and kits, in core');
   ok('September gets its own month', /September 2026/.test(await page.evaluate("document.querySelector('.sh-list').textContent")));
   await page.evaluate("Plume.stock.range('month')");
   ok('This month leaves September out', !/September 2026/.test(await page.evaluate("document.querySelector('.sh-list').textContent")));
+  await page.evaluate("Plume.stock.range('year'); Plume.stock.group('event')");
+  await page.evaluate("Array.from(document.querySelectorAll('.sh-tile')).find(function(t){return /Marketing/.test(t.textContent);}).click()");
+  ok('clicking a block shows what made up its number', await page.evaluate(
+    "/Showing Marketing: 2 units/.test(document.querySelector('.sh-showing').textContent) && Array.from(document.querySelectorAll('.sh-pill')).every(function(p){return /Marketing/.test(p.textContent);})"));
+  ok('with every row open, naming each product', /Oil mini[\s\S]*Marketing 2/.test(await page.evaluate("document.querySelector('.sh-detail').textContent")));
+  await page.evaluate("document.querySelector('.sh-give').click()");
+  ok('the giveaways and marketing line shows both reasons', await page.evaluate(
+    "/Showing Giveaways and marketing: 3 units/.test(document.querySelector('.sh-showing').textContent) && Array.from(document.querySelectorAll('.sh-pill')).some(function(p){return /Gifted/.test(p.textContent);})"));
+  await page.evaluate("Array.from(document.querySelectorAll('.sh-showing button'))[0].click()");
+  ok('Show everything puts it back', await page.evaluate("!document.querySelector('.sh-showing') && Array.from(document.querySelectorAll('.sh-pill')).some(function(p){return /Sold/.test(p.textContent);})"));
   await page.evaluate("Plume.stock.range('all'); Plume.stock.group('product')");
   ok('by product: a row per product', /Oil mini/.test(await page.evaluate("document.querySelector('.sh-list').textContent")));
   await page.evaluate("Plume.peek.close()");
