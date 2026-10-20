@@ -27,6 +27,10 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* The page is scaled by core's Size setting, which leaves the body short
+   of the window; the root carries the background so no gap shows. */
+html { background: var(--cream); }
+
 body {
   font-family: 'DM Sans', sans-serif;
   font-weight: 300;

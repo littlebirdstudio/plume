@@ -355,7 +355,7 @@ body.ps-shell .field input:focus, body.ps-shell .field select:focus, body.ps-she
 .run-back:hover { background: var(--cream-dark); color: var(--ink); }
 .run-add { border: 1.5px solid var(--cream-border); border-radius: 0 0 10px 10px; background: var(--cream); padding: 10px 12px 12px; }
 .run-add .run-add-row { display: grid; grid-template-columns: 150px 84px minmax(0,1fr) auto; gap: 10px; align-items: end; padding: 0; margin: 0; border: 0; border-radius: 0; background: none; }
-/* One product: Date, Units, From batch on the first line; Notes and Add fill under them */
+/* One product: Date, Units, From batch on the first line; Notes and Fill under them */
 .run-add .run-add-row:not(.pack) #run-from-cell { grid-column: 3 / 5; }
 .run-add .run-add-row:not(.pack) .field.grow { grid-column: 1 / 4; }
 .run-row.h .rr-qty { color: inherit; font-weight: 400; }
@@ -724,7 +724,7 @@ details.bc-tips .bc-note { border: 0; padding: 6px 0 0; margin: 0; font-size: 12
                   <label for="run-notes">Notes</label>
                   <input type="text" id="run-notes" placeholder="optional">
                 </div>
-                <button type="button" class="ps-btn-primary" id="run-add" onclick="addRun()"><span data-ps-icon="plus"></span>Add fill</button>
+                <button type="button" class="ps-btn-primary" id="run-add" onclick="addRun()">Fill</button>
               </div>
               <div class="run-parts" id="run-parts" hidden></div>
               <div class="run-takes" id="run-takes"></div>
@@ -1918,7 +1918,12 @@ function toast(msg) {
   if (t._timer) clearTimeout(t._timer);
   t._timer = setTimeout(function() { t.classList.remove('show'); }, 1800);
 }
-function markDirty() { dirty = true; renderSaveState(); }
+function markDirty() {
+  dirty = true;
+  renderSaveState();
+  // The fill row reads the product as it is on screen.
+  if (curId && document.getElementById('run-add') && findProduct(curId)) renderFillRow(findProduct(curId));
+}
 
 // Packaging list edits are tracked against the SAVED product, not with the
 // dirty flag, so Save packaging can save just them (her call, 2026-10-20):
@@ -3364,21 +3369,40 @@ function renderRuns(p) {
 function fillBatchSelect(id, formulaId, label, pick) {
   var list = Plume.fillBatches(batches, formulaId);
   var sel = (pick && findIn(list, pick)) ? pick : Plume.fillDefaultBatch(batches, formulaId, products);
-  return '<select id="' + id + '" onchange="fillTakes()" aria-label="From batch' + (label ? ' for ' + esc(label) : '') + '">' +
+  if (pick === '') sel = '';   // she chose Not from a logged batch; keep it
+  return '<select id="' + id + '" data-fid="' + esc(formulaId || '') + '" onchange="fillTakes()" aria-label="From batch' + (label ? ' for ' + esc(label) : '') + '">' +
     list.map(function(b) {
       return '<option value="' + esc(b.id) + '"' + (b.id === sel ? ' selected' : '') + '>' + esc(Plume.batchLabel(b)) + ' · ' +
         Plume.fmtG(Plume.batchLeftG(b, products)) + ' left' + (b.status === 'curing' ? ' (curing)' : '') + '</option>';
     }).join('') +
     '<option value=""' + (sel ? '' : ' selected') + '>Not from a logged batch</option></select>';
 }
+// The product as it is on screen: what Fill will save, then use (her
+// call, 2026-10-20: filling from the saved version after changing the net
+// weight or duplicating was a trap). Packaging, components, formulation and
+// kind change the product in memory as they are edited; net weight is read
+// from its field.
+function editorProduct() {
+  var p = curId ? findProduct(curId) : null;
+  if (!p) return null;
+  var e = {};
+  for (var k in p) if (Object.prototype.hasOwnProperty.call(p, k)) e[k] = p[k];
+  var nw = document.getElementById('p-netwt-g');
+  if (nw) e.netWtG = parseFloat(nw.value) || '';
+  return e;
+}
+var fillKeep = {}, fillKeepPid = null;   // formulaId -> the batch she picked, kept while one product's row redraws
 function renderFillRow(p) {
   // Fresh copies: Batches or Packaging may have changed in another tab.
   batches = Store.getJSON(BATCH_KEY, []) || [];
   pkgs    = Store.getJSON(PKG_KEY,   []) || [];
-  var sp = findIn(storedProducts(), p.id) || p;
-  var pick = fillPreset && fillPreset.pid === p.id ? fillPreset.bid : '';
+  if (fillKeepPid !== p.id) { fillKeep = {}; fillKeepPid = p.id; }
+  else [].forEach.call(document.querySelectorAll('#run-from-cell select, #run-parts select'), function(s) { fillKeep[s.getAttribute('data-fid')] = s.value; });
+  var sp = (curId === p.id && editorProduct()) || p;
+  var preset = fillPreset && fillPreset.pid === p.id ? fillPreset.bid : '';
   var parts = Plume.fillParts(sp, forms);
   var multi = sp.productKind === 'multi';
+  var pickFor = function(fid) { return preset || (Object.prototype.hasOwnProperty.call(fillKeep, fid) ? fillKeep[fid] : null); };
   document.getElementById('run-add-row').classList.toggle('pack', multi);
   document.getElementById('run-units-lbl').textContent = multi ? 'Packs' : 'Units';
   var cell = document.getElementById('run-from-cell'), box = document.getElementById('run-parts');
@@ -3387,12 +3411,12 @@ function renderFillRow(p) {
     box.hidden = !parts.length;
     box.innerHTML = parts.map(function(c, i) {
       return '<div class="run-part"><span>' + esc(c.label || 'Part') + '<small>' + (c.g ? Plume.fmtG(c.g) + ' each' : 'no grams set') + '</small></span>' +
-        fillBatchSelect('run-b' + i, c.formulaId, c.label, pick) + '<span class="r" id="run-g' + i + '"></span></div>';
+        fillBatchSelect('run-b' + i, c.formulaId, c.label, pickFor(c.formulaId)) + '<span class="r" id="run-g' + i + '"></span></div>';
     }).join('');
   } else {
     box.hidden = true; box.innerHTML = '';
     cell.hidden = false;
-    cell.innerHTML = '<label for="run-b0">From batch</label>' + fillBatchSelect('run-b0', parts.length ? parts[0].formulaId : '', '', pick);
+    cell.innerHTML = '<label for="run-b0">From batch</label>' + fillBatchSelect('run-b0', parts.length ? parts[0].formulaId : '', '', pickFor(parts.length ? parts[0].formulaId : ''));
   }
   if (!document.getElementById('run-date').value) document.getElementById('run-date').value = todayISO();
   // What's next (2026-10-20): a part whose formulation has no batch yet.
@@ -3405,7 +3429,7 @@ function renderFillRow(p) {
 }
 // The line under the row: what Add fill will take. Short packaging stops it.
 function fillPlan() {
-  var p = curId ? findIn(storedProducts(), curId) : null;
+  var p = editorProduct();
   if (!p) return null;
   var u = parseInt(document.getElementById('run-units').value, 10) || 0;
   var parts = Plume.fillParts(p, forms);
@@ -3425,11 +3449,7 @@ function fillTakes() {
     if (cell) cell.textContent = d.batchId && plan.units ? Plume.fmtG(d.grams) : '--';
   });
   var tracked = Plume.pkgTracked();
-  if (tracked && pkgChanged()) {
-    box.innerHTML = '<div class="stop">Save packaging first. A fill takes the packaging list as saved, and this one has changes.</div>';
-    btn.disabled = true;
-    return;
-  }
+  btn.textContent = unsaved() ? 'Save and fill' : 'Fill';
   if (!plan.units) {
     box.innerHTML = '<span class="ps-muted">Type the ' + (multi ? 'packs' : 'units') + ' to see what this takes.</span>';
     btn.disabled = true;
@@ -3451,7 +3471,7 @@ function fillTakes() {
   if (!tracked) pk = '';
   box.innerHTML = (pk ? 'Takes from packaging:<div class="takes-pk">' + pk + '</div>' : (tracked ? 'Nothing from packaging (no packaging list on this product).' : 'Packaging stock is not tracked (Settings), so nothing is taken from it.')) +
     (grams.length ? '<div style="margin-top:4px">' + (pk ? 'and ' : 'Takes ') + grams.join(', ') + '.</div>' : '') +
-    (dirty ? '<div class="ps-muted" style="margin-top:4px">Uses the product as saved; your unsaved changes are not included.</div>' : '') +
+    (unsaved() ? '<div class="ps-muted" style="margin-top:4px">This product has unsaved changes. Fill saves them first, then fills from the product as it is on screen.</div>' : '') +
     (warn.length ? '<div class="warn">' + warn.join('<br>') + '</div>' : '') +
     (plan.short.length ? '<div class="stop">Not enough in stock. ' + plan.short.map(function(s) { return esc(s.name) + ': needs ' + s.need + ', ' + s.have + ' in stock'; }).join('; ') +
       '. Add the purchase in Packaging, or check the count and the product’s packaging list.</div>' : '');
@@ -3460,12 +3480,14 @@ function fillTakes() {
 function addRun() {
   if (!curId) return;
   var p = findProduct(curId); if (!p) return;
-  var stored = storedProducts(), sp = findIn(stored, curId);
-  if (!sp) { Plume.tell('Save the new product first.', { title: 'Save first' }); return; }
   pkgs = Store.getJSON(PKG_KEY, []) || [];
   var plan = fillPlan();
   if (!plan || !plan.units) { Plume.tell('Enter how many you filled.'); return; }
-  if (plan.short.length || (Plume.pkgTracked() && pkgChanged())) { fillTakes(); return; }
+  if (plan.short.length) { fillTakes(); return; }
+  // Unsaved changes are saved first, so the fill and the product agree.
+  if (unsaved() && !saveProduct()) return;
+  var stored = storedProducts(), sp = findIn(stored, curId);
+  if (!sp) { Plume.tell('Save the new product first.', { title: 'Save first' }); return; }
   var run = Plume.makeFill(sp, {
     date:  document.getElementById('run-date').value || todayISO(),
     units: plan.units,

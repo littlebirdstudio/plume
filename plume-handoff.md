@@ -2732,3 +2732,39 @@ clear without a course. Previewed and approved 2026-10-20.
 
 **Tests:** new `test/test-next.js` (25 checks); `test-shell.js` and
 `test-theme.js` updated. 20 suites.
+
+### Session 21 (cont.): Save and fill; remembered batch view; Size setting (core v1.33)
+
+From her testing:
+
+- **Fill saves first** (her call: filling from the saved product after
+  changing the net weight, or right after Duplicate, was a trap). The fill
+  row now reads the product as it is on screen (`editorProduct()`: the
+  in-memory product, with net weight from its field). With unsaved changes
+  the button reads **Save and fill** and the line says so; `addRun` calls
+  `saveProduct()` first, then fills. The v1.31 "Save packaging first" gate is
+  gone (Save packaging stays, for saving just the list). `markDirty()` redraws
+  the fill row, keeping her batch picks (`fillKeep`, per product).
+- The fill button says **Fill** (was "+ Add fill").
+- **Batches, Filled tab:** product names in the filled list are plain text;
+  the "Fill from this batch" links are the one way to Products & Costing.
+- **Batch list view remembered** on this device (`plume-batch-view`,
+  `setBlView`, `restoreBlView`). By formulation until she picks another; she
+  prefers By status.
+- **Size** (Settings > Size: Smaller 0.8, Standard 1, Larger 1.15; per
+  device, `plume-size`). CSS zoom on the root (`applySize`, run as core
+  loads and in boot). Chrome reports boxes in zoomed pixels while positions
+  set in CSS are zoomed again, so pop-ups placed from a box divide by
+  `Plume.zoom()`: core's packaging picker, Formulations' phase menu and
+  ingredient dropdown. Standard is the original size: her "too big" turned
+  out to be her side screen. Settings rows for Size, pointers and packaging
+  stock now have a label above each (`.plume-set-lbl`).
+- **Fixed:** Products & Costing's Settings showed the light/dark choices
+  outside the dialog (its swatches sit straight in the dialog);
+  `renderThemeChoice` now inserts beside them there.
+- The start page carries the background on `html`, so a scaled page shows
+  no gap.
+
+**Tests:** new `test/test-size.js` (14 checks, pop-ups line up at each
+size); `test-fills.js` gains Save and fill and the remembered view;
+`test-shell.js` updated. 21 suites.

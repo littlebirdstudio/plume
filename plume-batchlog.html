@@ -737,6 +737,7 @@ function loadData() {
     if (!b.packagingDraws) b.packagingDraws = [];
   });
   autoReadyCured();
+  restoreBlView();
   renderStats();
   renderList();
   populateFormulaPicker();
@@ -950,7 +951,18 @@ function blSyncPills() {
   var tabs = document.querySelectorAll('[data-bl-view]');
   for (var j = 0; j < tabs.length; j++) tabs[j].classList.toggle('on', tabs[j].getAttribute('data-bl-view') === view);
 }
-function setBlView(v) { blPill('f-view', v); }
+// The list's view (By formulation, Recent, By status) is remembered on this
+// device (her call, 2026-10-20). By formulation until she picks another.
+var BL_VIEW_KEY = 'plume-batch-view';
+function setBlView(v) {
+  try { window.localStorage.setItem(BL_VIEW_KEY, v); } catch (e) {}
+  blPill('f-view', v);
+}
+function restoreBlView() {
+  var v = null;
+  try { v = window.localStorage.getItem(BL_VIEW_KEY); } catch (e) {}
+  if (v === 'formula' || v === 'recent' || v === 'status') document.getElementById('f-view').value = v;
+}
 
 // ── List rendering ──
 function renderList() {
@@ -1964,7 +1976,7 @@ function renderFills(b) {
     html += '<div class="fills-tbl"><div class="fill-it h"><span>Date</span><span>Product</span><span class="r">Units</span><span class="r">Grams</span></div>' +
       fills.map(function(f) {
         var sub = !f.run.fill ? 'logged before fills' : (f.product.productKind === 'multi' ? 'one part of the pack' : '');
-        return '<div class="fill-it"><span>' + fmtDate(f.run.date) + '</span><span><a href="' + costingLink(f.product.id) + '">' + esc(f.product.name || '(unnamed)') + '</a>' +
+        return '<div class="fill-it"><span>' + fmtDate(f.run.date) + '</span><span>' + esc(f.product.name || '(unnamed)') +
           (sub ? '<small>' + sub + '</small>' : '') + (f.run.notes ? '<small>' + esc(f.run.notes) + '</small>' : '') + '</span>' +
           '<span class="r">' + (parseInt(f.run.units, 10) || 0) + '</span><span class="r">' + (f.grams ? Plume.fmtG(f.grams) : '--') + '</span></div>';
       }).join('') + '</div>';

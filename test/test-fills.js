@@ -98,7 +98,12 @@ const PRODUCTS = [
   ok('Fill from this batch lists each product of this formulation and the pack, linked with the batch', links.length === 4 &&
      /Serum 10 mL .*plume-costing\.html#p=p10&fill=ss$/.test(links[0]) && links.some(l => /Sample duo Serum 5 mL .*#p=duo&fill=ss$/.test(l)) && !links.some(l => /Face oil 30/.test(l)), links);
   ok('there is no fill button or undo on the batch', await page.evaluate("!document.getElementById('d-fill-btn') && !document.querySelector('#d-fills .fill-it .x')"));
-  ok('the filled list names each product as a link to it', await page.evaluate("var a=document.querySelector('#d-fills .fill-it:not(.h) a'); a && a.getAttribute('href') === 'plume-costing.html#p=p10' && /logged before fills/.test(document.getElementById('d-fills').innerText)"));
+  ok('the filled list names each product, without a second link to it', await page.evaluate("!document.querySelector('#d-fills .fill-it a') && /Serum 10 mL[\\s\\S]*logged before fills/.test(document.getElementById('d-fills').innerText)"));
+  await page.evaluate("closeDetail()"); await page.waitForTimeout(300);
+  await page.evaluate("setBlView('status')"); await page.reload(); await page.waitForTimeout(500);
+  ok('the list remembers the view she picked', await page.evaluate("document.getElementById('f-view').value === 'status' && document.querySelector('[data-bl-view=\"status\"]').classList.contains('on')"));
+  await page.evaluate("setBlView('formula')");
+  await page.evaluate("openBatchDetail('ss'); setBatchTab('runs')"); await page.waitForTimeout(300);
   await page.evaluate("closeDetail()"); await page.waitForTimeout(300);
   await page.evaluate("openBatchDetail('sa'); setBatchTab('runs')"); await page.waitForTimeout(300);
   ok('a Used up batch reads 0 g and says what the numbers were', /0 g\s*of 200 g/.test(await page.evaluate("document.querySelector('#d-fills .bulk-card').innerText")) &&
@@ -129,7 +134,7 @@ const PRODUCTS = [
   let sp = (await stored()).find(p => p.id === 'p10');
   const r = sp.productionRuns.find(x => x.fill);
   ok('Add fill records the units, batch and grams', r && r.units === 3 && r.draws[0].batchId === 'ss' && r.draws[0].grams === 30 && r.notes === 'Market', sp.productionRuns);
-  ok('without saving other edits, and without asking to save', sp.retail === 20 && !dialogs.some(d => /Save/.test(JSON.stringify(d))) && await page.evaluate("dirty === true"));
+  ok('with unsaved edits, Fill saves them first (no separate Save step)', sp.retail === 99 && !dialogs.some(d => /Save first/.test(JSON.stringify(d))) && await page.evaluate("!unsaved()"));
   ok('the open editor has the fill too', await page.evaluate("findProduct('p10').productionRuns.length === 3"));
   ok('the packaging leaves stock, noted', (await stockOf('k10')) === 21 && (await stockOf('lb')) === 37 &&
      await page.evaluate("JSON.parse(localStorage.getItem('aerie-packaging-v2')).find(x => x.id === 'k10').adjustments[0].note === 'Filled: Serum 10 mL'"));
@@ -139,6 +144,16 @@ const PRODUCTS = [
   ok('the row clears for the next one', (await page.evaluate("document.getElementById('run-units').value")) === '');
   ok('the batch has 10 g left', await page.evaluate("Plume.batchLeftG({ id: 'ss', actualYield: 100 }, JSON.parse(localStorage.getItem('plume-products-v1'))) === 10"));
   await page.evaluate("dirty = false");
+
+  console.log('\n4b. A changed net weight is saved with the fill');
+  await page.evaluate("var n=document.getElementById('p-netwt-g'); n.value='12'; n.dispatchEvent(new Event('input'))");
+  await page.fill('#run-units', '1');
+  ok('the button reads Save and fill, and the line uses the new weight', (await page.evaluate("document.getElementById('run-add').textContent")) === 'Save and fill' && /12 g from Serum, September/.test(await takes()), await takes());
+  await page.click('#run-add'); await page.waitForTimeout(200);
+  sp = (await stored()).find(p => p.id === 'p10');
+  ok('Fill saves the product, then fills from it', sp.netWtG === 12 && sp.productionRuns.some(x => x.fill && x.units === 1 && x.draws[0].grams === 12) && (await page.evaluate("document.getElementById('run-add').textContent")) === 'Fill', sp);
+  await page.evaluate("deleteRun(JSON.parse(localStorage.getItem('plume-products-v1')).find(p => p.id === 'p10').productionRuns.find(x => x.fill && x.units === 1).id)"); await page.waitForTimeout(150);
+  await page.evaluate("var n=document.getElementById('p-netwt-g'); n.value='10'; n.dispatchEvent(new Event('input')); saveProduct();"); await page.waitForTimeout(100);
 
   console.log('\n5. Short packaging stops it; grams only warn');
   await page.selectOption('#run-b0', 'bs');
