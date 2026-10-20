@@ -2808,3 +2808,103 @@ Data is unchanged: `aerie-suppliers-v1`, `{id, name, webLink, notes}`.
 
 **Tests:** new `test/test-suppliers.js` (36 checks); `test-shell.js` nav
 order updated. 22 suites.
+
+### Session 22 (cont.): Kits from filled products; units on hand; Update stock and Stock history (core v1.35)
+
+**Why.** After fills (v1.29), a pack's parts pointed at FORMULATIONS, so filling
+a pack took grams straight from batches. Her way of working, from before
+fills: fill minis (and any product) from a batch, then assign them to kits
+later, in any package variety. Filling minis AND the pack counted bulk and
+mini bottles twice. Discussed and previewed with her through seven versions.
+
+**Units on hand** (core `Plume.onHand`, `onHandParts`): filled (every fill
+and older run; for a kit, every kit built) plus the product's `stockLog`.
+`p.stockLog`: `[{ id, date, qty (signed), kind: 'out' | 'count' | 'kit', reason,
+note, counted, unitCost, kitId, buildId }]`. The list's Made column is now
+On hand (red below zero); the summary says "N on hand"; the product's Fills
+tab opens with the number, its breakdown by reason, the kits it goes into,
+and a Stock changes list where any taken-out or reconcile line can be
+removed (`Plume.undoStock`; kit lines go with their build).
+
+**Kits** (`productKind: 'kit'`, `kitParts: [{ id, productId, qty }]`). Made
+from: **One formulation | A kit of products**; the older formulation pack
+(`'multi'`) keeps working, shows its own third button only on a product that
+is one, and carries a note saying to make a kit instead. Parts are single
+products only (`Plume.kitPartOk`: not kits, not older packs). The kit's
+packaging list is what the kit adds (box, insert, label); the minis' bottles
+left stock when they were filled.
+- **Building kits** is on the kit's **Built** tab (the Fills tab, relabelled):
+  how many, then Build. `Plume.buildKit` takes each part's units (a `kit`
+  line on each part's `stockLog`, with `buildId`), the kit's packaging from
+  stock (`fillPull`, reason "Kit built"), and records the build on the kit
+  (`productionRuns` entry with `kit: true`, `parts`). **Short parts stop it**,
+  like short packaging stops a fill (`Plume.kitShortages`). The X reverses it
+  (`Plume.undoKitBuild`): parts back on hand, packaging back to stock.
+- **Kit cost** = each part's unit cost x qty + the kit's packaging. Label: one
+  ingredient list per product in the kit (its own override text if it has
+  one).
+- Builds draw no grams, so batch arithmetic ignores them (`fillDraws`
+  returns nothing for a kit run).
+- **Reversing a fill is blocked when it would leave on hand below zero**
+  (`Plume.fillUndoBlock`, her call): those units already went into kits or
+  off the shelf; the message says how many and where.
+- Deleting a product that is part of a kit names the kit; deleting a kit with
+  builds says the parts are not put back.
+- Your existing packs: she will rebuild them by hand as kits. No migration.
+
+**Not for individual sale** (`p.notForSale`, a tick in the product header;
+her wording; NOT a status, since a tester can be Active or Discontinued).
+Minis for kits, free samples, testers: price cards give way to a note, retail
+and margins read as a dash, off the line sheet (`lsOffered`) and out of the
+margin count; a tag in the list and the stock panels.
+
+**Update stock** (core `Plume.stock.open`, sidebar under Stock; slides in on
+every page). Reasons (`Plume.STOCK_REASONS`): **Sold, Gifted, Marketing,
+Damaged** lower on hand; **Returned** (`back: true`, consignment that comes
+home) adds back. **Reconcile** sets on hand to a count (the difference is
+recorded; in the same pass it is applied after the reasons). Each reason
+keeps its own numbers while she switches; one Save records them all
+(`Plume.stockPass`), with one date and note for the pass. **Taking out more
+than is on hand stops Save** (row red, a line naming the product), unless the
+product is reconciled in the same pass; returns in the pass count toward it.
+Whole units only. A save calls `libChanged()`; Products & Costing's listener
+rereads products, keeping unsaved edits on the open product.
+
+**Unit cost on the day** (her call): every stock change stores `unitCost`,
+from core's `Plume.productUnitCost` (transcribed from Costing's
+`computeProductCost`; `test-kits.js` asserts they agree on every product).
+Kit lines carry none (not a loss).
+
+**Stock history** (core `Plume.stock.history`, sidebar under Stock). Range
+(this month, last month, this year, last 12 months, all time); a block per
+reason with units and cost; a "Giveaways and marketing" line; then By event
+(date + note, so one Update stock pass at a market is one row), By month, By
+product, each row opening to its products or changes; a search over notes and
+product names; Copy as a table (every change, one per line). **Clicking a block
+or the giveaways line shows what made up that number** (`Plume.stock.reason`):
+the list filters to it, every row opens, and the panel scrolls to it.
+Reconcile differences show as Unaccounted. A change saved before costs were
+recorded uses today's unit cost, marked ~.
+
+**Sidebar order (her call):** Library (Ingredients, Packaging, Suppliers), then
+**Actions** (Formulations, Batches, Products & Costing), then **Stock**
+(Update stock, Stock history), then Settings. Headings in the palette's main
+colour (`--bark`), same small size. The start page is unchanged.
+
+**Also:** the Ingredients list and the cheat sheet show each ingredient as a
+softly rounded row with a small gap (her ask, to match elsewhere); rows
+without stock keep a light outline.
+
+**A trap worth remembering:** `test/helpers.js` inlined core with
+`page.replace(tag, string)`, where `$'` in the replacement is a pattern. Core
+gained `'-$' : '$'` and every preview page broke with "Invalid or unexpected
+token" while `node --check` passed. The helper now passes a function; core
+writes the dollar sign as `$`. Any other tool that inlines core with a
+string replace has the same trap.
+
+**Tests:** new `test/test-kits.js` (88 checks): core arithmetic, the list,
+the kit editor and builds, Not for individual sale, Update stock (reasons,
+Returned, Reconcile, the over-limit stop), unit cost agreement, Stock
+history (totals, events, months, products, picked blocks), reversals and
+deletes. `test-shell.js` and `test-size.js` follow the new header and
+sidebar. 24 suites.

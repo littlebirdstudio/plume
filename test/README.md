@@ -12,7 +12,7 @@ From the repository root:
     npx playwright install chromium
     npm test
 
-`npm test` runs all thirteen suites and stops at the first failure. To run one:
+`npm test` runs every suite and stops at the first failure. To run one:
 
     node test/test-lock.js
 
@@ -50,6 +50,8 @@ version, run the suites, and commit the new lockfile together.
 | `test-pwa.js` | 41 | Installable app and offline copy: manifest, icon sizes and page tags; every file a page loads is in the service worker's `APP_FILES`; served over a local http server, the worker saves every file, a site change shows on the next load (network first), a slow network falls back after about 4 seconds, every page opens with the server stopped, installed-mode links stay in the window, Settings shows the status, and clearing the saved copy leaves data alone |
 | `test-theme.js` | 37 | Dark mode: each colour's role turns the right way and keeps its hue; every palette's dark version meets contrast for text, buttons, tints and warnings; the Light / Dark / Match my computer setting, following the computer, other open windows, printing in light, the landing page logo, and a contrast sweep over the main views of every module |
 | `test-packaging.js` | 95 | Packaging kinds: reading old free-text names (sizes like .5 oz, 1.5x.5 and 28mm, PET, cobalt, front/back, the product a label is for); the one display name; grouping and search; old items under Needs sorting, and giving one a kind without touching stock; the edit panel's Details and Stock tabs; the edit panel (kind first, fields by kind, Other needs a name, duplicate warning, Used in, photo removal); literal colors in dark mode; the shared picker in Batches and Products & Costing writing through the original select |
+| `test-suppliers.js` | 36 | Suppliers as a slide-in panel on every page: what each supplies, matched by name; rename following the name onto lots and items; names not saved, with a match for another spelling; the Library section |
+| `test-kits.js` | 88 | Kits built from filled products, units on hand, Not for individual sale, Update stock (reasons, Returned, Reconcile, the over-limit stop), unit cost on the day, Stock history, and fills that cannot be reversed below zero |
 
 ## How they run
 
