@@ -35,7 +35,7 @@ var Plume = (function () {
 // (v0.4 / v0.5 / v0.6 across five modules). BUMP IT IN EVERY PULL REQUEST,
 // core change or not: it is how "is this the update I just merged?" is
 // answered by looking, and browsers cache .js files stubbornly.
-var VERSION = '1.35';
+var VERSION = '1.36';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -82,6 +82,11 @@ var Store = (function () {
     },
     remove: function (k) {
       try { localStorage.removeItem(k); } catch (e) {}
+    },
+    // One key as it is NOW in storage, which another window may have
+    // changed since this page loaded. Optional for a driver.
+    peek: function (k) {
+      try { return localStorage.getItem(k); } catch (e) { return null; }
     }
   };
 
@@ -126,6 +131,15 @@ var Store = (function () {
     DRIVER.remove(key);
   }
 
+  // Re-read one key from storage into the cache, for data another window
+  // may have written since boot (2026-10-20: the log reads batches made in
+  // another window). A driver without peek keeps the cached copy.
+  function refresh(key) {
+    if (!DRIVER.peek) return;
+    var v = DRIVER.peek(key);
+    if (v === null || v === undefined) delete mem[key]; else mem[key] = String(v);
+  }
+
   function keys() {
     var out = [];
     for (var k in mem) if (Object.prototype.hasOwnProperty.call(mem, k)) out.push(k);
@@ -152,7 +166,7 @@ var Store = (function () {
 
   return {
     init: init, get: get, set: set, getJSON: getJSON, setJSON: setJSON,
-    remove: remove, keys: keys, bytes: bytes, totalBytes: totalBytes,
+    remove: remove, refresh: refresh, keys: keys, bytes: bytes, totalBytes: totalBytes,
     useDriver: useDriver,
     onQuotaError: function (fn) { quotaFn = fn; },
     isReady:      function () { return ready; },
@@ -1616,6 +1630,10 @@ function injectStyles() {
     '.ps-name{font-weight:500}' +
     '.ps-sub{font-size:12.5px;color:var(--ink-lighter);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:320px}' +
     '.ps-muted{color:var(--ink-lighter)}' +
+    /* A lot code (2026-10-20): the batch's code, in one look everywhere it shows. */
+    '.ps-lot{display:inline-flex;align-items:baseline;gap:4px;font-size:12px;font-weight:600;letter-spacing:.03em;font-variant-numeric:tabular-nums;padding:1px 7px;border-radius:5px;white-space:nowrap;background:color-mix(in srgb,var(--bark) 12%,var(--white));color:var(--bark-dark);line-height:1.6;text-decoration:none}' +
+    '.ps-lot small{font-size:10.5px;font-weight:500;letter-spacing:.06em;color:var(--ink-lighter)}' +
+    'a.ps-lot:hover{background:color-mix(in srgb,var(--bark) 22%,var(--white))}' +
     '.ps-tag{display:inline-block;font-size:12px;padding:1px 8px;border-radius:5px;margin:1px 4px 1px 0;white-space:nowrap;background:color-mix(in srgb,var(--ink) 8%,transparent);color:var(--ink-light);line-height:1.6}' +
     '.ps-tag.ph-water{background:var(--ph-water-bg,#E4EEF8);color:var(--ph-water-fg,#2A5C8A)}' +
     '.ps-tag.ph-oil{background:var(--ph-oil-bg,#F5ECD8);color:var(--ph-oil-fg,#7A4E10)}' +
@@ -3185,6 +3203,118 @@ function fillDefaultBatch(batches, formulaId, products) {
   return list.length ? list[0].id : '';
 }
 function batchLabel(b) { return (b && (b.batchName || b.formulaName)) || 'Batch'; }
+
+// ══ Lot codes and the formulation log (2026-10-20) ════
+// The lot is the BATCH (her call). Its code is the date made as YYMMDD,
+// with a letter only for a second batch that day: 261020, 261020B,
+// 261020C. Plume assigns it when the batch is made; she can change it, but
+// two batches may never share a code, since a shared code cannot be traced.
+// Fills keep a copy of the code on each draw, so a fill still names its
+// lot after the batch is gone. Changing a batch's date later does not
+// change its code: a code already written on a jar must not move.
+function lotBase(dateISO) {
+  var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(dateISO || ''));
+  return m ? m[1].slice(2) + m[2] + m[3] : '';
+}
+function lotNorm(code) { return String(code == null ? '' : code).toUpperCase().replace(/\s+/g, ''); }
+// Every code in use: on batches (one may be left out, the one being
+// edited) and on fills, which keep the codes of deleted batches too.
+function lotsInUse(batches, products, exceptId) {
+  var used = {};
+  (batches || []).forEach(function (b) { if (b && b.lotCode && b.id !== exceptId) used[lotNorm(b.lotCode)] = b; });
+  (products || []).forEach(function (p) {
+    (p.productionRuns || []).forEach(function (r) {
+      (r.draws || []).forEach(function (d) { if (d && d.lot && !used[lotNorm(d.lot)]) used[lotNorm(d.lot)] = true; });
+    });
+  });
+  return used;
+}
+var LOT_LETTERS = 'BCDEFGHIJKLMNOPQRSTUVWXYZ';
+function nextLotCode(dateISO, batches, products, exceptId) {
+  var base = lotBase(dateISO || todayISO());
+  var used = lotsInUse(batches, products, exceptId);
+  if (!used[base]) return base;
+  for (var i = 0; i < LOT_LETTERS.length; i++) if (!used[base + LOT_LETTERS[i]]) return base + LOT_LETTERS[i];
+  for (var n = 27; ; n++) if (!used[base + '-' + n]) return base + '-' + n;
+}
+// { code } when it can be used, { code, error } when not. Letters, digits
+// and dashes, up to 20; stored in capitals.
+function lotCheck(code, batches, exceptId) {
+  var c = lotNorm(code);
+  if (!c) return { code: c, error: 'A batch needs a lot code.' };
+  if (!/^[A-Z0-9][A-Z0-9-]{0,19}$/.test(c)) return { code: c, error: 'A lot code is letters, digits and dashes, up to 20.' };
+  for (var i = 0; i < (batches || []).length; i++) {
+    var b = batches[i];
+    if (b && b.id !== exceptId && lotNorm(b.lotCode) === c) {
+      return { code: c, error: 'Lot ' + c + ' is already ' + batchLabel(b) + ' (' + fmtDate(b.date) + '). Two batches cannot share a lot code.' };
+    }
+  }
+  return { code: c };
+}
+function batchLot(b) { return (b && b.lotCode) || ''; }
+// The chip: "LOT 261020", a link when href is given.
+function lotChip(code, href) {
+  if (!code) return '';
+  var inner = '<small>LOT</small>' + esc(code);
+  return href ? '<a class="ps-lot" href="' + esc(href) + '">' + inner + '</a>' : '<span class="ps-lot">' + inner + '</span>';
+}
+// A fill draw's lot: the batch's code while the batch exists, else the copy
+// the fill kept.
+function drawLot(d, batches) {
+  if (!d) return '';
+  var b = d.batchId ? fillFind(batches, d.batchId) : null;
+  return (b && b.lotCode) || d.lot || '';
+}
+// A version's name as Formulations shows it: its label, else Version N.
+function varTitle(v) { return v ? (v.label ? v.label : 'Version ' + (v.num || 1)) : ''; }
+function findVariant(f, vid) {
+  var vs = (f && f.variants) || [];
+  for (var i = 0; i < vs.length; i++) if (vs[i].vid === vid) return vs[i];
+  return null;
+}
+// The version a batch was made from, as text: "Sepinov", "Version 2", or
+// '' when it was not recorded (batches made before 2026-10-20 from a
+// formulation with more than one version).
+function batchVersion(b) { return (b && b.variantLabel) || ''; }
+
+// Gives older batches what new ones are made with. Lot codes in date order
+// (made-time order within a day), and the version where the formulation
+// has only one. Returns true when anything changed, so the page saves.
+function migrateBatches(batches, forms, products) {
+  var changed = false;
+  var need = (batches || []).filter(function (b) { return b && !b.lotCode; });
+  need.sort(function (a, b) {
+    return (a.date || '').localeCompare(b.date || '') || (a.createdAt || '').localeCompare(b.createdAt || '') || String(a.id).localeCompare(String(b.id));
+  });
+  need.forEach(function (b) {
+    b.lotCode = nextLotCode(b.date || (b.createdAt || '').slice(0, 10), batches, products, b.id);
+    changed = true;
+  });
+  (batches || []).forEach(function (b) {
+    if (!b || b.variantId) return;
+    var f = fillFind(forms, b.formulaId);
+    var vs = (f && f.variants) || [];
+    if (vs.length === 1) { b.variantId = vs[0].vid; b.variantLabel = varTitle(vs[0]); changed = true; }
+  });
+  return changed;
+}
+
+// The formulation log entry for a batch, wherever it is: { form, variant,
+// entry } or null. One entry per batch (her call, 2026-10-20): she links an
+// entry to a batch by hand, and a batch that has one opens it rather than
+// starting a second. Entries live on a version's usageLog (field name kept).
+function logEntryFor(forms, batchId) {
+  if (!batchId) return null;
+  for (var i = 0; i < (forms || []).length; i++) {
+    var vs = (forms[i] && forms[i].variants) || [];
+    for (var j = 0; j < vs.length; j++) {
+      var log = vs[j].usageLog || [];
+      for (var k = 0; k < log.length; k++) if (log[k] && log[k].batchId === batchId) return { form: forms[i], variant: vs[j], entry: log[k] };
+    }
+  }
+  return null;
+}
+
 // The parts a fill draws on: one for a single product, one per component
 // of a sample pack. [{ formulaId, g, label }]
 function fillParts(p, forms) {
@@ -3248,8 +3378,11 @@ function fillReturn(pkgs, runId) {
   return n;
 }
 // f: { date, units, notes, draws: [{ batchId, formulaId, grams }] }
-function makeFill(p, f, pkgs) {
+// batches (optional): each draw keeps its batch's lot code, so the fill
+// still names its lot if the batch is deleted later.
+function makeFill(p, f, pkgs, batches) {
   var draws = (f.draws || []).filter(function (d) { return d.batchId; });
+  if (batches) draws.forEach(function (d) { var b = fillFind(batches, d.batchId); if (b && b.lotCode) d.lot = b.lotCode; });
   var run = {
     id:      Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
     date:    f.date || todayISO(),
@@ -3892,6 +4025,9 @@ return {
   fillDraws: fillDraws, fillBatches: fillBatches, fillDefaultBatch: fillDefaultBatch, fillParts: fillParts, fillPkgNeeds: fillPkgNeeds,
   fillShortages: fillShortages, fillPull: fillPull, fillReturn: fillReturn,
   makeFill: makeFill, undoFill: undoFill, undoFillText: undoFillText, fmtG: fmtG,
+  lotBase: lotBase, lotNorm: lotNorm, lotsInUse: lotsInUse, nextLotCode: nextLotCode, lotCheck: lotCheck,
+  batchLot: batchLot, lotChip: lotChip, drawLot: drawLot, varTitle: varTitle, findVariant: findVariant, batchVersion: batchVersion,
+  migrateBatches: migrateBatches, logEntryFor: logEntryFor,
   boot: boot
 };
 })();

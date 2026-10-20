@@ -204,7 +204,7 @@ ok('an unknown icon name gives nothing rather than breaking', P.icon('nope') ===
     await page.evaluate("document.querySelector('#save-state button').click()");
     ok('Save saves and goes back to Saved', (await page.evaluate("forms.find(x => x.id === 'f1').notes")) === 'For very dry skin' &&
        /Saved/.test(await page.evaluate("document.getElementById('save-state').textContent")));
-    ok('Method is the first tab under the recipe', (await page.evaluate("document.getElementById('ep-method').style.display")) === '' &&
+    ok('Instructions is the first tab under the recipe', (await page.evaluate("document.getElementById('ep-method').style.display")) === '' &&
        (await page.evaluate("document.getElementById('f-instruct').value")) === 'Stir');
     await page.evaluate("document.getElementById('f-instruct').value = 'Stir gently'; document.getElementById('f-instruct').dispatchEvent(new Event('input')); saveFormula();");
     await page.evaluate("setEdTab('hist')");

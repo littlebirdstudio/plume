@@ -92,7 +92,7 @@ Core defines globals with the names modules already use, so **converting a modul
 **A module may override an alias by defining its own function** — this is the intended escape hatch. `plume-ingredients.html` keeps a local `openModal` because it snapshots form state to detect unsaved edits. Share the common case; keep the exception local.
 
 ### Versioning
-`Plume.VERSION` is displayed at the bottom of every converted module's Settings → Storage panel, alongside the active driver name. **Bump it on every core change.** Browsers cache `.js` far more stubbornly than they re-fetch a replaced HTML file, so "is core loaded, and is it the one I just uploaded?" must be answerable by looking. Current: **v1.10** (v1.8 added INCI blend splitting; v1.9 added density resolution; v1.10 ranked search results, best match first; v1.11 added pH records; v1.12 made it the one app version, shown in every footer; v1.13 rebuilt Quick add; v1.14 drafted lowdowns; v1.15 replaced the browser pop-ups with in-page dialogs).
+`Plume.VERSION` is displayed at the bottom of every converted module's Settings → Storage panel, alongside the active driver name. **Bump it on every core change.** Browsers cache `.js` far more stubbornly than they re-fetch a replaced HTML file, so "is core loaded, and is it the one I just uploaded?" must be answerable by looking. Current: **v1.36** (see the newest session notes at the end; v1.8 added INCI blend splitting; v1.9 added density resolution; v1.10 ranked search results, best match first; v1.11 added pH records; v1.12 made it the one app version, shown in every footer; v1.13 rebuilt Quick add; v1.14 drafted lowdowns; v1.15 replaced the browser pop-ups with in-page dialogs).
 
 ### Upload order matters
 `plume-core.js` **first**, then the HTML. A module that arrives before core shows the missing-core banner until core lands. Core alone breaks nothing.
@@ -439,6 +439,8 @@ if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
   committedAt,
   lotDraws:            [...],     // receipt of what came from which lot
   packagingDraws:      [...],     // flat list of {runId, packagingId, packagingName, quantity}
+  lotCode,                        // 2026-10-20: '261020', '261020B'; unique, editable
+  variantId, variantLabel,        // 2026-10-20: the version it was made from; absent = not recorded
   createdAt, updatedAt
 }
 ```
@@ -2908,3 +2910,82 @@ Returned, Reconcile, the over-limit stop), unit cost agreement, Stock
 history (totals, events, months, products, picked blocks), reversals and
 deletes. `test-shell.js` and `test-size.js` follow the new header and
 sidebar. 24 suites.
+
+### Session 23 (20 October 2026): Lot codes, Trace, the formulation log (core v1.36)
+
+Backlog items 3 and 4, previewed with Heide (full-app preview, two rounds)
+and approved.
+
+**Lot codes.** The lot is the BATCH. `b.lotCode` is the date made as
+YYMMDD, with a letter only for a second batch that day (261020, 261020B,
+then C...). Core: `lotBase`, `lotNorm`, `nextLotCode(date, batches,
+products, exceptId)`, `lotCheck(code, batches, exceptId)` (letters, digits,
+dashes, up to 20, stored in capitals; **two batches can never share a code**,
+the message names the other batch), `lotChip(code, href)` (the `.ps-lot`
+chip, "LOT 261020", same look everywhere), `drawLot(draw, batches)`.
+- New batch has a Lot code field that follows the date until she types her
+  own. Details tab has it too, editable. **Changing a batch's date does not
+  change its code** (a code already on a jar must not move).
+- `Plume.migrateBatches(batches, forms, products)` gives older batches codes
+  in date then made-time order, and fills in the version where the
+  formulation has exactly one. Run by Batches, Products & Costing AND
+  Formulations (`logBatches`) on load, whichever opens first; idempotent.
+- **Fills keep a copy** of each batch's code on their draws (`d.lot`, via
+  `makeFill(p, f, pkgs, batches)`), so a fill still names its lot after the
+  batch is deleted. `nextLotCode` never hands out a code a fill still holds.
+- Shown: batch list (under the date) and search, batch header, Filled tab,
+  the fill row's batch choices ("Lot 261001 · ..."), the fill list (a link
+  to the batch). Not on the line sheet.
+
+**Trace tab** in the batch panel (Details · Ingredients · Filled · Trace).
+Back: each supplier lot from `lotDraws`, with supplier, lot number and date
+received read live from the lot (a lot deleted since shows the label the
+batch recorded), and a note that this is Plume's first-in-first-out record,
+not what was on the bench. Forward: the fills, and the kits those products
+go into, saying a kit only MAY hold the lot (kits record products, not
+lots). The old "Which lots it came from" fold-out on Ingredients is gone; a
+line there points to Trace.
+
+**Version recorded.** New batches store `variantId` and `variantLabel` (the
+version in use). Older batches from a multi-version formulation show
+"version not recorded". New batch's hint names the version it will make.
+
+**The formulation log** (was the Usage log; her name "for now").
+Her design after one round: an entry is linked to ONE batch BY HAND (her
+pick over Make batch writing one, which left blank entries and invited
+duplicates), and each entry has two sections.
+- Entry shape (still `v.usageLog`): `{ id, date, batch, version, batchId?,
+  lot?, ph?, making?, notes }`. `making` = Making notes (with the pH steps);
+  `notes` = How it turned out. Older entries' "Outcome notes" are `notes`, so
+  they show under How it turned out, their readings under Making. No migration.
+- Add entry: From batch lists this version's batches plus older ones with no
+  version, newest first, starting on the newest without an entry, then "Not
+  tied to a batch" (which shows date and size). A linked entry takes date
+  and size from the batch. **One entry per batch**: picking a batch that has
+  one opens it (asks first if she has typed), and save refuses a second.
+  `Plume.logEntryFor(forms, batchId)` finds it anywhere.
+- **Empty entries are not saved.** Entries can be edited (they could only be
+  added and deleted before). "+ How it turned out" shows on an entry with
+  only Making.
+- Batches: the header shows "Log entry" (`#f=..&v=..&j=<entry>`, opens it
+  picked out) or "Write a log entry" (`#f=..&v=..&b=<batch>`, opens the form
+  with that batch). Deleting a batch keeps its entry, marked "batch deleted"
+  with the lot it kept.
+- Tabs under the recipe: **Instructions** (was Method), Formulation log,
+  Change history.
+
+**Lot sticker:** a fourth mode in the barcode panel. Plain text, "LOT
+261020" plus an optional second line (formulation name by default), one
+per sticker like the roll, 1.5 x 0.5 in by default. No barcode: nothing she
+uses scans a lot code. Opened from the batch header (`plume-costing.html#lot=
+<batch id>`) or the Barcodes button.
+
+**Also:** `Store.refresh(key)` re-reads one key from storage (drivers may
+offer `peek`). Products & Costing's fill row said it read batches and
+packaging fresh but read its own cache; it refreshes now, so a batch made
+in another window is offered without a reload.
+
+**Tests:** new `test/test-lots.js` (76 checks). `test-fills.js` expects lot
+codes in the batch choices; `test-ph.js` writes a note so its entry saves;
+`test-shell.js` says Instructions. 24 suites.
+

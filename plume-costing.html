@@ -120,6 +120,8 @@ main { max-width:1240px; margin:0 auto; padding:24px 22px 60px; }
 .run-row .rr-date { color:var(--ink-light); font-variant-numeric:tabular-nums; }
 .run-row .rr-qty { font-variant-numeric:tabular-nums; color:var(--ink); font-weight:500; text-align:right; }
 .run-row .rr-batch { color:var(--ink-light); font-size:11px; }
+.run-row .rr-lot { display:block; }
+.run-row .rr-lot + .rr-lot { margin-top:4px; }
 .run-row .rr-notes { color:var(--ink-lighter); font-size:11px; font-style:italic; }
 .run-row .rr-del { background:none; border:none; cursor:pointer; color:var(--ink-lighter); font-size:13px; padding:2px 4px; line-height:1; }
 .run-row .rr-del:hover { color:var(--danger); }
@@ -157,6 +159,8 @@ main { max-width:1240px; margin:0 auto; padding:24px 22px 60px; }
 .bc-note { font-size:11px; color:var(--ink-lighter); line-height:1.6; margin-top:10px; padding-top:10px; border-top:1px solid var(--cream-dark); }
 
 /* Multiple item scan card: grid of labelled barcodes on one page */
+.bc-lot-frame { background:#fff; border:1px dashed #B8B0A4; border-radius:3px; display:flex; align-items:center; justify-content:center; }
+.bc-lot-frame svg { display:block; }
 .bc-mode-row { display:flex; gap:16px; align-items:center; margin-bottom:14px; padding-bottom:12px; border-bottom:1px solid var(--cream-dark); font-size:12px; }
 .bc-mode-row label { display:flex; align-items:center; gap:5px; cursor:pointer; color:var(--ink-light); }
 .bc-card-sheet { background:#fff; }
@@ -897,7 +901,7 @@ details.bc-tips .bc-note { border: 0; padding: 6px 0 0; margin: 0; font-size: 12
 
     <div class="bc-intro">
       <h2 class="modal-title" id="bc-title">Barcode labels</h2>
-      <p>Scannable by the Square Handheld. Set each item's SKU in Square to the same code.</p>
+      <p id="bc-intro-text">Scannable by the Square Handheld. Set each item's SKU in Square to the same code.</p>
     </div>
 
     <div class="bc-grp">
@@ -906,16 +910,18 @@ details.bc-tips .bc-note { border: 0; padding: 6px 0 0; margin: 0; font-size: 12
         <button type="button" class="ps-chip" data-bc-pill="mode:roll" onclick="bcPill('mode','roll')">Sticker roll</button>
         <button type="button" class="ps-chip" data-bc-pill="mode:sheet" onclick="bcPill('mode','sheet')">Sticker sheet</button>
         <button type="button" class="ps-chip" data-bc-pill="mode:card" onclick="bcPill('mode','card')">Scan card</button>
+        <button type="button" class="ps-chip" data-bc-pill="mode:lot" onclick="bcPill('mode','lot')">Lot sticker</button>
       </div>
       <div class="bc-help" id="bc-mode-help"></div>
       <span hidden>
         <input type="radio" name="bc-mode" value="roll" id="bc-mode-roll" checked onchange="bcModeChange()">
         <input type="radio" name="bc-mode" value="sheet" id="bc-mode-sheet" onchange="bcModeChange()">
         <input type="radio" name="bc-mode" value="card" id="bc-mode-card" onchange="bcModeChange()">
+        <input type="radio" name="bc-mode" value="lot" id="bc-mode-lot" onchange="bcModeChange()">
       </span>
     </div>
 
-    <div class="bc-grp">
+    <div class="bc-grp" id="bc-fmt-grp">
       <span class="lbl">Format</span>
       <div class="bc-pills">
         <button type="button" class="ps-chip" data-bc-pill="fmt:c39" onclick="bcPill('fmt','c39')">Code 39 <small>wider bars</small></button>
@@ -1068,6 +1074,41 @@ details.bc-tips .bc-note { border: 0; padding: 6px 0 0; margin: 0; font-size: 12
       </div>
     </div>
 
+    <!-- Lot sticker mode (2026-10-20): the batch's lot code as plain text,
+         one per sticker on a roll. No barcode: nothing she uses scans a lot. -->
+    <div id="bc-lot-fields" class="bc-grp" style="display:none">
+      <span class="lbl">Lot</span>
+      <div class="field">
+        <label for="bc-lot-batch">From a batch</label>
+        <select id="bc-lot-batch" onchange="bcPickLotBatch()"></select>
+      </div>
+      <div class="bc-grid" style="grid-template-columns:1fr 1fr">
+        <div class="field">
+          <label for="bc-lot-code">Lot code</label>
+          <input type="text" id="bc-lot-code" maxlength="20" placeholder="e.g. 261020" oninput="bcRefresh()" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="field">
+          <label for="bc-lot-line2">Second line</label>
+          <input type="text" id="bc-lot-line2" maxlength="40" placeholder="optional, e.g. a product name" oninput="bcRefresh()" autocomplete="off">
+        </div>
+      </div>
+      <span class="lbl" style="margin-top:6px">Sticker</span>
+      <div class="bc-grid bc-grid-4">
+        <div class="field">
+          <label for="bc-lot-w">Width (in)</label>
+          <input type="number" id="bc-lot-w" step="0.05" min="0.4" value="1.5" oninput="bcRefresh()">
+        </div>
+        <div class="field">
+          <label for="bc-lot-h">Height (in)</label>
+          <input type="number" id="bc-lot-h" step="0.05" min="0.2" value="0.5" oninput="bcRefresh()">
+        </div>
+        <div class="field">
+          <label for="bc-lot-copies">Copies</label>
+          <input type="number" id="bc-lot-copies" min="1" max="500" value="30">
+        </div>
+      </div>
+    </div>
+
     <div class="bc-preview" id="bc-preview"></div>
     <div class="bc-meta" id="bc-meta"></div>
 
@@ -1080,6 +1121,9 @@ details.bc-tips .bc-note { border: 0; padding: 6px 0 0; margin: 0; font-size: 12
       <div class="bc-note" id="bc-note-sheet" style="display:none">
         <strong>Before using real label stock:</strong> print one test page on plain paper, hold it behind the label sheet against a light, and check every corner. In Chrome's print dialog set Scale to 100% (not "Fit to page"), Margins to None, and turn off headers and footers. Those are the usual cause of misalignment.<br>
         For plain sticker paper you cut yourself, leave Cut guides on and any layout will do.
+      </div>
+      <div class="bc-note" id="bc-note-lot" style="display:none">
+        <strong>Lot stickers</strong> print one per sticker, like a sticker roll, at the size above. The same 100% scale and no-margins settings apply. Use the number of units you filled from the batch as the copies.
       </div>
       <div class="bc-note" id="bc-note-card" style="display:none">
         <strong>Multiple item scan card:</strong> prints one page with every code laid out in a grid, each with its caption. Good for pottery price tiers: print once, keep it by the register, scan the card instead of the piece.<br>
@@ -1380,6 +1424,7 @@ function bcFormat() {
 }
 
 function bcMode() {
+  if (document.getElementById('bc-mode-lot').checked)   return 'lot';
   if (document.getElementById('bc-mode-card').checked)  return 'card';
   if (document.getElementById('bc-mode-sheet').checked) return 'sheet';
   return 'roll';
@@ -1390,7 +1435,8 @@ function bcMode() {
 var BC_HELP = {
   roll:  'One code, many copies, one sticker per label on a thermal roll.',
   sheet: 'One code repeated across a full page of labels.',
-  card:  'Several different codes on one page, each with a caption. For price tiers kept by the register.'
+  card:  'Several different codes on one page, each with a caption. For price tiers kept by the register.',
+  lot:   'A batch\u2019s lot code as plain text, one per sticker, for the bottom of a jar or box. Not a barcode: nothing you use scans a lot code.'
 };
 function bcPill(group, v) {
   if (group === 'mode') {
@@ -1418,7 +1464,15 @@ function bcSyncPills() {
 function bcModeChange() {
   var m = bcMode();
   document.getElementById('bc-mode-help').textContent = BC_HELP[m];
-  document.getElementById('bc-single-fields').style.display = (m === 'card') ? 'none' : '';
+  var lot = (m === 'lot');
+  document.getElementById('bc-lot-fields').style.display  = lot ? '' : 'none';
+  document.getElementById('bc-fmt-grp').style.display     = lot ? 'none' : '';
+  document.getElementById('bc-note-lot').style.display    = lot ? '' : 'none';
+  document.getElementById('bc-intro-text').textContent = lot
+    ? 'Lot codes come from Batches: one per batch, from the date it was made.'
+    : 'Scannable by the Square Handheld. Set each item\u2019s SKU in Square to the same code.';
+  if (lot) bcFillLotBatches();
+  document.getElementById('bc-single-fields').style.display = (m === 'card' || lot) ? 'none' : '';
   document.getElementById('bc-roll-fields').style.display   = (m === 'roll')  ? '' : 'none';
   document.getElementById('bc-sheet-fields').style.display  = (m === 'sheet') ? '' : 'none';
   document.getElementById('bc-card-fields').style.display   = (m === 'card')  ? '' : 'none';
@@ -1426,11 +1480,11 @@ function bcModeChange() {
   document.getElementById('bc-note-sheet').style.display    = (m === 'sheet') ? '' : 'none';
   document.getElementById('bc-note-card').style.display     = (m === 'card')  ? '' : 'none';
   // SVG/PNG download are single-barcode operations; they don't apply to a sheet
-  var single = (m !== 'card');
+  var single = (m !== 'card' && !lot);
   document.getElementById('bc-btn-svg').style.display = single ? '' : 'none';
   document.getElementById('bc-btn-png').style.display = single ? '' : 'none';
   document.getElementById('bc-btn-print').innerHTML = Plume.icon('print') +
-    ((m === 'card') ? 'Print scan card' : (m === 'sheet' ? 'Print sheet' : 'Print stickers'));
+    ((m === 'card') ? 'Print scan card' : (m === 'sheet' ? 'Print sheet' : (lot ? 'Print lot stickers' : 'Print stickers')));
   bcRefresh();
 }
 
@@ -1491,6 +1545,7 @@ function openBarcode(prefill, caption) {
   document.getElementById('bc-mode-roll').checked  = true;
   document.getElementById('bc-mode-sheet').checked = false;
   document.getElementById('bc-mode-card').checked  = false;
+  document.getElementById('bc-mode-lot').checked   = false;
   bcFillProductPickers();
   document.getElementById('bc-product').value = '';
   document.getElementById('bc-value').value   = prefill || '';
@@ -1702,6 +1757,7 @@ function bcScaledPreview(html, pageW, pageH) {
 function bcRefresh() {
   bcSyncPills();
   var m = bcMode();
+  if (m === 'lot')   return bcRefreshLot();
   if (m === 'card')  return bcRefreshCard();
   if (m === 'sheet') return bcRefreshSheet();
   return bcRefreshRoll();
@@ -1852,8 +1908,95 @@ function bcGridCss() {
     '.bc-card-bad { font-family:Helvetica,Arial,sans-serif; font-size:8pt; color:#B4523C; }';
 }
 
+// ── Lot stickers (2026-10-20) ──
+// Batches newest first, with their codes. Discarded batches are left out:
+// nothing from them reaches a shelf.
+function bcLotBatches() {
+  Store.refresh(BATCH_KEY);
+  batches = Store.getJSON(BATCH_KEY, []) || [];
+  return batches.filter(function(b) { return b && b.lotCode && b.status !== 'discarded'; })
+    .sort(function(a, b) { return (b.date || '').localeCompare(a.date || '') || (b.lotCode || '').localeCompare(a.lotCode || ''); });
+}
+function bcFillLotBatches(pick) {
+  var sel = document.getElementById('bc-lot-batch');
+  var list = bcLotBatches();
+  var cur = pick !== undefined ? pick : sel.value;
+  sel.innerHTML = '<option value="">-- Type my own --</option>' + list.map(function(b) {
+    return '<option value="' + esc(b.id) + '">' + esc(b.lotCode) + ' — ' + esc(Plume.batchLabel(b)) + '</option>';
+  }).join('');
+  if (cur && findIn(list, cur)) sel.value = cur;
+}
+function bcPickLotBatch() {
+  var b = findIn(batches, document.getElementById('bc-lot-batch').value);
+  if (b) {
+    document.getElementById('bc-lot-code').value = b.lotCode || '';
+    var f = findIn(forms, b.formulaId);
+    document.getElementById('bc-lot-line2').value = (f && f.name) || b.formulaName || '';
+  }
+  bcRefresh();
+}
+// Opens the panel on Lot sticker with a batch chosen (#lot=<batch id>).
+function openLotSticker(batchId) {
+  openBarcode('', '');
+  document.getElementById('bc-mode-roll').checked = false;
+  document.getElementById('bc-mode-lot').checked  = true;
+  bcModeChange();
+  bcFillLotBatches(batchId);
+  bcPickLotBatch();
+}
+function bcLotSettings() {
+  return {
+    code:  Plume.lotNorm(document.getElementById('bc-lot-code').value),
+    line2: document.getElementById('bc-lot-line2').value.trim(),
+    w:     Math.max(0.4, parseFloat(document.getElementById('bc-lot-w').value) || 1.5),
+    h:     Math.max(0.2, parseFloat(document.getElementById('bc-lot-h').value) || 0.5)
+  };
+}
+// Plain text in mils, like the barcode SVGs, so it prints at exact size.
+// The code is as large as fits; the second line is smaller beneath it.
+function bcLotSvg(code, line2, wIn, hIn) {
+  var W = wIn * 1000, H = hIn * 1000, pad = Math.min(W, H) * 0.08;
+  var main = 'LOT ' + code;
+  var mainH = line2 ? (H - 2 * pad) * 0.62 : (H - 2 * pad) * 0.8;
+  var mainSize = Math.min(mainH, (W - 2 * pad) / (main.length * 0.62));
+  var subSize = line2 ? Math.min((H - 2 * pad) * 0.26, (W - 2 * pad) / (line2.length * 0.55)) : 0;
+  var gap = line2 ? subSize * 0.35 : 0;
+  var block = mainSize * 0.78 + (line2 ? gap + subSize * 0.78 : 0);
+  var y0 = (H - block) / 2 + mainSize * 0.78;
+  var out = '<text x="' + (W / 2).toFixed(1) + '" y="' + y0.toFixed(1) + '" font-family="Helvetica,Arial,sans-serif" font-size="' + mainSize.toFixed(1) +
+    '" font-weight="700" text-anchor="middle" fill="#000" letter-spacing="' + (mainSize * 0.02).toFixed(1) + '">' + esc(main) + '</text>';
+  if (line2) {
+    out += '<text x="' + (W / 2).toFixed(1) + '" y="' + (y0 + gap + subSize * 0.78).toFixed(1) + '" font-family="Helvetica,Arial,sans-serif" font-size="' + subSize.toFixed(1) +
+      '" text-anchor="middle" fill="#000">' + esc(line2) + '</text>';
+  }
+  return '<svg xmlns="http://www.w3.org/2000/svg" class="bc-lot-svg" viewBox="0 0 ' + W.toFixed(1) + ' ' + H.toFixed(1) + '" width="' + wIn + 'in" height="' + hIn + 'in">' + out + '</svg>';
+}
+function bcRefreshLot() {
+  var s = bcLotSettings(), meta = document.getElementById('bc-meta');
+  if (!s.code) { bcEmptyState('Pick a batch or type a lot code to preview'); meta.innerHTML = ''; return; }
+  document.getElementById('bc-preview').innerHTML = '<div class="bc-lot-frame" style="width:' + s.w + 'in;height:' + s.h + 'in">' + bcLotSvg(s.code, s.line2, s.w, s.h) + '</div>';
+  var known = batches.some(function(b) { return Plume.lotNorm(b.lotCode) === s.code; });
+  meta.innerHTML = 'Lot <strong>' + esc(s.code) + '</strong> &middot; ' + s.w + ' &times; ' + s.h + ' in' +
+    (known ? '' : '<br><span class="bc-warn">&#9650; No batch has this lot code.</span>');
+}
+function bcPrintLot() {
+  var s = bcLotSettings();
+  if (!s.code) { Plume.tell('Pick a batch or type a lot code first.'); return; }
+  var copies = Math.max(1, Math.min(500, parseInt(document.getElementById('bc-lot-copies').value, 10) || 1));
+  var svg = bcLotSvg(s.code, s.line2, s.w, s.h), labels = '';
+  for (var i = 0; i < copies; i++) labels += '<div class="lbl">' + svg + '</div>';
+  var css = '@page { size: ' + s.w + 'in ' + s.h + 'in; margin: 0; }' +
+    'html, body { margin:0; padding:0; }' +
+    '.lbl { width:' + s.w + 'in; height:' + s.h + 'in; display:flex; align-items:center; justify-content:center; overflow:hidden; ' +
+      'page-break-after:always; break-after:page; box-sizing:border-box; }' +
+    '.lbl:last-child { page-break-after:auto; break-after:auto; }' +
+    '.lbl svg { display:block; }';
+  bcOpenPrintWindow('Lot ' + s.code + ' stickers', css, labels);
+}
+
 function bcPrint() {
   var m = bcMode();
+  if (m === 'lot')   return bcPrintLot();
   if (m === 'card')  return bcPrintCard();
   if (m === 'sheet') return bcPrintSheet();
   return bcPrintRoll();
@@ -2113,6 +2256,9 @@ function loadData() {
   Store.remove(OLD_COST_KEY);
   migrateListOrder();
   migrateStatus();
+  // Lot codes for batches made before 2026-10-20, in case this page opens
+  // before Batches does (Batches runs the same, idempotent).
+  if (Plume.migrateBatches(batches, forms, products)) Store.setJSON(BATCH_KEY, batches);
   renderList();
   renderStatusPills();
   Plume.renderStorBanner();
@@ -3518,17 +3664,20 @@ function saveStored(list) {
   return false;
 }
 
+// Each batch a fill drew on, as its lot code (a link to the batch) and
+// name. A deleted batch still shows the code the fill kept.
 function runBatchText(r, p) {
   var draws = Plume.fillDraws(r, p);
-  var ids = draws.length ? draws.map(function(d) { return d.batchId; }) : (r.batchId ? [r.batchId] : []);
+  if (!draws.length && r.batchId) draws = [{ batchId: r.batchId }];
   var g = 0;
   draws.forEach(function(d) { g += parseFloat(d.grams) || 0; });
-  var names = ids.map(function(id) {
-    var b = findIn(batches, id);
-    return b ? Plume.batchLabel(b) : '(deleted batch)';
+  var names = draws.map(function(d) {
+    var b = findIn(batches, d.batchId), lot = Plume.drawLot(d, batches);
+    return '<span class="rr-lot">' + (lot ? Plume.lotChip(lot, b ? 'plume-batchlog.html#b=' + encodeURIComponent(b.id) : '') : '') +
+      '<small>' + (b ? esc(Plume.batchLabel(b)) : 'batch deleted') + '</small></span>';
   });
   if (!names.length) return '<span class="rr-old">not from a logged batch</span>';
-  return esc(names.join(' + ')) + (g > 0 ? '<small>' + Plume.fmtG(g) + '</small>' : '');
+  return names.join('') + (g > 0 ? '<small>' + Plume.fmtG(g) + '</small>' : '');
 }
 function renderOnHand(p) {
   var oh = Plume.onHandParts(p), kit = Plume.isKit(p);
@@ -3625,7 +3774,7 @@ function fillBatchSelect(id, formulaId, label, pick) {
   if (pick === '') sel = '';   // she chose Not from a logged batch; keep it
   return '<select id="' + id + '" data-fid="' + esc(formulaId || '') + '" onchange="fillTakes()" aria-label="From batch' + (label ? ' for ' + esc(label) : '') + '">' +
     list.map(function(b) {
-      return '<option value="' + esc(b.id) + '"' + (b.id === sel ? ' selected' : '') + '>' + esc(Plume.batchLabel(b)) + ' · ' +
+      return '<option value="' + esc(b.id) + '"' + (b.id === sel ? ' selected' : '') + '>' + (b.lotCode ? 'Lot ' + esc(b.lotCode) + ' · ' : '') + esc(Plume.batchLabel(b)) + ' · ' +
         Plume.fmtG(Plume.batchLeftG(b, products)) + ' left' + (b.status === 'curing' ? ' (curing)' : '') + '</option>';
     }).join('') +
     '<option value=""' + (sel ? '' : ' selected') + '>Not from a logged batch</option></select>';
@@ -3647,6 +3796,9 @@ function editorProduct() {
 var fillKeep = {}, fillKeepPid = null;   // formulaId -> the batch she picked, kept while one product's row redraws
 function renderFillRow(p) {
   // Fresh copies: Batches or Packaging may have changed in another tab.
+  // Store.refresh re-reads storage; getJSON alone returns this page's
+  // cache, which is what the line below always read before 2026-10-20.
+  Store.refresh(BATCH_KEY); Store.refresh(PKG_KEY);
   batches = Store.getJSON(BATCH_KEY, []) || [];
   pkgs    = Store.getJSON(PKG_KEY,   []) || [];
   if (fillKeepPid !== p.id) { fillKeep = {}; fillKeepPid = p.id; }
@@ -3810,7 +3962,7 @@ function addRun() {
     units: plan.units,
     notes: document.getElementById('run-notes').value.trim(),
     draws: plan.draws.map(function(d) { return { batchId: d.batchId, formulaId: d.formulaId, grams: d.grams }; })
-  }, pkgs);
+  }, pkgs, batches);
   var okP = saveStored(stored), okK = savePkgs();
   // The open editor gets the same runs, so a later Save keeps them.
   p.productionRuns = JSON.parse(JSON.stringify(sp.productionRuns));
@@ -3869,6 +4021,14 @@ function deleteRun(rid) {
 window.addEventListener('plume-settings', function() { if (curId && findProduct(curId)) renderRuns(findProduct(curId)); });
 
 function handleFillLink() {
+  var l = /^#lot=(.+)$/.exec(location.hash || '');
+  if (l) {
+    var lb = '';
+    try { lb = decodeURIComponent(l[1]); } catch (e) { return; }
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+    openLotSticker(lb);
+    return;
+  }
   var n = /^#new=(.+)$/.exec(location.hash || '');
   if (n) {
     var fid = '';

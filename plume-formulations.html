@@ -405,6 +405,23 @@ span.ing-name-btn{text-decoration:none}
 .use-notes{color:var(--ink-light);line-height:1.5;white-space:pre-wrap}
 .use-del{background:none;border:none;cursor:pointer;color:var(--ink-lighter);font-size:13px;padding:0 2px}
 .use-del:hover{color:var(--danger)}
+/* Formulation log (2026-10-20): an entry may be linked to one batch. */
+.use-hdr{gap:8px}
+.use-left{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;min-width:0}
+.use-acts{display:flex;gap:2px;align-items:center;flex:none}
+.use-edit{background:none;border:none;cursor:pointer;color:var(--ink-lighter);font:inherit;font-size:12px;padding:1px 6px;border-radius:5px}
+.use-edit:hover{color:var(--bark-dark);background:var(--cream)}
+.use-kind{font-size:11.5px;color:var(--ink-lighter)}
+.use-gone{font-size:11.5px;color:var(--ink-lighter);font-style:italic}
+.use-empty{color:var(--ink-lighter);font-style:italic}
+.ul-sec{border-top:1px solid var(--cream-border);padding-top:10px;margin-top:4px}
+.ul-sec-h{font-size:13px;font-weight:600;color:var(--ink);margin-bottom:8px}
+.ul-sec-h span{font-weight:400;font-size:12px;color:var(--ink-lighter);margin-left:6px}
+.ul-linked{margin-top:6px}
+.use-sec{margin-top:6px}
+.use-sec-h{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-lighter);margin-bottom:2px}
+.use-entry.hl{background:color-mix(in srgb,var(--bark) 9%,var(--white));border-radius:8px;padding-left:8px;padding-right:8px;transition:background 1.2s}
+.ul-linked{font-size:12.5px;color:var(--ink-light);background:var(--cream);border-radius:8px;padding:8px 10px;margin-bottom:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .modal-ov{display:none;position:fixed;inset:0;background:rgba(44,37,32,0.55);z-index:100;overflow-y:auto;padding:2rem 1rem}
 .modal-ov.open{display:flex;align-items:flex-start;justify-content:center}
 .modal{background:var(--white);border-radius:6px;border:1px solid var(--cream-border);padding:1.75rem;width:100%;max-width:520px;margin:auto}
@@ -591,7 +608,7 @@ body.ps-shell .ing-search:hover { background: var(--cream-dark); }
 body.ps-shell .ing-search:focus { background: var(--white); border-color: var(--bark); }
 body.ps-shell #addin-btn.active, body.ps-shell #addin-btn.on { background: var(--ink); color: var(--white); border-color: var(--ink); }
 
-/* Method / Usage log / Change history */
+/* Instructions / Formulation log / Change history */
 .fe-sub { margin-top: 28px; }
 .fe-sub .ps-toolbar { margin-top: 0; }
 .et-ct { color: var(--ink-lighter); font-weight: 400; margin-left: 5px; font-size: 13px; }
@@ -751,10 +768,10 @@ body.ps-shell .inci-list { font-size: 13px; color: var(--ink); }
         <!-- Method, usage log and history: tabs under the recipe. -->
         <div class="fe-sub">
           <div class="ps-toolbar">
-            <button type="button" class="ps-tab on" id="et-method" onclick="setEdTab('method')">Method</button>
-            <button type="button" class="ps-tab" id="et-log" onclick="setEdTab('log')">Usage log<span class="et-ct" id="et-log-ct"></span></button>
+            <button type="button" class="ps-tab on" id="et-method" onclick="setEdTab('method')">Instructions</button>
+            <button type="button" class="ps-tab" id="et-log" onclick="setEdTab('log')">Formulation log<span class="et-ct" id="et-log-ct"></span></button>
             <button type="button" class="ps-tab" id="et-hist" onclick="setEdTab('hist')">Change history<span class="et-ct" id="et-hist-ct"></span></button>
-            <div class="ps-tools"><button type="button" class="ps-link-btn" id="et-log-add" style="display:none" onclick="openUsage()"><span data-ps-icon="plus"></span>Log use</button></div>
+            <div class="ps-tools"><button type="button" class="ps-link-btn" id="et-log-add" style="display:none" onclick="openUsage()"><span data-ps-icon="plus"></span>Add entry</button></div>
           </div>
           <div class="fe-pane" id="ep-method">
             <textarea id="f-instruct" rows="5" placeholder="Step-by-step process: temperatures, mixing order, special handling..." oninput="markDirty()"></textarea>
@@ -901,22 +918,40 @@ body.ps-shell .inci-list { font-size: 13px; color: var(--ink); }
   </div>
 </div>
 
-<!-- Usage log modal -->
+<!-- Formulation log entry (was the Usage log). One entry per batch, linked
+     by hand (her call, 2026-10-20); two sections: the making, and how it
+     turned out, which is usually added later to the same entry. -->
 <div class="modal-ov" id="m-use">
   <div class="modal">
-    <div class="modal-hdr"><div class="modal-title">Log a use</div><button class="modal-x" onclick="closeModal('m-use')">x</button></div>
-    <div class="field"><label>Date made *</label><input type="date" id="ul-date"></div>
-    <div class="field"><label>Batch size made (g)</label><input type="text" inputmode="decimal" id="ul-batch" placeholder="e.g. 100"></div>
-    <div class="field"><label>Version</label><input type="text" id="ul-ver" readonly style="background:var(--cream-dark)"></div>
-    <div class="field" id="ul-ph-wrap" style="display:none">
-      <label><span class="ph-word">pH</span> readings <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--ink-lighter)" id="ul-ph-target"></span></label>
-      <div class="ph-cols" id="ul-ph-cols" style="display:none"><span class="ph-word">pH</span><span>By</span><span>Then added</span><span></span></div>
-      <div id="ul-ph-steps"></div>
-      <div><button type="button" class="btn btn-sm" onclick="addPhStep()">+ Add a reading</button></div>
-      <div class="ph-err" id="ul-ph-err" style="display:none"></div>
-      <datalist id="ph-adjusters"></datalist>
+    <div class="modal-hdr"><div class="modal-title" id="ul-title">Log entry</div><button class="modal-x" onclick="closeModal('m-use')">x</button></div>
+    <input type="hidden" id="ul-id">
+    <div class="field">
+      <label for="ul-bsel">From batch</label>
+      <select id="ul-bsel" onchange="onLogBatchPick()"></select>
+      <div class="ul-linked" id="ul-linked" hidden></div>
     </div>
-    <div class="field"><label>Outcome notes</label><textarea id="ul-notes" rows="4" placeholder="How did it turn out? Texture, scent, stability, feedback, what you would change..."></textarea></div>
+    <div id="ul-own" class="ul-own">
+      <div class="field"><label for="ul-date">Date *</label><input type="date" id="ul-date"></div>
+      <div class="field"><label for="ul-batch">Batch size made (g)</label><input type="text" inputmode="decimal" id="ul-batch" placeholder="optional, e.g. 100"></div>
+    </div>
+    <div class="field"><label>Version</label><input type="text" id="ul-ver" readonly style="background:var(--cream-dark)"></div>
+    <div class="ul-sec">
+      <div class="ul-sec-h">Making <span>at the bench: what you did and saw</span></div>
+      <div class="field" id="ul-ph-wrap" style="display:none">
+        <label><span class="ph-word">pH</span> readings <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--ink-lighter)" id="ul-ph-target"></span></label>
+        <div class="ph-cols" id="ul-ph-cols" style="display:none"><span class="ph-word">pH</span><span>By</span><span>Then added</span><span></span></div>
+        <div id="ul-ph-steps"></div>
+        <div><button type="button" class="btn btn-sm" onclick="addPhStep()">+ Add a reading</button></div>
+        <div class="ph-err" id="ul-ph-err" style="display:none"></div>
+        <datalist id="ph-adjusters"></datalist>
+      </div>
+      <div class="field"><label for="ul-making">Notes on the making</label><textarea id="ul-making" rows="3" placeholder="Temperatures, order of addition, what you adjusted, anything unusual..."></textarea></div>
+    </div>
+    <div class="ul-sec">
+      <div class="ul-sec-h">How it turned out <span>add to this any time</span></div>
+      <div class="field"><label for="ul-notes">Notes on the product</label><textarea id="ul-notes" rows="4" placeholder="Texture, scent, stability, feedback, what you would change..."></textarea></div>
+    </div>
+    <div class="ph-err" id="ul-err" style="display:none"></div>
     <div class="modal-foot">
       <button class="btn" onclick="closeModal('m-use')">Cancel</button>
       <button class="btn btn-primary" onclick="saveUseEntry()">Save entry</button>
@@ -1465,7 +1500,7 @@ function renderSaveState(justSaved) {
   }
 }
 
-// Method, Usage log and Change history under the recipe.
+// Instructions, Formulation log (was Usage log) and Change history under the recipe.
 var edTab = 'method';
 function setEdTab(t) {
   edTab = t;
@@ -3853,68 +3888,244 @@ function readPhSteps() {
   return bad ? null : out;
 }
 
-// ── Usage log (per variant) ───────────────────────────
-function openUsage() {
-  var v = curVar();
+// ── Formulation log (per variant; was the Usage log) ──
+// Her design, 2026-10-20: an entry can be linked to ONE batch, chosen by
+// hand when she writes it, so a making never has two entries and nothing
+// is written for her. Each entry has two sections: the making (pH readings
+// and bench notes, `making`) and how it turned out (`notes`, which older
+// entries filled as "Outcome notes"). A linked entry takes its date and size
+// from the batch. Stored on the version's usageLog (field name kept).
+//
+// Batches live in another key, written by another window, so they are read
+// fresh here rather than from the copy this page loaded.
+function logBatches() {
+  Store.refresh(Plume.KEYS.batches);
+  var bs = Store.getJSON(Plume.KEYS.batches, []) || [];
+  // Lot codes for older batches, in case this page is the first one opened
+  // since lot codes arrived (Batches and Products & Costing do the same).
+  if (Plume.migrateBatches(bs, forms, Store.getJSON(Plume.KEYS.products, []) || [])) Store.setJSON(Plume.KEYS.batches, bs);
+  return bs;
+}
+function findIn(list, id) {
+  for (var i = 0; i < (list || []).length; i++) if (list[i] && list[i].id === id) return list[i];
+  return null;
+}
+function fmtDay(iso) {
+  var parts = String(iso || '').split('-');
+  var dt    = parts.length === 3 ? new Date(+parts[0], +parts[1] - 1, +parts[2]) : new Date(iso);
+  return isNaN(dt.getTime()) ? String(iso || '') : dt.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+}
+function batchHref(id) { return 'plume-batchlog.html#b=' + encodeURIComponent(id); }
+
+// The batches an entry on this version can link to: made from this version,
+// or from this formulation before versions were recorded. Newest first.
+function logBatchChoices(f, v) {
+  return logBatches().filter(function (b) {
+    return b && f && b.formulaId === f.id && (!b.variantId || b.variantId === v.vid);
+  }).sort(function (a, b) {
+    return (b.date || '').localeCompare(a.date || '') || (b.lotCode || '').localeCompare(a.lotCode || '');
+  });
+}
+function batchLine(b) {
+  return 'Made ' + esc(fmtDay(b.date)) + ' &middot; ' + esc(String(b.actualYield || b.targetYield || '')) + ' g &middot; ' +
+    (b.batchType === 'test' ? 'test batch' : 'production batch');
+}
+
+function addPhStepWith(st) {
+  addPhStep();
+  var row = document.querySelector('#ul-ph-steps .ph-step:last-child');
+  if (!row || !st) return;
+  row.querySelector('.ph-v').value = st.v || '';
+  row.querySelector('.ph-m').value = st.m || 'strip';
+  row.querySelector('.ph-a').value = st.add || '';
+}
+
+// openUsage() starts an entry (on the newest batch of this version that has
+// none, or untied when there is none); openUsage(id) edits that entry;
+// openUsage(null, batchId) starts one on that batch, or opens its entry.
+function openUsage(eid, batchId) {
+  var f = curForm(), v = curVar();
   if (!v) { Plume.tell('Open a version first.'); return; }
+  var e = eid ? findIn(v.usageLog, eid) : null;
+  if (eid && !e) return;
+  if (!e && batchId) {
+    var hit = Plume.logEntryFor(forms, batchId);
+    if (hit) { openLogEntryOf(hit); return; }
+  }
+  var choices = logBatchChoices(f, v);
+  var pick = e ? (e.batchId || '') : (batchId !== undefined && batchId !== null ? batchId : '');
+  if (!e && batchId == null) {
+    for (var i = 0; i < choices.length; i++) if (!Plume.logEntryFor(forms, choices[i].id)) { pick = choices[i].id; break; }
+  }
+  var sel = document.getElementById('ul-bsel');
+  var missing = e && e.batchId && !findIn(choices, e.batchId);   // a deleted batch
+  sel.innerHTML = choices.map(function (b) {
+    var has = Plume.logEntryFor(forms, b.id);
+    var other = has && (!e || has.entry.id !== e.id);
+    return '<option value="' + esc(b.id) + '">' + (b.lotCode ? 'Lot ' + esc(b.lotCode) + ' · ' : '') + esc(fmtDay(b.date)) + ' · ' +
+      esc(String(b.actualYield || b.targetYield || '')) + ' g' + (other ? ' (has an entry)' : '') + '</option>';
+  }).join('') +
+    (missing ? '<option value="' + esc(e.batchId) + '">' + (e.lot ? 'Lot ' + esc(e.lot) + ' · ' : '') + 'batch deleted</option>' : '') +
+    '<option value="">Not tied to a batch</option>';
+  sel.value = pick;
+  if (sel.value !== pick) sel.value = '';
+  document.getElementById('ul-id').value = e ? e.id : '';
+  document.getElementById('ul-title').textContent = e ? 'Edit log entry' : 'Log entry';
   // Local date, not toISOString(): that is UTC, so an entry logged after
   // 4pm in Alaska used to default to tomorrow.
-  document.getElementById('ul-date').value  = Plume.todayISO();
+  document.getElementById('ul-date').value  = e ? (e.date || '') : Plume.todayISO();
+  document.getElementById('ul-batch').value = e ? (e.batch || '') : (document.getElementById('batch-sz').value || '');
+  document.getElementById('ul-ver').value   = e ? (e.version || varTitle(v)) : varTitle(v);
   resetPhSteps(v);
-  document.getElementById('ul-batch').value = document.getElementById('batch-sz').value || '';
-  document.getElementById('ul-ver').value   = varTitle(v);
-  document.getElementById('ul-notes').value = '';
+  (e && e.ph || []).forEach(addPhStepWith);
+  if (e && e.ph && e.ph.length) document.getElementById('ul-ph-wrap').style.display = '';
+  document.getElementById('ul-making').value = e ? (e.making || '') : '';
+  document.getElementById('ul-notes').value  = e ? (e.notes || '') : '';
+  document.getElementById('ul-err').style.display = 'none';
+  showLogBatch();
   openModal('m-use');
+}
+// Opens the entry a batch already has, on whichever version holds it.
+function openLogEntryOf(hit) {
+  if (curForm() !== hit.form) return;
+  if (hit.variant.vid !== curVid) selectVariant(hit.variant.vid);
+  setEdTab('log');
+  openUsage(hit.entry.id);
+}
+// The line under From batch, and date and size only when not tied.
+function showLogBatch() {
+  var id = document.getElementById('ul-bsel').value;
+  var b = id ? findIn(logBatches(), id) : null;
+  var line = document.getElementById('ul-linked');
+  var eid = document.getElementById('ul-id').value;
+  var e = eid ? findIn((curVar() || {}).usageLog, eid) : null;
+  if (id) {
+    line.innerHTML = b ? Plume.lotChip(b.lotCode, batchHref(b.id)) + ' ' + batchLine(b)
+      : 'This batch has been deleted' + (e && e.lot ? '; the entry keeps its lot code ' + Plume.lotChip(e.lot) : '') + '.';
+    line.hidden = false;
+  } else {
+    line.hidden = true; line.innerHTML = '';
+  }
+  document.getElementById('ul-own').hidden = !!id;
+}
+// Picking a batch that already has an entry opens that entry instead.
+function onLogBatchPick() {
+  var id  = document.getElementById('ul-bsel').value;
+  var eid = document.getElementById('ul-id').value;
+  var hit = id ? Plume.logEntryFor(forms, id) : null;
+  if (hit && hit.entry.id !== eid) {
+    var typed = document.getElementById('ul-making').value.trim() || document.getElementById('ul-notes').value.trim() ||
+      document.querySelectorAll('#ul-ph-steps .ph-step').length;
+    var go = function () { closeModal('m-use'); openLogEntryOf(hit); };
+    if (typed) {
+      Plume.ask('That batch already has a log entry, and a batch has one entry. Open it? What you typed here is not saved.', go,
+        { title: 'Open the entry for that batch?', yes: 'Open it', no: 'Stay here' });
+      document.getElementById('ul-bsel').value = (eid && findIn((curVar() || {}).usageLog, eid) || {}).batchId || '';
+      showLogBatch();
+      return;
+    }
+    go();
+    return;
+  }
+  showLogBatch();
 }
 
 function saveUseEntry() {
-  var date = document.getElementById('ul-date').value;
-  if (!date) { Plume.tell('Please enter a date.'); return; }
   var v = curVar();
   if (!v) { closeModal('m-use'); return; }
+  var eid = document.getElementById('ul-id').value;
+  var old = eid ? findIn(v.usageLog, eid) : null;
+  var bid = document.getElementById('ul-bsel').value;
+  var err = document.getElementById('ul-err');
+  var fail = function (msg) { err.textContent = msg; err.style.display = ''; };
+  var date = document.getElementById('ul-date').value;
+  if (!bid && !date) { fail('Please enter a date.'); return; }
   var steps = readPhSteps();
   if (steps === null) return;   // a reading that is not a pH; the form says which
-  var entry = {
-    id:      newVid(),
-    date:    date,
-    batch:   document.getElementById('ul-batch').value,
-    version: varTitle(v),
-    notes:   document.getElementById('ul-notes').value.trim()
-  };
-  if (steps.length) entry.ph = steps;
-  v.usageLog = (v.usageLog || []).concat([entry]);
+  var making = document.getElementById('ul-making').value.trim();
+  var notes  = document.getElementById('ul-notes').value.trim();
+  if (!making && !notes && !steps.length) { fail('Write something in either section first. An empty entry is not saved.'); return; }
+  var hit = bid ? Plume.logEntryFor(forms, bid) : null;
+  if (hit && hit.entry !== old) { fail('That batch already has a log entry. A batch has one entry.'); return; }
+  var b = bid ? findIn(logBatches(), bid) : null;
+  var entry = old || { id: newVid(), version: varTitle(v) };
+  if (bid) {
+    entry.batchId = bid;
+    if (b) { entry.lot = b.lotCode || ''; entry.date = b.date; entry.batch = String(b.actualYield || b.targetYield || ''); }
+  } else {
+    delete entry.batchId; delete entry.lot;
+    entry.date = date; entry.batch = document.getElementById('ul-batch').value;
+  }
+  if (making) entry.making = making; else delete entry.making;
+  entry.notes = notes;
+  if (steps.length) entry.ph = steps; else delete entry.ph;
+  if (!old) v.usageLog = (v.usageLog || []).concat([entry]);
   saveAll(); closeModal('m-use'); renderUseLog(v);
 }
 
-// Entries are no longer grouped by version number -- the tab already tells
-// you which version this is, so the log is a straight track record for it.
+// Newest first. The tab already says which version this is.
 function renderUseLog(v) {
   var el = document.getElementById('use-panel');
   if (!el) return;
   var log = ((v && v.usageLog) || []).slice();
   setTabCount('et-log-ct', log.length);
   if (!log.length) {
-    el.innerHTML = '<div style="font-size:12px;color:var(--ink-lighter)">No uses logged yet for this version.</div>';
+    el.innerHTML = '<div style="font-size:12px;color:var(--ink-lighter)">Nothing logged for this version yet. Add an entry for a batch you made: how the making went, and later how it turned out.</div>';
     return;
   }
-  log.sort(function(a, b) { return String(b.date || '').localeCompare(String(a.date || '')); });
+  var bs = log.some(function (e) { return e.batchId; }) ? logBatches() : [];
+  // A linked entry reads its date from the batch, which can be edited.
+  var dateOf = function (e) { var b = e.batchId ? findIn(bs, e.batchId) : null; return (b && b.date) || e.date || ''; };
+  log.sort(function(a, b) { return String(dateOf(b)).localeCompare(String(dateOf(a))); });
 
-  var html = '<div style="font-size:11px;color:var(--ink-lighter);margin-bottom:8px">Made ' + log.length + ' time' + (log.length === 1 ? '' : 's') + '</div>';
+  var nb = log.filter(function (e) { return e.batchId; }).length;
+  var html = '<div style="font-size:11px;color:var(--ink-lighter);margin-bottom:8px">' + log.length + ' entr' + (log.length === 1 ? 'y' : 'ies') +
+    (nb ? ' &middot; ' + nb + ' linked to batches' : '') + '</div>';
   log.forEach(function(e) {
-    var parts = String(e.date || '').split('-');
-    var dt    = parts.length === 3 ? new Date(+parts[0], +parts[1] - 1, +parts[2]) : new Date(e.date);
-    var d     = isNaN(dt.getTime()) ? String(e.date || '') : dt.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
-    html += '<div class="use-entry"><div class="use-hdr">';
-    html += '<span class="use-date">' + esc(d) + '</span>';
-    html += '<span class="use-meta">' + (e.batch ? esc(e.batch) + 'g' : '') + '</span>';
-    html += '<button class="use-del" onclick="delUseEntry(\'' + e.id + '\')">x</button></div>';
+    var b = e.batchId ? findIn(bs, e.batchId) : null;
+    var left = '<span class="use-date">' + esc(fmtDay(dateOf(e))) + '</span>';
+    if (e.batchId) {
+      var lot = (b && b.lotCode) || e.lot;
+      left += lot ? Plume.lotChip(lot, b ? batchHref(b.id) : '') : '';
+      if (b) left += '<span class="use-kind">' + (b.batchType === 'test' ? 'Test batch' : 'Production batch') + ' &middot; ' + esc(String(b.actualYield || b.targetYield || '')) + ' g</span>';
+      else left += '<span class="use-gone">batch deleted</span>';
+    } else if (e.batch) {
+      left += '<span class="use-meta">' + esc(e.batch) + 'g</span>';
+    }
+    html += '<div class="use-entry" id="je-' + esc(e.id) + '"><div class="use-hdr"><span class="use-left">' + left + '</span>';
+    html += '<span class="use-acts"><button class="use-edit" onclick="openUsage(\'' + e.id + '\')">Edit</button>' +
+      '<button class="use-del" title="Remove this entry" onclick="delUseEntry(\'' + e.id + '\')">x</button></span></div>';
     // The final reading is compared with the version's CURRENT target --
     // the log is a working record for this version, not a historical one.
-    if (e.ph && e.ph.length) html += '<div class="use-ph">' + Plume.phStepsHtml(e.ph, v.phMin, v.phMax) + '</div>';
-    if (e.notes) html += '<div class="use-notes">' + esc(e.notes) + '</div>';
+    var hasMaking = (e.ph && e.ph.length) || e.making;
+    if (hasMaking) {
+      html += '<div class="use-sec use-making"><div class="use-sec-h">Making</div>' +
+        (e.ph && e.ph.length ? '<div class="use-ph">' + Plume.phStepsHtml(e.ph, v.phMin, v.phMax) + '</div>' : '') +
+        (e.making ? '<div class="use-notes">' + esc(e.making) + '</div>' : '') + '</div>';
+    }
+    if (e.notes) {
+      html += '<div class="use-sec use-turned"><div class="use-sec-h">How it turned out</div><div class="use-notes">' + esc(e.notes) + '</div></div>';
+    } else if (hasMaking) {
+      html += '<div class="use-sec use-turned"><button class="use-edit" style="padding-left:0" onclick="openUsage(\'' + e.id + '\')">+ How it turned out</button></div>';
+    }
     html += '</div>';
   });
   el.innerHTML = html;
+}
+
+// Opens a log entry from a link: #f=<formulation>&v=<version>&j=<entry>,
+// or starts one for a batch: #f=...&b=<batch>.
+function showLogEntry(vid, jid, bid) {
+  var f = curForm();
+  if (!f) return;
+  if (vid && Plume.findVariant(f, vid) && vid !== curVid) selectVariant(vid);
+  setEdTab('log');
+  if (bid) { openUsage(null, bid); return; }
+  var el = jid ? document.getElementById('je-' + jid) : null;
+  if (!el) return;
+  el.classList.add('hl');
+  try { el.scrollIntoView({ block: 'center' }); } catch (e) {}
+  setTimeout(function () { el.classList.remove('hl'); }, 2600);
 }
 
 function delUseEntry(eid) {
@@ -4079,11 +4290,19 @@ if (typeof Plume === 'undefined') {
     var icons = document.querySelectorAll('[data-ps-icon]');
     for (var ii = 0; ii < icons.length; ii++) icons[ii].innerHTML = Plume.icon(icons[ii].getAttribute('data-ps-icon'));
     loadAll();
-    // Deep link from Ingredients' "Used in" names: #f=<formulation id>
+    // Deep link from Ingredients' "Used in" names: #f=<formulation id>;
+    // from a batch's log link, also &v=<version> and &j=<entry> or &b=<batch>.
     if (location.hash.indexOf('#f=') === 0) {
-      var fid = location.hash.slice(3);
-      try { fid = decodeURIComponent(fid); } catch (e) {}
-      if (forms.some(function (x) { return x.id === fid; })) openFormula(fid);
+      var hp = {};
+      location.hash.slice(1).split('&').forEach(function (kv) {
+        var i = kv.indexOf('=');
+        if (i < 0) return;
+        try { hp[kv.slice(0, i)] = decodeURIComponent(kv.slice(i + 1)); } catch (e) { hp[kv.slice(0, i)] = kv.slice(i + 1); }
+      });
+      if (forms.some(function (x) { return x.id === hp.f; })) {
+        openFormula(hp.f);
+        if (hp.v || hp.j || hp.b) showLogEntry(hp.v, hp.j, hp.b);
+      }
     }
   });
 }

@@ -247,10 +247,10 @@ const BATCHES = [
     ok('the log shows the sequence', /6\.3[\s\S]*2 drops lactic[\s\S]*5\.25/.test(html));
     ok('the final reading is judged against the version target', /ph-badge ph-in[^>]*>pH 5\.25/.test(html), html.slice(0, 400));
 
-    await page.evaluate("openUsage()");
+    await page.evaluate("openUsage(); document.getElementById('ul-bsel').value=''; showLogBatch(); document.getElementById('ul-notes').value='Smooth'");
     await page.evaluate("saveUseEntry()");
     const last = await page.evaluate("(function(){var l=forms.find(function(x){return x.id==='f1';}).variants[0].usageLog;return l[l.length-1];})()");
-    ok('an entry with no readings stores no pH at all', !('ph' in last), last);
+    ok('an entry with no readings stores no pH at all', last.notes === 'Smooth' && !('ph' in last), last);
 
     await page.evaluate("closeModal('m-use'); openFormula('f2')"); await page.waitForTimeout(200);
     await page.evaluate("openUsage()");
