@@ -1676,6 +1676,7 @@ function injectStyles() {
     '.st-panel .st-row.on{background:var(--clay-light)}' +
     '.st-panel .st-row.over{background:color-mix(in srgb,var(--danger) 10%,var(--white))}' +
     '.st-panel .st-row.over input{border-color:var(--danger)}' +
+    '.st-panel .st-rp{font-size:13px;color:var(--ink-light);margin:12px 0 0}.st-panel .st-rp a{color:var(--bark)}' +
     '.st-panel .st-over{margin-top:12px;font-size:13px;color:var(--danger);line-height:1.45}' +
     '.st-panel .st-name{font-size:14px;color:var(--ink);min-width:0}' +
     '.st-panel .st-name small{display:block;font-size:12px;color:var(--ink-lighter)}' +
@@ -3372,6 +3373,9 @@ function kitsUsing(productId, products) {
 function stockPass(products, entries, opts) {
   opts = opts || {};
   var n = 0, stamp = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  // What each unit cost on the day (her call): a report keeps that month's
+  // prices, as batches keep theirs. Not for units into kits (not a loss).
+  var cd = opts.costs === false ? null : costData({ products: products });
   (entries || []).forEach(function (en, i) {
     var pr = fillFind(products, en.productId);
     var v = parseFloat(en.value);
@@ -3379,6 +3383,7 @@ function stockPass(products, entries, opts) {
     if (opts.mode === 'out' && v === 0) return;
     var e = { id: 'st-' + stamp + '-' + i, date: opts.date || todayISO(), kind: opts.mode === 'count' ? 'count' : 'out', note: opts.note || '' };
     if (e.kind === 'out' && opts.reason) e.reason = opts.reason;
+    if (cd) { var uc = productUnitCost(pr, cd); if (uc > 0) e.unitCost = Math.round(uc * 10000) / 10000; }
     if (e.kind === 'count') { e.counted = v; e.qty = v - onHand(pr); }
     else e.qty = -v;
     if (!pr.stockLog) pr.stockLog = [];
@@ -3401,6 +3406,64 @@ function fillUndoBlock(p, run) {
   return 'Only ' + Math.max(0, onHand(p)) + ' of these are on hand' + (went.length ? ' (' + went.join(', ') + ')' : '') +
     ', so reversing this fill of ' + run.units + ' would leave ' + after + '. Reverse the kit builds that used them, or remove the stock changes, first.';
 }
+// ── A product's unit cost, from any page (2026-10-20) ─────────────────
+// Transcribed from Products & Costing (formulationCostDetail, pkgUnitCost,
+// computeProductCost) so Update stock can record what each unit cost when
+// it left the shelf. test-kits.js checks the two agree on every product.
+// d: { ings, forms, pkgs, products }; anything missing is read from Store.
+function costData(d) {
+  d = d || {};
+  var g = function (k) { var l = Store.getJSON(k, []); return Array.isArray(l) ? l : []; };
+  return { ings: d.ings || g('aerie-ingredients-v2'), forms: d.forms || g('aerie-formulations-v1'),
+           pkgs: d.pkgs || g('aerie-packaging-v2'), products: d.products || g('plume-products-v1') };
+}
+function formCostPerG(f, d) {
+  if (!f || !f.lines || !f.lines.length) return null;
+  var cost = 0, mass = 0, any = false;
+  f.lines.forEach(function (line) {
+    if (line.soapAddin) return;
+    var cpg = costPerG(fillFind(d.ings, line.ingId));
+    var grams = parseFloat(line.gramsFixed) || 0, pct = parseFloat(line.pct) || 0;
+    var m = grams > 0 ? grams : (pct > 0 ? pct : 0);
+    if (m <= 0) return;
+    mass += m;
+    if (cpg !== null) { cost += cpg * m; any = true; }
+  });
+  return (any && mass > 0) ? cost / mass : null;
+}
+function pkgUnitCostOf(pkg) {
+  if (!pkg || !(pkg.purchases || []).length) return null;
+  var sorted = pkg.purchases.slice().sort(function (a, b) { return (b.date || '').localeCompare(a.date || ''); });
+  for (var i = 0; i < sorted.length; i++) {
+    var total = parseFloat(sorted[i].totalCost) || 0, ship = parseFloat(sorted[i].shipping) || 0, qty = parseInt(sorted[i].qty, 10) || 0;
+    if (qty > 0 && total > 0) return (total + ship) / qty;
+  }
+  return null;
+}
+function productUnitCost(p, d) {
+  if (!p) return 0;
+  d = costData(d);
+  var c = 0;
+  if (p.productKind === 'kit') {
+    kitParts(p, d.products).forEach(function (k) {
+      if (k.product && kitPartOk(k.product)) c += productUnitCost(k.product, d) * k.qty;
+    });
+  } else if (p.productKind === 'multi') {
+    (p.components || []).forEach(function (cm) {
+      var cpg = formCostPerG(fillFind(d.forms, cm.formulaId), d), wt = parseFloat(cm.netWtG) || 0;
+      if (cpg !== null && wt > 0) c += cpg * wt;
+    });
+  } else {
+    var cpg = formCostPerG(fillFind(d.forms, p.formulaId), d), nw = parseFloat(p.netWtG) || 0;
+    if (cpg !== null && nw > 0) c += cpg * nw;
+  }
+  (p.packagingRecipe || []).forEach(function (r) {
+    var qty = parseInt(r.quantity, 10) || 0, uc = pkgUnitCostOf(fillFind(d.pkgs, r.packagingId));
+    if (qty > 0 && uc !== null) c += uc * qty;
+  });
+  return c;
+}
+
 // ── Update stock: a slide-in panel on every page (2026-10-20) ───────────
 // From the sidebar, so it is a quick task from anywhere. Reasons lower on
 // hand (Sold, Gifted, Marketing, Damaged); each keeps its own numbers while
@@ -3453,6 +3516,7 @@ function stHtml() {
     '<div class="st-cols"><span>Product</span><span>On hand</span><span>' + esc(m.label) + '</span></div>' +
     '<div id="st-rows">' + stRowsHtml() + '</div>' +
     '<div class="st-over" id="st-over" hidden></div>' +
+    '<p class="st-rp"><a href="plume-costing.html#stock-report" target="plume-costing" onclick="if (typeof openReport === \'function\') { Plume.peek.close(); openReport(); return false; }">See the stock report</a>: where units went over time, and what they cost.</p>' +
     '<div class="st-foot"><span class="st-ct" id="st-ct">Nothing entered yet</span><span class="ps-grow"></span>' +
       '<button type="button" class="ps-link-btn" onclick="Plume.peek.close()">Cancel</button>' +
       '<button type="button" class="ps-btn-primary" id="st-save" onclick="Plume.stock.save()" disabled>Save</button></div></div>';
@@ -3607,7 +3671,7 @@ return {
   onHand: onHand, onHandParts: onHandParts, isKit: isKit, kitPartOk: kitPartOk, kitParts: kitParts,
   kitNeeds: kitNeeds, kitShortages: kitShortages, buildKit: buildKit, undoKitBuild: undoKitBuild,
   undoKitText: undoKitText, kitsUsing: kitsUsing, stockPass: stockPass, undoStock: undoStock,
-  STOCK_REASONS: STOCK_REASONS, stockReasonLabel: stockReasonLabel, fillUndoBlock: fillUndoBlock,
+  STOCK_REASONS: STOCK_REASONS, productUnitCost: productUnitCost, stockReasonLabel: stockReasonLabel, fillUndoBlock: fillUndoBlock,
   stock: { open: stockOpen, mode: stockMode, search: stockSearch, typed: stTyped, save: stockSave, entries: stEntries },
   pkTypeFor: pkTypeFor, pkForProduct: pkForProduct, pkColored: pkColored, pkIsOther: pkIsOther,
   pkIcon: pkIcon, pkIconFor: pkIconFor, pkProducts: pkProducts, pkProductName: pkProductName,

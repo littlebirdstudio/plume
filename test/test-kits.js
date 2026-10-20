@@ -238,6 +238,30 @@ console.log('\n1. Units on hand and kits, in core');
   const said = await page.evaluate("var m=''; var real=Plume.tell; Plume.tell=function(t){ m=t; }; deleteRun('r1'); Plume.tell=real; m");
   ok('a fill whose units went into kits cannot be reversed, and says why', /into kits/.test(said) && (await stored()).find(x => x.id === 'mo').productionRuns.length === 1, said);
 
+  console.log('\n6c. Unit cost recorded, and the stock report');
+  ok('core works out the same unit cost as Products & Costing, for every product (single, kit, older pack, not for sale)', await page.evaluate(
+    "products.every(function(p){ return Math.abs(Plume.productUnitCost(p, { ings: ings, forms: forms, pkgs: pkgs, products: products }) - computeProductCost(p).totalCost) < 1e-9; })"));
+  const outs = (await stored()).find(x => x.id === 'full').stockLog.filter(e => e.kind === 'out');
+  // Face Oil 1 oz: 28 g x $0.10, no packaging
+  ok('each stock change carries the unit cost on the day it was saved', outs.length && outs.every(e => Math.abs(e.unitCost - 2.8) < 1e-9), outs);
+  await page.evaluate("Plume.peek.close(); leaveEditor(); openReport()");
+  ok('the report opens from the list', await page.evaluate("document.getElementById('view-report').style.display === '' && document.getElementById('view-list').style.display === 'none'"));
+  const tiles = await page.evaluate("Array.from(document.querySelectorAll('.rp-tile')).map(function(t){return t.querySelector('.rp-k').textContent+':'+t.querySelector('.rp-n').textContent;}).join(',')");
+  // Sold: 3 of Face Oil 1 oz and 1 Oil mini earlier in this test; the 2 damaged were removed again.
+  ok('the totals add up each reason: 4 sold, 1 gifted, none damaged', /Sold:4/.test(tiles) && /Damaged:0/.test(tiles) && /Gifted:1/.test(tiles) && /Marketing:0/.test(tiles), tiles);
+  ok('sold at cost: 3 x $2.80 + 1 x $1.00', (await page.evaluate("Array.from(document.querySelectorAll('.rp-tile')).find(function(t){return /Sold/.test(t.textContent);}).querySelector('.rp-c').textContent")) === '$9.40 at cost');
+  ok('there is a row for this month', /October 2026/.test(await page.evaluate("document.getElementById('rp-months').textContent")));
+  ok('and a row per product, most units out first', (await page.evaluate("document.querySelector('#rp-prods tbody tr td').textContent")) === 'Face Oil 1 oz');
+  // An entry from before costs were recorded uses today's cost, marked ~
+  await page.evaluate("var ps=JSON.parse(localStorage.getItem('plume-products-v1')); ps.find(function(p){return p.id==='mo';}).stockLog.push({id:'old1',date:'2026-09-02',qty:-2,kind:'out',reason:'marketing',note:''}); localStorage.setItem('plume-products-v1', JSON.stringify(ps)); Plume.Store.init(function(){ openReport(); });");
+  await page.waitForTimeout(150);
+  ok('an older change without a recorded cost is estimated and marked ~', /~\$/.test(await page.evaluate("document.getElementById('rp-months').textContent")) &&
+     /before costs were recorded/.test(await page.evaluate("document.getElementById('rp-foot').textContent")));
+  ok('September gets its own row', /September 2026/.test(await page.evaluate("document.getElementById('rp-months').textContent")));
+  await page.evaluate("rpRange='all'; renderReport()");
+  ok('All time is a range choice', await page.evaluate("Array.from(document.querySelectorAll('#rp-range .ps-chip')).some(function(b){return b.classList.contains('on') && b.textContent==='All time';})"));
+  await page.evaluate("closeReport()");
+
   console.log('\n7. Older packs and the rest');
   await page.evaluate("openProduct('old')");
   ok('an older pack keeps its kind, with a note on how to make a kit', await page.evaluate(
