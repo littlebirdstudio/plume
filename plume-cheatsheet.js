@@ -35,7 +35,7 @@ var PHASE_NAMES = { water: 'Water', oil: 'Oil', 'cool-down': 'Cool-down', 'add-i
 var COLS = {
   use:    { label: 'Use %',          get: function (i) { return range(i.min, i.max); } },
   phase:  { label: 'Phase',          get: function (i) { return PHASE_NAMES[i.phase] || i.phase || ''; } },
-  ph:     { label: 'pH',             get: function (i) { return i.optimalPh || ''; } },
+  ph:     { label: 'Effective pH',   get: function (i) { return i.optimalPh || ''; } },
   heat:   { label: 'Heat stability', get: function (i) { return i.heatStability || ''; } },
   restr:  { label: 'Restrictions',   get: function (i) { return i.restrictions || ''; } },
   absorb: { label: 'Absorption',     get: function (i) { return i.absorptionRate || ''; } },

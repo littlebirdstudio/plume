@@ -35,7 +35,7 @@ var Plume = (function () {
 // (v0.4 / v0.5 / v0.6 across five modules). BUMP IT IN EVERY PULL REQUEST,
 // core change or not: it is how "is this the update I just merged?" is
 // answered by looking, and browsers cache .js files stubbornly.
-var VERSION = '1.36';
+var VERSION = '1.37';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -2178,6 +2178,83 @@ function phTargetText(min, max) {
   return '';
 }
 
+// ── Effective pH ranges (2026-10-20) ──
+// An ingredient's "Effective pH range" (stored as optimalPh, label only
+// changed: her point that optimal is not the same as functional) is free
+// text, often from a reference: "4.0 – 5.5", "3 to 6, with better efficacy
+// at lower pH", "Marketed between 3 – 8, but preferably below 5.5", "up to
+// 5.5", "below 6", "4+". The FIRST range in it is the one used, so a
+// "preferably" clause never tightens it. { min, max } with either null for
+// an open side, or null when nothing reads as a range.
+function effPhRange(str) {
+  var s = String(str == null ? '' : str).toLowerCase().replace(/,(\d)/g, '.$1');
+  var num = '(\\d{1,2}(?:\\.\\d+)?)';
+  var ok = function (n) { return n >= 0 && n <= 14; };
+  var m = new RegExp(num + '\\s*(?:-|\u2013|\u2014|to)\\s*' + num).exec(s);
+  if (m) {
+    var a = parseFloat(m[1]), b = parseFloat(m[2]);
+    if (ok(a) && ok(b) && a <= b) return { min: a, max: b };
+  }
+  m = new RegExp('(?:up to|below|under|max(?:imum)?|<=?|\u2264)\\s*(?:ph\\s*)?' + num).exec(s);
+  if (m && ok(parseFloat(m[1]))) return { min: null, max: parseFloat(m[1]) };
+  m = new RegExp('(?:above|over|from|min(?:imum)?|>=?|\u2265)\\s*(?:ph\\s*)?' + num).exec(s);
+  if (m && ok(parseFloat(m[1]))) return { min: parseFloat(m[1]), max: null };
+  m = new RegExp(num + '\\s*\\+').exec(s);
+  if (m && ok(parseFloat(m[1]))) return { min: parseFloat(m[1]), max: null };
+  return null;
+}
+function effPhText(r) {
+  if (!r) return '';
+  if (r.min !== null && r.max !== null) return r.min + '\u2013' + r.max;
+  return r.max !== null ? 'up to ' + r.max : 'from ' + r.min;
+}
+// An ingredient that is meant to preserve: its function says so.
+function isPreservative(ing) {
+  if (!ing) return false;
+  if (funcCats(ing).some(function (c) { return /preserv/i.test(c); })) return true;
+  return /^preservative|broad[- ]spectrum preserv/i.test(String(ing.function || ''));
+}
+// The ingredients in a formula whose effective range a pH falls outside.
+// lo and hi are numbers or null (a target open on one side; a single
+// reading passes the same number as both). Returns
+// [{ ing, range, side: 'low' | 'high', at }]: at is the pH that falls out.
+// Every ingredient with a range counts, not only preservatives: a thickener
+// or an active outside its range fails too, if less dangerously.
+function effPhIssues(lines, ings, lo, hi) {
+  var out = [], seen = {};
+  if (lo === null && hi === null) return out;
+  (lines || []).forEach(function (l) {
+    var id = l && (l.ingId || l.ingredientId);
+    if (!id || seen[id]) return;
+    seen[id] = true;
+    var ing = findIngIn(ings, id), r = ing ? effPhRange(ing.optimalPh) : null;
+    if (!r) return;
+    var top = hi !== null ? hi : lo, bot = lo !== null ? lo : hi;
+    if (r.max !== null && top > r.max) out.push({ ing: ing, range: r, side: 'high', at: top });
+    else if (r.min !== null && bot < r.min) out.push({ ing: ing, range: r, side: 'low', at: bot });
+  });
+  return out;
+}
+// Preservatives in a formula with no effective range recorded, so the
+// check above cannot see them.
+function effPhUnknown(lines, ings) {
+  var out = [], seen = {};
+  (lines || []).forEach(function (l) {
+    var id = l && (l.ingId || l.ingredientId);
+    if (!id || seen[id]) return;
+    seen[id] = true;
+    var ing = findIngIn(ings, id);
+    if (isPreservative(ing) && !effPhRange(ing.optimalPh)) out.push(ing);
+  });
+  return out;
+}
+// One sentence per issue. what: 'Target reaches pH 6' style lead-in given
+// by the caller ('target' or 'final').
+function effPhIssueText(x, what) {
+  var lead = what === 'final' ? 'Final pH ' + x.at + ' is' : (x.side === 'high' ? 'Target reaches pH ' + x.at + ',' : 'Target starts at pH ' + x.at + ',');
+  return lead + ' ' + (x.side === 'high' ? 'above' : 'below') + ' where ' + (x.ing.name || 'an ingredient') + ' is effective (' + effPhText(x.range) + ').';
+}
+
 // Does a formula have a water phase? pH only means something when there is
 // water, so this decides whether pH fields appear at all -- a balm or an
 // oil blend never shows them. Uses the per-line phase override first, same
@@ -4007,6 +4084,7 @@ return {
   setTheme: setTheme, isDark: isDark, themeChoice: themeChoice, darkValue: darkValue, applyTheme: applyTheme,
   tell: tell, ask: ask, askValue: askValue,
   parsePh: parsePh, phNum: phNum, phRange: phRange, phTargetText: phTargetText,
+  effPhRange: effPhRange, effPhText: effPhText, isPreservative: isPreservative, effPhIssues: effPhIssues, effPhUnknown: effPhUnknown, effPhIssueText: effPhIssueText,
   isAqueous: isAqueous, phBadge: phBadge, phStepsHtml: phStepsHtml, phFinal: phFinal,
   PK_COLORS: PK_COLORS, PK_MATERIALS: PK_MATERIALS, PK_PARTS: PK_PARTS, PK_GROUPS: PK_GROUPS, PK_KINDS: PK_KINDS,
   pkColor: pkColor, pkSwatch: pkSwatch, pkKind: pkKind, pkKindOf: pkKindOf, pkGroup: pkGroup, pkGroupKey: pkGroupKey,

@@ -1382,8 +1382,8 @@
           <input type="text" id="f-scent" placeholder="e.g. Nutty, mild">
         </div>
         <div class="field">
-          <label>Optimal pH</label>
-          <input type="text" id="f-optimal-ph" placeholder="e.g. 4.0 – 5.5">
+          <label title="The pH range it works in. Outside it, it may not do its job; for a preservative, the product may not be protected. Formulations warns when a target or a batch falls outside it.">Effective pH range</label>
+          <input type="text" id="f-optimal-ph" placeholder="e.g. 3 – 5.5, or up to 6">
         </div>
         <div class="field">
           <label>Dermal limits <span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:10px">— for essential oils</span></label>
@@ -1520,10 +1520,10 @@
 <div class="modal-overlay" id="modal-lowdown">
   <div class="modal" style="max-width:720px">
     <div class="modal-header">
-      <div class="modal-title">Fill in lowdowns</div>
+      <div class="modal-title" id="lowdown-title">Fill in lowdowns</div>
       <button class="modal-close" onclick="closeModal('modal-lowdown')">×</button>
     </div>
-    <div style="font-size:13px;color:var(--ink-light);margin-bottom:0.75rem;line-height:1.5">Drafted lines for your ingredients that have no lowdown yet, matched by name to the starter list. Untick any you don't want. Each one arrives marked <span class="draft-tag" style="margin-left:0">draft</span> until you tick it or edit it.</div>
+    <div id="lowdown-intro" style="font-size:13px;color:var(--ink-light);margin-bottom:0.75rem;line-height:1.5">Drafted lines for your ingredients that have no lowdown yet, matched by name to the starter list. Untick any you don't want. Each one arrives marked <span class="draft-tag" style="margin-left:0">draft</span> until you tick it or edit it.</div>
     <div id="lowdown-review-body" style="max-height:420px;overflow-y:auto"></div>
     <div class="seeder-footer">
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
@@ -1570,6 +1570,14 @@
           <div style="font-size:12px;color:var(--ink-lighter);line-height:1.4">Offers a drafted lowdown for each of your ingredients that has none, from the starter list. Shows every line first. Drafts are marked until you keep or edit them; lowdowns you have written are never touched.</div>
         </div>
         <button class="btn btn-sm" onclick="closeModal('modal-settings'); openLowdownReview();">Review&hellip;</button>
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--cream-border);gap:16px">
+        <div style="flex:1">
+          <div style="font-size:14px;color:var(--ink);margin-bottom:3px">Fill in effective pH ranges</div>
+          <div style="font-size:12px;color:var(--ink-lighter);line-height:1.4">Offers the starter list's effective pH range, from manufacturer data, for each of your ingredients that has none (mostly preservatives). Formulations uses them to warn when a target or a batch falls outside. Ranges you have entered are never touched.</div>
+        </div>
+        <button class="btn btn-sm" onclick="closeModal('modal-settings'); openLowdownReview('optimalPh');">Review&hellip;</button>
       </div>
 
       <div style="font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-lighter);margin-top:20px;margin-bottom:10px">Maintenance utilities</div>
@@ -2839,7 +2847,7 @@ function viewIngredient(id) {
     { label: 'Oxidation stability', value: i.oxidationStability},
     { label: 'Colour',              value: i.colour            },
     { label: 'Scent',               value: i.scent             },
-    { label: 'Optimal pH',          value: i.optimalPh         },
+    { label: 'Effective pH range',  value: i.optimalPh         },
     { label: 'Dermal limits',       value: i.dermalLimits      },
     { label: 'Restricted use',      value: i.flag === 'yes' ? ('Yes' + (i.restrictions ? ' \u2014 ' + i.restrictions : '')) : (i.restrictions ? 'Not flagged \u2014 ' + i.restrictions : 'No') },
     // An inferred density is still the number the stock and cost figures are
@@ -4217,6 +4225,7 @@ function starterToIngredient(item) {
   delete ing.soap;
   delete ing.type;
   delete ing.aka;
+  delete ing.phSource;   // where the starter's effective pH range came from; shown in the review only
   var ref = (typeof PlumeSap !== 'undefined') ? PlumeSap.lookup(item.name) : null;
   if (ref && !ref.unknown && ref.naoh) {
     ing.soap = { naoh: ref.naoh, koh: ref.koh };
@@ -4236,11 +4245,23 @@ function starterToIngredient(item) {
 // Offers the starter list's drafted lowdown to each of her ingredients that
 // has none. Matched by name or former name (the same keys Quick add uses).
 // Only blank lowdowns; never 'purpose'; nothing applied without a tick.
-var lowdownPlan = [];
-function buildLowdownPlan() {
+// Since 2026-10-20 the same review also fills effective pH ranges
+// (optimalPh), from manufacturer data in the starter list. Those are not
+// drafts: the review itself is where she checks them, source shown.
+var lowdownPlan = [], reviewField = 'chooseWhen';
+var REVIEW_TEXT = {
+  chooseWhen: { title: 'Fill in lowdowns', noun: 'lowdown', nouns: 'lowdowns',
+    intro: 'Drafted lines for your ingredients that have no lowdown yet, matched by name to the starter list. Untick any you don\'t want. Each one arrives marked <span class="draft-tag" style="margin-left:0">draft</span> until you tick it or edit it.',
+    none: 'Every ingredient that matches the starter list already has a lowdown, or the starter list has none for it.' },
+  optimalPh: { title: 'Fill in effective pH ranges', noun: 'pH range', nouns: 'pH ranges',
+    intro: 'The range each ingredient works in, from the manufacturer or a supplier, for your ingredients that have none, matched by name to the starter list. Untick any you don\'t want. Outside its range a preservative may not protect the product, so Formulations warns when a target or a batch falls outside.',
+    none: 'Every ingredient that matches the starter list already has an effective pH range, or the starter list has none for it.' }
+};
+function buildLowdownPlan(field) {
+  field = field || 'chooseWhen';
   var byKey = {};
   SEEDER_ITEMS.forEach(function (it) {
-    if (!it.chooseWhen) return;
+    if (!it[field]) return;
     [it.name].concat(it.aka || []).forEach(function (n) {
       var k = seederNameKey(n);
       if (k && !byKey[k]) byKey[k] = it;
@@ -4248,19 +4269,23 @@ function buildLowdownPlan() {
   });
   var plan = [];
   ingredients.forEach(function (ing) {
-    if (ing.archived || (ing.chooseWhen && String(ing.chooseWhen).trim())) return;
+    if (ing.archived || (ing[field] && String(ing[field]).trim())) return;
     var it = byKey[seederNameKey(ing.name)];
-    if (it) plan.push({ ing: ing, line: it.chooseWhen, from: it.name });
+    if (it) plan.push({ ing: ing, line: it[field], from: it.name, src: field === 'optimalPh' ? (it.phSource || '') : '' });
   });
   plan.sort(function (a, b) { return a.ing.name.toLowerCase().localeCompare(b.ing.name.toLowerCase()); });
   return plan;
 }
-function openLowdownReview() {
-  lowdownPlan = buildLowdownPlan();
+function openLowdownReview(field) {
+  reviewField = field || 'chooseWhen';
+  var T = REVIEW_TEXT[reviewField];
+  document.getElementById('lowdown-title').textContent = T.title;
+  document.getElementById('lowdown-intro').innerHTML = T.intro;
+  lowdownPlan = buildLowdownPlan(reviewField);
   var body = document.getElementById('lowdown-review-body');
   if (!lowdownPlan.length) {
     body.innerHTML = '<div style="padding:16px 0;font-size:14px;color:var(--ink)">Nothing to fill in.</div>' +
-      '<div style="font-size:12px;color:var(--ink-lighter);line-height:1.5">Every ingredient that matches the starter list already has a lowdown, or the starter list has none for it.</div>';
+      '<div style="font-size:12px;color:var(--ink-lighter);line-height:1.5">' + T.none + '</div>';
   } else {
     body.innerHTML = lowdownPlan.map(function (p, k) {
       var id = 'ld-' + k;
@@ -4270,6 +4295,7 @@ function openLowdownReview() {
           '<div class="seeder-item-name">' + esc(p.ing.name) +
             (seederNameKey(p.from) !== seederNameKey(p.ing.name) ? ' <span style="font-weight:400;font-size:11px;color:var(--ink-lighter)">(as ' + esc(p.from) + ')</span>' : '') + '</div>' +
           '<div style="font-size:12.5px;color:var(--ink-light);line-height:1.45;margin-top:2px">' + esc(p.line) + '</div>' +
+          (p.src ? '<div style="font-size:11.5px;color:var(--ink-lighter);margin-top:2px">Source: ' + esc(p.src) + '</div>' : '') +
         '</div></label>';
     }).join('');
   }
@@ -4282,7 +4308,8 @@ function openLowdownReview() {
 function updateLowdownCount() {
   var n = document.querySelectorAll('#lowdown-review-body input:checked').length;
   document.getElementById('lowdown-count').textContent = n + ' selected';
-  document.getElementById('lowdown-apply-btn').textContent = n ? 'Add ' + n + ' lowdown' + (n === 1 ? '' : 's') : 'Add selected';
+  var T = REVIEW_TEXT[reviewField];
+  document.getElementById('lowdown-apply-btn').textContent = n ? 'Add ' + n + ' ' + (n === 1 ? T.noun : T.nouns) : 'Add selected';
 }
 function lowdownToggleAll() {
   var boxes = document.querySelectorAll('#lowdown-review-body input');
@@ -4295,9 +4322,9 @@ function applyLowdowns() {
   document.querySelectorAll('#lowdown-review-body input:checked').forEach(function (cb) {
     var p = lowdownPlan[parseInt(cb.getAttribute('data-k'), 10)];
     // Re-check at apply time: a lowdown typed meanwhile is never overwritten.
-    if (!p || (p.ing.chooseWhen && String(p.ing.chooseWhen).trim())) return;
-    p.ing.chooseWhen = p.line;
-    p.ing.chooseWhenDraft = true;
+    if (!p || (p.ing[reviewField] && String(p.ing[reviewField]).trim())) return;
+    p.ing[reviewField] = p.line;
+    if (reviewField === 'chooseWhen') p.ing.chooseWhenDraft = true;
     n++;
   });
   if (n && !saveData()) return;
@@ -4305,7 +4332,8 @@ function applyLowdowns() {
   closeModal('modal-lowdown');
   renderTable();
   if (ingView === 'cheat' && typeof PlumeCheat !== 'undefined') PlumeCheat.render(ingredients);
-  Plume.tell(n ? 'Added ' + n + ' drafted lowdown' + (n === 1 ? '' : 's') + '. Each is marked "draft" until you keep or edit it.' : 'Nothing was added.');
+  if (reviewField === 'optimalPh') Plume.tell(n ? 'Added ' + n + ' effective pH range' + (n === 1 ? '' : 's') + '.' : 'Nothing was added.');
+  else Plume.tell(n ? 'Added ' + n + ' drafted lowdown' + (n === 1 ? '' : 's') + '. Each is marked "draft" until you keep or edit it.' : 'Nothing was added.');
 }
 
 // Saves once at the end. It used to save after every ingredient with a

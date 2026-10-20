@@ -344,6 +344,8 @@ body.ps-shell .field input:focus, body.ps-shell .field select:focus, body.ps-she
 .lot-hint { font-size: 11.5px; color: var(--ink-lighter); margin-top: 4px; }
 .bl-date .ps-lot { margin-top: 3px; }
 .bp-sub .ps-lot { font-size: 12.5px; }
+.ph-range-warn { margin-top: 6px; display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; line-height: 1.45; max-width: 360px; }
+.ph-range-warn .pw { color: var(--warning); background: var(--warning-bg); border-radius: 8px; padding: 6px 10px; }
 .tr-sec { display: flex; flex-direction: column; gap: 8px; }
 .tr-h { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
 .tr-h h3 { margin: 0; font-size: 15px; font-weight: 600; }
@@ -647,6 +649,7 @@ body.ps-shell .pkg-builder-hdr .field input { width: 100%; min-width: 0; }
               </select>
             </div>
             <div class="ph-note" id="d-ph-note"></div>
+            <div class="ph-range-warn" id="d-ph-range" hidden></div>
             <div class="ph-err" id="d-ph-err" style="display:none"></div>
           </div>
           <div class="field full">
@@ -1598,6 +1601,13 @@ function renderFinalPhNote() {
   var val = document.getElementById('d-ph').value;
   var badge = Plume.parsePh(val) ? Plume.phBadge(val, document.getElementById('d-ph-method').value, t.min, t.max) : '';
   note.innerHTML = (txt ? '<span>Target ' + esc(txt) + '</span>' : '<span>No target set on the formula</span>') + badge;
+  // Effective pH (2026-10-20): the final reading against the effective
+  // range of each ingredient that actually went into this batch.
+  var warn = document.getElementById('d-ph-range');
+  var v = Plume.phNum(val);
+  var issues = v === null ? [] : Plume.effPhIssues(b.ingredientSnapshot || [], ings, v, v);
+  warn.innerHTML = issues.map(function(x) { return '<div class="pw">' + esc(Plume.effPhIssueText(x, 'final')) + '</div>'; }).join('');
+  warn.hidden = !issues.length;
 }
 
 function onFinalPhInput() {

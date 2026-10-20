@@ -414,6 +414,11 @@ span.ing-name-btn{text-decoration:none}
 .use-kind{font-size:11.5px;color:var(--ink-lighter)}
 .use-gone{font-size:11.5px;color:var(--ink-lighter);font-style:italic}
 .use-empty{color:var(--ink-lighter);font-style:italic}
+.ph-range-warn{margin-top:10px;display:flex;flex-direction:column;gap:4px;font-size:12.5px;line-height:1.45}
+.ph-range-warn .pw{color:var(--warning);background:var(--warning-bg);border-radius:8px;padding:6px 10px}
+.ph-range-warn .pw b{font-weight:600}
+.ph-range-warn .pu{color:var(--ink-light)}
+.ph-range-warn a{color:inherit}
 .ul-sec{border-top:1px solid var(--cream-border);padding-top:10px;margin-top:4px}
 .ul-sec-h{font-size:13px;font-weight:600;color:var(--ink);margin-bottom:8px}
 .ul-sec-h span{font-weight:400;font-size:12px;color:var(--ink-lighter);margin-left:6px}
@@ -739,6 +744,7 @@ body.ps-shell .inci-list { font-size: 13px; color: var(--ink); }
             <div class="ph-err" id="ph-target-err" style="display:none"></div>
           </div>
         </div>
+        <div class="ph-range-warn" id="ph-range-warn" hidden></div>
         <div id="f-ver-lbl" hidden></div>
       </div>
     </div>
@@ -3784,9 +3790,29 @@ function phApplies() {
     !!(v && (v.phMin || v.phMax));
 }
 
+// Effective pH (2026-10-20): the version's target against each
+// ingredient's effective range. Her rule: optimal is not the same as
+// functional; outside its range a preservative may not protect the product.
+function renderPhRangeWarn() {
+  var box = document.getElementById('ph-range-warn');
+  if (!box) return;
+  var lo = Plume.phNum(document.getElementById('f-ph-min').value), hi = Plume.phNum(document.getElementById('f-ph-max').value);
+  if (!phApplies() || (lo === null && hi === null)) { box.hidden = true; box.innerHTML = ''; return; }
+  var link = function (ing) { return '<a href="plume-ingredients.html#ing=' + encodeURIComponent(ing.id) + '" target="plume-ingredients">' + esc(ing.name || 'an ingredient') + '</a>'; };
+  var html = Plume.effPhIssues(fLines, ings, lo, hi).map(function (x) {
+    return '<div class="pw">' + esc(Plume.effPhIssueText(x, 'target')).replace(esc(x.ing.name || ''), '<b>' + link(x.ing) + '</b>') + '</div>';
+  }).join('');
+  html += Plume.effPhUnknown(fLines, ings).map(function (ing) {
+    return '<div class="pu">No effective pH range is recorded for ' + link(ing) + ', so Plume cannot check it against the target.</div>';
+  }).join('');
+  box.innerHTML = html;
+  box.hidden = !html;
+}
+
 function updatePhUI() {
   var row = document.getElementById('ph-target-row');
   if (row) row.style.display = phApplies() ? '' : 'none';
+  renderPhRangeWarn();
 }
 
 // Marks a field that is not a pH, and says why, rather than dropping the
@@ -3807,6 +3833,7 @@ function checkPhField(el) {
     }
     err.textContent = msg;
     err.style.display = msg ? '' : 'none';
+    renderPhRangeWarn();
   }
 }
 
