@@ -239,7 +239,6 @@ body.ps-shell .field input:focus, body.ps-shell .field select:focus, body.ps-she
 .cost-flag { color: var(--warning); font-size: 11px; margin-left: 3px; }
 .st { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 5px; line-height: 1.6; white-space: nowrap; }
 .st-active { background: var(--sage-light); color: var(--sage-dark); }
-.st-draft { background: color-mix(in srgb, var(--ink) 8%, transparent); color: var(--ink-light); }
 .st-discontinued { background: transparent; color: var(--ink-lighter); box-shadow: inset 0 0 0 1px var(--cream-border); }
 .margin-pos { color: var(--sage-dark); font-weight: 500; }
 .margin-neg { color: var(--danger); font-weight: 500; }
@@ -255,6 +254,11 @@ body.ps-shell .field input:focus, body.ps-shell .field select:focus, body.ps-she
 .fe-crumb .cur { color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 40vw; }
 .fe-saved { font-size: 12.5px; color: var(--ink-lighter); display: inline-flex; gap: 5px; align-items: center; margin-right: 4px; }
 .fe-saved .ps-i { width: 14px; height: 14px; }
+/* A note that opens on hover or keyboard focus (Duplicate) */
+.tip-wrap { position: relative; display: inline-flex; }
+.tip { position: absolute; top: calc(100% + 8px); right: 0; width: 280px; background: var(--ink); color: var(--white); font-size: 12.5px; line-height: 1.45; padding: 9px 11px; border-radius: 8px; box-shadow: 0 8px 24px rgba(20,20,15,.18); opacity: 0; transform: translateY(-3px); pointer-events: none; transition: opacity .12s, transform .12s; z-index: 30; }
+.tip-wrap:hover .tip, .tip-wrap:focus-within .tip { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) { .tip { transition: none; } }
 
 /* Colour block: name, label weight line, the identity fields */
 .ps-page-head.fe-head { align-items: flex-start; flex-wrap: nowrap; gap: 14px; }
@@ -390,8 +394,15 @@ body.ps-shell .run-row { font-size: 14px; padding: 8px 12px; border-bottom: 1px 
 body.ps-shell .run-row .rr-batch, body.ps-shell .run-row .rr-notes { font-size: 13px; font-style: normal; }
 .runs-sum { font-size: 13.5px; color: var(--ink-lighter); margin: 0 0 8px; }
 .runs-sum:empty { display: none; }
-#p-notes { width: 100%; min-height: 120px; font-family: 'DM Sans', sans-serif; font-size: 14px; line-height: 1.6; color: var(--ink); background: var(--white); border: 1px solid var(--cream-border); border-radius: 9px; padding: 10px 12px; resize: vertical; outline: none; }
-#p-notes:focus { border-color: var(--bark); }
+#p-description { width: 100%; min-height: 76px; font-family: 'DM Sans', sans-serif; font-size: 14px; line-height: 1.55; color: var(--ink); background: var(--white); border: 1px solid var(--cream-border); border-radius: 9px; padding: 9px 12px; resize: vertical; outline: none; }
+#p-description:focus { border-color: var(--bark); }
+.desc-field { margin: 0 0 16px; }
+.desc-field label .ps-muted { font-weight: 400; margin-left: 4px; }
+.pkg-add-row { display: flex; align-items: center; gap: 8px; }
+.pkg-add-row .ps-grow { flex: 1; }
+.pkg-save { font: inherit; font-size: 13px; font-weight: 500; border: 1px solid var(--cream-border); background: var(--white); color: var(--ink-lighter); border-radius: 7px; padding: 4px 11px; margin-right: 6px; cursor: default; }
+.pkg-save:not([disabled]) { background: var(--bark); border-color: var(--bark); color: var(--white); cursor: pointer; box-shadow: 0 1px 2px rgba(20,20,15,.12); }
+.sub-lbl { font-size: 13px; font-weight: 600; color: var(--ink); margin: 0 0 8px; }
 
 
 /* ══ Barcode panel and line sheet (2026-10-19) ════════════════════════
@@ -562,12 +573,14 @@ details.bc-tips .bc-note { border: 0; padding: 6px 0 0; margin: 0; font-size: 12
       <div class="fe-crumb"><button type="button" onclick="goList()"><span data-ps-icon="costing"></span>Products &amp; Costing</button><span aria-hidden="true">/</span><span class="cur" id="pe-crumb-cur"></span></div>
       <span class="ps-grow"></span>
       <span class="fe-saved" id="save-state"></span>
+      <span class="tip-wrap">
+        <button type="button" class="ps-link-btn" onclick="duplicateProduct()" aria-describedby="dup-tip"><span data-ps-icon="copy"></span>Duplicate</button>
+        <span class="tip" role="tooltip" id="dup-tip">Start another size or version of this product. The copy keeps the formulation, packaging, prices and label settings, and starts with no fills, SKU or barcode.</span>
+      </span>
       <button type="button" class="ps-link-btn" onclick="openBarcodeForProduct()" title="Generate a printable barcode label for this product"><span data-ps-icon="print"></span>Barcode label</button>
       <div class="ps-menu-wrap">
         <button type="button" class="ps-icon-btn" data-ps-menu aria-label="More actions" aria-expanded="false"><span data-ps-icon="more"></span></button>
         <div class="ps-menu" role="menu">
-          <button type="button" onclick="duplicateProduct()" title="Create a copy of this product"><span data-ps-icon="copy"></span>Duplicate</button>
-          <hr>
           <button type="button" class="ps-menu-danger" onclick="deleteProduct()"><span data-ps-icon="trash"></span>Delete</button>
         </div>
       </div>
@@ -582,9 +595,11 @@ details.bc-tips .bc-note { border: 0; padding: 6px 0 0; margin: 0; font-size: 12
         <div class="fe-meta">
           <div class="fe-mf"><label for="p-sku">SKU</label><input type="text" id="p-sku" placeholder="e.g. HSL-1OZ" oninput="markDirty()"></div>
           <div class="fe-mf"><label for="p-barcode">Barcode value</label><input type="text" id="p-barcode" placeholder="same as SKU" oninput="markDirty()"></div>
-          <div class="fe-mf"><label for="p-status">Status</label>
-            <select id="p-status" onchange="markDirty()">
-              <option value="draft">Draft</option>
+          <div class="fe-mf"><span class="lbl" id="status-lbl">Status</span>
+            <span class="kind-seg" role="radiogroup" aria-labelledby="status-lbl">
+              <button type="button" id="status-btn-active" onclick="pickStatus('active')" title="You sell it">Active</button><button type="button" id="status-btn-discontinued" onclick="pickStatus('discontinued')" title="You no longer make it. It stays here with its fills and costs.">Discontinued</button>
+            </span>
+            <select id="p-status" onchange="markDirty()" hidden>
               <option value="active">Active</option>
               <option value="discontinued">Discontinued</option>
             </select>
@@ -649,19 +664,26 @@ details.bc-tips .bc-note { border: 0; padding: 6px 0 0; margin: 0; font-size: 12
               <div></div>
             </div>
             <div id="pkg-recipe-body"></div>
-            <div class="add-row"><button type="button" onclick="addPkgRecipeRow()"><span data-ps-icon="plus"></span>Add packaging</button></div>
+            <div class="add-row pkg-add-row"><button type="button" onclick="addPkgRecipeRow()"><span data-ps-icon="plus"></span>Add packaging</button>
+              <span class="ps-grow"></span>
+              <button type="button" class="pkg-save" id="pkg-save" onclick="savePackagingOnly()" disabled title="Saves just the packaging list. Fills use the saved list.">Save packaging</button></div>
           </div>
         </section>
 
-        <!-- Label, production runs and notes: tabs under the recipe -->
+        <!-- Label and Fills: tabs under the recipe. Notes was retired on
+             2026-10-20; its text became the Description, under Label. -->
         <section class="ed-tabs">
           <div class="ps-toolbar ed-tabbar" role="tablist">
             <button type="button" class="ps-tab on" id="pt-label" onclick="setEdTab('label')">Label</button>
             <button type="button" class="ps-tab" id="pt-runs" onclick="setEdTab('runs')">Fills<span class="et-ct" id="pt-runs-ct"></span></button>
-            <button type="button" class="ps-tab" id="pt-notes" onclick="setEdTab('notes')">Notes<span class="et-ct" id="pt-notes-ct"></span></button>
           </div>
 
           <div class="ed-pane" id="pp-label">
+            <div class="field desc-field">
+              <label for="p-description">Description <span class="ps-muted">for shops and your website</span></label>
+              <textarea id="p-description" rows="3" placeholder="What it is and why someone would love it" oninput="markDirty()"></textarea>
+            </div>
+            <div class="sub-lbl">Ingredient list</div>
             <div class="lbl-modes">
               <label class="ps-chip"><input type="radio" name="label-mode" value="inci" id="lbl-inci" onchange="markDirty(); renderLabel()" checked>INCI names</label>
               <label class="ps-chip"><input type="radio" name="label-mode" value="common" id="lbl-common" onchange="markDirty(); renderLabel()">Common names</label>
@@ -708,9 +730,6 @@ details.bc-tips .bc-note { border: 0; padding: 6px 0 0; margin: 0; font-size: 12
             </div>
           </div>
 
-          <div class="ed-pane" id="pp-notes" hidden>
-            <textarea id="p-notes" rows="5" placeholder="Internal notes, formulation details, marketing description..." oninput="markDirty(); setTabCounts()"></textarea>
-          </div>
         </section>
       </div>
 
@@ -1900,11 +1919,43 @@ function toast(msg) {
 }
 function markDirty() { dirty = true; renderSaveState(); }
 
+// Packaging list edits are tracked against the SAVED product, not with the
+// dirty flag, so Save packaging can save just them (her call, 2026-10-20):
+// a fill takes the packaging list as saved, so it has to be saved first.
+function pkgNorm(list) {
+  return JSON.stringify((list || []).map(function(r) { return [r.packagingId || '', parseFloat(r.quantity) || 0]; }));
+}
+function pkgChanged() {
+  if (!curId) return false;
+  var p = findProduct(curId), sp = findIn(storedProducts(), curId);
+  if (!p || !sp) return false;
+  return pkgNorm(p.packagingRecipe) !== pkgNorm(sp.packagingRecipe);
+}
+function unsaved() { return dirty || pkgChanged(); }
+function renderPkgSave() {
+  var b = document.getElementById('pkg-save');
+  if (b) b.disabled = !pkgChanged();
+}
+function pkgEdited() {
+  renderSaveState();
+  renderPkgSave();
+  if (typeof fillTakes === 'function' && document.getElementById('run-add')) fillTakes();
+}
+function savePackagingOnly() {
+  if (!curId) return;
+  var p = findProduct(curId), stored = storedProducts(), sp = findIn(stored, curId);
+  if (!p || !sp) return;
+  sp.packagingRecipe = (p.packagingRecipe || []).map(function(r) { return { packagingId: r.packagingId, quantity: r.quantity }; });
+  sp.updatedAt = new Date().toISOString();
+  if (saveStored(stored)) toast('Packaging saved');
+  pkgEdited();
+}
+
 // "Saved" when there is nothing to save, a Save button when there is.
 function renderSaveState() {
   var el = document.getElementById('save-state');
   if (!el) return;
-  el.innerHTML = dirty
+  el.innerHTML = unsaved()
     ? '<button type="button" class="ps-btn-primary" onclick="saveProduct()">Save</button>'
     : Plume.icon('check') + 'Saved';
 }
@@ -1913,6 +1964,21 @@ function syncCrumb() {
   document.getElementById('pe-crumb-cur').textContent = document.getElementById('p-name').value || '(unnamed)';
 }
 // The "Made from" buttons drive the two radios, which onKindChange reads.
+// Status is Active or Discontinued (her call, 2026-10-20: drafting happens
+// in Formulations). The buttons drive the hidden select, which save reads.
+function pickStatus(v) {
+  var sel = document.getElementById('p-status');
+  if (sel.value !== v) { sel.value = v; markDirty(); }
+  syncStatusBtns();
+}
+function syncStatusBtns() {
+  var v = document.getElementById('p-status').value;
+  ['active', 'discontinued'].forEach(function(k) {
+    var b = document.getElementById('status-btn-' + k);
+    b.classList.toggle('on', k === v);
+    b.setAttribute('aria-checked', k === v ? 'true' : 'false');
+  });
+}
 function pickKind(kind) {
   var r = document.getElementById(kind === 'multi' ? 'kind-multi' : 'kind-single');
   if (r.checked) return;
@@ -1922,7 +1988,8 @@ function pickKind(kind) {
 var edTab = 'label';
 function setEdTab(t) {
   edTab = t;
-  ['label', 'runs', 'notes'].forEach(function(k) {
+  if (t !== 'label' && t !== 'runs') t = edTab = 'label';
+  ['label', 'runs'].forEach(function(k) {
     document.getElementById('pt-' + k).classList.toggle('on', k === t);
     document.getElementById('pp-' + k).hidden = (k !== t);
   });
@@ -1931,7 +1998,6 @@ function setTabCounts() {
   var p = curId ? findProduct(curId) : null;
   var n = p ? (p.productionRuns || []).length : 0;
   document.getElementById('pt-runs-ct').textContent = n ? String(n) : '';
-  document.getElementById('pt-notes-ct').textContent = document.getElementById('p-notes').value.trim() ? '•' : '';
 }
 
 function findIng(id) {
@@ -1963,9 +2029,20 @@ function loadData() {
   // Phase 6 wipe: old costing data was scoped for replacement, not migration.
   Store.remove(OLD_COST_KEY);
   migrateListOrder();
+  migrateStatus();
   renderList();
   renderStatusPills();
   Plume.renderStorBanner();
+}
+
+// Draft was retired on 2026-10-20; a product is Active or Discontinued.
+// A draft (or a product with no status) becomes Active, saved once.
+function migrateStatus() {
+  var changed = false;
+  products.forEach(function(p) {
+    if (p.status !== 'active' && p.status !== 'discontinued') { p.status = 'active'; changed = true; }
+  });
+  if (changed) saveProducts();
 }
 
 // Returns true on success. Store.setJSON returns false rather than throwing
@@ -2286,12 +2363,11 @@ function renderStatusPills() {
   var pills = [
     { v:'all',          label:'All' },
     { v:'active',       label:'Active' },
-    { v:'draft',        label:'Draft' },
     { v:'discontinued', label:'Discontinued' }
   ];
   document.getElementById('status-pills').innerHTML = pills.map(function(p) {
     var n = p.v === 'all' ? products.length
-      : products.filter(function(x) { return (x.status || 'draft') === p.v; }).length;
+      : products.filter(function(x) { return (x.status || 'active') === p.v; }).length;
     return '<button type="button" class="ps-chip' + (statusFilter === p.v ? ' on' : '') +
       '" onclick="setStatusFilter(\'' + p.v + '\')">' + p.label + ' <span class="ct">' + n + '</span></button>';
   }).join('');
@@ -2332,7 +2408,7 @@ function renderSummary() {
   var active = 0, made = 0, low = 0;
   products.forEach(function(p) {
     (p.productionRuns || []).forEach(function(r) { made += parseInt(r.units, 10) || 0; });
-    if ((p.status || 'draft') !== 'active') return;
+    if ((p.status || 'active') !== 'active') return;
     active++;
     var c = computeProductCost(p);
     if ((c.retailMargin !== null && c.retailMargin < 0.30) ||
@@ -2346,7 +2422,7 @@ function renderSummary() {
 
 function prodRowHtml(p, key, nested) {
   var c = computeProductCost(p);
-  var status = p.status || 'draft';
+  var status = p.status || 'active';
   var runs = p.productionRuns || [];
   var totalUnits = 0, mostRecent = '';
   runs.forEach(function(r) {
@@ -2392,7 +2468,7 @@ function renderList() {
   }
   var q = (document.getElementById('search').value || '').toLowerCase().trim();
   var filtered = products.filter(function(p) {
-    if (statusFilter !== 'all' && (p.status || 'draft') !== statusFilter) return false;
+    if (statusFilter !== 'all' && (p.status || 'active') !== statusFilter) return false;
     if (q) {
       var hay = ((p.name || '') + ' ' + (p.sku || '') + ' ' + prodGroupKey(p) + ' ' + prodTypeKey(p)).toLowerCase();
       if (hay.indexOf(q) === -1) return false;
@@ -2529,14 +2605,16 @@ function openProduct(id) {
   document.getElementById('p-name').value         = p.name || '';
   document.getElementById('p-sku').value          = p.sku || '';
   document.getElementById('p-barcode').value      = p.barcode || '';
-  document.getElementById('p-status').value       = p.status || 'draft';
+  document.getElementById('p-status').value       = p.status === 'discontinued' ? 'discontinued' : 'active';
+  syncStatusBtns();
   var kind = (p.productKind === 'multi') ? 'multi' : 'single';
   document.getElementById('kind-single').checked  = (kind === 'single');
   document.getElementById('kind-multi').checked   = (kind === 'multi');
   document.getElementById('p-formula').value      = p.formulaId || '';
   document.getElementById('p-netwt-g').value      = p.netWtG || '';
   document.getElementById('p-netwt-display').value = p.netWtDisplay || '';
-  document.getElementById('p-notes').value        = p.notes || '';
+  // Notes became Description (2026-10-20); old note text carries over.
+  document.getElementById('p-description').value  = p.description != null ? p.description : (p.notes || '');
   document.getElementById('p-retail').value       = p.retail || '';
   document.getElementById('p-wholesale').value    = p.wholesale || '';
   document.getElementById('lbl-inci').checked     = (p.labelMode !== 'common');
@@ -2556,6 +2634,7 @@ function openProduct(id) {
   setTabCounts();
   setEdTab(edTab);
   renderSaveState();
+  renderPkgSave();
   document.getElementById('view-list').style.display = 'none';
   document.getElementById('view-editor').style.display = '';
   document.documentElement.scrollTop = 0;
@@ -2564,7 +2643,7 @@ function openProduct(id) {
 function goList() {
   // The unsaved-changes question answers later, so leaving happens in
   // leaveEditor(), called at once when clean or on "Leave" when dirty.
-  if (dirty) {
+  if (unsaved()) {
     Plume.ask('You have unsaved changes. Leave anyway?', leaveEditor,
       { title: 'Leave without saving?', yes: 'Leave', danger: true });
     return;
@@ -2573,6 +2652,13 @@ function goList() {
 }
 
 function leaveEditor() {
+  // Edits change the product in memory as they are made; leaving without
+  // saving puts it back as saved, so a later Save (which writes every
+  // product) cannot carry abandoned edits with it.
+  if (curId) {
+    var sp = findIn(storedProducts(), curId);
+    for (var i = 0; i < products.length; i++) if (products[i].id === curId && sp) { products[i] = sp; break; }
+  }
   document.getElementById('view-sheet').style.display = 'none';
   document.getElementById('view-list').style.display = '';
   document.getElementById('view-editor').style.display = 'none';
@@ -2599,7 +2685,8 @@ function saveProduct() {
     p.netWtG          = parseFloat(document.getElementById('p-netwt-g').value) || '';
   }
   p.netWtDisplay      = document.getElementById('p-netwt-display').value.trim();
-  p.notes             = document.getElementById('p-notes').value;
+  p.description       = document.getElementById('p-description').value;
+  delete p.notes;
   p.retail            = parseFloat(document.getElementById('p-retail').value) || '';
   p.wholesale         = parseFloat(document.getElementById('p-wholesale').value) || '';
   p.labelMode         = document.getElementById('lbl-common').checked ? 'common' : 'inci';
@@ -2609,8 +2696,10 @@ function saveProduct() {
   saveProducts();
   dirty = false;
   renderSaveState();
+  renderPkgSave();
   syncCrumb();
   toast('Saved');
+  if (document.getElementById('run-add')) fillTakes();
   return true;
 }
 
@@ -2641,7 +2730,7 @@ function duplicateProduct() {
   if (!curId) return;
   // The save-first question answers later, so the copy is made in
   // makeDuplicate(), called at once when clean or on "Save and duplicate".
-  if (dirty) {
+  if (unsaved()) {
     var sid = curId;
     Plume.ask('You have unsaved changes. Save first so the duplicate has your latest edits?', function() {
       if (curId !== sid) return;   // she left the product meanwhile
@@ -2666,7 +2755,7 @@ function makeDuplicate(srcId) {
     netWtG:            src.netWtG || '',
     components:        (src.components || []).map(function(c) { return { id:uid(), formulaId:c.formulaId, netWtG:c.netWtG, label:c.label || '' }; }),
     netWtDisplay:      src.netWtDisplay || '',
-    notes:             src.notes || '',
+    description:       src.description != null ? src.description : (src.notes || ''),
     packagingRecipe:   (src.packagingRecipe || []).map(function(r) { return { packagingId:r.packagingId, quantity:r.quantity }; }),
     retail:            src.retail || '',
     wholesale:         src.wholesale || '',
@@ -2734,14 +2823,14 @@ function addPkgRecipeRow() {
   var p = findProduct(curId); if (!p) return;
   if (!p.packagingRecipe) p.packagingRecipe = [];
   p.packagingRecipe.push({ packagingId:'', quantity:1 });
-  markDirty();
+  pkgEdited();
   renderPkgRecipe(p);
 }
 function removePkgRecipeRow(idx) {
   if (!curId) return;
   var p = findProduct(curId); if (!p) return;
   p.packagingRecipe.splice(idx, 1);
-  markDirty();
+  pkgEdited();
   renderPkgRecipe(p);
   recalcCost();
 }
@@ -2751,7 +2840,7 @@ function onPkgRecipeChange(idx, newPkgId, newQty) {
   if (!p.packagingRecipe[idx]) return;
   if (newPkgId !== null) p.packagingRecipe[idx].packagingId = newPkgId;
   if (newQty   !== null) p.packagingRecipe[idx].quantity    = parseInt(newQty, 10) || 1;
-  markDirty();
+  pkgEdited();
   renderPkgRecipe(p);
   recalcCost();
 }
@@ -3322,6 +3411,11 @@ function fillTakes() {
     var cell = document.getElementById('run-g' + i);
     if (cell) cell.textContent = d.batchId && plan.units ? Plume.fmtG(d.grams) : '--';
   });
+  if (pkgChanged()) {
+    box.innerHTML = '<div class="stop">Save packaging first. A fill takes the packaging list as saved, and this one has changes.</div>';
+    btn.disabled = true;
+    return;
+  }
   if (!plan.units) {
     box.innerHTML = '<span class="ps-muted">Type the ' + (multi ? 'packs' : 'units') + ' to see what this takes.</span>';
     btn.disabled = true;
@@ -3356,7 +3450,7 @@ function addRun() {
   pkgs = Store.getJSON(PKG_KEY, []) || [];
   var plan = fillPlan();
   if (!plan || !plan.units) { Plume.tell('Enter how many you filled.'); return; }
-  if (plan.short.length) { fillTakes(); return; }
+  if (plan.short.length || pkgChanged()) { fillTakes(); return; }
   var run = Plume.makeFill(sp, {
     date:  document.getElementById('run-date').value || todayISO(),
     units: plan.units,
@@ -3444,7 +3538,7 @@ function lsLoad() {
   // First time: every active product.
   if (!d.pick) {
     d.pick = {};
-    products.forEach(function(p) { if ((p.status || 'draft') === 'active') d.pick[p.id] = true; });
+    products.forEach(function(p) { if ((p.status || 'active') === 'active') d.pick[p.id] = true; });
   }
   ls = d;
 }
@@ -3458,7 +3552,7 @@ function lsSave() {
 // Products a sheet can offer: everything not discontinued, in the list's
 // own order (type, then formulation, then her drag order).
 function lsOffered() {
-  return products.filter(function(p) { return (p.status || 'draft') !== 'discontinued'; });
+  return products.filter(function(p) { return (p.status || 'active') !== 'discontinued'; });
 }
 function lsGrouped(list) {
   var types = {}, typeKeys = [];
@@ -3517,7 +3611,7 @@ function lsToggleType(t, on) {
 function lsQuick(w) {
   ls.pick = {};
   lsOffered().forEach(function(p) {
-    var active = (p.status || 'draft') === 'active';
+    var active = (p.status || 'active') === 'active';
     if (w === 'active' && active) ls.pick[p.id] = true;
     if (w === 'wholesale' && active && parseFloat(p.wholesale) > 0) ls.pick[p.id] = true;
   });
@@ -3537,7 +3631,7 @@ function renderLineSheet() {
         '<span>' + picked + ' of ' + g.items.length + '</span></label>' +
       g.items.map(function(p) {
         var on = !!ls.pick[p.id];
-        var sub = [p.sku, (p.status || 'draft') === 'draft' ? 'Draft' : ''].filter(function(x) { return x; }).join(' · ');
+        var sub = p.sku || '';
         return '<label class="r' + (on ? '' : ' off') + '"><input type="checkbox" data-ls="' + esc(p.id) + '"' + (on ? ' checked' : '') +
           ' onchange="lsToggle(\'' + esc(p.id) + '\')"><span class="nm">' + esc(p.name || '(unnamed)') +
           (sub ? '<small>' + esc(sub) + '</small>' : '') + '</span>' +

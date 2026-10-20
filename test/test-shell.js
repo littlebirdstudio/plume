@@ -78,8 +78,8 @@ ok('an unknown icon name gives nothing rather than breaking', P.icon('nope') ===
     ok('the old header is gone and the sidebar is in', await page.evaluate(
       "!document.querySelector('.app-header') && !!document.getElementById('ps-side') && document.body.classList.contains('ps-shell')"));
     const nav = await page.evaluate("Array.from(document.querySelectorAll('#ps-side a.ps-nav[target]')).map(function(a){var c=a.querySelector('.ps-ct');return a.textContent.replace(c?c.textContent:'','').trim()+' '+(c?c.textContent.trim():'');})");
-    ok('it lists the five modules with counts (archived ingredient left out)',
-       JSON.stringify(nav) === '["Ingredients 3","Formulations 2","Packaging 0","Products & Costing 0","Batches 0"]', nav);
+    ok('it lists the five modules in the order of the work, with counts (archived ingredient left out)',
+       JSON.stringify(nav) === '["Ingredients 3","Packaging 0","Formulations 2","Batches 0","Products & Costing 0"]', nav);
     ok('the current module is marked for screen readers too', await page.evaluate(
       "var a=document.querySelector('#ps-side .ps-nav.on'); a && a.getAttribute('aria-current')==='page' && /ingredients/.test(a.getAttribute('href'))"));
     ok('each module opens in its own window, so two can sit side by side', await page.evaluate(
@@ -246,7 +246,7 @@ ok('an unknown icon name gives nothing rather than breaking', P.icon('nope') ===
     ok('the sidebar marks Products & Costing', (await page.evaluate("document.querySelector('#ps-side .ps-nav.on').textContent")).indexOf('Products') !== -1);
     ok('the old dark header is gone', (await page.evaluate("document.querySelector('.app-hdr')")) === null);
     const sum = await page.evaluate("document.getElementById('pl-summary').innerText");
-    ok('the summary counts products, active, units made and low margins', /6 products[\s\S]*4 active[\s\S]*6 units made[\s\S]*1 with a margin under 30%/.test(sum), sum);
+    ok('the summary counts products, active (a draft became Active), units made and low margins', /6 products[\s\S]*5 active[\s\S]*6 units made[\s\S]*1 with a margin under 30%/.test(sum), sum);
     const outline = () => page.evaluate(`Array.from(document.querySelectorAll('#list-body tr')).map(function (r) {
       if (r.classList.contains('grp-type')) return 'T:' + r.querySelector('.type-bar').childNodes[1].textContent;
       if (r.classList.contains('grp-sub')) return 'F:' + r.querySelector('.sub-h').childNodes[1].textContent;
@@ -261,9 +261,11 @@ ok('an unknown icon name gives nothing rather than breaking', P.icon('nope') ===
     ok('clicking a type folds it away', (await outline()).indexOf('Pepper 4 oz') === -1 && (await outline()).indexOf('T:Body butter') === 0, await outline());
     await page.evaluate("document.getElementById('search').value = 'face oil'; renderList();");
     ok('search matches the type, and reaches a folded group', (await outline()) === 'T:Face oil|F:Calendula oil|Calendula 30', await outline());
-    await page.evaluate("document.getElementById('search').value = ''; setStatusFilter('draft');");
-    ok('a status chip filters', (await outline()) === 'T:Body butter', await outline());
-    await page.evaluate("document.querySelector('.grp-type').click(); setStatusFilter('all');");
+    await page.evaluate("document.getElementById('search').value = ''; setStatusFilter('discontinued');");
+    ok('a status chip filters', (await outline()) === 'T:Face oil|F:Calendula oil|Calendula 30', await outline());
+    ok('the chips are All, Active and Discontinued', (await page.evaluate("Array.from(document.querySelectorAll('#status-pills .ps-chip')).map(b => b.firstChild.textContent.trim()).join()")) === 'All,Active,Discontinued');
+    ok('a draft was saved as Active', await page.evaluate("JSON.parse(localStorage.getItem('plume-products-v1')).find(p => p.id === 'w2').status === 'active'"));
+    await page.evaluate("setStatusFilter('all'); document.querySelector('.grp-type').click();");
     ok('the row shows unit cost and both margins', /\$1\.00[\s\S]*95%[\s\S]*90%/.test(await page.evaluate(
       "Array.from(document.querySelectorAll('.prod-row')).find(r => r.innerText.indexOf('Whip 4 oz') !== -1).innerText")));
 
@@ -293,8 +295,30 @@ ok('an unknown icon name gives nothing rather than breaking', P.icon('nope') ===
       "document.getElementById('kind-multi').checked && document.getElementById('multi-mode-fields').style.display === '' && document.getElementById('kind-btn-multi').classList.contains('on')"));
     await page.evaluate("pickKind('single')");
     ok('and back', await page.evaluate("document.getElementById('kind-single').checked && document.getElementById('single-mode-fields').style.display === ''"));
-    ok('Duplicate and Delete are in the ⋯ menu', await page.evaluate(
-      "var m=document.querySelector('.fe-top .ps-menu'); /Duplicate/.test(m.textContent) && !!m.querySelector('.ps-menu-danger')"));
+    ok('Duplicate is in the top bar, Delete in the ⋯ menu', await page.evaluate(
+      "var m=document.querySelector('.fe-top .ps-menu'); !/Duplicate/.test(m.textContent) && !!m.querySelector('.ps-menu-danger') && /Duplicate/.test(document.querySelector('.fe-top .tip-wrap').textContent)"));
+    await page.hover('.fe-top .tip-wrap .ps-link-btn'); await page.waitForTimeout(250);
+    ok('hovering Duplicate says what it does', await page.evaluate("getComputedStyle(document.getElementById('dup-tip')).opacity === '1' && /another size or version/.test(document.getElementById('dup-tip').textContent)"));
+    ok('Status is Active or Discontinued', await page.evaluate("document.getElementById('status-btn-active').classList.contains('on') && Array.from(document.getElementById('p-status').options).map(o => o.value).join() === 'active,discontinued'"));
+    await page.evaluate("pickStatus('discontinued')");
+    ok('picking Discontinued sets it and asks to save', (await page.evaluate("document.getElementById('p-status').value")) === 'discontinued' && await page.evaluate("dirty === true"));
+    await page.evaluate("pickStatus('active'); dirty = false; renderSaveState();");
+    ok('the tabs are Label and Fills; Description sits under Label', await page.evaluate("!document.getElementById('pt-notes') && !!document.querySelector('#pp-label #p-description')"));
+    ok('Save packaging starts greyed out', await page.evaluate("document.getElementById('pkg-save').disabled"));
+    await page.evaluate("onPkgRecipeChange(0, null, '2')");
+    ok('a packaging change lights it up, and the main Save', await page.evaluate("!document.getElementById('pkg-save').disabled && !!document.querySelector('#save-state button')"));
+    await page.evaluate("var r=document.getElementById('p-retail'); r.value='41'; r.dispatchEvent(new Event('input'))");
+    await page.evaluate("setEdTab('runs'); document.getElementById('run-units').value = '1'; fillTakes();");
+    ok('the fill row waits for the packaging to be saved', await page.evaluate("document.getElementById('run-add').disabled && /Save packaging first/.test(document.getElementById('run-takes').innerText)"));
+    await page.click('#pkg-save'); await page.waitForTimeout(100);
+    ok('Save packaging saves only the packaging', await page.evaluate("var sp=JSON.parse(localStorage.getItem('plume-products-v1')).find(p => p.id === 'w4'); sp.packagingRecipe[0].quantity === 2 && sp.retail === 40"));
+    ok('then greys out; the price is still unsaved; the fill row is free', await page.evaluate("document.getElementById('pkg-save').disabled && !!document.querySelector('#save-state button') && !document.getElementById('run-add').disabled"));
+    await page.evaluate("leaveEditor()");
+    ok('leaving without saving puts the product back as saved', (await page.evaluate("findProduct('w4').retail")) === 40);
+    await page.evaluate("openProduct('w4'); setEdTab('label')"); await page.waitForTimeout(100);
+    await page.fill('#p-description', 'A whipped butter for dry hands.');
+    await page.evaluate("saveProduct()");
+    ok('the Description saves', await page.evaluate("JSON.parse(localStorage.getItem('plume-products-v1')).find(p => p.id === 'w4').description === 'A whipped butter for dry hands.'"));
     await page.close();
 
     const phone = await open('costing', { width: 390, height: 844 });

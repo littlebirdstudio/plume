@@ -77,7 +77,7 @@ const PRODUCTS = [
   ok('it opens as its own view', await page.evaluate(
     "document.getElementById('view-sheet').style.display === '' && document.getElementById('view-list').style.display === 'none'"));
   const picked = () => page.evaluate("Array.from(document.querySelectorAll('#ls-pick input[data-ls]:checked')).map(e => e.getAttribute('data-ls')).join(',')");
-  ok('the first sheet starts with every active product', (await picked()) === 'w4,w2,c30,kit', await picked());
+  ok('the first sheet starts with every active product (a draft is Active now)', (await picked()) === 'w4,w2,c30,c10,kit', await picked());
   ok('discontinued products are not offered', (await page.evaluate("document.querySelector('#ls-pick [data-ls=\"old\"]')")) === null);
   ok('a product with no wholesale price says so', /no wholesale price/.test(await page.evaluate(
     "document.querySelector('#ls-pick [data-ls=\"c30\"]').closest('label').textContent")));
@@ -86,11 +86,13 @@ const PRODUCTS = [
   ok('prices print as money; a missing wholesale price prints "ask"', /\$13\.00[\s\S]*\$26\.00/.test(await paper()) && /Calendula 30 mL[^\n]*\n?[\s\S]*ask/i.test(await paper()));
   ok('the size uses the label line, or grams', /4 oz \/ 113 g/.test(await paper()) && /56 g/.test(await paper()));
   await page.evaluate("document.querySelector('#ls-pick [data-ls=\"c10\"]').click()");
-  ok('ticking a draft adds it', /Calendula 10 mL/.test(await paper()));
+  ok('unticking a product takes it off', !/Calendula 10 mL/.test(await paper()));
+  await page.evaluate("document.querySelector('#ls-pick [data-ls=\"c10\"]').click()");
+  ok('and ticking puts it back', /Calendula 10 mL/.test(await paper()));
   await page.evaluate("document.querySelector('#ls-pick label.t').click()");
   ok('a type box unticks the whole type', !/Whip 4 oz/.test(await paper()) && !/Whip 2 oz/.test(await paper()));
   await page.evaluate("lsQuick('wholesale')");
-  ok('"Active with a wholesale price" picks only those', (await picked()) === 'w4,w2,kit', await picked());
+  ok('"Active with a wholesale price" picks only those', (await picked()) === 'w4,w2,c10,kit', await picked());
   await page.evaluate("lsQuick('none')");
   ok('Clear empties the sheet', (await picked()) === '' && /Pick products on the left/.test(await paper()));
   await page.evaluate("lsQuick('active')");
@@ -122,7 +124,7 @@ const PRODUCTS = [
 
   await page.reload(); await page.waitForTimeout(500);
   await page.evaluate("openLineSheet()"); await page.waitForTimeout(150);
-  ok('the last sheet is remembered: picks, columns and heading', (await picked()) === 'w4,w2,c30,kit' &&
+  ok('the last sheet is remembered: picks, columns and heading', (await picked()) === 'w4,w2,c30,c10,kit' &&
      (await page.evaluate("document.getElementById('ls-to').value")) === 'Corner Shop' &&
      !/SKU/.test(await page.evaluate("document.querySelector('#ls-paper thead').innerText")));
   ok('it is labelled in the storage report', /Line sheet/.test(await page.evaluate("JSON.stringify(Plume.storageReport().rows)")));
