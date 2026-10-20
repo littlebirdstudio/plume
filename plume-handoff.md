@@ -3112,3 +3112,27 @@ than $0, which is what core's `productUnitCost` always did (they agree).
 `test-costing-tools.js` "it opens as a panel at the right edge" failed once
 in a full run and passed on two reruns (animation timing); watch for it.
 
+### Session 23 (cont.): Links into a page that is already open (core v1.38)
+
+**Her report:** Lot sticker in a batch "takes me into the P&C fields".
+Cause: module links open in NAMED windows (`target="plume-costing"`), so
+when that tab is already open, `plume-costing.html#lot=<id>` only changes
+its hash, which loads nothing and runs no handler: the tab came forward as
+it was. Every cross-module link with a hash had this (Fill from this batch,
+Back to batch, Make batch, Write a log entry / Log entry, Used in names,
+View in library). It had looked fine because a fresh tab runs the handler
+at boot.
+
+**Fix:** `Plume.followLinks({ save, dirty })`, called by Ingredients,
+Formulations, Batches and Products & Costing after boot. On a new hash the
+page reloads, so the link acts as in a fresh tab and with fresh data.
+Formulations saves first (it saves as it goes); the others ask first when
+something is unsaved (Products & Costing: `unsaved()`; Batches: a dirty
+batch panel or an open New batch; Ingredients: a changed edit form). The
+hash is cleared while asking, and every page now clears a hash once
+followed (Formulations and Ingredients did not), so the same link works
+twice. New suite `test/test-links.js` (12 checks). 27 suites.
+
+**Note:** in the artifact preview such links may still do nothing: the
+preview frame does not pass `#key=value` hashes.
+

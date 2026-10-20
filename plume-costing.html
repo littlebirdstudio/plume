@@ -4356,6 +4356,7 @@ if (typeof Plume === 'undefined') {
     for (var k = 0; k < ic.length; k++) ic[k].innerHTML = Plume.icon(ic[k].getAttribute('data-ps-icon'));
     loadData();
     handleFillLink();
+    Plume.followLinks({ dirty: function () { return !!curId && unsaved(); } });
   });
 }
 </script>

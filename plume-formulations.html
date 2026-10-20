@@ -4347,11 +4347,15 @@ if (typeof Plume === 'undefined') {
         if (i < 0) return;
         try { hp[kv.slice(0, i)] = decodeURIComponent(kv.slice(i + 1)); } catch (e) { hp[kv.slice(0, i)] = kv.slice(i + 1); }
       });
+      // Cleared once followed, so the same link can be followed again.
+      try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
       if (forms.some(function (x) { return x.id === hp.f; })) {
         openFormula(hp.f);
         if (hp.v || hp.j || hp.b) showLogEntry(hp.v, hp.j, hp.b);
       }
     }
+    // Saving is automatic here, so a link from another tab saves and goes.
+    Plume.followLinks({ save: function () { if (curForm() && curVar()) saveFormula(true); } });
   });
 }
 </script>

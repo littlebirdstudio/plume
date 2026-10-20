@@ -1700,6 +1700,7 @@ function loadData() {
     var deepId;
     try { deepId = decodeURIComponent(location.hash.slice(5)); }
     catch(e) { deepId = location.hash.slice(5); }
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
     if (ingredients.find(function(i) { return i.id === deepId; })) {
       viewIngredient(deepId);
     }
@@ -4415,7 +4416,11 @@ if (typeof Plume === 'undefined') {
     loadData();
     if (Store.get('plume_ing_view') === 'cheat') setIngView('cheat');
     // Older links and bookmarks to Suppliers land here.
-    if (location.hash === '#suppliers') openSuppliers();
+    if (location.hash === '#suppliers') { openSuppliers(); try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {} }
+    Plume.followLinks({ dirty: function () {
+      var m = document.getElementById('modal-add');
+      return !!m && m.classList.contains('open') && isEditFormDirty();
+    } });
   });
 }
 </script>

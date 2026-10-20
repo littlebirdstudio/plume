@@ -1074,6 +1074,36 @@ var supQuery = '';
 var libListeners = [];
 // Modules that hold ingredients or packaging in memory register here, so a
 // rename made from the panel reaches what they will save next.
+// Links into a page that is ALREADY OPEN in its own tab (2026-10-20). Module
+// links open in named windows (target="plume-costing"), so when that tab is
+// open a link like plume-costing.html#lot=<id> only changes its hash, which
+// loads nothing: the tab came forward showing whatever it showed, and the
+// lot sticker, fill, log entry or batch never opened. Every page now
+// reloads on a new hash, so a link behaves as it does in a fresh tab, with
+// fresh data. opts.save() runs first (a page that saves as it goes);
+// opts.dirty() asks first when something is not saved. The hash is cleared
+// while asking, so staying and clicking the same link again still works.
+function followLinks(opts) {
+  opts = opts || {};
+  window.addEventListener('hashchange', function () {
+    var h = location.hash;
+    if (!h || h === '#') return;
+    var target = location.pathname + location.search + h;
+    var go = function () {
+      try { history.replaceState(null, '', target); } catch (e) {}
+      location.reload();
+    };
+    if (opts.save) { try { opts.save(); } catch (e) {} }
+    if (opts.dirty && opts.dirty()) {
+      try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+      ask('This page has changes that are not saved. Follow the link and lose them?', go,
+        { title: 'Leave unsaved changes?', yes: 'Follow the link', no: 'Stay here', danger: true });
+      return;
+    }
+    go();
+  });
+}
+
 function onLibraryChange(fn) { if (typeof fn === 'function') libListeners.push(fn); }
 function libChanged() { libListeners.forEach(function (fn) { try { fn(); } catch (e) {} }); refreshShell(); }
 
@@ -4085,7 +4115,7 @@ return {
   peek: { open: openPeek, close: closePeek, isOpen: peekIsOpen },
   suppliers: { open: openSuppliers, add: supAdd, edit: supEdit, cancel: supCancel, save: supSave,
                remove: supRemove, match: supMatch, search: supSearch, nameTyped: supNameTyped, usage: supUsage, list: supAll },
-  onLibraryChange: onLibraryChange,
+  onLibraryChange: onLibraryChange, followLinks: followLinks,
   isInstalled: isInstalled, install: install, openPage: openPage, resetAppCache: resetAppCache,
   zoom: zoom, setSize: setSize, sizeChoice: sizeChoice, applySize: applySize,
   tipsOn: tipsOn, setTips: setTips, applyTips: applyTips, nextStep: nextStep,
