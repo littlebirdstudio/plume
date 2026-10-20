@@ -282,6 +282,51 @@ body.ps-shell .field input:focus, body.ps-shell .field select:focus, body.ps-she
 /* Body: two columns */
 .ed-layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 32px; margin-top: 22px; }
 .ed-main { min-width: 0; display: flex; flex-direction: column; gap: 26px; }
+.nfs-tog { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: var(--ink-light); border: 1px solid var(--cream-border); border-radius: 999px; padding: 4px 11px 4px 9px; cursor: pointer; background: var(--white); white-space: nowrap; }
+.nfs-tog:has(input:checked) { background: var(--ink); color: var(--white); border-color: var(--ink); }
+.fe-mf .nfs-tog input { width: auto; margin: 0; padding: 0; accent-color: var(--bark); }
+.nfs-card p { margin: 6px 0 0; font-size: 13px; color: var(--ink-light); line-height: 1.45; }
+.nfs-tag { display: inline-block; font-size: 11.5px; padding: 0 7px; border-radius: 5px; margin-left: 6px; background: color-mix(in srgb, var(--ink) 8%, transparent); color: var(--ink-light); font-weight: 400; vertical-align: 1px; white-space: nowrap; }
+.oh-neg { color: var(--danger); font-weight: 600; }
+.old-pack-note { font-size: 13px; color: var(--ink-light); background: var(--cream-dark); border-radius: 9px; padding: 10px 13px; margin-bottom: 14px; line-height: 1.45; }
+.kit-hdr, .kit-row { display: grid; grid-template-columns: minmax(0, 1fr) 72px 70px 80px 30px; gap: 10px; align-items: center; }
+.kit-hdr { font-size: 12px; color: var(--ink-lighter); background: var(--cream); border-bottom: 1px solid var(--cream-border); }
+.kit-hdr div:nth-child(n+2):nth-child(-n+4) { text-align: right; }
+.kit-hdr { padding: 8px 12px; }
+.kit-row { padding: 8px 12px; border-bottom: 1px solid var(--cream-border); font-size: 14px; }
+.kit-row select, .kit-row input { width: 100%; min-width: 0; box-sizing: border-box; font: inherit; font-size: 14px; padding: 6px 8px; border-radius: 7px; border: 1px solid var(--cream-border); background: var(--white); color: var(--ink); }
+.kit-row input { text-align: right; }
+.kit-row .comp-del { background: none; border: none; cursor: pointer; color: var(--ink-lighter); font-size: 14px; padding: 2px 6px; line-height: 1; }
+.kit-row .comp-del:hover { color: var(--danger); }
+.kit-row .kr-n { font-variant-numeric: tabular-nums; font-size: 13.5px; color: var(--ink-light); text-align: right; }
+.onhand { display: flex; gap: 18px; align-items: baseline; flex-wrap: wrap; padding: 4px 0 12px; }
+.onhand .oh-big { font-size: 26px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+.onhand .oh-big small { font-size: 13px; font-weight: 400; color: var(--ink-light); margin-left: 6px; }
+.onhand .oh-parts { font-size: 13px; color: var(--ink-light); display: flex; gap: 12px; flex-wrap: wrap; font-variant-numeric: tabular-nums; }
+.onhand a { color: var(--bark); }
+.stock-hist { margin-top: 22px; }
+.stock-hist h3 { font-size: 13px; font-weight: 600; color: var(--ink-light); margin: 0 0 6px; }
+.sh-row { display: grid; grid-template-columns: 96px 70px minmax(0, 1fr) 28px; gap: 10px; align-items: baseline; padding: 6px 2px; border-bottom: 1px solid var(--cream-border); font-size: 13.5px; }
+.sh-row .sh-q { font-variant-numeric: tabular-nums; text-align: right; }
+.sh-row .sh-note { color: var(--ink-light); min-width: 0; }
+.sh-row button { border: 0; background: none; color: var(--ink-lighter); cursor: pointer; font: inherit; }
+.sh-row button:hover { color: var(--danger); }
+.st-panel .st-modes { display: flex; gap: 6px; margin-bottom: 12px; }
+.st-panel .st-help { font-size: 13px; color: var(--ink-light); margin: 0 0 12px; line-height: 1.45; }
+.st-panel .st-fields { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 10px; margin-bottom: 12px; }
+.st-panel .st-fields label { display: block; font-size: 12.5px; color: var(--ink-light); margin-bottom: 3px; }
+.st-panel .st-fields input { width: 100%; box-sizing: border-box; font: inherit; font-size: 14px; padding: 6px 8px; border: 1px solid var(--cream-border); border-radius: 7px; background: var(--white); color: var(--ink); }
+.st-panel .st-type { font-size: 12.5px; font-weight: 600; color: var(--white); background: var(--bark); border-radius: 6px; padding: 4px 10px; margin: 14px 0 2px; }
+.st-panel .st-row { display: grid; grid-template-columns: minmax(0, 1fr) 64px 76px; gap: 10px; align-items: center; padding: 7px 4px; border-bottom: 1px solid var(--cream-border); }
+.st-panel .st-row.on { background: var(--clay-light); }
+.st-panel .st-name { font-size: 14px; color: var(--ink); min-width: 0; }
+.st-panel .st-name small { display: block; font-size: 12px; color: var(--ink-lighter); }
+.st-panel .st-have { text-align: right; font-variant-numeric: tabular-nums; font-size: 13.5px; color: var(--ink-light); }
+.st-panel .st-row input { width: 100%; box-sizing: border-box; font: inherit; font-size: 14px; padding: 5px 7px; border: 1px solid var(--cream-border); border-radius: 7px; text-align: right; background: var(--white); color: var(--ink); }
+.st-panel .st-cols { display: grid; grid-template-columns: minmax(0, 1fr) 64px 76px; gap: 10px; font-size: 12px; color: var(--ink-lighter); padding: 0 4px 4px; text-align: right; }
+.st-panel .st-cols span:first-child { text-align: left; }
+.st-panel .st-foot { position: sticky; bottom: -30px; background: var(--white); padding: 12px 0 8px; display: flex; gap: 10px; align-items: center; border-top: 1px solid var(--cream-border); margin-top: 12px; }
+.st-panel .st-foot .ps-muted { font-size: 13px; }
 .ed-side { display: flex; flex-direction: column; gap: 14px; position: sticky; top: 16px; align-self: start; min-width: 0; }
 .sec-h { display: flex; align-items: baseline; gap: 10px; margin: 0 0 8px; flex-wrap: wrap; }
 .sec-h h2 { font-size: 15px; font-weight: 600; margin: 0; }
@@ -541,6 +586,7 @@ details.bc-tips .bc-note { border: 0; padding: 6px 0 0; margin: 0; font-size: 12
     <div class="ps-toolbar">
       <span class="ps-tab on">All products</span>
       <div class="ps-tools">
+        <button type="button" class="ps-link-btn" id="stock-open" onclick="openStock()" title="Record what left the shelf, or count what is on it, for many products at once"><span data-ps-icon="check"></span>Update stock</button>
         <button type="button" class="ps-link-btn" onclick="openLineSheet()" title="A wholesale line sheet for a shop: pick the products, then print or save as PDF"><span data-ps-icon="note"></span>Line sheet</button>
         <button type="button" class="ps-link-btn" onclick="openBarcode('')" title="Generate printable barcode labels"><span data-ps-icon="print"></span>Barcodes</button>
         <button type="button" class="ps-btn-primary" onclick="openNewProduct()"><span data-ps-icon="plus"></span>New</button>
@@ -558,7 +604,7 @@ details.bc-tips .bc-note { border: 0; padding: 6px 0 0; margin: 0; font-size: 12
     <div class="pl-wrap">
       <table class="ps-table pl-table">
         <thead><tr>
-          <th>Product</th><th class="ps-num hide-sm">Made</th><th class="ps-num">Unit cost</th>
+          <th>Product</th><th class="ps-num hide-sm" title="Units on hand: filled, less what went into kits or was taken out">On hand</th><th class="ps-num">Unit cost</th>
           <th class="ps-num hide-sm">Retail</th><th class="ps-num">Margin</th>
           <th class="ps-num hide-sm">Wholesale</th><th class="ps-num hide-sm">Margin</th><th>Status</th>
         </tr></thead>
@@ -606,12 +652,16 @@ details.bc-tips .bc-note { border: 0; padding: 6px 0 0; margin: 0; font-size: 12
           </div>
           <div class="fe-mf"><span class="lbl" id="kind-lbl">Made from</span>
             <span class="kind-seg" role="radiogroup" aria-labelledby="kind-lbl">
-              <button type="button" id="kind-btn-single" onclick="pickKind('single')">One formulation</button><button type="button" id="kind-btn-multi" onclick="pickKind('multi')">Several (pack or kit)</button>
+              <button type="button" id="kind-btn-single" onclick="pickKind('single')" title="Filled from a batch of one formulation">One formulation</button><button type="button" id="kind-btn-kit" onclick="pickKind('kit')" title="Built from products you have filled, plus the kit's own packaging">A kit of products</button><button type="button" id="kind-btn-multi" onclick="pickKind('multi')" title="The older kind of pack, made from formulations" hidden>Formulation pack</button>
             </span>
             <span hidden>
               <input type="radio" name="prod-kind" value="single" id="kind-single" onchange="onKindChange()" checked>
+              <input type="radio" name="prod-kind" value="kit" id="kind-kit" onchange="onKindChange()">
               <input type="radio" name="prod-kind" value="multi" id="kind-multi" onchange="onKindChange()">
             </span>
+          </div>
+          <div class="fe-mf"><span class="lbl">&nbsp;</span>
+            <label class="nfs-tog" title="Minis for kits, free samples and testers: a cost but no price of their own. Kept off the line sheet and the margin count."><input type="checkbox" id="p-nfs" onchange="onNfsChange()">Not for individual sale</label>
           </div>
         </div>
       </div>
@@ -637,8 +687,25 @@ details.bc-tips .bc-note { border: 0; padding: 6px 0 0; margin: 0; font-size: 12
           <div class="form-hint" id="p-form-hint"></div>
         </section>
 
-        <!-- Multi-component mode -->
+        <!-- Kit (2026-10-20): made from products she has filled -->
+        <section id="kit-mode-fields" style="display:none">
+          <div class="sec-h"><h2>What is in it</h2><span class="ps-muted">products you fill; building a kit takes them from what is on hand</span></div>
+          <div class="rows">
+            <div class="kit-hdr">
+              <div>Product</div>
+              <div>Per kit</div>
+              <div>On hand</div>
+              <div>Unit cost</div>
+              <div></div>
+            </div>
+            <div id="kit-parts-body"></div>
+            <div class="add-row"><button type="button" onclick="addKitPart()"><span data-ps-icon="plus"></span>Add a product</button></div>
+          </div>
+        </section>
+
+        <!-- Multi-component mode: the older pack, made from formulations -->
         <section id="multi-mode-fields" style="display:none">
+          <div class="old-pack-note">This is the older kind of pack, made straight from formulations. It keeps its fills and history. To draw from minis you have filled, make a new product as <b>A kit of products</b>.</div>
           <div class="sec-h"><h2>What is in it</h2><span class="ps-muted">each formulation portion in the pack</span></div>
           <div class="rows">
             <div class="comp-recipe-hdr">
@@ -655,7 +722,7 @@ details.bc-tips .bc-note { border: 0; padding: 6px 0 0; margin: 0; font-size: 12
 
         <!-- Packaging recipe -->
         <section>
-          <div class="sec-h"><h2>Packaging</h2><span class="ps-muted">what goes around each unit</span></div>
+          <div class="sec-h"><h2>Packaging</h2><span class="ps-muted" id="pkg-sub">what goes around each unit</span></div>
           <div class="rows">
             <div class="pkg-recipe-hdr">
               <div>Item</div>
@@ -675,7 +742,7 @@ details.bc-tips .bc-note { border: 0; padding: 6px 0 0; margin: 0; font-size: 12
         <section class="ed-tabs">
           <div class="ps-toolbar ed-tabbar" role="tablist">
             <button type="button" class="ps-tab on" id="pt-label" onclick="setEdTab('label')">Label</button>
-            <button type="button" class="ps-tab" id="pt-runs" onclick="setEdTab('runs')">Fills<span class="et-ct" id="pt-runs-ct"></span></button>
+            <button type="button" class="ps-tab" id="pt-runs" onclick="setEdTab('runs')"><span id="pt-runs-lbl">Fills</span><span class="et-ct" id="pt-runs-ct"></span></button>
           </div>
 
           <div class="ed-pane" id="pp-label">
@@ -706,6 +773,7 @@ details.bc-tips .bc-note { border: 0; padding: 6px 0 0; margin: 0; font-size: 12
                  one. A fill counts the units, takes the packaging list out of
                  stock and the grams from the batch; the X reverses it. -->
             <a class="run-back" id="run-back" hidden></a>
+            <div class="onhand" id="onhand-box"></div>
             <div class="runs-sum" id="runs-summary"></div>
             <div class="runs-list" id="runs-list"></div>
             <div class="run-add">
@@ -729,6 +797,7 @@ details.bc-tips .bc-note { border: 0; padding: 6px 0 0; margin: 0; font-size: 12
               <div class="run-parts" id="run-parts" hidden></div>
               <div class="run-takes" id="run-takes"></div>
             </div>
+            <div class="stock-hist" id="stock-hist"></div>
           </div>
 
         </section>
@@ -737,7 +806,11 @@ details.bc-tips .bc-note { border: 0; padding: 6px 0 0; margin: 0; font-size: 12
       <!-- Cost, prices and margins stay in view while editing -->
       <aside class="ed-side">
         <div class="card" id="cost-panel"></div>
-        <div class="card">
+        <div class="card nfs-card" id="nfs-card" hidden>
+          <div class="card-h"><span>Not for individual sale</span></div>
+          <p>No price of its own: it goes into kits, or out as a free sample or tester. Its cost still counts wherever it is used.</p>
+        </div>
+        <div class="card" id="price-card">
           <div class="card-h"><span>Prices</span><span>margin</span></div>
           <div class="price-row">
             <label for="p-retail">Retail</label>
@@ -750,7 +823,7 @@ details.bc-tips .bc-note { border: 0; padding: 6px 0 0; margin: 0; font-size: 12
             <span class="marg" id="marg-wholesale"></span>
           </div>
         </div>
-        <div class="card">
+        <div class="card" id="helper-card">
           <div class="card-h"><span>Price from cost</span></div>
           <div class="pricing-helper" id="pricing-helper"></div>
         </div>
@@ -817,6 +890,7 @@ details.bc-tips .bc-note { border: 0; padding: 6px 0 0; margin: 0; font-size: 12
       <select id="n-formula">
         <option value="">-- Pick a formula --</option>
       </select>
+      <div class="form-hint" style="margin-top:6px">For a kit, leave this blank, then choose <b>A kit of products</b> in the product.</div>
     </div>
     <div class="modal-foot">
       <button class="btn" onclick="closeModal('m-new')">Cancel</button>
@@ -1986,7 +2060,7 @@ function syncStatusBtns() {
   });
 }
 function pickKind(kind) {
-  var r = document.getElementById(kind === 'multi' ? 'kind-multi' : 'kind-single');
+  var r = document.getElementById('kind-' + (kind === 'multi' || kind === 'kit' ? kind : 'single'));
   if (r.checked) return;
   r.checked = true;
   onKindChange();
@@ -2004,6 +2078,24 @@ function setTabCounts() {
   var p = curId ? findProduct(curId) : null;
   var n = p ? (p.productionRuns || []).length : 0;
   document.getElementById('pt-runs-ct').textContent = n ? String(n) : '';
+  document.getElementById('pt-runs-lbl').textContent = p && Plume.isKit(p) ? 'Built' : 'Fills';
+}
+function curKind() {
+  if (document.getElementById('kind-kit').checked) return 'kit';
+  return document.getElementById('kind-multi').checked ? 'multi' : 'single';
+}
+// Not for individual sale (2026-10-20): minis, free samples, testers.
+function onNfsChange() {
+  var p = curId ? findProduct(curId) : null;
+  if (p) p.notForSale = document.getElementById('p-nfs').checked;
+  applyNfs();
+  markDirty();
+}
+function applyNfs() {
+  var on = document.getElementById('p-nfs').checked;
+  document.getElementById('nfs-card').hidden = !on;
+  document.getElementById('price-card').hidden = on;
+  document.getElementById('helper-card').hidden = on;
 }
 
 function findIng(id) {
@@ -2282,14 +2374,27 @@ function pkgUnitCost(pkg) {
 }
 
 function computeProductCost(p) {
-  var isMulti = (p.productKind === 'multi');
+  var isMulti = (p.productKind === 'multi' || p.productKind === 'kit');
   var ingCost = 0;
   var ingCostKnown = true;
   var compRows = [];
   var fcpg = null;       // single-mode only
   var netWtG = 0;        // single-mode only
 
-  if (isMulti) {
+  if (p.productKind === 'kit') {
+    // A kit costs its parts' unit costs (each part's bulk and its own
+    // bottle) plus the kit's own packaging, added below.
+    Plume.kitParts(p, products).forEach(function(k) {
+      var pr = k.product;
+      var pc = (pr && Plume.kitPartOk(pr)) ? computeProductCost(pr) : null;
+      var known = !!pc && pc.ingCostKnown && pc.totalCost > 0;
+      var sub = pc ? pc.totalCost * k.qty : 0;
+      if (!known) ingCostKnown = false;
+      ingCost += sub;
+      compRows.push({ label: (pr && pr.name) || '(a deleted product)', qty: k.qty, unit: pc ? pc.totalCost : null, subtotal: sub, known: known, kit: true });
+    });
+    if (!Plume.kitParts(p, products).length) ingCostKnown = false;
+  } else if (isMulti) {
     // Sum each component's (formulation cost/g * its net weight). A component
     // with no formula or no cost data marks the whole ingredient cost as
     // "not fully known" so the rollup can flag it.
@@ -2336,8 +2441,8 @@ function computeProductCost(p) {
   });
 
   var totalCost = ingCost + pkgCost;
-  var retail    = parseFloat(p.retail)    || 0;
-  var wholesale = parseFloat(p.wholesale) || 0;
+  var retail    = p.notForSale ? 0 : (parseFloat(p.retail)    || 0);
+  var wholesale = p.notForSale ? 0 : (parseFloat(p.wholesale) || 0);
   var retailMargin    = retail    > 0 ? (retail    - totalCost) / retail    : null;
   var wholesaleMargin = wholesale > 0 ? (wholesale - totalCost) / wholesale : null;
   var retailProfit    = retail    > 0 ? retail    - totalCost : null;
@@ -2390,7 +2495,7 @@ function setStatusFilter(v) {
 // kit draws on several formulations, so packs keep a group of their own.
 var PACKS_GROUP = 'Sample packs & kits';
 function prodTypeKey(p) {
-  if (p.productKind === 'multi') return PACKS_GROUP;
+  if (p.productKind === 'multi' || p.productKind === 'kit') return PACKS_GROUP;
   var f = findForm(p.formulaId);
   if (!f) return 'No formulation';
   return f.type || 'No type set';
@@ -2413,32 +2518,27 @@ function renderSummary() {
   if (!el) return;
   var active = 0, made = 0, low = 0;
   products.forEach(function(p) {
-    (p.productionRuns || []).forEach(function(r) { made += parseInt(r.units, 10) || 0; });
     if ((p.status || 'active') !== 'active') return;
+    made += Math.max(0, Plume.onHand(p));
     active++;
+    if (p.notForSale) return;
     var c = computeProductCost(p);
     if ((c.retailMargin !== null && c.retailMargin < 0.30) ||
         (c.wholesaleMargin !== null && c.wholesaleMargin < 0.30)) low++;
   });
   el.innerHTML = '<span><b>' + products.length + '</b> product' + (products.length === 1 ? '' : 's') + '</span>' +
     '<span><b>' + active + '</b> active</span>' +
-    '<span><b>' + made + '</b> units made</span>' +
+    '<span title="Units on hand across active products"><b>' + made + '</b> on hand</span>' +
     (low ? '<span title="Active products whose retail or wholesale margin is under 30%"><b style="color:var(--warning)">' + low + '</b> with a margin under 30%</span>' : '');
 }
 
 function prodRowHtml(p, key, nested) {
   var c = computeProductCost(p);
   var status = p.status || 'active';
-  var runs = p.productionRuns || [];
-  var totalUnits = 0, mostRecent = '';
-  runs.forEach(function(r) {
-    totalUnits += parseInt(r.units, 10) || 0;
-    if (!mostRecent || (r.date && r.date > mostRecent)) mostRecent = r.date || '';
-  });
+  var oh = Plume.onHandParts(p);
   var dash = '<span class="ps-muted">--</span>';
-  var unitsCell = totalUnits > 0
-    ? '<span title="' + runs.length + ' run' + (runs.length === 1 ? '' : 's') +
-        (mostRecent ? '; last: ' + fmtDate(mostRecent) : '') + '">' + totalUnits + '</span>'
+  var unitsCell = (oh.filled || (p.stockLog || []).length)
+    ? '<span class="' + (oh.total < 0 ? 'oh-neg' : '') + '" title="' + esc(onHandTitle(p, oh)) + '">' + oh.total + '</span>'
     : dash;
   var sub = [p.sku, p.netWtDisplay].filter(function(x) { return x; }).join(' · ');
   return '<tr class="prod-row' + (nested ? ' l2' : '') + (status === 'discontinued' ? ' dim' : '') + '"' +
@@ -2451,7 +2551,7 @@ function prodRowHtml(p, key, nested) {
         ' ondragstart="onProdDragStart(event,\'' + p.id + '\')"' +
         ' ondragend="onProdDragEnd(event)"' +
         ' onclick="event.stopPropagation()">&#8942;&#8942;</span>' +
-      '<div><div class="ps-name">' + esc(p.name || '(unnamed)') + '</div>' +
+      '<div><div class="ps-name">' + esc(p.name || '(unnamed)') + (p.notForSale ? '<span class="nfs-tag">not for sale</span>' : '') + '</div>' +
         (sub ? '<div class="ps-sub">' + esc(sub) + '</div>' : '') + '</div>' +
     '</div></td>' +
     '<td class="ps-num hide-sm">' + unitsCell + '</td>' +
@@ -2530,6 +2630,15 @@ function renderList() {
     });
   });
   body.innerHTML = html;
+}
+
+function onHandTitle(p, oh) {
+  var kit = Plume.isKit(p);
+  var bits = [oh.filled + (kit ? ' built' : ' filled')];
+  if (oh.kits) bits.push((-oh.kits) + ' into kits');
+  if (oh.out) bits.push((-oh.out) + ' taken out');
+  if (oh.counted) bits.push((oh.counted > 0 ? '+' : '') + oh.counted + ' from counts');
+  return bits.join(', ');
 }
 
 function marginCell(m) {
@@ -2616,9 +2725,14 @@ function openProduct(id) {
   document.getElementById('p-barcode').value      = p.barcode || '';
   document.getElementById('p-status').value       = p.status === 'discontinued' ? 'discontinued' : 'active';
   syncStatusBtns();
-  var kind = (p.productKind === 'multi') ? 'multi' : 'single';
+  var kind = (p.productKind === 'multi' || p.productKind === 'kit') ? p.productKind : 'single';
   document.getElementById('kind-single').checked  = (kind === 'single');
+  document.getElementById('kind-kit').checked     = (kind === 'kit');
   document.getElementById('kind-multi').checked   = (kind === 'multi');
+  // The older formulation pack is only offered to a product that is one.
+  document.getElementById('kind-btn-multi').hidden = (kind !== 'multi');
+  document.getElementById('p-nfs').checked        = !!p.notForSale;
+  applyNfs();
   document.getElementById('p-formula').value      = p.formulaId || '';
   document.getElementById('p-netwt-g').value      = p.netWtG || '';
   document.getElementById('p-netwt-display').value = p.netWtDisplay || '';
@@ -2634,6 +2748,7 @@ function openProduct(id) {
 
   applyKindVisibility(kind);
   renderComponents(p);
+  renderKitParts(p);
   renderPkgRecipe(p);
   recalcCost();
   renderLabel();
@@ -2685,10 +2800,15 @@ function saveProduct() {
   p.sku               = document.getElementById('p-sku').value.trim();
   p.barcode           = document.getElementById('p-barcode').value.trim();
   p.status            = document.getElementById('p-status').value;
-  p.productKind       = document.getElementById('kind-multi').checked ? 'multi' : 'single';
+  p.productKind       = curKind();
+  p.notForSale        = document.getElementById('p-nfs').checked;
+  if (!p.notForSale) delete p.notForSale;
   if (p.productKind === 'multi') {
     // Components are maintained live on p by the component editor; ensure array
     p.components = p.components || [];
+  } else if (p.productKind === 'kit') {
+    // Parts are maintained live on p by the kit editor.
+    p.kitParts = (p.kitParts || []).filter(function(k) { return k.productId; });
   } else {
     p.formulaId       = document.getElementById('p-formula').value;
     p.netWtG          = parseFloat(document.getElementById('p-netwt-g').value) || '';
@@ -2727,7 +2847,11 @@ function deleteProduct() {
   var p = findProduct(curId); if (!p) return;
   // Capture the id now: the delete runs later, in the dialog's callback.
   var pid = p.id;
-  Plume.ask('This cannot be undone.', function() {
+  var into = Plume.kitsUsing(pid, products);
+  var msg = 'This cannot be undone.';
+  if (into.length) msg = 'It is part of ' + into.map(function(k) { return k.name || 'a kit'; }).join(', ') + '. Those kits will show it as a deleted product.\n\n' + msg;
+  if (Plume.isKit(p) && (p.productionRuns || []).length) msg = 'Its builds stay counted: the products that went into these kits are not put back. Reverse the builds first if they should be.\n\n' + msg;
+  Plume.ask(msg, function() {
     products = products.filter(function(x) { return x.id !== pid; });
     saveProducts();
     curId = null; dirty = false;
@@ -2763,6 +2887,8 @@ function makeDuplicate(srcId) {
     formulaId:         src.formulaId || '',
     netWtG:            src.netWtG || '',
     components:        (src.components || []).map(function(c) { return { id:uid(), formulaId:c.formulaId, netWtG:c.netWtG, label:c.label || '' }; }),
+    kitParts:          (src.kitParts || []).map(function(k) { return { id:uid(), productId:k.productId, qty:k.qty }; }),
+    notForSale:        !!src.notForSale,
     netWtDisplay:      src.netWtDisplay || '',
     description:       src.description != null ? src.description : (src.notes || ''),
     packagingRecipe:   (src.packagingRecipe || []).map(function(r) { return { packagingId:r.packagingId, quantity:r.quantity }; }),
@@ -2861,18 +2987,26 @@ function onPkgRecipeChange(idx, newPkgId, newQty) {
 // Multi-component (sample pack / kit) editor
 // ──────────────────────────────────────────────────────────────────────
 function applyKindVisibility(kind) {
-  document.getElementById('single-mode-fields').style.display = (kind === 'multi') ? 'none' : '';
+  document.getElementById('single-mode-fields').style.display = (kind === 'single') ? '' : 'none';
   document.getElementById('multi-mode-fields').style.display  = (kind === 'multi') ? '' : 'none';
-  var bs = document.getElementById('kind-btn-single'), bm = document.getElementById('kind-btn-multi');
-  bs.classList.toggle('on', kind !== 'multi'); bs.setAttribute('aria-pressed', kind !== 'multi' ? 'true' : 'false');
-  bm.classList.toggle('on', kind === 'multi'); bm.setAttribute('aria-pressed', kind === 'multi' ? 'true' : 'false');
+  document.getElementById('kit-mode-fields').style.display    = (kind === 'kit') ? '' : 'none';
+  ['single', 'kit', 'multi'].forEach(function(k) {
+    var b = document.getElementById('kind-btn-' + k);
+    b.classList.toggle('on', k === kind); b.setAttribute('aria-pressed', k === kind ? 'true' : 'false');
+  });
+  document.getElementById('pkg-sub').textContent = kind === 'kit' ? 'what the kit adds: box, insert, label' : 'what goes around each unit';
 }
 
 function onKindChange() {
   if (!curId) return;
   var p = findProduct(curId); if (!p) return;
-  var kind = document.getElementById('kind-multi').checked ? 'multi' : 'single';
+  var kind = curKind();
   p.productKind = kind;
+  if (kind === 'kit') {
+    if (!p.kitParts) p.kitParts = [];
+    if (!p.kitParts.length) p.kitParts.push({ id: uid(), productId: '', qty: 1 });
+    renderKitParts(p);
+  }
   if (kind === 'multi' && !p.components) p.components = [];
   // Seed a first empty component row so the editor isn't blank on first switch
   if (kind === 'multi' && p.components.length === 0) {
@@ -2955,13 +3089,69 @@ function onComponentChange(idx, field, value) {
   renderLabel();
 }
 
+// ── Kit parts (2026-10-20) ─────────────────────────────
+// A kit is built from products she has filled. Each row picks a product
+// (made from one formulation; not a kit, not an older pack) and how many
+// go in each kit.
+function kitPartOptions(cur) {
+  var list = products.filter(function(x) { return x.id !== curId && Plume.kitPartOk(x) && ((x.status || 'active') !== 'discontinued' || x.id === cur); });
+  var byType = {}, order = [];
+  list.forEach(function(x) {
+    var t = prodTypeKey(x);
+    if (!byType[t]) { byType[t] = []; order.push(t); }
+    byType[t].push(x);
+  });
+  order.sort(typeOrder);
+  return '<option value="">-- Pick a product --</option>' + order.map(function(t) {
+    return '<optgroup label="' + esc(t) + '">' + byType[t].map(function(x) {
+      return '<option value="' + esc(x.id) + '"' + (x.id === cur ? ' selected' : '') + '>' + esc(x.name || '(unnamed)') +
+'</option>';
+    }).join('') + '</optgroup>';
+  }).join('');
+}
+function renderKitParts(p) {
+  var body = document.getElementById('kit-parts-body');
+  if (!body) return;
+  var rows = p.kitParts || [];
+  if (!rows.length) { body.innerHTML = '<div class="empty-row">No products yet. Add each product that goes in the kit.</div>'; return; }
+  body.innerHTML = rows.map(function(k, idx) {
+    var pr = k.productId ? findProduct(k.productId) : null;
+    var oh = pr ? Plume.onHand(pr) : null;
+    var uc = pr ? computeProductCost(pr).totalCost : null;
+    return '<div class="kit-row">' +
+      '<select onchange="onKitPartChange(' + idx + ',\'productId\',this.value)" aria-label="Product">' + kitPartOptions(k.productId) + '</select>' +
+      '<input type="number" min="1" step="1" value="' + esc(k.qty || 1) + '" onchange="onKitPartChange(' + idx + ',\'qty\',this.value)" aria-label="How many per kit">' +
+      '<span class="kr-n' + (oh !== null && oh < 0 ? ' oh-neg' : '') + '">' + (oh === null ? '--' : oh) + '</span>' +
+      '<span class="kr-n">' + (uc ? '$' + uc.toFixed(2) : '--') + '</span>' +
+      '<button class="comp-del" title="Remove" onclick="removeKitPart(' + idx + ')">&#x2715;</button>' +
+    '</div>';
+  }).join('');
+}
+function addKitPart() {
+  var p = curId ? findProduct(curId) : null; if (!p) return;
+  if (!p.kitParts) p.kitParts = [];
+  p.kitParts.push({ id: uid(), productId: '', qty: 1 });
+  markDirty(); renderKitParts(p);
+}
+function removeKitPart(idx) {
+  var p = curId ? findProduct(curId) : null; if (!p || !p.kitParts) return;
+  p.kitParts.splice(idx, 1);
+  markDirty(); renderKitParts(p); recalcCost(); renderLabel();
+}
+function onKitPartChange(idx, field, value) {
+  var p = curId ? findProduct(curId) : null; if (!p || !p.kitParts || !p.kitParts[idx]) return;
+  if (field === 'qty') p.kitParts[idx].qty = Math.max(1, parseInt(value, 10) || 1);
+  else p.kitParts[idx].productId = value;
+  markDirty(); renderKitParts(p); recalcCost(); renderLabel();
+}
+
 // ──────────────────────────────────────────────────────────────────────
 // Cost rollup panel
 // ──────────────────────────────────────────────────────────────────────
 function recalcCost() {
   if (!curId) return;
   var p = findProduct(curId); if (!p) return;
-  var isMulti = (p.productKind === 'multi');
+  var isMulti = (p.productKind === 'multi' || p.productKind === 'kit');
   // In single mode the formula/netwt come from the visible fields. In multi
   // mode those fields are hidden and components are maintained directly on p
   // by the component editor, so we don't read them here.
@@ -2983,7 +3173,13 @@ function recalcCost() {
   }
 
   var lines = '';
-  if (isMulti) {
+  if (p.productKind === 'kit') {
+    c.compRows.forEach(function(r) {
+      lines += '<div class="cl"><span>' + esc(r.label) + (r.qty > 1 ? ' &times; ' + r.qty : '') +
+        '<span class="sub">' + (r.unit ? '$' + r.unit.toFixed(2) + ' each' : 'no cost yet') + '</span></span><b>$' + r.subtotal.toFixed(2) + '</b></div>';
+    });
+    if (!c.compRows.length) lines += '<div class="cl"><span class="ps-muted">No products in the kit yet.</span></div>';
+  } else if (isMulti) {
     c.compRows.forEach(function(r) {
       var cpgTxt = r.cpg !== null ? '$' + r.cpg.toFixed(4) + '/g' : 'no cost';
       var wtTxt  = r.netWtG > 0 ? r.netWtG + ' g' : 'no weight';
@@ -3002,7 +3198,10 @@ function recalcCost() {
   });
 
   var warn = '';
-  if (isMulti) {
+  if (p.productKind === 'kit') {
+    var gaps = c.compRows.filter(function(r) { return !r.known; });
+    if (gaps.length) warn = '<div class="warn-line"><strong>Incomplete cost for</strong> ' + gaps.map(function(r) { return esc(r.label); }).join(', ') + '. Open each to finish its costs.</div>';
+  } else if (isMulti) {
     var missingComp = c.compRows.filter(function(r) { return !r.known; });
     if (missingComp.length) {
       warn = '<div class="warn-line"><strong>Incomplete cost for</strong> ' +
@@ -3150,7 +3349,9 @@ function formulaLabelItems(f) {
 function productInciMerges(p) {
   var fs = p.productKind === 'multi'
     ? (p.components || []).map(function(c) { return findForm(c.formulaId); })
-    : [findForm(p.formulaId)];
+    : p.productKind === 'kit'
+      ? Plume.kitParts(p, products).map(function(k) { return k.product ? findForm(k.product.formulaId) : null; })
+      : [findForm(p.formulaId)];
   var merged = [];
   fs.forEach(function(f) {
     merged = merged.concat(Plume.inciMerged(Plume.inciMerge(formulaLabelItems(f))));
@@ -3186,6 +3387,18 @@ function singleFormulaIngredients(f, mode) {
 }
 
 function buildIngredientList(p, mode) {
+  if (p.productKind === 'kit') {
+    var parts = Plume.kitParts(p, products);
+    if (!parts.length) return '(no products in the kit)';
+    // One list per product in the kit, each as its own label reads.
+    var seen = {};
+    return parts.filter(function(k) { if (seen[k.productId]) return false; seen[k.productId] = true; return true; }).map(function(k) {
+      var pr = k.product;
+      if (!pr) return '(a deleted product)';
+      var own = pr.labelOverrideOn && (pr.labelOverrideText || '').trim();
+      return (pr.name || 'Product') + ': ' + (own ? pr.labelOverrideText.trim() : singleFormulaIngredients(findForm(pr.formulaId), mode));
+    }).join('\n');
+  }
   if (p.productKind === 'multi') {
     var comps = p.components || [];
     if (!comps.length) return '(no components)';
@@ -3332,14 +3545,69 @@ function runBatchText(r, p) {
   if (!names.length) return '<span class="rr-old">not from a logged batch</span>';
   return esc(names.join(' + ')) + (g > 0 ? '<small>' + Plume.fmtG(g) + '</small>' : '');
 }
+function renderOnHand(p) {
+  var oh = Plume.onHandParts(p), kit = Plume.isKit(p);
+  var bits = ['<span>' + oh.filled + (kit ? ' built' : ' filled') + '</span>'];
+  if (oh.kits) bits.push('<span>' + (-oh.kits) + ' into kits</span>');
+  if (oh.out) bits.push('<span>' + (-oh.out) + ' taken out</span>');
+  if (oh.counted) bits.push('<span>' + (oh.counted > 0 ? '+' : '') + oh.counted + ' from counts</span>');
+  var into = Plume.kitsUsing(p.id, products);
+  document.getElementById('onhand-box').innerHTML =
+    '<div class="oh-big' + (oh.total < 0 ? ' oh-neg' : '') + '">' + oh.total + '<small>on hand</small></div>' +
+    '<div class="oh-parts">' + bits.join('') + '</div>' +
+    (into.length ? '<div class="oh-parts">Goes into ' + into.map(function(k) { return '<a href="#" onclick="openProduct(\'' + esc(k.id) + '\');return false">' + esc(k.name || 'a kit') + '</a>'; }).join(', ') + '</div>' : '');
+}
+// Taken out, counts and units into kits, newest first. Kit lines are undone
+// from the kit; the others have their own X.
+function renderStockHist(p) {
+  var el = document.getElementById('stock-hist');
+  var log = (p.stockLog || []).slice().sort(function(a, b) { return (b.date || '').localeCompare(a.date || '') || String(b.id).localeCompare(String(a.id)); });
+  if (!log.length) { el.innerHTML = ''; return; }
+  el.innerHTML = '<h3>Stock changes</h3>' + log.map(function(e) {
+    var q = parseFloat(e.qty) || 0;
+    var what = e.kind === 'count' ? 'Counted ' + e.counted : (e.kind === 'kit' ? 'Into a kit' : 'Taken out');
+    return '<div class="sh-row"><span>' + fmtDate(e.date) + '</span><span class="sh-q">' + (q > 0 ? '+' : '') + q + '</span>' +
+      '<span class="sh-note">' + esc(what) + (e.note && e.kind !== 'kit' ? ': ' + esc(e.note) : '') + (e.kind === 'kit' ? ' (' + esc(String(e.note || '').replace(/^Into kit: /, '')) + ')' : '') + '</span>' +
+      (e.kind === 'kit' ? '<span></span>' : '<button title="Remove this change" aria-label="Remove this change" onclick="undoStockLine(\'' + esc(e.id) + '\')">&#x2715;</button>') + '</div>';
+  }).join('');
+}
+function undoStockLine(id) {
+  if (!curId) return;
+  var pid = curId;
+  Plume.ask('On hand goes back to what it was before this change.', function() {
+    var stored = storedProducts(), sp = findIn(stored, pid);
+    if (!sp || !Plume.undoStock(sp, id)) return;
+    saveStored(stored);
+    var p = findProduct(pid); if (p) p.stockLog = JSON.parse(JSON.stringify(sp.stockLog || []));
+    if (curId === pid) renderRuns(p);
+    renderList();
+  }, { title: 'Remove this stock change?', yes: 'Remove', danger: true });
+}
 function renderRuns(p) {
   if (!p) return;
   var runs = p.productionRuns || [];
   var list = document.getElementById('runs-list');
   var summary = document.getElementById('runs-summary');
+  var kit = Plume.isKit(p);
+  renderOnHand(p);
+  renderStockHist(p);
   if (!runs.length) {
-    list.innerHTML = '<div class="empty-row">Nothing filled yet.</div>';
+    list.innerHTML = '<div class="empty-row">' + (kit ? 'No kits built yet.' : 'Nothing filled yet.') + '</div>';
     summary.textContent = '';
+  } else if (kit) {
+    var made = 0;
+    var ks = runs.slice().sort(function(a, b) { return (b.date || '').localeCompare(a.date || '') || (b.addedAt || '').localeCompare(a.addedAt || ''); });
+    var kh = '<div class="run-row h"><span>Date</span><span class="rr-qty">Kits</span><span>Products used</span><span>Packaging taken</span><span></span></div>';
+    ks.forEach(function(r) {
+      var q = parseInt(r.units, 10) || 0; made += q;
+      var used = (r.parts || []).map(function(c) { return '<span class="rr-pk">' + c.quantity + ' &times; ' + esc(c.productName) + '</span>'; }).join('') || '<span class="rr-old">none</span>';
+      var pk = r.pkgUntracked ? '<span class="rr-old">packaging stock not tracked</span>' : ((r.packaging || []).length ? r.packaging.map(function(c) { return '<span class="rr-pk">' + c.quantity + ' &times; ' + esc(c.packagingName) + '</span>'; }).join('') : '<span class="rr-old">none on its packaging list</span>');
+      kh += '<div class="run-row"><span class="rr-date">' + fmtDate(r.date) + '</span><span class="rr-qty">' + q + '</span>' +
+        '<span class="rr-batch">' + used + '</span><span class="rr-notes">' + pk + (r.notes ? '<small>' + esc(r.notes) + '</small>' : '') + '</span>' +
+        '<button class="rr-del" title="Reverse: products back on hand, packaging back to stock" aria-label="Reverse this build" onclick="deleteRun(\'' + r.id + '\')">&#x2715;</button></div>';
+    });
+    list.innerHTML = kh;
+    summary.textContent = made + ' kits across ' + runs.length + ' build' + (runs.length === 1 ? '' : 's');
   } else {
     var totalUnits = 0;
     var sorted = runs.slice().sort(function(a, b) { return (b.date || '').localeCompare(a.date || '') || (b.addedAt || '').localeCompare(a.addedAt || ''); });
@@ -3402,6 +3670,18 @@ function renderFillRow(p) {
   var preset = fillPreset && fillPreset.pid === p.id ? fillPreset.bid : '';
   var parts = Plume.fillParts(sp, forms);
   var multi = sp.productKind === 'multi';
+  if (Plume.isKit(sp)) {
+    document.getElementById('run-add-row').classList.remove('pack');
+    document.getElementById('run-units-lbl').textContent = 'Kits';
+    document.getElementById('run-from-cell').hidden = true;
+    document.getElementById('run-from-cell').innerHTML = '';
+    document.getElementById('run-parts').hidden = true;
+    document.getElementById('run-parts').innerHTML = '';
+    document.getElementById('run-next').innerHTML = '';
+    if (!document.getElementById('run-date').value) document.getElementById('run-date').value = todayISO();
+    fillTakes();
+    return;
+  }
   var pickFor = function(fid) { return preset || (Object.prototype.hasOwnProperty.call(fillKeep, fid) ? fillKeep[fid] : null); };
   document.getElementById('run-add-row').classList.toggle('pack', multi);
   document.getElementById('run-units-lbl').textContent = multi ? 'Packs' : 'Units';
@@ -3439,8 +3719,37 @@ function fillPlan() {
   });
   return { p: p, units: u, draws: draws, needs: Plume.fillPkgNeeds(p, u), short: Plume.fillShortages(pkgs, p, u) };
 }
+// Building kits: takes each product's units and the kit's packaging. A
+// part short of units stops it, like short packaging stops a fill.
+function kitTakes() {
+  var box = document.getElementById('run-takes'), btn = document.getElementById('run-add');
+  var p = editorProduct();
+  var u = parseInt(document.getElementById('run-units').value, 10) || 0;
+  btn.textContent = unsaved() ? 'Save and build' : 'Build';
+  if (!Plume.kitParts(p, products).length) { box.innerHTML = '<span class="ps-muted">Add the products that go in the kit first.</span>'; btn.disabled = true; return; }
+  if (!u) { box.innerHTML = '<span class="ps-muted">Type how many kits to see what this takes.</span>'; btn.disabled = true; return; }
+  var needs = Plume.kitNeeds(p, u, products);
+  var shortP = needs.filter(function(n) { return n.missing || n.need > n.have; });
+  var tracked = Plume.pkgTracked();
+  var pkN = tracked ? Plume.fillPkgNeeds(p, u) : [];
+  var shortK = Plume.fillShortages(pkgs, p, u);
+  var pk = pkN.map(function(n) {
+    var it = findIn(pkgs, n.packagingId);
+    return '<span><span class="pk-thumb">' + Plume.pkIconFor(it) + '</span><b>' + n.quantity + '</b>&nbsp;&times; ' + esc(it ? Plume.pkDisplay(it) : '(a deleted item)') + '</span>';
+  }).join('');
+  box.innerHTML = 'Takes from your products:<div class="takes-pk">' + needs.map(function(n) {
+      return '<span><b>' + n.need + '</b>&nbsp;&times; ' + esc(n.name) + ' <span class="ps-muted">(' + n.have + ' on hand)</span></span>';
+    }).join('') + '</div>' +
+    (pk ? '<div style="margin-top:4px">and from packaging:</div><div class="takes-pk">' + pk + '</div>' : (tracked ? '' : '<div class="ps-muted" style="margin-top:4px">Packaging stock is not tracked (Settings), so nothing is taken from it.</div>')) +
+    (unsaved() ? '<div class="ps-muted" style="margin-top:4px">This kit has unsaved changes. Build saves them first.</div>' : '') +
+    (shortP.length ? '<div class="stop">Not enough on hand. ' + shortP.map(function(n) { return esc(n.name) + ': needs ' + n.need + ', ' + n.have + ' on hand'; }).join('; ') +
+      '. Fill more first, or count what is on the shelf with Update stock.</div>' : '') +
+    (shortK.length ? '<div class="stop">Not enough packaging in stock. ' + shortK.map(function(x) { return esc(x.name) + ': needs ' + x.need + ', ' + x.have + ' in stock'; }).join('; ') + '.</div>' : '');
+  btn.disabled = !!(shortP.length || shortK.length);
+}
 function fillTakes() {
   var box = document.getElementById('run-takes'), btn = document.getElementById('run-add');
+  if (curId && Plume.isKit(findProduct(curId))) { kitTakes(); return; }
   var plan = fillPlan();
   if (!plan) { box.innerHTML = ''; btn.disabled = true; return; }
   var multi = plan.p.productKind === 'multi';
@@ -3477,10 +3786,33 @@ function fillTakes() {
       '. Add the purchase in Packaging, or check the count and the product’s packaging list.</div>' : '');
   btn.disabled = !!plan.short.length;
 }
+function addKitBuild(p) {
+  var u = parseInt(document.getElementById('run-units').value, 10) || 0;
+  if (!u) { Plume.tell('Enter how many kits you built.'); return; }
+  if (unsaved() && !saveProduct()) return;
+  var stored = storedProducts(), sk = findIn(stored, curId);
+  if (!sk) { Plume.tell('Save the new kit first.', { title: 'Save first' }); return; }
+  if (Plume.kitShortages(sk, u, stored).length || Plume.fillShortages(pkgs, sk, u).length) { products = stored; kitTakes(); return; }
+  var run = Plume.buildKit(stored, sk, {
+    date: document.getElementById('run-date').value || todayISO(), units: u,
+    notes: document.getElementById('run-notes').value.trim()
+  }, pkgs);
+  var okP = saveStored(stored), okK = savePkgs();
+  // Parts changed too, so the page takes the stored copy whole and keeps
+  // the open kit's in-memory edits (there are none: Build saved them).
+  products = stored;
+  document.getElementById('run-units').value = '';
+  document.getElementById('run-notes').value = '';
+  renderRuns(findProduct(curId));
+  renderKitParts(findProduct(curId));
+  renderList();
+  if (okP && okK) toast(run.units + ' built');
+}
 function addRun() {
   if (!curId) return;
   var p = findProduct(curId); if (!p) return;
   pkgs = Store.getJSON(PKG_KEY, []) || [];
+  if (Plume.isKit(p)) { addKitBuild(p); return; }
   var plan = fillPlan();
   if (!plan || !plan.units) { Plume.tell('Enter how many you filled.'); return; }
   if (plan.short.length) { fillTakes(); return; }
@@ -3513,6 +3845,21 @@ function deleteRun(rid) {
   var run = null;
   (sp.productionRuns || []).forEach(function(r) { if (r.id === rid) run = r; });
   if (!run) return;
+  if (run.kit) {
+    var kid = p.id;
+    Plume.ask(Plume.undoKitText(run), function() {
+      var st = storedProducts(), sk = findIn(st, kid);
+      pkgs = Store.getJSON(PKG_KEY, []) || [];
+      if (!sk || !Plume.undoKitBuild(st, sk, rid, pkgs)) return;
+      saveStored(st); savePkgs();
+      // Keep any unsaved edits on the open kit; take everything else fresh.
+      var open = findProduct(kid);
+      products = st.map(function(x) { return x.id === kid && open ? Object.assign(open, { productionRuns: x.productionRuns }) : x; });
+      if (curId === kid) { renderRuns(findProduct(kid)); renderKitParts(findProduct(kid)); }
+      renderList();
+    }, { title: 'Reverse this build of ' + run.units + ' on ' + fmtDate(run.date) + '?', yes: 'Reverse build', danger: true });
+    return;
+  }
   // The reversal runs later, in the dialog's callback; p and rid are locals.
   Plume.ask(Plume.undoFillText(sp, run), function() {
     stored = storedProducts(); sp = findIn(stored, p.id);
@@ -3565,6 +3912,107 @@ function handleFillLink() {
 
 
 // ──────────────────────────────────────────────────────────────────────
+// Update stock (2026-10-20): one pass over every active product, from the
+// list. Took out: what left the shelf (a market, giveaways). Counted: what
+// is on the shelf; Plume records the difference. A date and a note cover
+// the whole pass. Units into kits are taken by building the kit, not here.
+// ──────────────────────────────────────────────────────────────────────
+var stMode = 'out', stQ = '';
+function openStock() {
+  stMode = 'out'; stQ = ''; stVals = {};
+  products = storedProducts();
+  Plume.peek.open(stockHtml(), { label: 'Products & Costing', onClose: function() { renderList(); } });
+  var d = document.getElementById('st-date'); if (d) d.value = todayISO();
+}
+function stockList() {
+  return products.filter(function(p) { return (p.status || 'active') !== 'discontinued'; });
+}
+function stockRowsHtml() {
+  var q = stQ.toLowerCase().trim();
+  var list = stockList().filter(function(p) { return !q || ((p.name || '') + ' ' + (p.sku || '')).toLowerCase().indexOf(q) !== -1; });
+  var byType = {}, order = [];
+  list.forEach(function(p) { var t = prodTypeKey(p); if (!byType[t]) { byType[t] = []; order.push(t); } byType[t].push(p); });
+  order.sort(typeOrder);
+  if (!list.length) return '<div class="ps-muted" style="padding:14px 4px">' + (q ? 'No product matches.' : 'No active products yet.') + '</div>';
+  return order.map(function(t) {
+    return '<div class="st-type">' + esc(t) + '</div>' + byType[t].map(function(p) {
+      var oh = Plume.onHand(p);
+      return '<div class="st-row" data-pid="' + esc(p.id) + '"><div class="st-name">' + esc(p.name || '(unnamed)') +
+        (p.notForSale ? '<span class="nfs-tag">not for sale</span>' : '') + (p.netWtDisplay ? '<small>' + esc(p.netWtDisplay) + '</small>' : '') + '</div>' +
+        '<div class="st-have' + (oh < 0 ? ' oh-neg' : '') + '">' + oh + '</div>' +
+        '<input type="number" min="0" step="1" inputmode="numeric" data-pid="' + esc(p.id) + '" aria-label="' + esc((stMode === 'out' ? 'Took out: ' : 'Counted: ') + (p.name || '')) + '" oninput="stockTyped()"></div>';
+    }).join('');
+  }).join('');
+}
+function stockHtml() {
+  return '<div class="st-panel"><div class="sup-title">' + Plume.icon('check') + '<h2>Update stock</h2></div>' +
+    '<div class="st-modes" style="margin-top:12px">' +
+      '<button type="button" class="ps-chip' + (stMode === 'out' ? ' on' : '') + '" onclick="stockMode(\'out\')">Took out</button>' +
+      '<button type="button" class="ps-chip' + (stMode === 'count' ? ' on' : '') + '" onclick="stockMode(\'count\')">Counted</button></div>' +
+    '<p class="st-help">' + (stMode === 'out'
+      ? 'How many left the shelf: sold at a market, given away, damaged. Leave the rest blank.'
+      : 'How many are on the shelf now. Plume records the difference from what it had. Use this to set real numbers.') + '</p>' +
+    '<div class="st-fields"><div><label for="st-date">Date</label><input type="date" id="st-date"></div>' +
+      '<div><label for="st-note">Note</label><input type="text" id="st-note" placeholder="' + (stMode === 'out' ? 'e.g. Market, Oct 18' : 'e.g. Shelf count') + '"></div></div>' +
+    '<label class="ps-search" style="border:1px solid var(--cream-border);margin-bottom:6px">' + Plume.icon('search') + '<input type="search" id="st-q" placeholder="Search products" value="' + esc(stQ) + '" oninput="stockSearch(this.value)"></label>' +
+    '<div class="st-cols"><span>Product</span><span>On hand</span><span>' + (stMode === 'out' ? 'Took out' : 'Counted') + '</span></div>' +
+    '<div id="st-rows">' + stockRowsHtml() + '</div>' +
+    '<div class="st-foot"><span class="ps-muted" id="st-ct">Nothing entered yet</span><span class="ps-grow"></span>' +
+      '<button type="button" class="ps-link-btn" onclick="Plume.peek.close()">Cancel</button>' +
+      '<button type="button" class="ps-btn-primary" id="st-save" onclick="saveStock()" disabled>Save</button></div></div>';
+}
+// Values typed so far survive a mode switch or a search.
+var stVals = {};
+function stockKeep() {
+  [].forEach.call(document.querySelectorAll('#st-rows input[data-pid]'), function(i) { stVals[i.getAttribute('data-pid')] = i.value; });
+}
+function stockRestore() {
+  [].forEach.call(document.querySelectorAll('#st-rows input[data-pid]'), function(i) {
+    var v = stVals[i.getAttribute('data-pid')]; if (v != null) i.value = v;
+  });
+  stockTyped();
+}
+function stockMode(m) {
+  stockKeep();
+  var d = document.getElementById('st-date').value, n = document.getElementById('st-note').value;
+  stMode = m;
+  document.getElementById('ps-peek-body').innerHTML = stockHtml();
+  document.getElementById('st-date').value = d; document.getElementById('st-note').value = n;
+  stockRestore();
+}
+function stockSearch(v) {
+  stockKeep(); stQ = v;
+  document.getElementById('st-rows').innerHTML = stockRowsHtml();
+  stockRestore();
+}
+function stockEntries() {
+  stockKeep();
+  return Object.keys(stVals).filter(function(id) { return String(stVals[id]).trim() !== '' && findProduct(id); })
+    .map(function(id) { return { productId: id, value: stVals[id] }; });
+}
+function stockTyped() {
+  [].forEach.call(document.querySelectorAll('#st-rows .st-row'), function(r) {
+    var i = r.querySelector('input'); r.classList.toggle('on', i && i.value.trim() !== '');
+  });
+  var n = stockEntries().length;
+  document.getElementById('st-ct').textContent = n ? n + ' product' + (n === 1 ? '' : 's') + ' to update' : 'Nothing entered yet';
+  document.getElementById('st-save').disabled = !n;
+}
+function saveStock() {
+  var entries = stockEntries();
+  var bad = entries.filter(function(e) { var v = parseFloat(e.value); return isNaN(v) || v < 0 || Math.floor(v) !== v; });
+  if (bad.length) { Plume.tell('Use whole numbers of units, 0 or more.'); return; }
+  var stored = storedProducts();
+  var n = Plume.stockPass(stored, entries, { mode: stMode, date: document.getElementById('st-date').value || todayISO(), note: document.getElementById('st-note').value.trim() });
+  if (!n) return;
+  if (!saveStored(stored)) return;
+  products = stored;
+  stVals = {};
+  Plume.peek.close();
+  toast(n + ' product' + (n === 1 ? '' : 's') + ' updated');
+}
+
+// ──────────────────────────────────────────────────────────────────────
 // Line sheet (2026-10-19)
 // ──────────────────────────────────────────────────────────────────────
 // What a shop asks for: the products on offer with their wholesale price
@@ -3602,7 +4050,7 @@ function lsSave() {
 // Products a sheet can offer: everything not discontinued, in the list's
 // own order (type, then formulation, then her drag order).
 function lsOffered() {
-  return products.filter(function(p) { return (p.status || 'active') !== 'discontinued'; });
+  return products.filter(function(p) { return (p.status || 'active') !== 'discontinued' && !p.notForSale; });
 }
 function lsGrouped(list) {
   var types = {}, typeKeys = [];

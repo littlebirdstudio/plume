@@ -35,7 +35,7 @@ var Plume = (function () {
 // (v0.4 / v0.5 / v0.6 across five modules). BUMP IT IN EVERY PULL REQUEST,
 // core change or not: it is how "is this the update I just merged?" is
 // answered by looking, and browsers cache .js files stubbornly.
-var VERSION = '1.34';
+var VERSION = '1.35';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -3151,14 +3151,14 @@ function fillShortages(pkgs, p, units) {
   return out;
 }
 // Takes the packaging out of stock and records it on the run.
-function fillPull(pkgs, p, run) {
+function fillPull(pkgs, p, run, verb) {
   run.packaging = [];
   if (!pkgTracked()) { run.pkgUntracked = true; return; }
   fillPkgNeeds(p, parseInt(run.units, 10) || 0).forEach(function (n) {
     var it = fillFind(pkgs, n.packagingId);
     if (!it) return;
     if (!it.adjustments) it.adjustments = [];
-    var why = 'Filled: ' + (p.name || 'a product');
+    var why = (verb || 'Filled') + ': ' + (p.name || 'a product');
     it.adjustments.push({ id: 'fill-' + run.id + '-' + it.id, qty: -n.quantity, date: run.date, note: why, reason: why, productId: p.id, fillId: run.id });
     run.packaging.push({ packagingId: it.id, packagingName: pkDisplay(it), quantity: n.quantity });
   });
@@ -3222,6 +3222,137 @@ function fmtG(g) {
   return (Math.abs(g) >= 1000 ? g.toLocaleString('en-US') : String(g)) + ' g';
 }
 
+// ══ Units on hand and kits (2026-10-20) ═══════════════
+// Her way of working: fill products (minis included) from batches, then
+// build kits from what is filled, adding the kit's own packaging. So a
+// product has units on hand:
+//   filled (every fill and older run; for a kit, every kit built)
+//   + its stock log: taken out (sold, given away), counted (a recount, the
+//     difference from what Plume thought), and units put into kits.
+// Plume is not a point of sale; taking out is optional.
+// p.stockLog: [{ id, date, qty (signed), kind: 'out' | 'count' | 'kit',
+//   note, counted (count only), kitId and buildId (kit only) }]
+function onHandParts(p) {
+  var o = { filled: 0, out: 0, kits: 0, counted: 0, total: 0 };
+  ((p && p.productionRuns) || []).forEach(function (r) { o.filled += parseInt(r.units, 10) || 0; });
+  ((p && p.stockLog) || []).forEach(function (e) {
+    var q = parseFloat(e.qty) || 0;
+    if (e.kind === 'kit') o.kits += q; else if (e.kind === 'count') o.counted += q; else o.out += q;
+  });
+  o.total = o.filled + o.out + o.kits + o.counted;
+  return o;
+}
+function onHand(p) { return onHandParts(p).total; }
+function isKit(p) { return !!p && p.productKind === 'kit'; }
+// What a product can go into a kit as: a product made from one
+// formulation. Kits are not parts of kits; older formulation packs neither.
+function kitPartOk(p) { return !!p && p.productKind !== 'kit' && p.productKind !== 'multi'; }
+// [{ productId, qty, product }] with a positive whole qty.
+function kitParts(kit, products) {
+  return ((kit && kit.kitParts) || []).map(function (k) {
+    return { productId: k.productId, qty: parseInt(k.qty, 10) || 0, product: fillFind(products, k.productId) };
+  }).filter(function (k) { return k.productId && k.qty > 0; });
+}
+// Each part's units for `units` kits, added up per product.
+function kitNeeds(kit, units, products) {
+  var need = {}, order = [];
+  kitParts(kit, products).forEach(function (k) {
+    if (!(k.productId in need)) { need[k.productId] = 0; order.push(k.productId); }
+    need[k.productId] += k.qty * units;
+  });
+  return order.map(function (id) {
+    var pr = fillFind(products, id);
+    return { productId: id, name: pr ? (pr.name || '(unnamed)') : '(a deleted product)', need: need[id], have: pr ? onHand(pr) : 0, missing: !pr };
+  });
+}
+// A build is not allowed while a part is short (her rule, as for packaging:
+// short means a fill was not logged).
+function kitShortages(kit, units, products) {
+  return kitNeeds(kit, units, products).filter(function (n) { return n.missing || n.need > n.have; });
+}
+// Builds `f.units` kits: takes each part's units from its product, the
+// kit's packaging list from stock, and records the build on the kit.
+// f: { date, units, notes }. Changes products and pkgs; the page saves.
+function buildKit(products, kit, f, pkgs) {
+  var run = {
+    id:      Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+    date:    f.date || todayISO(),
+    units:   parseInt(f.units, 10) || 0,
+    notes:   f.notes || '',
+    addedAt: new Date().toISOString(),
+    fill:    true,
+    kit:     true,
+    parts:   []
+  };
+  kitNeeds(kit, run.units, products).forEach(function (n) {
+    var pr = fillFind(products, n.productId);
+    if (!pr) return;
+    if (!pr.stockLog) pr.stockLog = [];
+    pr.stockLog.push({ id: 'kit-' + run.id + '-' + pr.id, date: run.date, qty: -n.need, kind: 'kit',
+      note: 'Into kit: ' + (kit.name || 'a kit'), kitId: kit.id, buildId: run.id });
+    run.parts.push({ productId: pr.id, productName: pr.name || '', quantity: n.need });
+  });
+  fillPull(pkgs, kit, run, 'Kit built');
+  if (!kit.productionRuns) kit.productionRuns = [];
+  kit.productionRuns.push(run);
+  kit.updatedAt = run.addedAt;
+  return run;
+}
+// Reverses a build: the parts' units come back, the packaging goes back
+// to stock, the build leaves the kit. Returns the run, or null.
+function undoKitBuild(products, kit, runId, pkgs) {
+  var run = null;
+  ((kit && kit.productionRuns) || []).forEach(function (r) { if (r.id === runId) run = r; });
+  if (!run) return null;
+  (products || []).forEach(function (pr) {
+    if (pr && pr.stockLog) pr.stockLog = pr.stockLog.filter(function (e) { return e.buildId !== runId; });
+  });
+  fillReturn(pkgs, runId);
+  kit.productionRuns = kit.productionRuns.filter(function (r) { return r.id !== runId; });
+  return run;
+}
+function undoKitText(run) {
+  var bits = [];
+  if (run.parts && run.parts.length) bits.push('These go back on hand:\n' + run.parts.map(function (c) { return '  ' + c.quantity + ' x ' + c.productName; }).join('\n'));
+  if (run.packaging && run.packaging.length) bits.push('This puts back into packaging stock:\n' + run.packaging.map(function (c) { return '  ' + c.quantity + ' x ' + c.packagingName; }).join('\n'));
+  return bits.join('\n\n');
+}
+// Kits a product goes into (by id), for "Used in" notes and delete warnings.
+function kitsUsing(productId, products) {
+  return (products || []).filter(function (k) {
+    return isKit(k) && (k.kitParts || []).some(function (x) { return x.productId === productId; });
+  });
+}
+// The stock panel: one pass over many products. entries: [{ productId,
+// value }]; opts: { mode: 'out' | 'count', date, note }. Taken out records
+// -value; counted records the difference from on hand (kept even when it
+// is 0, so the count shows in the history). Returns how many changed.
+function stockPass(products, entries, opts) {
+  opts = opts || {};
+  var n = 0, stamp = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  (entries || []).forEach(function (en, i) {
+    var pr = fillFind(products, en.productId);
+    var v = parseFloat(en.value);
+    if (!pr || isNaN(v) || v < 0) return;
+    if (opts.mode === 'out' && v === 0) return;
+    var e = { id: 'st-' + stamp + '-' + i, date: opts.date || todayISO(), kind: opts.mode === 'count' ? 'count' : 'out', note: opts.note || '' };
+    if (e.kind === 'count') { e.counted = v; e.qty = v - onHand(pr); }
+    else e.qty = -v;
+    if (!pr.stockLog) pr.stockLog = [];
+    pr.stockLog.push(e);
+    pr.updatedAt = new Date().toISOString();
+    n++;
+  });
+  return n;
+}
+// Removes one taken-out or counted entry. Kit entries go with their build.
+function undoStock(p, id) {
+  if (!p || !p.stockLog) return false;
+  var before = p.stockLog.length;
+  p.stockLog = p.stockLog.filter(function (e) { return e.id !== id || e.kind === 'kit'; });
+  return p.stockLog.length !== before;
+}
+
 return {
   VERSION: VERSION,
   inciSplit: inciSplit, inciMerge: inciMerge, inciMerged: inciMerged,
@@ -3257,6 +3388,9 @@ return {
   isAqueous: isAqueous, phBadge: phBadge, phStepsHtml: phStepsHtml, phFinal: phFinal,
   PK_COLORS: PK_COLORS, PK_MATERIALS: PK_MATERIALS, PK_PARTS: PK_PARTS, PK_GROUPS: PK_GROUPS, PK_KINDS: PK_KINDS,
   pkColor: pkColor, pkSwatch: pkSwatch, pkKind: pkKind, pkKindOf: pkKindOf, pkGroup: pkGroup, pkGroupKey: pkGroupKey,
+  onHand: onHand, onHandParts: onHandParts, isKit: isKit, kitPartOk: kitPartOk, kitParts: kitParts,
+  kitNeeds: kitNeeds, kitShortages: kitShortages, buildKit: buildKit, undoKitBuild: undoKitBuild,
+  undoKitText: undoKitText, kitsUsing: kitsUsing, stockPass: stockPass, undoStock: undoStock,
   pkTypeFor: pkTypeFor, pkForProduct: pkForProduct, pkColored: pkColored, pkIsOther: pkIsOther,
   pkIcon: pkIcon, pkIconFor: pkIconFor, pkProducts: pkProducts, pkProductName: pkProductName,
   pkKindName: pkKindName, pkLooks: pkLooks, pkDisplay: pkDisplay, pkDetailHtml: pkDetailHtml, pkStock: pkStock,
