@@ -2768,3 +2768,43 @@ From her testing:
 **Tests:** new `test/test-size.js` (14 checks, pop-ups line up at each
 size); `test-fills.js` gains Save and fill and the remembered view;
 `test-shell.js` updated. 21 suites.
+
+### Session 22 (20 October 2026): Library section; Suppliers as a slide-in panel (core v1.34)
+
+Her calls: the sidebar splits the work from the supplies. Formulations,
+Batches and Products & Costing come first; Ingredients, Packaging and
+Suppliers sit under Library. **The start page keeps its order** (Ingredients
+first, numbered steps): its job is to say what to do first, and you add
+ingredients first. `SHELL_MODULES` keeps the order of the work and marks the
+supplies `lib: true`; `shell()` renders the two groups.
+
+**Suppliers is a slide-in panel in core, on every page** (her pick over a
+page of its own). `Plume.suppliers.open()`; the sidebar button is
+`#ps-nav-suppliers`, marked `.on` while the panel is open. The old
+Ingredients modal and its functions are gone; `openSuppliers()` in
+Ingredients now opens the panel, and `#suppliers` links still land there.
+Data is unchanged: `aerie-suppliers-v1`, `{id, name, webLink, notes}`.
+
+- **What it supplies:** lots (`l.supplier`) and packaging items
+  (`item.supplier`) name a supplier as plain text, so the panel matches by
+  name, ignoring case and spacing (`supNorm`). Archived records are left
+  out. Names on hover.
+- **Rename follows the name:** editing a supplier that lots or items use
+  shows a tick box (ticked) once the name differs; saving renames it on
+  them too (`supRenameEverywhere`). A change of capitals or spacing only
+  always follows.
+- **Not saved here:** names typed on lots and items with no saved supplier
+  are listed at the bottom with Save. A different spelling of a saved one
+  (letters and digits match, `supSquash`: "Lotion Crafter" and
+  "Lotioncrafter") gets "Same as <name>" instead, which renames those lots.
+- **Pages hold copies in memory**, so a rename made from the panel would be
+  undone by the page's next save. `Plume.onLibraryChange(fn)`: every module
+  registers a listener that rereads ingredients and packaging (Ingredients
+  and Packaging also re-render). Anything new that keeps ingredients or
+  packaging in memory must register too.
+- Packaging's Supplier field suggests saved suppliers plus names already on
+  other items (`fillSupplierChoices`, a datalist).
+- Names are escaped; the old modal printed them as markup.
+
+**Tests:** new `test/test-suppliers.js` (36 checks); `test-shell.js` nav
+order updated. 22 suites.
