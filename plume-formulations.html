@@ -405,6 +405,17 @@ span.ing-name-btn{text-decoration:none}
 .use-notes{color:var(--ink-light);line-height:1.5;white-space:pre-wrap}
 .use-del{background:none;border:none;cursor:pointer;color:var(--ink-lighter);font-size:13px;padding:0 2px}
 .use-del:hover{color:var(--danger)}
+/* Journal (2026-10-20): entries Make batch writes carry the batch's lot. */
+.use-hdr{gap:8px}
+.use-left{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;min-width:0}
+.use-acts{display:flex;gap:2px;align-items:center;flex:none}
+.use-edit{background:none;border:none;cursor:pointer;color:var(--ink-lighter);font:inherit;font-size:12px;padding:1px 6px;border-radius:5px}
+.use-edit:hover{color:var(--bark-dark);background:var(--cream)}
+.use-kind{font-size:11.5px;color:var(--ink-lighter)}
+.use-gone{font-size:11.5px;color:var(--ink-lighter);font-style:italic}
+.use-empty{color:var(--ink-lighter);font-style:italic}
+.use-entry.hl{background:color-mix(in srgb,var(--bark) 9%,var(--white));border-radius:8px;padding-left:8px;padding-right:8px;transition:background 1.2s}
+.ul-linked{font-size:12.5px;color:var(--ink-light);background:var(--cream);border-radius:8px;padding:8px 10px;margin-bottom:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .modal-ov{display:none;position:fixed;inset:0;background:rgba(44,37,32,0.55);z-index:100;overflow-y:auto;padding:2rem 1rem}
 .modal-ov.open{display:flex;align-items:flex-start;justify-content:center}
 .modal{background:var(--white);border-radius:6px;border:1px solid var(--cream-border);padding:1.75rem;width:100%;max-width:520px;margin:auto}
@@ -591,7 +602,7 @@ body.ps-shell .ing-search:hover { background: var(--cream-dark); }
 body.ps-shell .ing-search:focus { background: var(--white); border-color: var(--bark); }
 body.ps-shell #addin-btn.active, body.ps-shell #addin-btn.on { background: var(--ink); color: var(--white); border-color: var(--ink); }
 
-/* Method / Usage log / Change history */
+/* Method / Journal / Change history */
 .fe-sub { margin-top: 28px; }
 .fe-sub .ps-toolbar { margin-top: 0; }
 .et-ct { color: var(--ink-lighter); font-weight: 400; margin-left: 5px; font-size: 13px; }
@@ -752,9 +763,9 @@ body.ps-shell .inci-list { font-size: 13px; color: var(--ink); }
         <div class="fe-sub">
           <div class="ps-toolbar">
             <button type="button" class="ps-tab on" id="et-method" onclick="setEdTab('method')">Method</button>
-            <button type="button" class="ps-tab" id="et-log" onclick="setEdTab('log')">Usage log<span class="et-ct" id="et-log-ct"></span></button>
+            <button type="button" class="ps-tab" id="et-log" onclick="setEdTab('log')">Journal<span class="et-ct" id="et-log-ct"></span></button>
             <button type="button" class="ps-tab" id="et-hist" onclick="setEdTab('hist')">Change history<span class="et-ct" id="et-hist-ct"></span></button>
-            <div class="ps-tools"><button type="button" class="ps-link-btn" id="et-log-add" style="display:none" onclick="openUsage()"><span data-ps-icon="plus"></span>Log use</button></div>
+            <div class="ps-tools"><button type="button" class="ps-link-btn" id="et-log-add" style="display:none" onclick="openUsage()"><span data-ps-icon="plus"></span>Add entry</button></div>
           </div>
           <div class="fe-pane" id="ep-method">
             <textarea id="f-instruct" rows="5" placeholder="Step-by-step process: temperatures, mixing order, special handling..." oninput="markDirty()"></textarea>
@@ -901,12 +912,17 @@ body.ps-shell .inci-list { font-size: 13px; color: var(--ink); }
   </div>
 </div>
 
-<!-- Usage log modal -->
+<!-- Journal entry modal (was Usage log). Adds an entry, or edits one;
+     an entry Make batch wrote shows its batch in place of date and size. -->
 <div class="modal-ov" id="m-use">
   <div class="modal">
-    <div class="modal-hdr"><div class="modal-title">Log a use</div><button class="modal-x" onclick="closeModal('m-use')">x</button></div>
-    <div class="field"><label>Date made *</label><input type="date" id="ul-date"></div>
-    <div class="field"><label>Batch size made (g)</label><input type="text" inputmode="decimal" id="ul-batch" placeholder="e.g. 100"></div>
+    <div class="modal-hdr"><div class="modal-title" id="ul-title">Journal entry</div><button class="modal-x" onclick="closeModal('m-use')">x</button></div>
+    <input type="hidden" id="ul-id">
+    <div class="ul-linked" id="ul-linked" hidden></div>
+    <div id="ul-own">
+      <div class="field"><label>Date *</label><input type="date" id="ul-date"></div>
+      <div class="field"><label>Batch size made (g)</label><input type="text" inputmode="decimal" id="ul-batch" placeholder="optional, e.g. 100"></div>
+    </div>
     <div class="field"><label>Version</label><input type="text" id="ul-ver" readonly style="background:var(--cream-dark)"></div>
     <div class="field" id="ul-ph-wrap" style="display:none">
       <label><span class="ph-word">pH</span> readings <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--ink-lighter)" id="ul-ph-target"></span></label>
@@ -916,7 +932,7 @@ body.ps-shell .inci-list { font-size: 13px; color: var(--ink); }
       <div class="ph-err" id="ul-ph-err" style="display:none"></div>
       <datalist id="ph-adjusters"></datalist>
     </div>
-    <div class="field"><label>Outcome notes</label><textarea id="ul-notes" rows="4" placeholder="How did it turn out? Texture, scent, stability, feedback, what you would change..."></textarea></div>
+    <div class="field"><label>Notes</label><textarea id="ul-notes" rows="5" placeholder="How did it turn out? Texture, scent, stability, issues, feedback, what you would change..."></textarea></div>
     <div class="modal-foot">
       <button class="btn" onclick="closeModal('m-use')">Cancel</button>
       <button class="btn btn-primary" onclick="saveUseEntry()">Save entry</button>
@@ -1465,7 +1481,7 @@ function renderSaveState(justSaved) {
   }
 }
 
-// Method, Usage log and Change history under the recipe.
+// Method, Journal (was Usage log) and Change history under the recipe.
 var edTab = 'method';
 function setEdTab(t) {
   edTab = t;
@@ -3853,68 +3869,187 @@ function readPhSteps() {
   return bad ? null : out;
 }
 
-// ── Usage log (per variant) ───────────────────────────
-function openUsage() {
+// ── Journal (per variant; was the Usage log) ──────────
+// Since 2026-10-20 every batch made writes an entry here on the version it
+// was made from (batchId, lot). Those entries start with empty notes: this
+// is where her thinking about a batch goes. Entries she adds by hand still
+// work as before. Any entry can be edited.
+//
+// Batches live in another key, written by another window, so they are read
+// fresh for the journal rather than from the copy this page loaded.
+function journalBatches() {
+  Store.refresh(Plume.KEYS.batches);
+  return Store.getJSON(Plume.KEYS.batches, []) || [];
+}
+function findIn(list, id) {
+  for (var i = 0; i < (list || []).length; i++) if (list[i] && list[i].id === id) return list[i];
+  return null;
+}
+function fmtDay(iso) {
+  var parts = String(iso || '').split('-');
+  var dt    = parts.length === 3 ? new Date(+parts[0], +parts[1] - 1, +parts[2]) : new Date(iso);
+  return isNaN(dt.getTime()) ? String(iso || '') : dt.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+}
+function batchHref(id) { return 'plume-batchlog.html#b=' + encodeURIComponent(id); }
+
+function addPhStepWith(st) {
+  addPhStep();
+  var row = document.querySelector('#ul-ph-steps .ph-step:last-child');
+  if (!row || !st) return;
+  row.querySelector('.ph-v').value = st.v || '';
+  row.querySelector('.ph-m').value = st.m || 'strip';
+  row.querySelector('.ph-a').value = st.add || '';
+}
+
+// openUsage() adds an entry; openUsage(id) edits that one.
+function openUsage(eid) {
   var v = curVar();
   if (!v) { Plume.tell('Open a version first.'); return; }
+  var e = eid ? findIn(v.usageLog, eid) : null;
+  if (eid && !e) return;
+  document.getElementById('ul-id').value = e ? e.id : '';
+  document.getElementById('ul-title').textContent = e ? 'Edit journal entry' : 'Journal entry';
   // Local date, not toISOString(): that is UTC, so an entry logged after
   // 4pm in Alaska used to default to tomorrow.
-  document.getElementById('ul-date').value  = Plume.todayISO();
+  document.getElementById('ul-date').value  = e ? (e.date || '') : Plume.todayISO();
   resetPhSteps(v);
-  document.getElementById('ul-batch').value = document.getElementById('batch-sz').value || '';
-  document.getElementById('ul-ver').value   = varTitle(v);
-  document.getElementById('ul-notes').value = '';
+  (e && e.ph || []).forEach(addPhStepWith);
+  if (e && e.ph && e.ph.length) document.getElementById('ul-ph-wrap').style.display = '';
+  document.getElementById('ul-batch').value = e ? (e.batch || '') : (document.getElementById('batch-sz').value || '');
+  document.getElementById('ul-ver').value   = e ? (e.version || varTitle(v)) : varTitle(v);
+  document.getElementById('ul-notes').value = e ? (e.notes || '') : '';
+  // A batch's entry takes its date and size from the batch.
+  var linked = document.getElementById('ul-linked');
+  if (e && e.batchId) {
+    var b = findIn(journalBatches(), e.batchId);
+    linked.innerHTML = b
+      ? 'From batch ' + Plume.lotChip(b.lotCode || e.lot, batchHref(b.id)) + ' made ' + esc(fmtDay(b.date)) + ', ' + esc(String(b.actualYield || b.targetYield || '')) + ' g'
+      : 'From a batch since deleted' + (e.lot ? ' ' + Plume.lotChip(e.lot) : '') + ', made ' + esc(fmtDay(e.date));
+    linked.hidden = false;
+    document.getElementById('ul-own').hidden = true;
+  } else {
+    linked.hidden = true; linked.innerHTML = '';
+    document.getElementById('ul-own').hidden = false;
+  }
   openModal('m-use');
+  if (e) setTimeout(function () { document.getElementById('ul-notes').focus(); }, 60);
 }
 
 function saveUseEntry() {
-  var date = document.getElementById('ul-date').value;
-  if (!date) { Plume.tell('Please enter a date.'); return; }
   var v = curVar();
   if (!v) { closeModal('m-use'); return; }
+  var eid = document.getElementById('ul-id').value;
+  var old = eid ? findIn(v.usageLog, eid) : null;
+  var linked = !!(old && old.batchId);
+  var date = document.getElementById('ul-date').value;
+  if (!linked && !date) { Plume.tell('Please enter a date.'); return; }
   var steps = readPhSteps();
   if (steps === null) return;   // a reading that is not a pH; the form says which
-  var entry = {
-    id:      newVid(),
-    date:    date,
-    batch:   document.getElementById('ul-batch').value,
-    version: varTitle(v),
-    notes:   document.getElementById('ul-notes').value.trim()
-  };
-  if (steps.length) entry.ph = steps;
-  v.usageLog = (v.usageLog || []).concat([entry]);
+  var notes = document.getElementById('ul-notes').value.trim();
+  if (old) {
+    if (!linked) { old.date = date; old.batch = document.getElementById('ul-batch').value; }
+    old.notes = notes;
+    if (steps.length) old.ph = steps; else delete old.ph;
+  } else {
+    var entry = {
+      id:      newVid(),
+      date:    date,
+      batch:   document.getElementById('ul-batch').value,
+      version: varTitle(v),
+      notes:   notes
+    };
+    if (steps.length) entry.ph = steps;
+    v.usageLog = (v.usageLog || []).concat([entry]);
+  }
   saveAll(); closeModal('m-use'); renderUseLog(v);
 }
 
-// Entries are no longer grouped by version number -- the tab already tells
-// you which version this is, so the log is a straight track record for it.
+// Newest first. The tab already says which version this is.
 function renderUseLog(v) {
   var el = document.getElementById('use-panel');
   if (!el) return;
   var log = ((v && v.usageLog) || []).slice();
   setTabCount('et-log-ct', log.length);
   if (!log.length) {
-    el.innerHTML = '<div style="font-size:12px;color:var(--ink-lighter)">No uses logged yet for this version.</div>';
+    el.innerHTML = '<div style="font-size:12px;color:var(--ink-lighter)">Nothing in the journal for this version yet. Each batch you make of it adds an entry here for your notes.</div>';
     return;
   }
-  log.sort(function(a, b) { return String(b.date || '').localeCompare(String(a.date || '')); });
+  var bs = log.some(function (e) { return e.batchId; }) ? journalBatches() : [];
+  // A batch's entry reads its date from the batch, which can be edited.
+  var dateOf = function (e) { var b = e.batchId ? findIn(bs, e.batchId) : null; return (b && b.date) || e.date || ''; };
+  log.sort(function(a, b) { return String(dateOf(b)).localeCompare(String(dateOf(a))); });
 
-  var html = '<div style="font-size:11px;color:var(--ink-lighter);margin-bottom:8px">Made ' + log.length + ' time' + (log.length === 1 ? '' : 's') + '</div>';
+  var nb = log.filter(function (e) { return e.batchId; }).length;
+  var html = '<div style="font-size:11px;color:var(--ink-lighter);margin-bottom:8px">' + log.length + ' entr' + (log.length === 1 ? 'y' : 'ies') +
+    (nb ? ' &middot; ' + nb + ' from batches' : '') + '</div>';
   log.forEach(function(e) {
-    var parts = String(e.date || '').split('-');
-    var dt    = parts.length === 3 ? new Date(+parts[0], +parts[1] - 1, +parts[2]) : new Date(e.date);
-    var d     = isNaN(dt.getTime()) ? String(e.date || '') : dt.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
-    html += '<div class="use-entry"><div class="use-hdr">';
-    html += '<span class="use-date">' + esc(d) + '</span>';
-    html += '<span class="use-meta">' + (e.batch ? esc(e.batch) + 'g' : '') + '</span>';
-    html += '<button class="use-del" onclick="delUseEntry(\'' + e.id + '\')">x</button></div>';
+    var b = e.batchId ? findIn(bs, e.batchId) : null;
+    var left = '<span class="use-date">' + esc(fmtDay(dateOf(e))) + '</span>';
+    if (e.batchId) {
+      var lot = (b && b.lotCode) || e.lot;
+      left += lot ? Plume.lotChip(lot, b ? batchHref(b.id) : '') : '';
+      if (b) left += '<span class="use-kind">' + (b.batchType === 'test' ? 'Test batch' : 'Production batch') + ' &middot; ' + esc(String(b.actualYield || b.targetYield || '')) + ' g</span>';
+      else left += '<span class="use-gone">batch deleted</span>';
+    } else if (e.batch) {
+      left += '<span class="use-meta">' + esc(e.batch) + 'g</span>';
+    }
+    html += '<div class="use-entry" id="je-' + esc(e.id) + '"><div class="use-hdr"><span class="use-left">' + left + '</span>';
+    html += '<span class="use-acts"><button class="use-edit" onclick="openUsage(\'' + e.id + '\')">Edit</button>' +
+      '<button class="use-del" title="Remove this entry" onclick="delUseEntry(\'' + e.id + '\')">x</button></span></div>';
     // The final reading is compared with the version's CURRENT target --
     // the log is a working record for this version, not a historical one.
     if (e.ph && e.ph.length) html += '<div class="use-ph">' + Plume.phStepsHtml(e.ph, v.phMin, v.phMax) + '</div>';
     if (e.notes) html += '<div class="use-notes">' + esc(e.notes) + '</div>';
+    else if (e.batchId && !(e.ph && e.ph.length)) html += '<div class="use-notes use-empty">No notes yet. Edit to add how it went.</div>';
     html += '</div>';
   });
   el.innerHTML = html;
+}
+
+// Entries another window wrote (Batches, when a batch is made) are added to
+// this page's copy, so its next save keeps them. Entries removed in this
+// page are not brought back.
+var removedUseIds = {};
+function mergeJournalFrom(stored) {
+  var added = 0;
+  (stored || []).forEach(function (sf) {
+    var f = findIn(forms, sf.id);
+    if (!f) return;
+    (sf.variants || []).forEach(function (sv) {
+      var v = Plume.findVariant(f, sv.vid);
+      if (!v) return;
+      (sv.usageLog || []).forEach(function (se) {
+        if (removedUseIds[se.id] || findIn(v.usageLog, se.id)) return;
+        v.usageLog = (v.usageLog || []).concat([se]);
+        added++;
+      });
+    });
+  });
+  return added;
+}
+window.addEventListener('storage', function (ev) {
+  if (ev.key !== FORM_KEY && ev.key !== Plume.KEYS.batches) return;
+  Store.refresh(ev.key);
+  if (ev.key === FORM_KEY && mergeJournalFrom(Store.getJSON(FORM_KEY, []) || [])) {
+    // Our copy now holds what storage holds plus our own edits; writing it
+    // back keeps the two the same.
+    saveAll();
+  }
+  var v = curVar();
+  if (v && document.getElementById('use-panel')) renderUseLog(v);
+});
+
+// Opens a journal entry from a link: #f=<formulation>&v=<version>&j=<entry>.
+function showJournalEntry(vid, jid) {
+  var f = curForm();
+  if (!f) return;
+  if (vid && Plume.findVariant(f, vid) && vid !== curVid) selectVariant(vid);
+  setEdTab('log');
+  var el = jid ? document.getElementById('je-' + jid) : null;
+  if (!el) return;
+  el.classList.add('hl');
+  try { el.scrollIntoView({ block: 'center' }); } catch (e) {}
+  setTimeout(function () { el.classList.remove('hl'); }, 2600);
 }
 
 function delUseEntry(eid) {
@@ -3922,6 +4057,7 @@ function delUseEntry(eid) {
   Plume.ask('This cannot be undone.', function() {
     var v = curVar();
     if (!v) return;
+    removedUseIds[eid] = true;
     v.usageLog = (v.usageLog || []).filter(function(e) { return e.id !== eid; });
     saveAll(); renderUseLog(v);
   }, { title: 'Remove this log entry?', yes: 'Remove', danger: true });
@@ -4079,11 +4215,19 @@ if (typeof Plume === 'undefined') {
     var icons = document.querySelectorAll('[data-ps-icon]');
     for (var ii = 0; ii < icons.length; ii++) icons[ii].innerHTML = Plume.icon(icons[ii].getAttribute('data-ps-icon'));
     loadAll();
-    // Deep link from Ingredients' "Used in" names: #f=<formulation id>
+    // Deep link from Ingredients' "Used in" names: #f=<formulation id>;
+    // from a batch's journal link, also &v=<version>&j=<entry>.
     if (location.hash.indexOf('#f=') === 0) {
-      var fid = location.hash.slice(3);
-      try { fid = decodeURIComponent(fid); } catch (e) {}
-      if (forms.some(function (x) { return x.id === fid; })) openFormula(fid);
+      var hp = {};
+      location.hash.slice(1).split('&').forEach(function (kv) {
+        var i = kv.indexOf('=');
+        if (i < 0) return;
+        try { hp[kv.slice(0, i)] = decodeURIComponent(kv.slice(i + 1)); } catch (e) { hp[kv.slice(0, i)] = kv.slice(i + 1); }
+      });
+      if (forms.some(function (x) { return x.id === hp.f; })) {
+        openFormula(hp.f);
+        if (hp.v || hp.j) showJournalEntry(hp.v, hp.j);
+      }
     }
   });
 }

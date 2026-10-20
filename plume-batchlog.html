@@ -337,6 +337,30 @@ body.ps-shell .field input:focus, body.ps-shell .field select:focus, body.ps-she
 .bp-foot .ps-grow { flex: 1; }
 .bp-saved { font-size: 12.5px; color: var(--ink-lighter); display: inline-flex; gap: 5px; align-items: center; }
 .bp-saved .ps-i { width: 14px; height: 14px; }
+/* Lot codes and trace (2026-10-20) */
+.lot-inp { width: 130px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; font-variant-numeric: tabular-nums; }
+.lot-err { font-size: 12px; color: var(--danger); margin-top: 4px; max-width: 260px; line-height: 1.4; }
+.lot-err:empty { display: none; }
+.lot-hint { font-size: 11.5px; color: var(--ink-lighter); margin-top: 4px; }
+.bl-date .ps-lot { margin-top: 3px; }
+.bp-sub .ps-lot { font-size: 12.5px; }
+.tr-sec { display: flex; flex-direction: column; gap: 8px; }
+.tr-h { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.tr-h h3 { margin: 0; font-size: 15px; font-weight: 600; }
+.tr-h .ps-muted { font-size: 12.5px; }
+.tr-tbl { border: 1.5px solid var(--cream-border); border-radius: 10px; overflow: hidden; }
+.tr-row { display: grid; grid-template-columns: minmax(0,1.3fr) minmax(0,1fr) minmax(0,1fr) 64px; gap: 10px; align-items: baseline; padding: 7px 12px; border-bottom: 1px solid var(--cream-border); font-size: 13.5px; }
+.tr-row:last-child { border-bottom: 0; }
+.tr-row.h { background: var(--cream); font-size: 12px; color: var(--ink-lighter); padding: 6px 12px; }
+.tr-row .r { text-align: right; font-variant-numeric: tabular-nums; }
+.tr-row small { display: block; font-size: 12px; color: var(--ink-lighter); }
+.tr-row.cont { padding-top: 0; }
+.tr-row.more { border-bottom: 0; }
+.tr-row .gone { color: var(--ink-lighter); font-style: italic; }
+.tr-row.fw { grid-template-columns: 100px minmax(0,1fr) 56px 70px; }
+.tr-row a { color: var(--bark-dark); }
+.tr-kits { font-size: 12.5px; color: var(--ink-light); }
+.bp-acts { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 2px; }
 .bp-lnk { border: 0; background: none; color: var(--ink-light); font: inherit; font-size: 13px; padding: 4px 6px; border-radius: 6px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
 .bp-lnk:hover { background: var(--cream-dark); color: var(--ink); }
 .bp-lnk .ps-i { width: 15px; height: 15px; }
@@ -438,7 +462,7 @@ body.ps-shell .pkg-builder-hdr .field input { width: 100%; min-width: 0; }
     <option value="production">Production only</option>
     <option value="test">Tests only</option>
   </select>
-  <div class="bl-search"><label class="ps-search"><span data-ps-icon="search"></span><input type="search" id="search" placeholder="Search by formulation, batch name or notes" aria-label="Search batches" oninput="renderList()"></label></div>
+  <div class="bl-search"><label class="ps-search"><span data-ps-icon="search"></span><input type="search" id="search" placeholder="Search by lot code, formulation, batch name or notes" aria-label="Search batches" oninput="renderList()"></label></div>
 
   <div class="ps-table-wrap">
     <table class="ps-table bl-table">
@@ -479,7 +503,12 @@ body.ps-shell .pkg-builder-hdr .field input { width: 100%; min-width: 0; }
         </div>
         <div class="field">
           <label for="f-date">Date made</label>
-          <input type="date" id="f-date">
+          <input type="date" id="f-date" onchange="onNewDate()">
+        </div>
+        <div class="field">
+          <label for="f-lot">Lot code</label>
+          <input type="text" id="f-lot" class="lot-inp" maxlength="20" autocomplete="off" spellcheck="false" oninput="newLotTouched=true;checkNewLot()" title="From the date made, with a letter for a second batch that day. You can change it.">
+          <div class="lot-err" id="f-lot-err"></div>
         </div>
         <div class="field n">
           <label for="f-yield">Yield (g)</label>
@@ -564,6 +593,7 @@ body.ps-shell .pkg-builder-hdr .field input { width: 100%; min-width: 0; }
         <button type="button" class="ps-tab on" id="bt-details" onclick="setBatchTab('details')">Details</button>
         <button type="button" class="ps-tab" id="bt-ings" onclick="setBatchTab('ings')">Ingredients<span class="bp-ct" id="bt-ings-ct"></span></button>
         <button type="button" class="ps-tab" id="bt-runs" onclick="setBatchTab('runs')">Filled<span class="bp-ct" id="bt-runs-ct"></span></button>
+        <button type="button" class="ps-tab" id="bt-trace" onclick="setBatchTab('trace')">Trace</button>
       </div>
 
       <div class="bp-pane" id="bp-details">
@@ -576,6 +606,11 @@ body.ps-shell .pkg-builder-hdr .field input { width: 100%; min-width: 0; }
           <div class="field">
             <label for="d-date">Date made</label>
             <input type="date" id="d-date" oninput="detDirty()">
+          </div>
+          <div class="field">
+            <label for="d-lot">Lot code</label>
+            <input type="text" id="d-lot" class="lot-inp" maxlength="20" autocomplete="off" spellcheck="false" oninput="detDirty();checkDetLot()">
+            <div class="lot-err" id="d-lot-err"></div>
           </div>
           <div class="field n">
             <label for="d-yield">Yield (g)</label>
@@ -629,10 +664,14 @@ body.ps-shell .pkg-builder-hdr .field input { width: 100%; min-width: 0; }
         <div class="bp-note">What went into this batch, locked when it was made. Changing the formulation later does not change it. Costs are at today's lot prices.</div>
         <div id="d-snapshot"></div>
         <div id="d-cost-rollup"></div>
-        <details class="bp-rcpt" id="d-receipt-hdr" style="display:none">
-          <summary>Which lots it came from</summary>
-          <div id="d-receipt" style="display:none"></div>
-        </details>
+        <div class="bp-note" id="d-trace-pointer" hidden>Which supplier lots it came from is on the Trace tab.</div>
+      </div>
+
+      <div class="bp-pane" id="bp-trace" hidden>
+        <!-- Trace (2026-10-20): back to the supplier lots that went in,
+             forward to what was filled from it. For the moment a customer
+             names a lot code. -->
+        <div id="d-trace"></div>
       </div>
 
       <div class="bp-pane" id="bp-runs" hidden>
@@ -736,6 +775,8 @@ function loadData() {
     if (!b.lotDraws) b.lotDraws = [];
     if (!b.packagingDraws) b.packagingDraws = [];
   });
+  // Lot codes and versions for batches made before 2026-10-20.
+  if (Plume.migrateBatches(batches, forms, products)) saveBatches();
   autoReadyCured();
   restoreBlView();
   renderStats();
@@ -974,7 +1015,7 @@ function renderList() {
   var rows = batches.filter(function(b) {
     if (typeFilt && b.batchType !== typeFilt) return false;
     if (search) {
-      var hay = ((b.formulaName||'') + ' ' + (b.batchName||'') + ' ' + (b.notes||'')).toLowerCase();
+      var hay = ((b.formulaName||'') + ' ' + (b.batchName||'') + ' ' + (b.notes||'') + ' ' + (b.lotCode||'')).toLowerCase();
       if (hay.indexOf(search) < 0) return false;
     }
     return true;
@@ -1080,7 +1121,7 @@ function rowHtml(b) {
     ? '<div class="ps-name">' + esc(b.batchName) + '</div><div class="ps-sub">' + esc(b.formulaName || '') + '</div>'
     : '<div class="ps-name">' + esc(b.formulaName || '(no formula)') + '</div>' + (f && f.type ? '<div class="ps-sub">' + esc(f.type) + '</div>' : '');
   return '<tr class="bl-row' + (b.status === 'depleted' ? ' dim' : '') + (b.status === 'discarded' ? ' discarded' : '') + '" onclick="openBatchDetail(\'' + b.id + '\')">' +
-    '<td>' + fmtDate(b.date) + '</td>' +
+    '<td class="bl-date">' + fmtDate(b.date) + (b.lotCode ? '<div>' + Plume.lotChip(b.lotCode) + '</div>' : '') + '</td>' +
     '<td>' + nameDisplay + '</td>' +
     '<td class="ps-num">' + (b.actualYield || b.targetYield || '--') + ' g' +
       (b.finalPh ? '<div class="yield-ph">' + Plume.phBadge(b.finalPh, b.finalPhMethod, batchPhTarget(b).min, batchPhTarget(b).max) + '</div>' : '') +
@@ -1115,6 +1156,9 @@ function openNewBatch() {
   // Reset form
   document.getElementById('f-formula').value = '';
   document.getElementById('f-date').value    = todayISO();
+  newLotTouched = false;
+  document.getElementById('f-lot').value     = Plume.nextLotCode(todayISO(), batches, products);
+  document.getElementById('f-lot-err').textContent = '';
   document.getElementById('f-yield').value   = '';
   document.getElementById('f-type-sel').value = 'production';
   document.getElementById('f-cure').value     = '4';
@@ -1130,6 +1174,26 @@ function openNewBatch() {
   newFormula = null;
   blSyncPills();
   openModal('m-new');
+}
+
+// The lot code follows the date until she types her own.
+var newLotTouched = false;
+function onNewDate() {
+  if (!newLotTouched) document.getElementById('f-lot').value = Plume.nextLotCode(document.getElementById('f-date').value || todayISO(), batches, products);
+  checkNewLot();
+}
+function checkNewLot() {
+  var r = Plume.lotCheck(document.getElementById('f-lot').value, batches, null);
+  document.getElementById('f-lot-err').textContent = r.error || '';
+  return r;
+}
+
+// The version a new batch is made from: the one in use. Its name, for the
+// hint and the record.
+function newVariant(f) {
+  var v = f ? Plume.findVariant(f, f.activeVariantId) : null;
+  if (!v && f && f.variants && f.variants.length) v = f.variants[0];
+  return v;
 }
 
 function onFormulaChange() {
@@ -1150,6 +1214,7 @@ function onFormulaChange() {
   var bits = [];
   if (newFormula.type)   bits.push(newFormula.type.replace('-',' '));
   if (newFormula.status) bits.push('status: ' + newFormula.status);
+  if ((newFormula.variants || []).length > 1 && newVariant(newFormula)) bits.push('makes ' + Plume.varTitle(newVariant(newFormula)) + ', the version in use');
   hint.textContent = bits.join(' \u00b7 ');
   hint.style.display = bits.length ? 'block' : 'none';
   // Default batch type from formula status
@@ -1427,6 +1492,9 @@ function saveBatch() {
   if (!batchName) {
     batchName = (newFormula.name || 'Batch') + ' -- ' + date;
   }
+  var lot = checkNewLot();
+  if (lot.error) { document.getElementById('f-lot').focus(); return; }
+  var nv = newVariant(newFormula);
 
   var ingredientSnapshot = newPreview.map(function(p) {
     return {
@@ -1454,6 +1522,9 @@ function saveBatch() {
     notes:             notes,
     phMin:             newFormula.phMin || '',
     phMax:             newFormula.phMax || '',
+    lotCode:           lot.code,
+    variantId:         nv ? nv.vid : '',
+    variantLabel:      nv ? Plume.varTitle(nv) : '',
     ingredientSnapshot: ingredientSnapshot,
     packagingRuns:     [],
     committed:         false,
@@ -1486,6 +1557,14 @@ function saveBatch() {
   batches.push(b);
   saveIngredients();
   savePackaging();
+  // The journal entry on the version it was made from (her pick,
+  // 2026-10-20): it identifies the batch in the journal, and the journal
+  // holds the thinking the batch record does not need.
+  if (nv) {
+    var entry = Plume.journalEntryFor(b);
+    var saved = Plume.journalAdd(b.formulaId, nv.vid, entry);
+    if (saved) { forms = saved; b.journalId = entry.id; }
+  }
   saveBatches();
   closeModal('m-new');
   renderStats();
@@ -1555,6 +1634,8 @@ function openBatchDetail(id) {
   document.getElementById('d-type-sel').value = b.batchType || 'production';
   document.getElementById('d-name').value     = b.batchName || '';
   document.getElementById('d-name').placeholder = b.formulaName || 'Batch';
+  document.getElementById('d-lot').value      = b.lotCode || '';
+  document.getElementById('d-lot-err').textContent = '';
   document.getElementById('d-notes').value    = b.notes || '';
 
   // Final pH: shown for a water-based batch, or one that already has a reading.
@@ -1584,9 +1665,9 @@ function openBatchDetail(id) {
   renderFills(b);
   renderPackagingRuns(b);
 
-  // Commit state + receipt
+  // Commit state; trace (back to supplier lots, forward to fills)
   renderCommitBar(b);
-  renderReceipt(b);
+  renderTrace(b);
   // Clear any stale commit-blocked message from previous opens
   var box = document.getElementById('d-commit-msg');
   if (box) { box.style.display = 'none'; box.innerHTML = ''; }
@@ -1602,14 +1683,30 @@ function openBatchDetail(id) {
 // The panel's header line: formulation (a link to it), date, status.
 function renderDetailMeta(b) {
   var parts = [];
+  if (b.lotCode) parts.push(Plume.lotChip(b.lotCode));
   if (b.formulaName) {
     parts.push(findFormula(b.formulaId)
       ? '<a href="plume-formulations.html#f=' + encodeURIComponent(b.formulaId) + '" target="plume-formulations">' + esc(b.formulaName) + '</a>'
       : '<span>' + esc(b.formulaName) + '</span>');
   }
+  parts.push('<span class="d-ver">' + (b.variantLabel ? esc(b.variantLabel) : '<span class="ps-muted">version not recorded</span>') + '</span>');
   parts.push('<span>' + fmtDate(b.date) + '</span>');
   parts.push(statusBadgeHtml(b));
-  document.getElementById('d-meta').innerHTML = parts.join('<span aria-hidden="true">&middot;</span>');
+  var acts = [];
+  if (journalLink(b)) acts.push('<a class="bp-lnk" id="d-journal" href="' + journalLink(b) + '" target="plume-formulations">' + Plume.icon('note') + 'Journal entry</a>');
+  if (b.lotCode) acts.push('<a class="bp-lnk" id="d-lot-sticker" href="plume-costing.html#lot=' + encodeURIComponent(b.id) + '" target="plume-costing">' + Plume.icon('print') + 'Lot sticker</a>');
+  document.getElementById('d-meta').innerHTML = parts.join('<span aria-hidden="true">&middot;</span>') +
+    (acts.length ? '<div class="bp-acts" style="flex-basis:100%">' + acts.join('') + '</div>' : '');
+}
+// The journal entry Make batch wrote, when the batch has one.
+function journalLink(b) {
+  if (!b || !b.journalId || !b.variantId || !findFormula(b.formulaId)) return '';
+  return 'plume-formulations.html#f=' + encodeURIComponent(b.formulaId) + '&v=' + encodeURIComponent(b.variantId) + '&j=' + encodeURIComponent(b.journalId);
+}
+function checkDetLot() {
+  var r = Plume.lotCheck(document.getElementById('d-lot').value, batches, editingBatchId);
+  document.getElementById('d-lot-err').textContent = r.error || '';
+  return r;
 }
 // Status is set by hand from these pills (curing soap also turns Ready by
 // itself on its date). A change saves at once, like Mark ready did. The
@@ -1669,7 +1766,7 @@ function renderCuringNote(b) {
 var batchTab = 'details';
 function setBatchTab(t) {
   batchTab = t;
-  ['details', 'ings', 'runs'].forEach(function(k) {
+  ['details', 'ings', 'runs', 'trace'].forEach(function(k) {
     document.getElementById('bt-' + k).classList.toggle('on', k === t);
     document.getElementById('bp-' + k).hidden = (k !== t);
   });
@@ -1723,47 +1820,76 @@ function renderCommitBar(b) {
   }
 }
 
-function renderReceipt(b) {
-  var hdr  = document.getElementById('d-receipt-hdr');
-  var wrap = document.getElementById('d-receipt');
-  var draws = b.lotDraws || [];
-  if (!b.committed || !draws.length) {
-    hdr.style.display = 'none';
-    wrap.style.display = 'none';
-    return;
-  }
-  hdr.style.display  = '';
-  wrap.style.display = '';
-  setBatchTabCounts(b);
-  // Group by ingredient so multi-lot draws show together
-  var byIng = {};
-  var order = [];
-  draws.forEach(function(d) {
-    if (!byIng[d.ingredientId]) {
-      byIng[d.ingredientId] = { name: d.ingredientName, totalG: 0, rows: [] };
-      order.push(d.ingredientId);
-    }
-    byIng[d.ingredientId].totalG += d.grams;
-    byIng[d.ingredientId].rows.push(d);
-  });
-  var html = '<div class="receipt-wrap">';
-  order.forEach(function(id) {
-    var ig = byIng[id];
-    ig.rows.forEach(function(d, idx) {
-      var showName = (idx === 0);
-      var ingCell = showName
-        ? '<div><span class="rcpt-ing">' + esc(ig.name) + '</span>' +
-          '<span class="rcpt-lot">' + esc(d.lotLabel || 'lot') + '</span></div>'
-        : '<div><span class="rcpt-ing" style="color:var(--ink-lighter)">&nbsp;</span>' +
-          '<span class="rcpt-lot">' + esc(d.lotLabel || 'lot') + '</span></div>';
-      html += '<div class="receipt-row">' + ingCell +
-        '<span class="rcpt-g">' + d.grams.toFixed(2) + ' g</span>' +
-        '<span class="rcpt-native">' + (d.nativeQty ? (d.nativeQty.toFixed(3) + ' ' + (d.nativeUnit || 'g')) : '') + '</span>' +
-        '</div>';
+// ── Trace (2026-10-20) ──
+// Back: the supplier lots that went in, from the batch's own record of
+// what it took (lotDraws), with supplier, lot number and date received
+// read from the lot as it is now. Forward: every fill from this batch, and
+// the kits those products go into. For the moment a customer names a lot.
+function traceLot(d) {
+  var ing = findIng(d.ingredientId);
+  var lots = (ing && ing.lots) || [];
+  for (var i = 0; i < lots.length; i++) if (lots[i].id === d.lotId) return lots[i];
+  return null;
+}
+function renderTrace(b) {
+  var box = document.getElementById('d-trace');
+  if (!box) return;
+  var draws = b.committed ? (b.lotDraws || []) : [];
+  var html = '<div class="tr-sec"><div class="tr-h"><h3>What went into it</h3><span class="ps-muted">supplier lots</span></div>';
+  if (!draws.length) {
+    html += '<div class="bp-note">No supplier lots were recorded for this batch.</div>';
+  } else {
+    html += '<div class="bp-note">This is Plume’s first-in-first-out record: it takes the oldest lot of each ingredient first. If you mixed lots at the bench, your own notes are the better record.</div>';
+    // Grouped by ingredient, so an ingredient drawn from two lots reads as one.
+    var byIng = {}, order = [];
+    draws.forEach(function(d) {
+      var k = d.ingredientId || d.ingredientName;
+      if (!byIng[k]) { byIng[k] = { name: d.ingredientName, rows: [] }; order.push(k); }
+      byIng[k].rows.push(d);
     });
-  });
+    html += '<div class="tr-tbl"><div class="tr-row h"><span>Ingredient</span><span>Supplier</span><span>Supplier lot</span><span class="r">Grams</span></div>';
+    order.forEach(function(k) {
+      byIng[k].rows.forEach(function(d, i) {
+        var lot = traceLot(d);
+        var sup = lot ? (lot.supplier ? esc(lot.supplier) : '<span class="ps-muted">--</span>') : '<span class="gone">lot since deleted</span>';
+        var num = lot ? (lot.lotNum ? esc(lot.lotNum) : '<span class="ps-muted">no lot number</span>') : esc(d.lotLabel || '');
+        var rcv = lot && (lot.received || lot.receivedDate);
+        var more = i < byIng[k].rows.length - 1;
+        html += '<div class="tr-row' + (i ? ' cont' : '') + (more ? ' more' : '') + '"><span>' + (i ? '' : esc(byIng[k].name || '')) + '</span>' +
+          '<span>' + sup + '</span><span>' + num + (rcv ? '<small>received ' + fmtDate(rcv) + '</small>' : '') + '</span>' +
+          '<span class="r">' + Plume.fmtG(d.grams) + '</span></div>';
+      });
+    });
+    html += '</div>';
+  }
   html += '</div>';
-  wrap.innerHTML = html;
+
+  var fills = Plume.batchFills(b.id, products);
+  html += '<div class="tr-sec"><div class="tr-h"><h3>Where it went</h3><span class="ps-muted">fills from this batch</span></div>';
+  if (!fills.length) {
+    html += '<div class="bp-note">Nothing filled from this batch yet.</div>';
+  } else {
+    html += '<div class="tr-tbl"><div class="tr-row fw h"><span>Date</span><span>Product</span><span class="r">Units</span><span class="r">Grams</span></div>' +
+      fills.map(function(f) {
+        return '<div class="tr-row fw"><span>' + fmtDate(f.run.date) + '</span><span><a href="' + costingLink(f.product.id) + '" target="plume-costing">' + esc(f.product.name || '(unnamed)') + '</a>' +
+          (f.run.notes ? '<small>' + esc(f.run.notes) + '</small>' : '') + '</span>' +
+          '<span class="r">' + (parseInt(f.run.units, 10) || 0) + '</span><span class="r">' + (f.grams ? Plume.fmtG(f.grams) : '--') + '</span></div>';
+      }).join('') + '</div>';
+    // Kits record products, not lots, so a kit only MAY hold this lot.
+    var seen = {}, kits = [];
+    fills.forEach(function(f) {
+      Plume.kitsUsing(f.product.id, products).forEach(function(k) { if (!seen[k.id]) { seen[k.id] = true; kits.push(k); } });
+    });
+    if (kits.length) {
+      html += '<div class="tr-kits">These products also go into ' + kits.map(function(k) {
+        return '<a href="' + costingLink(k.id) + '" target="plume-costing">' + esc(k.name || '(unnamed kit)') + '</a>';
+      }).join(', ') + '. A kit records which products it holds, not which lot they came from, so a kit built after this fill may hold this lot.</div>';
+    }
+  }
+  html += '</div>';
+  box.innerHTML = html;
+  var ptr = document.getElementById('d-trace-pointer');
+  if (ptr) ptr.hidden = !draws.length;
 }
 
 // Dispatcher: the commit button toggles between commit and decommit
@@ -1936,7 +2062,7 @@ function renderFills(b) {
   var fills = Plume.batchFills(b.id, products);
   var closed = b.status === 'discarded' || b.status === 'depleted';
   var pct = made ? Math.max(0, Math.min(100, Math.round(left / made * 100))) : 0;
-  var html = '<div class="bulk-card"><div><div class="lbl">Bulk left</div>' +
+  var html = '<div class="bulk-card"><div><div class="lbl">Bulk left' + (b.lotCode ? ' &middot; ' + Plume.lotChip(b.lotCode) : '') + '</div>' +
       '<div class="big' + (left < 0 ? ' neg' : '') + '">' + Plume.fmtG(left) + ' <small>of ' + Plume.fmtG(made) + ' made</small></div>' +
       '<span class="left-bar" aria-hidden="true"><i style="width:' + pct + '%"></i></span></div></div>';
   if (b.status === 'depleted') {
@@ -2229,6 +2355,8 @@ function saveBatchEdits() {
   var cureWks = soap ? parseInt(document.getElementById('d-cure').value, 10) || 4 : null;
 
   if (!yieldG || yieldG <= 0) { Plume.tell('Yield must be greater than zero.'); return; }
+  var lot = checkDetLot();
+  if (lot.error) { setBatchTab('details'); document.getElementById('d-lot').focus(); return; }
 
   var ph = Plume.parsePh(document.getElementById('d-ph').value);
   if (ph === null) {
@@ -2242,6 +2370,7 @@ function saveBatchEdits() {
   else    { delete b.finalPh; delete b.finalPhMethod; }
 
   b.date        = date;
+  b.lotCode     = lot.code;
   b.actualYield = yieldG;
   b.targetYield = b.targetYield || yieldG;  // preserve original target if present
   b.batchName   = name || (b.formulaName || 'Batch') + ' -- ' + date;
@@ -2740,8 +2869,10 @@ function deleteBatch() {
   var fills = Plume.batchFills(b.id, products);
   if (fills.length) {
     msg += fills.length + ' fill' + (fills.length === 1 ? '' : 's') + ' came from this batch. ' + (fills.length === 1 ? 'It stays' : 'They stay') +
-      ' on ' + (fills.length === 1 ? 'its product' : 'their products') + ', and the packaging stays out of stock.\n\n';
+      ' on ' + (fills.length === 1 ? 'its product' : 'their products') + ', and the packaging stays out of stock' +
+      (b.lotCode ? '. ' + (fills.length === 1 ? 'It keeps' : 'They keep') + ' lot code ' + b.lotCode : '') + '.\n\n';
   }
+  if (b.journalId) msg += 'Its journal entry stays on the formulation, marked as from a deleted batch.\n\n';
   msg += 'This cannot be undone.';
 
   var id = b.id;

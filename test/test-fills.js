@@ -122,8 +122,8 @@ const PRODUCTS = [
   await page.goto(previewUrl('costing')); await page.waitForTimeout(500);
   await page.evaluate("openProduct('p10'); setEdTab('runs')"); await page.waitForTimeout(200);
   const opts = await page.evaluate("Array.from(document.getElementById('run-b0').options).map(o => (o.selected ? '*' : '') + o.textContent)");
-  ok('batches are listed oldest first, the oldest with bulk chosen; Used up and discarded left out', opts.length === 3 &&
-     /^\*Serum, September · 40 g left/.test(opts[0]) && /^Serum, October · 200 g left/.test(opts[1]) && opts[2] === 'Not from a logged batch', opts);
+  ok('batches are listed oldest first by lot code, the oldest with bulk chosen; Used up and discarded left out', opts.length === 3 &&
+     /^\*Lot 2609\w* · Serum, September · 40 g left/.test(opts[0]) && /^Lot 261017 · Serum, October · 200 g left/.test(opts[1]) && opts[2] === 'Not from a logged batch', opts);
   const takes = () => page.evaluate("document.getElementById('run-takes').innerText.replace(/\\s+/g, ' ')");
   ok('before units, Add fill waits', await page.evaluate("document.getElementById('run-add').disabled") && /Type the units/.test(await takes()));
   await page.fill('#run-units', '3');
