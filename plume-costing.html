@@ -115,7 +115,7 @@ main { max-width:1240px; margin:0 auto; padding:24px 22px 60px; }
 
 /* ── Production runs ── */
 .runs-list { background:var(--white); border:1px solid var(--cream-border); border-radius:3px; }
-.run-row { display:grid; grid-template-columns:100px 80px 1fr 1fr 30px; gap:10px; padding:7px 12px; border-bottom:1px solid var(--cream-dark); align-items:center; font-size:12px; }
+.run-row { display:grid; grid-template-columns:100px 60px minmax(0,1.3fr) minmax(0,1fr) 30px; gap:10px; padding:7px 12px; border-bottom:1px solid var(--cream-dark); align-items:center; font-size:12px; }
 .run-row:last-child { border-bottom:none; }
 .run-row .rr-date { color:var(--ink-light); font-variant-numeric:tabular-nums; }
 .run-row .rr-qty { font-variant-numeric:tabular-nums; color:var(--ink); font-weight:500; text-align:right; }
@@ -332,11 +332,22 @@ body.ps-shell .field input:focus, body.ps-shell .field select:focus, body.ps-she
 .ph-cell-actions button { font-size: 11.5px; border-radius: 6px; padding: 2px 6px; }
 .ph-empty { padding: 6px 0; font-style: normal; text-align: left; font-size: 12.5px; }
 
-/* Label / Production runs / Notes tabs */
-.ed-tabs .ps-toolbar { margin-top: 0; }
-.et-ct { color: var(--ink-lighter); font-weight: 400; margin-left: 5px; font-size: 13px; }
+/* Label / Fills / Notes tabs: a filled bar in the palette's darkest tone,
+   so they read as the three parts of the product (her item 5, 2026-10-19). */
+.ed-tabs { margin-top: 6px; }
+.ed-tabs .ps-toolbar.ed-tabbar { margin: 0; flex-wrap: nowrap; gap: 4px; padding: 4px; border: 0; border-radius: 11px; background: color-mix(in srgb, var(--bark) 13%, var(--white)); }
+.ed-tabbar .ps-tab { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 600; color: var(--bark-dark); padding: 8px 12px; margin: 0; border: 0; border-radius: 8px; }
+.ed-tabbar .ps-tab:hover { background: color-mix(in srgb, var(--bark) 20%, var(--white)); color: var(--bark-dark); }
+.ed-tabbar .ps-tab.on { background: var(--bark); color: var(--white); box-shadow: 0 1px 2px rgba(20,20,15,.12); }
+.ed-tabbar .ps-tab.on .et-ct { color: color-mix(in srgb, var(--white) 75%, transparent); }
+.et-ct { color: var(--ink-lighter); font-weight: 500; margin-left: 6px; font-size: 13px; }
 .et-ct:empty { display: none; }
-.ed-pane { padding-top: 12px; }
+.ed-pane { padding-top: 14px; }
+.runs-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.runs-head .ps-grow { flex: 1; }
+.runs-head .runs-sum { margin: 0; font-size: 13.5px; }
+.run-row .rr-batch small, .run-row .rr-notes small { display: block; color: var(--ink-lighter); font-size: 12px; }
+.run-row .rr-old { color: var(--ink-lighter); font-size: 12px; }
 .lbl-modes { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 10px; }
 .lbl-modes .ps-chip input { position: absolute; opacity: 0; pointer-events: none; }
 .lbl-modes .ps-chip:has(input:checked) { background: var(--ink); color: var(--white); border-color: var(--ink); }
@@ -348,7 +359,9 @@ body.ps-shell .label-box { border: 1.5px solid var(--cream-border); border-radiu
 body.ps-shell .label-box-hdr-l, body.ps-shell .label-section-name { font-size: 11.5px; letter-spacing: 0; text-transform: none; font-weight: 500; }
 body.ps-shell .label-content { font-family: 'DM Sans', sans-serif; font-size: 13.5px; line-height: 1.55; }
 body.ps-shell .label-merge-note { font-size: 12px; border-radius: 8px; }
-body.ps-shell .runs-list { border: 1.5px solid var(--cream-border); border-radius: 10px 10px 0 0; border-bottom: 0; overflow: hidden; }
+body.ps-shell .runs-list { border: 1.5px solid var(--cream-border); border-radius: 10px; overflow: hidden; }
+body.ps-shell .runs-list .empty-row { padding: 12px 14px; font-size: 13.5px; line-height: 1.5; color: var(--ink-lighter); }
+body.ps-shell .runs-list .run-row.h { background: var(--cream); font-size: 12px; color: var(--ink-lighter); padding: 6px 12px; }
 body.ps-shell .run-row { font-size: 14px; padding: 8px 12px; border-bottom: 1px solid var(--cream-border); }
 body.ps-shell .run-row .rr-batch, body.ps-shell .run-row .rr-notes { font-size: 13px; font-style: normal; }
 body.ps-shell .run-add-row { margin-top: 0; border: 1.5px solid var(--cream-border); border-radius: 0 0 10px 10px; background: var(--cream); }
@@ -458,9 +471,9 @@ details.bc-tips .bc-note { border: 0; padding: 6px 0 0; margin: 0; font-size: 12
   .pkg-recipe-row, .pkg-recipe-hdr { grid-template-columns: 1fr 56px 70px 26px; gap: 6px; }
   .comp-recipe-row, .comp-recipe-hdr { grid-template-columns: 1fr 60px 70px 26px; gap: 6px; }
   .comp-recipe-row > :nth-child(3), .comp-recipe-hdr > :nth-child(3) { display: none; }
-  .run-row { grid-template-columns: 84px 50px 1fr 26px !important; }
+  .run-row { grid-template-columns: 84px 44px 1fr 26px !important; }
   .run-row > .rr-notes { display: none; }
-  .run-add-row { grid-template-columns: 1fr 1fr !important; }
+  .ed-tabbar .ps-tab { font-size: 14px; padding: 7px 6px; }
 }
 @media print { .ps-side, .fe-top { display: none !important; } body.ps-shell { padding-left: 0 !important; } }
 </style>
@@ -615,9 +628,9 @@ details.bc-tips .bc-note { border: 0; padding: 6px 0 0; margin: 0; font-size: 12
 
         <!-- Label, production runs and notes: tabs under the recipe -->
         <section class="ed-tabs">
-          <div class="ps-toolbar">
+          <div class="ps-toolbar ed-tabbar" role="tablist">
             <button type="button" class="ps-tab on" id="pt-label" onclick="setEdTab('label')">Label</button>
-            <button type="button" class="ps-tab" id="pt-runs" onclick="setEdTab('runs')">Production runs<span class="et-ct" id="pt-runs-ct"></span></button>
+            <button type="button" class="ps-tab" id="pt-runs" onclick="setEdTab('runs')">Fills<span class="et-ct" id="pt-runs-ct"></span></button>
             <button type="button" class="ps-tab" id="pt-notes" onclick="setEdTab('notes')">Notes<span class="et-ct" id="pt-notes-ct"></span></button>
           </div>
 
@@ -640,29 +653,14 @@ details.bc-tips .bc-note { border: 0; padding: 6px 0 0; margin: 0; font-size: 12
           </div>
 
           <div class="ed-pane" id="pp-runs" hidden>
-            <div class="runs-list" id="runs-list"></div>
-            <div class="run-add-row">
-              <div class="field">
-                <label for="run-date">Date</label>
-                <input type="date" id="run-date">
-              </div>
-              <div class="field">
-                <label for="run-units">Units</label>
-                <input type="number" id="run-units" min="1" step="1" placeholder="e.g. 12">
-              </div>
-              <div class="field">
-                <label for="run-batch">From batch (optional)</label>
-                <select id="run-batch">
-                  <option value="">-- No batch linked --</option>
-                </select>
-              </div>
-              <div class="field">
-                <label for="run-notes">Notes</label>
-                <input type="text" id="run-notes" placeholder="Optional">
-              </div>
-              <button type="button" class="ps-btn-primary" onclick="addRun()"><span data-ps-icon="plus"></span>Add run</button>
+            <!-- A fill counts the units, takes the packaging list out of
+                 stock and the grams from the batch (2026-10-19). -->
+            <div class="runs-head">
+              <div class="runs-sum" id="runs-summary"></div>
+              <span class="ps-grow"></span>
+              <button type="button" class="ps-btn-primary" id="run-fill-btn" onclick="openProductFill()"><span data-ps-icon="plus"></span>Fill</button>
             </div>
-            <div class="runs-sum" id="runs-summary"></div>
+            <div class="runs-list" id="runs-list"></div>
           </div>
 
           <div class="ed-pane" id="pp-notes" hidden>
@@ -2500,9 +2498,6 @@ function openProduct(id) {
   document.getElementById('lbl-override-on').checked = !!p.labelOverrideOn;
   document.getElementById('lbl-override-wrap').style.display = p.labelOverrideOn ? '' : 'none';
   document.getElementById('p-label-override').value = p.labelOverrideText || '';
-  document.getElementById('run-date').value = todayISO();
-  document.getElementById('run-units').value = '';
-  document.getElementById('run-notes').value = '';
 
   applyKindVisibility(kind);
   renderComponents(p);
@@ -2685,7 +2680,7 @@ function renderPkgRecipe(p) {
   });
   body.innerHTML = html;
   // Core's packaging picker (v1.22), same as in Batches.
-  Plume.pkPickers(body, pkgs);
+  Plume.pkPickers(body, pkgs, { stock: false });
 }
 
 function addPkgRecipeRow() {
@@ -3150,99 +3145,100 @@ function fallbackCopy(text) {
 }
 
 // ──────────────────────────────────────────────────────────────────────
-// Production runs
+// Fills (production)
 // ──────────────────────────────────────────────────────────────────────
+// A fill counts units, takes this product's packaging list out of stock
+// and takes the grams from the batch it came from (core's Plume.openFill
+// does the work; Batches opens the same panel from a batch). Runs logged
+// before 2026-10-19 show as older runs: they took no packaging.
+function runBatchText(r, p) {
+  var draws = Plume.fillDraws(r, p);
+  var ids = draws.length ? draws.map(function(d) { return d.batchId; }) : (r.batchId ? [r.batchId] : []);
+  var g = 0;
+  draws.forEach(function(d) { g += parseFloat(d.grams) || 0; });
+  var names = ids.map(function(id) {
+    var b = null;
+    for (var i = 0; i < batches.length; i++) if (batches[i].id === id) { b = batches[i]; break; }
+    return b ? Plume.batchLabel(b) : '(deleted batch)';
+  });
+  if (!names.length) return '<span style="color:var(--ink-lighter)">--</span>';
+  return esc(names.join(' + ')) + (g > 0 ? '<small>' + Plume.fmtG(g) + '</small>' : '');
+}
 function renderRuns(p) {
   if (!p) return;
   var runs = p.productionRuns || [];
-
-  var bsel = document.getElementById('run-batch');
-  bsel.innerHTML = '<option value="">-- No batch linked --</option>';
-  if (p.formulaId) {
-    // A discarded batch never became product, so it is not offered.
-    var relevant = batches.filter(function(b) { return b.formulaId === p.formulaId && b.status !== 'discarded'; });
-    relevant.sort(function(a, b) { return (b.date || '').localeCompare(a.date || ''); });
-    relevant.forEach(function(b) {
-      var label = (b.batchName || b.formulaName || 'Batch') + ' -- ' + fmtDate(b.date);
-      if (b.actualYield) label += ' (' + b.actualYield + 'g)';
-      bsel.innerHTML += '<option value="' + b.id + '">' + esc(label) + '</option>';
-    });
-  }
-
   var list = document.getElementById('runs-list');
   var summary = document.getElementById('runs-summary');
   if (!runs.length) {
-    list.innerHTML = '<div class="empty-row">No production runs logged yet.</div>';
+    list.innerHTML = '<div class="empty-row">Nothing filled yet. A fill counts the units, takes the packaging list out of stock, and takes the grams from the batch you poured from.</div>';
     summary.textContent = '';
     setTabCounts();
     return;
   }
   var totalUnits = 0;
-  var sorted = runs.slice().sort(function(a, b) { return (b.date || '').localeCompare(a.date || ''); });
-  var html = '';
+  var sorted = runs.slice().sort(function(a, b) { return (b.date || '').localeCompare(a.date || '') || (b.addedAt || '').localeCompare(a.addedAt || ''); });
+  var html = '<div class="run-row h"><span>Date</span><span class="rr-qty">Units</span><span>From</span><span>Notes</span><span></span></div>';
   sorted.forEach(function(r) {
     var qty = parseInt(r.units, 10) || 0;
     totalUnits += qty;
-    var batchTxt = '';
-    if (r.batchId) {
-      var b = null;
-      for (var i = 0; i < batches.length; i++) if (batches[i].id === r.batchId) { b = batches[i]; break; }
-      batchTxt = b ? (b.batchName || b.formulaName || 'Batch') : '(deleted batch)';
-    }
+    var pk = (r.packaging || []).map(function(c) { return c.quantity + ' ' + c.packagingName; }).join(', ');
     html += '<div class="run-row">' +
       '<span class="rr-date">' + fmtDate(r.date) + '</span>' +
       '<span class="rr-qty">' + qty + '</span>' +
-      '<span class="rr-batch">' + (batchTxt ? esc(batchTxt) : '<span style="color:var(--ink-lighter)">--</span>') + '</span>' +
-      '<span class="rr-notes">' + esc(r.notes || '') + '</span>' +
-      '<button class="rr-del" title="Delete run" onclick="deleteRun(\'' + r.id + '\')">&#x2715;</button>' +
+      '<span class="rr-batch">' + runBatchText(r, p) + '</span>' +
+      '<span class="rr-notes">' + esc(r.notes || '') +
+        (r.fill ? (pk ? '<small title="' + esc(pk) + '">took ' + (r.packaging.length === 1 ? '1 packaging item' : r.packaging.length + ' packaging items') + ' from stock</small>' : '')
+                : '<small class="rr-old">logged before fills; no packaging taken</small>') + '</span>' +
+      '<button class="rr-del" title="Undo this fill" aria-label="Undo this fill" onclick="deleteRun(\'' + r.id + '\')">&#x2715;</button>' +
       '</div>';
   });
   list.innerHTML = html;
-  summary.textContent = totalUnits + ' units across ' + runs.length + ' run' + (runs.length === 1 ? '' : 's');
+  summary.textContent = totalUnits + ' units across ' + runs.length + ' fill' + (runs.length === 1 ? '' : 's');
   setTabCounts();
 }
 
-function addRun() {
-  if (!curId) return;
-  var p = findProduct(curId); if (!p) return;
-  var date  = document.getElementById('run-date').value || todayISO();
-  var units = parseInt(document.getElementById('run-units').value, 10);
-  var batchId = document.getElementById('run-batch').value;
-  var notes = document.getElementById('run-notes').value.trim();
-  if (!units || units <= 0) { Plume.tell('Enter a positive number of units.'); return; }
-  if (!p.productionRuns) p.productionRuns = [];
-  p.productionRuns.push({
-    id:      uid(),
-    date:    date,
-    units:   units,
-    batchId: batchId || null,
-    notes:   notes,
-    addedAt: new Date().toISOString()
+function openProductFill() {
+  var p = curId ? findProduct(curId) : null;
+  if (!p || dirty) {
+    Plume.tell('Save the product first, so the fill uses its packaging list and formulation as saved.', { title: 'Save first' });
+    return;
+  }
+  // Fresh copies, in case Batches or Packaging changed in another tab.
+  batches = Store.getJSON(BATCH_KEY, []) || [];
+  pkgs    = Store.getJSON(PKG_KEY,   []) || [];
+  Plume.openFill({
+    mode: 'product', product: p,
+    products: products, batches: batches, pkgs: pkgs, forms: forms,
+    crumb: 'Products & Costing · ' + (p.name || '(unnamed)'),
+    onCommit: function(done) {
+      var okP = saveProducts(), okK = savePkgs();
+      if (curId === p.id) renderRuns(p);
+      renderList();
+      if (okP && okK) toast(done[0].run.units + ' filled');
+    }
   });
-  p.updatedAt = new Date().toISOString();
-  saveProducts();
-  renderRuns(p);
-  document.getElementById('run-units').value = '';
-  document.getElementById('run-notes').value = '';
-  document.getElementById('run-batch').value = '';
-  document.getElementById('run-date').value = todayISO();
-  toast('Run added');
+}
+function savePkgs() {
+  if (Store.setJSON(PKG_KEY, pkgs)) { Plume.noteSaveOk(); return true; }
+  Plume.noteSaveFailed();
+  return false;
 }
 
 function deleteRun(rid) {
   if (!curId) return;
   var p = findProduct(curId); if (!p) return;
-  if (!p.productionRuns) return;
   var run = null;
-  for (var i = 0; i < p.productionRuns.length; i++) if (p.productionRuns[i].id === rid) { run = p.productionRuns[i]; break; }
+  (p.productionRuns || []).forEach(function(r) { if (r.id === rid) run = r; });
   if (!run) return;
-  // The delete runs later, in the dialog's callback; p and rid are locals.
-  Plume.ask('Delete this production run? (' + run.units + ' units on ' + fmtDate(run.date) + ')', function() {
-    p.productionRuns = (p.productionRuns || []).filter(function(r) { return r.id !== rid; });
-    p.updatedAt = new Date().toISOString();
+  // The undo runs later, in the dialog's callback; p and rid are locals.
+  Plume.ask(Plume.undoFillText(p, run), function() {
+    pkgs = Store.getJSON(PKG_KEY, []) || [];
+    Plume.undoFill(p, rid, pkgs);
     saveProducts();
+    if (run.fill) savePkgs();
     if (curId === p.id) renderRuns(p);
-  }, { title: 'Delete this run?', yes: 'Delete', danger: true });
+    renderList();
+  }, { title: 'Undo this fill of ' + run.units + ' on ' + fmtDate(run.date) + '?', yes: 'Undo fill', danger: true });
 }
 
 

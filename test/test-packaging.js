@@ -274,7 +274,7 @@ const PRODUCTS = [
     await ctx.close();
   }
 
-  console.log('\n6. The picker in Batches and Products & Costing');
+  console.log('\n6. The picker in Products & Costing');
   {
     const tidy = [
       Object.assign({}, OLD[0], { kind: 'dropper', capacity: '1 oz', color: 'Amber', material: 'Glass', name: 'Dropper bottle · 1 oz · Amber glass' }),
@@ -286,28 +286,31 @@ const PRODUCTS = [
       ingredientSnapshot: [], packagingRuns: [], committed: true, committedAt: '2026-10-10T00:00:00.000Z', lotDraws: [], packagingDraws: [] };
     const data = { 'aerie-packaging-v2': tidy, 'plume-products-v1': PRODUCTS, 'aerie-batches-v1': [batch] };
     {
-      const { ctx, page, errors } = await open('batchlog', data);
-      await page.evaluate("openBatchDetail('b1'); setBatchTab('runs'); pendingRunReset();");
+      // Batches' run builder was retired for fills (2026-10-19), so the
+      // picker's list is checked here, in a product's packaging list.
+      const { ctx, page, errors } = await open('costing', data);
+      await page.evaluate("openProduct('pr2'); addPkgRecipeRow()");
       await page.waitForTimeout(150);
-      ok('Batches: the run builder shows the picker, the select hidden behind it',
-         await page.evaluate("!!document.querySelector('#d-pkg-builder-comps .pk-pick-btn') && document.querySelector('#d-pkg-builder-comps select').style.display === 'none'"));
-      await page.click('#d-pkg-builder-comps .pk-pick-btn');
+      const last = "Array.from(document.querySelectorAll('#pkg-recipe-body .pk-pick-btn')).pop()";
+      ok('a new packaging row shows the picker, the select hidden behind it',
+         await page.evaluate("!!" + last + " && Array.from(document.querySelectorAll('#pkg-recipe-body select[data-pk-pick]')).pop().style.display === 'none'"));
+      await page.evaluate(last + ".click()");
       await page.waitForTimeout(100);
       const groups = await page.evaluate("Array.from(document.querySelectorAll('.pk-pop-g')).map(function(e){return e.textContent})");
       ok('the list is grouped by kind, old items last', JSON.stringify(groups) === '["Dropper bottle","Product label","Needs sorting"]', groups);
-      ok('each line has a drawing and its stock', await page.evaluate("document.querySelectorAll('.pk-pop-i .pk-thumb svg').length === 4 && /24 in stock/.test(document.querySelector('.pk-pop-list').innerText)"));
+      ok('each line has a drawing, and no stock here (her call, 2026-10-19)', await page.evaluate("document.querySelectorAll('.pk-pop-i .pk-thumb svg').length === 4 && !/in stock/.test(document.querySelector('.pk-pop-list').innerText)"));
       await page.keyboard.type('blue');
       await page.waitForTimeout(80);
       ok('typing narrows it', await page.evaluate("document.querySelectorAll('.pk-pop-i').length") === 1);
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(80);
-      ok('Enter picks it, through the select, so the run records it', (await page.evaluate("pendingRun.components[0].packagingId")) === 'p2');
-      ok('the button shows the display name', /Dropper bottle · 1 oz · Blue glass/.test(await page.evaluate("document.querySelector('#d-pkg-builder-comps .pk-pick-btn').innerText")));
+      await page.waitForTimeout(120);
+      ok('Enter picks it, through the select, so the recipe records it', (await page.evaluate("findProduct('pr2').packagingRecipe.slice(-1)[0].packagingId")) === 'p2');
+      ok('the button shows the display name, without stock', await page.evaluate("var t=" + last + ".innerText; /Dropper bottle · 1 oz · Blue glass/.test(t) && !/in stock/.test(t)"));
       ok('the list has closed', await page.evaluate("!document.querySelector('.pk-pop')"));
-      await page.click('#d-pkg-builder-comps .pk-pick-btn');
+      await page.evaluate(last + ".click()");
       await page.waitForTimeout(80);
       await page.keyboard.press('Escape');
-      ok('Escape closes it without changing the pick', await page.evaluate("!document.querySelector('.pk-pop') && pendingRun.components[0].packagingId === 'p2'"));
+      ok('Escape closes it without changing the pick', await page.evaluate("!document.querySelector('.pk-pop') && findProduct('pr2').packagingRecipe.slice(-1)[0].packagingId === 'p2'"));
       ok('no page errors', errors.length === 0, errors);
       await ctx.close();
     }
