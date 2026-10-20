@@ -2667,3 +2667,37 @@ with a batch link and packaging pulled on commit and returned on reverse.
 
 **Tests:** `test/test-fills.js` rewritten (49 checks); `test-shell.js`
 updated. 19 suites.
+
+### Session 21 (20 October 2026): Products & Costing tidy-up; sidebar in work order (core v1.31)
+
+Heide, testing for pinch points, settled the order of the work: design the
+formulation (Formulations), commit to making it (Batches), set up the
+products to sell (Products & Costing), then fill each product. "I'm filling
+products, not batches." Steps 2 and 3 can happen in either order.
+
+- **Status is Active or Discontinued** (her call: drafting happens in
+  Formulations). Two buttons in the colour block (`pickStatus`) drive the
+  hidden `#p-status` select. `migrateStatus()` in `loadData` turns any draft
+  (or missing status) into Active and saves once. The list's chips are All,
+  Active, Discontinued; the line sheet's Draft tag is gone.
+- **Duplicate** moved from the ⋯ menu to the top bar, with a note on hover
+  or focus (`.tip-wrap`, `#dup-tip`). Delete stays in the menu.
+- **Save packaging** (`#pkg-save`, `savePackagingOnly`): packaging list edits
+  no longer set `dirty`; `pkgChanged()` compares the list with the SAVED
+  product. The button is greyed until they differ, and saves only the list.
+  The main Save still saves everything (`unsaved()` = dirty or pkgChanged).
+  The fill row waits ("Save packaging first") while the list has changes,
+  since a fill takes the list as saved.
+- **Notes tab retired; Description** (`p.description`) sits at the top of the
+  Label tab, for shops and the website. Old `p.notes` text carries into it
+  and is dropped on the next save. Tabs: Label | Fills.
+- **Bug fixed:** edits change the product in memory as they are made, and
+  Save writes every product. Leaving without saving left the abandoned edits
+  in memory, so the next Save of any product saved them too. `leaveEditor`
+  now puts the product back from storage.
+- **Sidebar order** (core `SHELL_MODULES`): Ingredients, Packaging,
+  Formulations, Batches, Products & Costing, then Suppliers under Library.
+
+**Tests:** `test-shell.js` 4c gained checks for status, Duplicate, Save
+packaging, Description and the leave fix; nav order updated.
+`test-costing-tools.js` updated for drafts becoming Active.

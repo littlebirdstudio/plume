@@ -35,7 +35,7 @@ var Plume = (function () {
 // (v0.4 / v0.5 / v0.6 across five modules). BUMP IT IN EVERY PULL REQUEST,
 // core change or not: it is how "is this the update I just merged?" is
 // answered by looking, and browsers cache .js files stubbornly.
-var VERSION = '1.30';
+var VERSION = '1.31';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -766,17 +766,19 @@ function countOf(key, keep) {
   return keep ? list.filter(keep).length : list.length;
 }
 var notArchived = function (x) { return x && !x.archived; };
+// In the order of the work (2026-10-20): the supplies, then design the
+// formulation, make a batch, and set up and fill the products.
 var SHELL_MODULES = [
   { key: 'ingredients',  label: 'Ingredients',        href: 'plume-ingredients.html',  icon: 'ingredients',
     count: function () { return countOf('aerie-ingredients-v2', notArchived); } },
-  { key: 'formulations', label: 'Formulations',       href: 'plume-formulations.html', icon: 'formulations',
-    count: function () { return countOf('aerie-formulations-v1', notArchived); } },
   { key: 'packaging',    label: 'Packaging',          href: 'plume-packaging.html',    icon: 'packaging',
     count: function () { return countOf('aerie-packaging-v2', notArchived); } },
-  { key: 'costing',      label: 'Products & Costing', href: 'plume-costing.html',      icon: 'costing',
-    count: function () { return countOf('plume-products-v1', notArchived); } },
+  { key: 'formulations', label: 'Formulations',       href: 'plume-formulations.html', icon: 'formulations',
+    count: function () { return countOf('aerie-formulations-v1', notArchived); } },
   { key: 'batchlog',     label: 'Batches',            href: 'plume-batchlog.html',     icon: 'batches',
-    count: function () { return countOf('aerie-batches-v1'); } }
+    count: function () { return countOf('aerie-batches-v1'); } },
+  { key: 'costing',      label: 'Products & Costing', href: 'plume-costing.html',      icon: 'costing',
+    count: function () { return countOf('plume-products-v1', notArchived); } }
 ];
 
 // Line icons. The five module icons are the landing page's drawings.
