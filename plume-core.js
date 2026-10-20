@@ -906,6 +906,7 @@ var ICONS = {
   packaging:    ['0 0 48 48', '<path d="M20 8 L 28 8 L 28 14 L 32 18 L 32 40 Q 24 43, 16 40 L 16 18 L 20 14 Z"/><path d="M19 26 L 29 26"/>'],
   costing:      ['0 0 48 48', '<path d="M24 10 L 24 38"/><path d="M16 38 L 32 38"/><path d="M10 18 L 24 14 L 38 18"/><path d="M6 26 Q 10 18, 14 26 Q 10 30, 6 26 Z"/><path d="M34 26 Q 38 18, 42 26 Q 38 30, 34 26 Z"/>'],
   batches:      ['0 0 48 48', '<path d="M10 28 L 10 42 L 22 42 L 22 28"/><path d="M12 24 L 20 24 L 20 28 L 12 28 Z"/><path d="M26 14 L 26 28 L 38 28 L 38 14"/><path d="M28 10 L 36 10 L 36 14 L 28 14 Z"/><path d="M26 30 L 38 30 L 38 42 L 26 42 Z"/>'],
+  stock:        ['0 0 24 24', '<path d="M4 8h16v12H4z"/><path d="M7 8V5h10v3"/><path d="m9 14 2 2 4-4"/>'],
   suppliers:    ['0 0 24 24', '<path d="M3 21h18"/><path d="M5 21V8l7-4 7 4v13"/><path d="M9 21v-6h6v6"/>'],
   settings:     ['0 0 24 24', '<circle cx="12" cy="12" r="3"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6"/>'],
   search:       ['0 0 24 24', '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>'],
@@ -965,6 +966,7 @@ function shell(opts) {
         '<button type="button" class="ps-nav" id="ps-nav-suppliers" onclick="Plume.suppliers.open()" title="Suppliers">' + icon('suppliers') + '<span class="ps-nav-label">Suppliers</span><span class="ps-ct" data-ct="suppliers"></span></button>' +
       '</nav>' +
       '<div class="ps-grow"></div>' +
+      '<button type="button" class="ps-nav" id="ps-nav-stock" onclick="Plume.stock.open()" title="Update stock: sold, gifted, marketing, damaged, or reconcile to a count">' + icon('stock') + '<span class="ps-nav-label">Update stock</span></button>' +
       '<button type="button" class="ps-nav" onclick="if (typeof openSettings === \'function\') openSettings()" title="Settings">' + icon('settings') + '<span class="ps-nav-label">Settings</span></button>' +
     '</aside>';
   document.body.insertAdjacentHTML('afterbegin', html);
@@ -1659,6 +1661,33 @@ function injectStyles() {
     '.sup-loose-name{font-size:14px;color:var(--ink)}' +
     '.sup-loose-row .sup-use{margin:0 0 0 auto}' +
     '.sup-loose-row .ps-link-btn{padding:3px 10px}' +
+    '' +
+    // Update stock panel (2026-10-20).
+    '.st-panel .st-modes{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0 10px;align-items:center}' +
+    '.st-panel .st-mct{font-variant-numeric:tabular-nums;opacity:.75}' +
+    '.st-panel .st-help{font-size:13px;color:var(--ink-light);margin:0 0 12px;line-height:1.45}' +
+    '.st-panel .st-fields{display:grid;grid-template-columns:150px minmax(0,1fr);gap:10px;margin-bottom:12px}' +
+    '.st-panel .st-fields label{display:block;font-size:12.5px;color:var(--ink-light);margin-bottom:3px}' +
+    '.st-panel .st-fields input{width:100%;box-sizing:border-box;font:inherit;font-size:14px;padding:6px 8px;border:1px solid var(--cream-border);border-radius:7px;background:var(--white);color:var(--ink)}' +
+    '.st-panel .st-search{border:1px solid var(--cream-border);margin-bottom:6px}.st-panel .st-search input{width:100%}' +
+    '.st-panel .st-type{font-size:12.5px;font-weight:600;color:var(--white);background:var(--bark);border-radius:6px;padding:4px 10px;margin:14px 0 2px}' +
+    '.st-panel .st-row,.st-panel .st-cols{display:grid;grid-template-columns:minmax(0,1fr) 64px 76px;gap:10px;align-items:center}' +
+    '.st-panel .st-row{padding:7px 4px;border-bottom:1px solid var(--cream-border)}' +
+    '.st-panel .st-row.on{background:var(--clay-light)}' +
+    '.st-panel .st-row.over{background:color-mix(in srgb,var(--danger) 10%,var(--white))}' +
+    '.st-panel .st-row.over input{border-color:var(--danger)}' +
+    '.st-panel .st-over{margin-top:12px;font-size:13px;color:var(--danger);line-height:1.45}' +
+    '.st-panel .st-name{font-size:14px;color:var(--ink);min-width:0}' +
+    '.st-panel .st-name small{display:block;font-size:12px;color:var(--ink-lighter)}' +
+    '.st-panel .st-nfs{display:inline-block;font-size:11.5px;padding:0 7px;border-radius:5px;margin-left:6px;background:color-mix(in srgb,var(--ink) 8%,transparent);color:var(--ink-light);white-space:nowrap}' +
+    '.st-panel .st-have{text-align:right;font-variant-numeric:tabular-nums;font-size:13.5px;color:var(--ink-light)}' +
+    '.st-panel .st-neg{color:var(--danger);font-weight:600}' +
+    '.st-panel .st-row input{width:100%;box-sizing:border-box;font:inherit;font-size:14px;padding:5px 7px;border:1px solid var(--cream-border);border-radius:7px;text-align:right;background:var(--white);color:var(--ink)}' +
+    '.st-panel .st-cols{font-size:12px;color:var(--ink-lighter);padding:0 4px 4px;text-align:right}' +
+    '.st-panel .st-cols span:first-child{text-align:left}' +
+    '.st-panel .st-empty{padding:14px 4px;color:var(--ink-lighter);font-size:13.5px}' +
+    '.st-panel .st-foot{position:sticky;bottom:-30px;background:var(--white);padding:12px 0 8px;display:flex;gap:10px;align-items:center;border-top:1px solid var(--cream-border);margin-top:12px}' +
+    '.st-panel .st-ct{font-size:13px;color:var(--ink-light)}' +
     '' +
     '@media (max-width:760px){' +
     '  body.ps-shell,body.ps-shell.ps-collapsed{padding-left:0}' +
@@ -3232,12 +3261,25 @@ function fmtG(g) {
 // Plume is not a point of sale; taking out is optional.
 // p.stockLog: [{ id, date, qty (signed), kind: 'out' | 'count' | 'kit',
 //   note, counted (count only), kitId and buildId (kit only) }]
+// Why units left the shelf (her list, 2026-10-20). Each lowers on hand;
+// the reason is kept so losses can be counted apart from sales later.
+var STOCK_REASONS = [
+  { key: 'sold',      label: 'Sold',      hint: 'at a market, a shop or online' },
+  { key: 'gifted',    label: 'Gifted',    hint: 'given to friends or family' },
+  { key: 'marketing', label: 'Marketing', hint: 'giveaways, demos, samples for shops' },
+  { key: 'damaged',   label: 'Damaged',   hint: 'broken, spoiled or spilled' }
+];
+function stockReasonLabel(k) {
+  for (var i = 0; i < STOCK_REASONS.length; i++) if (STOCK_REASONS[i].key === k) return STOCK_REASONS[i].label;
+  return 'Taken out';
+}
 function onHandParts(p) {
-  var o = { filled: 0, out: 0, kits: 0, counted: 0, total: 0 };
+  var o = { filled: 0, out: 0, kits: 0, counted: 0, total: 0, byReason: {} };
   ((p && p.productionRuns) || []).forEach(function (r) { o.filled += parseInt(r.units, 10) || 0; });
   ((p && p.stockLog) || []).forEach(function (e) {
     var q = parseFloat(e.qty) || 0;
-    if (e.kind === 'kit') o.kits += q; else if (e.kind === 'count') o.counted += q; else o.out += q;
+    if (e.kind === 'kit') o.kits += q; else if (e.kind === 'count') o.counted += q;
+    else { o.out += q; var r = e.reason || 'out'; o.byReason[r] = (o.byReason[r] || 0) + q; }
   });
   o.total = o.filled + o.out + o.kits + o.counted;
   return o;
@@ -3336,6 +3378,7 @@ function stockPass(products, entries, opts) {
     if (!pr || isNaN(v) || v < 0) return;
     if (opts.mode === 'out' && v === 0) return;
     var e = { id: 'st-' + stamp + '-' + i, date: opts.date || todayISO(), kind: opts.mode === 'count' ? 'count' : 'out', note: opts.note || '' };
+    if (e.kind === 'out' && opts.reason) e.reason = opts.reason;
     if (e.kind === 'count') { e.counted = v; e.qty = v - onHand(pr); }
     else e.qty = -v;
     if (!pr.stockLog) pr.stockLog = [];
@@ -3345,6 +3388,179 @@ function stockPass(products, entries, opts) {
   });
   return n;
 }
+// Reversing a fill takes its units off hand again. Not allowed when that
+// would leave the product below zero: some of those units already went
+// into kits or off the shelf (her call, 2026-10-20).
+function fillUndoBlock(p, run) {
+  if (!p || !run || isKit(p)) return '';
+  var after = onHand(p) - (parseInt(run.units, 10) || 0);
+  if (after >= 0) return '';
+  var o = onHandParts(p), went = [];
+  if (o.kits) went.push((-o.kits) + ' into kits');
+  if (o.out) went.push((-o.out) + ' off the shelf');
+  return 'Only ' + Math.max(0, onHand(p)) + ' of these are on hand' + (went.length ? ' (' + went.join(', ') + ')' : '') +
+    ', so reversing this fill of ' + run.units + ' would leave ' + after + '. Reverse the kit builds that used them, or remove the stock changes, first.';
+}
+// ── Update stock: a slide-in panel on every page (2026-10-20) ───────────
+// From the sidebar, so it is a quick task from anywhere. Reasons lower on
+// hand (Sold, Gifted, Marketing, Damaged); each keeps its own numbers while
+// she switches between them, and one Save records them all. Reconcile is
+// what is on the shelf now; in the same pass it is applied after the
+// reasons. A date and a note cover the whole pass. Units go into kits by
+// building the kit in Products & Costing, not here.
+var stMode = 'sold', stQ = '', stVals = {};
+function stProducts() { var l = Store.getJSON('plume-products-v1', []); return Array.isArray(l) ? l : []; }
+function stTypeKey(p, forms) {
+  if (p.productKind === 'multi' || p.productKind === 'kit') return 'Sample packs & kits';
+  var f = fillFind(forms, p.formulaId);
+  return f ? (f.type || 'No type set') : 'No formulation';
+}
+function stModes() { return STOCK_REASONS.concat([{ key: 'count', label: 'Reconcile', hint: 'how many are on the shelf now' }]); }
+function stLabel(m) { var l = stModes(); for (var i = 0; i < l.length; i++) if (l[i].key === m) return l[i]; return l[0]; }
+function stRowsHtml() {
+  var prods = stProducts(), forms = Store.getJSON('aerie-formulations-v1', []) || [];
+  var q = stQ.toLowerCase().trim();
+  var list = prods.filter(function (p) { return (p.status || 'active') !== 'discontinued'; })
+    .filter(function (p) { return !q || ((p.name || '') + ' ' + (p.sku || '')).toLowerCase().indexOf(q) !== -1; });
+  if (!list.length) return '<div class="st-empty">' + (q ? 'No product matches.' : 'No active products yet. They are set up in Products &amp; Costing.') + '</div>';
+  var by = {}, order = [];
+  list.forEach(function (p) { var t = stTypeKey(p, forms); if (!by[t]) { by[t] = []; order.push(t); } by[t].push(p); });
+  order.sort(function (a, b) { return a === 'Sample packs & kits' ? 1 : b === 'Sample packs & kits' ? -1 : a.localeCompare(b); });
+  var lbl = stLabel(stMode).label;
+  return order.map(function (t) {
+    return '<div class="st-type">' + esc(t) + '</div>' + by[t].map(function (p) {
+      var oh = onHand(p);
+      return '<div class="st-row" data-pid="' + esc(p.id) + '"><div class="st-name">' + esc(p.name || '(unnamed)') +
+        (p.notForSale ? '<span class="st-nfs">not for sale</span>' : '') + (p.netWtDisplay ? '<small>' + esc(p.netWtDisplay) + '</small>' : '') + '</div>' +
+        '<div class="st-have' + (oh < 0 ? ' st-neg' : '') + '">' + oh + '</div>' +
+        '<input type="number" min="0" step="1" inputmode="numeric" data-pid="' + esc(p.id) + '" aria-label="' + esc(lbl + ': ' + (p.name || '')) + '" oninput="Plume.stock.typed()"></div>';
+    }).join('');
+  }).join('');
+}
+function stHtml() {
+  var m = stLabel(stMode);
+  return '<div class="st-panel"><div class="sup-title">' + icon('stock') + '<h2>Update stock</h2></div>' +
+    '<div class="st-modes">' + STOCK_REASONS.map(function (r) {
+      return '<button type="button" class="ps-chip' + (stMode === r.key ? ' on' : '') + '" onclick="Plume.stock.mode(\'' + r.key + '\')">' + r.label + '<span class="st-mct" data-m="' + r.key + '"></span></button>';
+    }).join('') + '<span class="ps-chip-sep"></span>' +
+      '<button type="button" class="ps-chip' + (stMode === 'count' ? ' on' : '') + '" onclick="Plume.stock.mode(\'count\')">Reconcile<span class="st-mct" data-m="count"></span></button></div>' +
+    '<p class="st-help">' + (stMode === 'count'
+      ? 'How many are on the shelf now. Plume records the difference from what it had. Use this to set real numbers.'
+      : '<b>' + m.label + '</b>: ' + m.hint + '. These come off what is on hand. Switch reasons to enter more; Save records them all.') + '</p>' +
+    '<div class="st-fields"><div><label for="st-date">Date</label><input type="date" id="st-date"></div>' +
+      '<div><label for="st-note">Note</label><input type="text" id="st-note" placeholder="e.g. Market, Oct 18"></div></div>' +
+    '<label class="ps-search st-search">' + icon('search') + '<input type="search" id="st-q" placeholder="Search products" value="' + esc(stQ) + '" oninput="Plume.stock.search(this.value)" aria-label="Search products"></label>' +
+    '<div class="st-cols"><span>Product</span><span>On hand</span><span>' + esc(m.label) + '</span></div>' +
+    '<div id="st-rows">' + stRowsHtml() + '</div>' +
+    '<div class="st-over" id="st-over" hidden></div>' +
+    '<div class="st-foot"><span class="st-ct" id="st-ct">Nothing entered yet</span><span class="ps-grow"></span>' +
+      '<button type="button" class="ps-link-btn" onclick="Plume.peek.close()">Cancel</button>' +
+      '<button type="button" class="ps-btn-primary" id="st-save" onclick="Plume.stock.save()" disabled>Save</button></div></div>';
+}
+function stKeep() {
+  var vals = stVals[stMode] || (stVals[stMode] = {});
+  [].forEach.call(document.querySelectorAll('#st-rows input[data-pid]'), function (i) { vals[i.getAttribute('data-pid')] = i.value; });
+}
+function stRestore() {
+  var vals = stVals[stMode] || {};
+  [].forEach.call(document.querySelectorAll('#st-rows input[data-pid]'), function (i) {
+    var v = vals[i.getAttribute('data-pid')]; i.value = v != null ? v : '';
+  });
+  stTyped();
+}
+// { mode: [{ productId, value }] } for every mode with something typed.
+function stEntries() {
+  stKeep();
+  var prods = stProducts(), out = {};
+  Object.keys(stVals).forEach(function (m) {
+    var list = Object.keys(stVals[m]).filter(function (id) { return String(stVals[m][id]).trim() !== '' && fillFind(prods, id); })
+      .map(function (id) { return { productId: id, value: stVals[m][id] }; });
+    if (list.length) out[m] = list;
+  });
+  return out;
+}
+// Products whose reasons add up to more than is on hand. Not allowed (her
+// call): it means a fill was not logged, or the number is wrong. A product
+// reconciled in the same pass is fine, since the count wins.
+function stOver(en) {
+  var prods = stProducts(), tot = {}, counted = {}, out = [];
+  (en.count || []).forEach(function (e) { counted[e.productId] = true; });
+  STOCK_REASONS.forEach(function (r) {
+    (en[r.key] || []).forEach(function (e) { tot[e.productId] = (tot[e.productId] || 0) + (parseFloat(e.value) || 0); });
+  });
+  Object.keys(tot).forEach(function (id) {
+    var p = fillFind(prods, id), have = p ? onHand(p) : 0;
+    if (!counted[id] && tot[id] > have) out.push({ productId: id, name: p ? (p.name || '(unnamed)') : '', take: tot[id], have: have });
+  });
+  return out;
+}
+function stTyped() {
+  var en = stEntries(), bits = [], any = false, over = stOver(en), overIds = {};
+  over.forEach(function (o) { overIds[o.productId] = true; });
+  [].forEach.call(document.querySelectorAll('#st-rows .st-row'), function (r) {
+    var i = r.querySelector('input'); r.classList.toggle('on', !!i && i.value.trim() !== '');
+    r.classList.toggle('over', !!overIds[r.getAttribute('data-pid')]);
+  });
+  stModes().forEach(function (m) {
+    var list = en[m.key] || [], ct = document.querySelector('.st-mct[data-m="' + m.key + '"]');
+    var n = 0; list.forEach(function (e) { n += parseFloat(e.value) || 0; });
+    if (ct) ct.textContent = list.length ? (m.key === 'count' ? ' ' + list.length : ' ' + n) : '';
+    if (!list.length) return;
+    any = true;
+    bits.push(m.key === 'count' ? list.length + ' to reconcile' : m.label + ' ' + n);
+  });
+  var el = document.getElementById('st-ct');
+  if (el) el.textContent = any ? bits.join(' · ') : 'Nothing entered yet';
+  var warn = document.getElementById('st-over');
+  if (warn) {
+    warn.hidden = !over.length;
+    warn.textContent = over.length ? 'More than is on hand: ' + over.map(function (o) { return o.name + ' (' + o.take + ' of ' + o.have + ')'; }).join('; ') +
+      '. Log the fill first, or reconcile to what is on the shelf.' : '';
+  }
+  var b = document.getElementById('st-save'); if (b) b.disabled = !any || !!over.length;
+}
+function stockOpen() {
+  stMode = 'sold'; stQ = ''; stVals = {};
+  openPeek(stHtml(), {
+    label: 'Update stock',
+    onClose: function () {
+      var p = document.getElementById('ps-peek'); if (p) p.removeAttribute('data-panel');
+      var b = document.getElementById('ps-nav-stock'); if (b) b.classList.remove('on');
+    }
+  });
+  document.getElementById('ps-peek').setAttribute('data-panel', 'stock');
+  var b = document.getElementById('ps-nav-stock'); if (b) b.classList.add('on');
+  document.getElementById('st-date').value = todayISO();
+}
+function stockMode(m) {
+  stKeep();
+  var d = document.getElementById('st-date').value, n = document.getElementById('st-note').value;
+  stMode = m;
+  document.getElementById('ps-peek-body').innerHTML = stHtml();
+  document.getElementById('st-date').value = d; document.getElementById('st-note').value = n;
+  stRestore();
+}
+function stockSearch(v) {
+  stKeep(); stQ = v;
+  document.getElementById('st-rows').innerHTML = stRowsHtml();
+  stRestore();
+}
+function stockSave() {
+  var en = stEntries(), bad = false;
+  Object.keys(en).forEach(function (m) { en[m].forEach(function (e) { var v = parseFloat(e.value); if (isNaN(v) || v < 0 || Math.floor(v) !== v) bad = true; }); });
+  if (bad) { tell('Use whole numbers of units, 0 or more.'); return; }
+  if (stOver(en).length) { stTyped(); return; }
+  var prods = stProducts(), date = document.getElementById('st-date').value || todayISO(), note = document.getElementById('st-note').value.trim(), n = 0;
+  STOCK_REASONS.forEach(function (r) { if (en[r.key]) n += stockPass(prods, en[r.key], { mode: 'out', reason: r.key, date: date, note: note }); });
+  if (en.count) n += stockPass(prods, en.count, { mode: 'count', date: date, note: note });
+  if (!n) return;
+  if (Store.setJSON('plume-products-v1', prods) === false) { noteSaveFailed(); return; }
+  stVals = {};
+  libChanged();
+  closePeek();
+  tell(n + ' stock change' + (n === 1 ? '' : 's') + ' saved.', { title: 'Stock updated' });
+}
+
 // Removes one taken-out or counted entry. Kit entries go with their build.
 function undoStock(p, id) {
   if (!p || !p.stockLog) return false;
@@ -3391,6 +3607,8 @@ return {
   onHand: onHand, onHandParts: onHandParts, isKit: isKit, kitPartOk: kitPartOk, kitParts: kitParts,
   kitNeeds: kitNeeds, kitShortages: kitShortages, buildKit: buildKit, undoKitBuild: undoKitBuild,
   undoKitText: undoKitText, kitsUsing: kitsUsing, stockPass: stockPass, undoStock: undoStock,
+  STOCK_REASONS: STOCK_REASONS, stockReasonLabel: stockReasonLabel, fillUndoBlock: fillUndoBlock,
+  stock: { open: stockOpen, mode: stockMode, search: stockSearch, typed: stTyped, save: stockSave, entries: stEntries },
   pkTypeFor: pkTypeFor, pkForProduct: pkForProduct, pkColored: pkColored, pkIsOther: pkIsOther,
   pkIcon: pkIcon, pkIconFor: pkIconFor, pkProducts: pkProducts, pkProductName: pkProductName,
   pkKindName: pkKindName, pkLooks: pkLooks, pkDisplay: pkDisplay, pkDetailHtml: pkDetailHtml, pkStock: pkStock,

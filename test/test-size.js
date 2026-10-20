@@ -43,6 +43,9 @@ const DATA = {
     await page.evaluate("localStorage.setItem('plume-size', '" + size + "')");
     await page.goto(previewUrl('costing')); await page.waitForTimeout(500);
     await page.evaluate("openProduct('o10')"); await page.waitForTimeout(200);
+    // With room below, as a person would scroll it (the list opens upward
+    // near the bottom of the window, which is right but not what this checks).
+    await page.evaluate("document.querySelector('#pkg-recipe-body .pk-pick-btn').scrollIntoView({ block: 'center' })"); await page.waitForTimeout(100);
     await page.click('#pkg-recipe-body .pk-pick-btn'); await page.waitForTimeout(150);
     const g = await page.evaluate("var b=document.querySelector('#pkg-recipe-body .pk-pick-btn').getBoundingClientRect(), p=document.querySelector('.pk-pop').getBoundingClientRect(); [Math.round(p.left - b.left), Math.round(p.top - b.bottom)]");
     ok(size + ': the packaging list opens just under its button', Math.abs(g[0]) <= 1 && g[1] >= 0 && g[1] <= 7, g);

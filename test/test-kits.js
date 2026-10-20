@@ -44,6 +44,7 @@ vm.createContext(sandbox);
 vm.runInContext(core, sandbox);
 const P = sandbox.Plume;
 const clone = x => JSON.parse(JSON.stringify(x));
+async function type2(page, v) { await page.fill('#run-units', v); await page.dispatchEvent('#run-units', 'input'); }
 
 console.log('\n1. Units on hand and kits, in core');
 {
@@ -156,45 +157,96 @@ console.log('\n1. Units on hand and kits, in core');
   ok('unticked', !('notForSale' in (await stored()).find(x => x.id === 'full')));
   ok('the line sheet leaves not-for-sale products out', await page.evaluate("leaveEditor(); lsOffered().map(function(p){return p.id;}).indexOf('mo')===-1 && lsOffered().map(function(p){return p.id;}).indexOf('full')!==-1"));
 
-  console.log('\n6. Update stock');
-  await page.evaluate("leaveEditor(); openStock()");
-  ok('the panel lists every active product with what is on hand', await page.evaluate(
+  console.log('\n6. Update stock, from the sidebar');
+  await page.evaluate("leaveEditor()");
+  ok('the sidebar has Update stock, above Settings', await page.evaluate(
+    "var b=document.getElementById('ps-nav-stock'); b && b.nextElementSibling && /Settings/.test(b.nextElementSibling.textContent)"));
+  ok('Products & Costing no longer has its own button', await page.evaluate("!document.getElementById('stock-open')"));
+  await page.click('#ps-nav-stock');
+  await page.waitForTimeout(200);
+  ok('it opens the panel with every active product and what is on hand', await page.evaluate(
     "document.querySelectorAll('#st-rows .st-row').length === 5 && document.querySelector('#st-rows .st-row[data-pid=\"full\"] .st-have').textContent === '8'"));
+  ok('the reasons are Sold, Gifted, Marketing, Damaged, then Reconcile', (await page.evaluate(
+    "Array.from(document.querySelectorAll('.st-modes .ps-chip')).map(function(b){return b.firstChild.textContent;}).join(',')")) === 'Sold,Gifted,Marketing,Damaged,Reconcile');
   ok('Save waits until something is entered', await page.evaluate("document.getElementById('st-save').disabled"));
-  await page.fill('#st-rows input[data-pid="full"]', '3');
-  await page.dispatchEvent('#st-rows input[data-pid="full"]', 'input');
+  const type = async (pid, v) => { await page.fill('#st-rows input[data-pid="' + pid + '"]', v); await page.dispatchEvent('#st-rows input[data-pid="' + pid + '"]', 'input'); };
+  await type('full', '3');
   await page.fill('#st-note', 'Market, Oct 18');
-  await page.evaluate("stockSearch('spritz')");
-  ok('a search keeps what was typed for products it hides', await page.evaluate("stockEntries().length === 1"));
-  await page.evaluate("stockSearch('')");
-  ok('and it is still in its box after clearing the search', (await page.evaluate("document.querySelector('#st-rows input[data-pid=\"full\"]').value")) === '3');
-  await page.evaluate("saveStock()");
-  ok('took out 3 at the market', (await onHandOf('full')) === 5 && (await stored()).find(x => x.id === 'full').stockLog[0].note === 'Market, Oct 18');
-  await page.evaluate("openStock(); stockMode('count')");
-  await page.fill('#st-rows input[data-pid="mo"]', '10');
-  await page.dispatchEvent('#st-rows input[data-pid="mo"]', 'input');
-  await page.evaluate("saveStock()");
-  ok('counted 10 oil minis: on hand is 10', (await onHandOf('mo')) === 10);
+  await page.evaluate("Plume.stock.mode('gifted')");
+  ok('switching reason starts a fresh column', (await page.evaluate("document.querySelector('#st-rows input[data-pid=\"full\"]').value")) === '');
+  await type('full', '1');
+  await page.evaluate("Plume.stock.mode('damaged')");
+  await type('mo', '2');
+  ok('the note survives switching', (await page.evaluate("document.getElementById('st-note').value")) === 'Market, Oct 18');
+  await page.evaluate("Plume.stock.search('spritz')");
+  ok('a search keeps what was typed for products it hides', (await page.evaluate("Plume.stock.entries().damaged.length")) === 1);
+  await page.evaluate("Plume.stock.search('')");
+  await page.evaluate("Plume.stock.mode('sold')");
+  ok('each reason keeps its own numbers', (await page.evaluate("document.querySelector('#st-rows input[data-pid=\"full\"]').value")) === '3');
+  ok('the footer adds them up', (await page.evaluate("document.getElementById('st-ct').textContent")) === 'Sold 3 · Gifted 1 · Damaged 2');
+  await page.evaluate("Plume.stock.mode('marketing')");
+  await type('ms5', '4');
+  await page.evaluate("Plume.stock.mode('sold')");
+  await type('ms5', '2');
+  ok('reasons adding up to more than is on hand stop Save, and say which', await page.evaluate(
+    "document.getElementById('st-save').disabled && /Spritz mini \\(6 of 5\\)/.test(document.getElementById('st-over').textContent) && document.querySelector('#st-rows .st-row[data-pid=\"ms5\"]').classList.contains('over')"));
+  await page.evaluate("Plume.stock.mode('count')");
+  await type('ms5', '5');
+  ok('reconciling the same product in the pass lifts it: the count wins', await page.evaluate("!document.getElementById('st-save').disabled"));
+  await type('ms5', '');
+  await page.evaluate("Plume.stock.mode('marketing')");
+  await type('ms5', '');
+  await page.evaluate("Plume.stock.mode('sold')");
+  await type('ms5', '');
+  ok('clearing them lets Save through again', await page.evaluate("!document.getElementById('st-save').disabled"));
+  await page.evaluate("Plume.stock.save()");
+  await page.waitForTimeout(150);
+  ok('one Save records every reason', (await onHandOf('full')) === 4 && (await onHandOf('mo')) === 10);
+  const log = (await stored()).find(x => x.id === 'full').stockLog;
+  ok('each line keeps its reason and the note', log.map(e => e.reason).sort().join(',') === 'gifted,sold' && log.every(e => e.note === 'Market, Oct 18'), log);
+  ok('the list behind the panel follows', await page.evaluate(
+    "Array.from(document.querySelectorAll('.prod-row')).find(function(r){return /Face Oil 1 oz/.test(r.textContent);}).querySelectorAll('td')[1].textContent === '4'"));
+
+  await page.evaluate("Plume.stock.open(); Plume.stock.mode('count')");
+  await type('mo', '9');
+  await page.evaluate("Plume.stock.mode('sold')");
+  await type('mo', '1');
+  await page.evaluate("Plume.stock.save()");
+  await page.waitForTimeout(150);
+  ok('Reconcile is applied after the reasons in the same pass: on hand is the count', (await onHandOf('mo')) === 9);
   await page.evaluate("openProduct('mo'); setEdTab('runs')");
-  ok('the product shows the change in its history', (await page.evaluate("document.getElementById('stock-hist').textContent")).indexOf('Counted 10') !== -1);
-  await page.evaluate("undoStockLine(findProduct('mo').stockLog[0].id)");
+  const hist = await page.evaluate("document.getElementById('stock-hist').textContent");
+  ok('the product\'s history names each reason and the reconcile', hist.indexOf('Damaged') !== -1 && hist.indexOf('Reconciled to 9') !== -1 && hist.indexOf('Sold') !== -1, hist);
+  ok('the on-hand box breaks it down by reason', /2 damaged/.test(await page.evaluate("document.getElementById('onhand-box').textContent")));
+  const before = await onHandOf('mo');
+  await page.evaluate("undoStockLine(findProduct('mo').stockLog.filter(function(e){return e.reason==='damaged';})[0].id)");
   await page.waitForTimeout(100);
-  ok('and the change can be removed', (await onHandOf('mo')) === 12);
-  await page.evaluate("openStock()");
-  await page.fill('#st-rows input[data-pid="mo"]', '1.5');
-  await page.dispatchEvent('#st-rows input[data-pid="mo"]', 'input');
-  await page.evaluate("saveStock()");
-  ok('part units are refused', (await onHandOf('mo')) === 12);
+  ok('a stock change can be removed: the 2 damaged come back', (await onHandOf('mo')) === before + 2);
+  await page.evaluate("Plume.stock.open()");
+  await type('mo', '1.5');
+  await page.evaluate("Plume.stock.save()");
+  ok('part units are refused', (await page.evaluate("document.getElementById('ps-peek').classList.contains('open')")));
+  await page.evaluate("Plume.peek.close()");
+
+  console.log('\n6b. Reversing a fill');
+  // Oil mini: 12 filled. Build 2 kits, which takes 4 of them.
+  await page.evaluate("openProduct('kit'); setEdTab('runs')");
+  await type2(page, '2');
+  await page.click('#run-add');
+  await page.waitForTimeout(150);
+  await page.evaluate("openProduct('mo'); setEdTab('runs')");
+  const said = await page.evaluate("var m=''; var real=Plume.tell; Plume.tell=function(t){ m=t; }; deleteRun('r1'); Plume.tell=real; m");
+  ok('a fill whose units went into kits cannot be reversed, and says why', /into kits/.test(said) && (await stored()).find(x => x.id === 'mo').productionRuns.length === 1, said);
 
   console.log('\n7. Older packs and the rest');
-  await page.evaluate("Plume.peek.close(); openProduct('old')");
+  await page.evaluate("openProduct('old')");
   ok('an older pack keeps its kind, with a note on how to make a kit', await page.evaluate(
     "document.getElementById('kind-btn-multi').classList.contains('on') && !document.getElementById('kind-btn-multi').hidden && document.getElementById('multi-mode-fields').textContent.indexOf('A kit of products') !== -1"));
   await page.evaluate("leaveEditor(); openProduct('mo')");
   const msg = [];
   await page.evaluate("window.PLUME_TEST_ANSWER = false");
-  const said = await page.evaluate("var m=''; var real=Plume.ask; Plume.ask=function(t){ m=t; }; deleteProduct(); Plume.ask=real; m");
-  ok('deleting a kit part names the kit', said.indexOf('Duo Kit') !== -1, said);
+  const delMsg = await page.evaluate("var m=''; var real=Plume.ask; Plume.ask=function(t){ m=t; }; deleteProduct(); Plume.ask=real; m");
+  ok('deleting a kit part names the kit', delMsg.indexOf('Duo Kit') !== -1, delMsg);
 
   ok('no page errors', errors.length === 0, errors);
   await browser.close();

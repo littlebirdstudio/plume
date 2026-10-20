@@ -311,22 +311,6 @@ body.ps-shell .field input:focus, body.ps-shell .field select:focus, body.ps-she
 .sh-row .sh-note { color: var(--ink-light); min-width: 0; }
 .sh-row button { border: 0; background: none; color: var(--ink-lighter); cursor: pointer; font: inherit; }
 .sh-row button:hover { color: var(--danger); }
-.st-panel .st-modes { display: flex; gap: 6px; margin-bottom: 12px; }
-.st-panel .st-help { font-size: 13px; color: var(--ink-light); margin: 0 0 12px; line-height: 1.45; }
-.st-panel .st-fields { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 10px; margin-bottom: 12px; }
-.st-panel .st-fields label { display: block; font-size: 12.5px; color: var(--ink-light); margin-bottom: 3px; }
-.st-panel .st-fields input { width: 100%; box-sizing: border-box; font: inherit; font-size: 14px; padding: 6px 8px; border: 1px solid var(--cream-border); border-radius: 7px; background: var(--white); color: var(--ink); }
-.st-panel .st-type { font-size: 12.5px; font-weight: 600; color: var(--white); background: var(--bark); border-radius: 6px; padding: 4px 10px; margin: 14px 0 2px; }
-.st-panel .st-row { display: grid; grid-template-columns: minmax(0, 1fr) 64px 76px; gap: 10px; align-items: center; padding: 7px 4px; border-bottom: 1px solid var(--cream-border); }
-.st-panel .st-row.on { background: var(--clay-light); }
-.st-panel .st-name { font-size: 14px; color: var(--ink); min-width: 0; }
-.st-panel .st-name small { display: block; font-size: 12px; color: var(--ink-lighter); }
-.st-panel .st-have { text-align: right; font-variant-numeric: tabular-nums; font-size: 13.5px; color: var(--ink-light); }
-.st-panel .st-row input { width: 100%; box-sizing: border-box; font: inherit; font-size: 14px; padding: 5px 7px; border: 1px solid var(--cream-border); border-radius: 7px; text-align: right; background: var(--white); color: var(--ink); }
-.st-panel .st-cols { display: grid; grid-template-columns: minmax(0, 1fr) 64px 76px; gap: 10px; font-size: 12px; color: var(--ink-lighter); padding: 0 4px 4px; text-align: right; }
-.st-panel .st-cols span:first-child { text-align: left; }
-.st-panel .st-foot { position: sticky; bottom: -30px; background: var(--white); padding: 12px 0 8px; display: flex; gap: 10px; align-items: center; border-top: 1px solid var(--cream-border); margin-top: 12px; }
-.st-panel .st-foot .ps-muted { font-size: 13px; }
 .ed-side { display: flex; flex-direction: column; gap: 14px; position: sticky; top: 16px; align-self: start; min-width: 0; }
 .sec-h { display: flex; align-items: baseline; gap: 10px; margin: 0 0 8px; flex-wrap: wrap; }
 .sec-h h2 { font-size: 15px; font-weight: 600; margin: 0; }
@@ -536,7 +520,7 @@ details.bc-tips .bc-note { border: 0; padding: 6px 0 0; margin: 0; font-size: 12
   .ls-paper { padding: 26px 20px; min-height: 0; }
 }
 @media (max-width: 760px) { #m-barcode .bc-grid-4 { grid-template-columns: 1fr 1fr; } }
-/* Four toolbar buttons since Update stock (2026-10-20): let them wrap on a phone. */
+/* Let the toolbar buttons wrap on a phone. */
 @media (max-width: 760px) { #view-list .ps-tools { flex-wrap: wrap; margin-left: 0; } }
 
 @media (max-width: 980px) {
@@ -588,7 +572,6 @@ details.bc-tips .bc-note { border: 0; padding: 6px 0 0; margin: 0; font-size: 12
     <div class="ps-toolbar">
       <span class="ps-tab on">All products</span>
       <div class="ps-tools">
-        <button type="button" class="ps-link-btn" id="stock-open" onclick="openStock()" title="Record what left the shelf, or count what is on it, for many products at once"><span data-ps-icon="check"></span>Update stock</button>
         <button type="button" class="ps-link-btn" onclick="openLineSheet()" title="A wholesale line sheet for a shop: pick the products, then print or save as PDF"><span data-ps-icon="note"></span>Line sheet</button>
         <button type="button" class="ps-link-btn" onclick="openBarcode('')" title="Generate printable barcode labels"><span data-ps-icon="print"></span>Barcodes</button>
         <button type="button" class="ps-btn-primary" onclick="openNewProduct()"><span data-ps-icon="plus"></span>New</button>
@@ -2638,8 +2621,8 @@ function onHandTitle(p, oh) {
   var kit = Plume.isKit(p);
   var bits = [oh.filled + (kit ? ' built' : ' filled')];
   if (oh.kits) bits.push((-oh.kits) + ' into kits');
-  if (oh.out) bits.push((-oh.out) + ' taken out');
-  if (oh.counted) bits.push((oh.counted > 0 ? '+' : '') + oh.counted + ' from counts');
+  Object.keys(oh.byReason).forEach(function(r) { bits.push((-oh.byReason[r]) + ' ' + Plume.stockReasonLabel(r).toLowerCase()); });
+  if (oh.counted) bits.push((oh.counted > 0 ? '+' : '') + oh.counted + ' reconciled');
   return bits.join(', ');
 }
 
@@ -3551,8 +3534,8 @@ function renderOnHand(p) {
   var oh = Plume.onHandParts(p), kit = Plume.isKit(p);
   var bits = ['<span>' + oh.filled + (kit ? ' built' : ' filled') + '</span>'];
   if (oh.kits) bits.push('<span>' + (-oh.kits) + ' into kits</span>');
-  if (oh.out) bits.push('<span>' + (-oh.out) + ' taken out</span>');
-  if (oh.counted) bits.push('<span>' + (oh.counted > 0 ? '+' : '') + oh.counted + ' from counts</span>');
+  Object.keys(oh.byReason).forEach(function(r) { bits.push('<span>' + (-oh.byReason[r]) + ' ' + Plume.stockReasonLabel(r).toLowerCase() + '</span>'); });
+  if (oh.counted) bits.push('<span>' + (oh.counted > 0 ? '+' : '') + oh.counted + ' reconciled</span>');
   var into = Plume.kitsUsing(p.id, products);
   document.getElementById('onhand-box').innerHTML =
     '<div class="oh-big' + (oh.total < 0 ? ' oh-neg' : '') + '">' + oh.total + '<small>on hand</small></div>' +
@@ -3567,7 +3550,7 @@ function renderStockHist(p) {
   if (!log.length) { el.innerHTML = ''; return; }
   el.innerHTML = '<h3>Stock changes</h3>' + log.map(function(e) {
     var q = parseFloat(e.qty) || 0;
-    var what = e.kind === 'count' ? 'Counted ' + e.counted : (e.kind === 'kit' ? 'Into a kit' : 'Taken out');
+    var what = e.kind === 'count' ? 'Reconciled to ' + e.counted : (e.kind === 'kit' ? 'Into a kit' : Plume.stockReasonLabel(e.reason));
     return '<div class="sh-row"><span>' + fmtDate(e.date) + '</span><span class="sh-q">' + (q > 0 ? '+' : '') + q + '</span>' +
       '<span class="sh-note">' + esc(what) + (e.note && e.kind !== 'kit' ? ': ' + esc(e.note) : '') + (e.kind === 'kit' ? ' (' + esc(String(e.note || '').replace(/^Into kit: /, '')) + ')' : '') + '</span>' +
       (e.kind === 'kit' ? '<span></span>' : '<button title="Remove this change" aria-label="Remove this change" onclick="undoStockLine(\'' + esc(e.id) + '\')">&#x2715;</button>') + '</div>';
@@ -3745,7 +3728,7 @@ function kitTakes() {
     (pk ? '<div style="margin-top:4px">and from packaging:</div><div class="takes-pk">' + pk + '</div>' : (tracked ? '' : '<div class="ps-muted" style="margin-top:4px">Packaging stock is not tracked (Settings), so nothing is taken from it.</div>')) +
     (unsaved() ? '<div class="ps-muted" style="margin-top:4px">This kit has unsaved changes. Build saves them first.</div>' : '') +
     (shortP.length ? '<div class="stop">Not enough on hand. ' + shortP.map(function(n) { return esc(n.name) + ': needs ' + n.need + ', ' + n.have + ' on hand'; }).join('; ') +
-      '. Fill more first, or count what is on the shelf with Update stock.</div>' : '') +
+      '. Fill more first, or reconcile to what is on the shelf with Update stock.</div>' : '') +
     (shortK.length ? '<div class="stop">Not enough packaging in stock. ' + shortK.map(function(x) { return esc(x.name) + ': needs ' + x.need + ', ' + x.have + ' in stock'; }).join('; ') + '.</div>' : '');
   btn.disabled = !!(shortP.length || shortK.length);
 }
@@ -3847,6 +3830,8 @@ function deleteRun(rid) {
   var run = null;
   (sp.productionRuns || []).forEach(function(r) { if (r.id === rid) run = r; });
   if (!run) return;
+  var block = Plume.fillUndoBlock(sp, run);
+  if (block) { Plume.tell(block, { title: 'This fill cannot be reversed yet' }); return; }
   if (run.kit) {
     var kid = p.id;
     Plume.ask(Plume.undoKitText(run), function() {
@@ -3913,106 +3898,9 @@ function handleFillLink() {
 }
 
 
-// ──────────────────────────────────────────────────────────────────────
-// Update stock (2026-10-20): one pass over every active product, from the
-// list. Took out: what left the shelf (a market, giveaways). Counted: what
-// is on the shelf; Plume records the difference. A date and a note cover
-// the whole pass. Units into kits are taken by building the kit, not here.
-// ──────────────────────────────────────────────────────────────────────
-var stMode = 'out', stQ = '';
-function openStock() {
-  stMode = 'out'; stQ = ''; stVals = {};
-  products = storedProducts();
-  Plume.peek.open(stockHtml(), { label: 'Products & Costing', onClose: function() { renderList(); } });
-  var d = document.getElementById('st-date'); if (d) d.value = todayISO();
-}
-function stockList() {
-  return products.filter(function(p) { return (p.status || 'active') !== 'discontinued'; });
-}
-function stockRowsHtml() {
-  var q = stQ.toLowerCase().trim();
-  var list = stockList().filter(function(p) { return !q || ((p.name || '') + ' ' + (p.sku || '')).toLowerCase().indexOf(q) !== -1; });
-  var byType = {}, order = [];
-  list.forEach(function(p) { var t = prodTypeKey(p); if (!byType[t]) { byType[t] = []; order.push(t); } byType[t].push(p); });
-  order.sort(typeOrder);
-  if (!list.length) return '<div class="ps-muted" style="padding:14px 4px">' + (q ? 'No product matches.' : 'No active products yet.') + '</div>';
-  return order.map(function(t) {
-    return '<div class="st-type">' + esc(t) + '</div>' + byType[t].map(function(p) {
-      var oh = Plume.onHand(p);
-      return '<div class="st-row" data-pid="' + esc(p.id) + '"><div class="st-name">' + esc(p.name || '(unnamed)') +
-        (p.notForSale ? '<span class="nfs-tag">not for sale</span>' : '') + (p.netWtDisplay ? '<small>' + esc(p.netWtDisplay) + '</small>' : '') + '</div>' +
-        '<div class="st-have' + (oh < 0 ? ' oh-neg' : '') + '">' + oh + '</div>' +
-        '<input type="number" min="0" step="1" inputmode="numeric" data-pid="' + esc(p.id) + '" aria-label="' + esc((stMode === 'out' ? 'Took out: ' : 'Counted: ') + (p.name || '')) + '" oninput="stockTyped()"></div>';
-    }).join('');
-  }).join('');
-}
-function stockHtml() {
-  return '<div class="st-panel"><div class="sup-title">' + Plume.icon('check') + '<h2>Update stock</h2></div>' +
-    '<div class="st-modes" style="margin-top:12px">' +
-      '<button type="button" class="ps-chip' + (stMode === 'out' ? ' on' : '') + '" onclick="stockMode(\'out\')">Took out</button>' +
-      '<button type="button" class="ps-chip' + (stMode === 'count' ? ' on' : '') + '" onclick="stockMode(\'count\')">Counted</button></div>' +
-    '<p class="st-help">' + (stMode === 'out'
-      ? 'How many left the shelf: sold at a market, given away, damaged. Leave the rest blank.'
-      : 'How many are on the shelf now. Plume records the difference from what it had. Use this to set real numbers.') + '</p>' +
-    '<div class="st-fields"><div><label for="st-date">Date</label><input type="date" id="st-date"></div>' +
-      '<div><label for="st-note">Note</label><input type="text" id="st-note" placeholder="' + (stMode === 'out' ? 'e.g. Market, Oct 18' : 'e.g. Shelf count') + '"></div></div>' +
-    '<label class="ps-search" style="border:1px solid var(--cream-border);margin-bottom:6px">' + Plume.icon('search') + '<input type="search" id="st-q" placeholder="Search products" value="' + esc(stQ) + '" oninput="stockSearch(this.value)"></label>' +
-    '<div class="st-cols"><span>Product</span><span>On hand</span><span>' + (stMode === 'out' ? 'Took out' : 'Counted') + '</span></div>' +
-    '<div id="st-rows">' + stockRowsHtml() + '</div>' +
-    '<div class="st-foot"><span class="ps-muted" id="st-ct">Nothing entered yet</span><span class="ps-grow"></span>' +
-      '<button type="button" class="ps-link-btn" onclick="Plume.peek.close()">Cancel</button>' +
-      '<button type="button" class="ps-btn-primary" id="st-save" onclick="saveStock()" disabled>Save</button></div></div>';
-}
-// Values typed so far survive a mode switch or a search.
-var stVals = {};
-function stockKeep() {
-  [].forEach.call(document.querySelectorAll('#st-rows input[data-pid]'), function(i) { stVals[i.getAttribute('data-pid')] = i.value; });
-}
-function stockRestore() {
-  [].forEach.call(document.querySelectorAll('#st-rows input[data-pid]'), function(i) {
-    var v = stVals[i.getAttribute('data-pid')]; if (v != null) i.value = v;
-  });
-  stockTyped();
-}
-function stockMode(m) {
-  stockKeep();
-  var d = document.getElementById('st-date').value, n = document.getElementById('st-note').value;
-  stMode = m;
-  document.getElementById('ps-peek-body').innerHTML = stockHtml();
-  document.getElementById('st-date').value = d; document.getElementById('st-note').value = n;
-  stockRestore();
-}
-function stockSearch(v) {
-  stockKeep(); stQ = v;
-  document.getElementById('st-rows').innerHTML = stockRowsHtml();
-  stockRestore();
-}
-function stockEntries() {
-  stockKeep();
-  return Object.keys(stVals).filter(function(id) { return String(stVals[id]).trim() !== '' && findProduct(id); })
-    .map(function(id) { return { productId: id, value: stVals[id] }; });
-}
-function stockTyped() {
-  [].forEach.call(document.querySelectorAll('#st-rows .st-row'), function(r) {
-    var i = r.querySelector('input'); r.classList.toggle('on', i && i.value.trim() !== '');
-  });
-  var n = stockEntries().length;
-  document.getElementById('st-ct').textContent = n ? n + ' product' + (n === 1 ? '' : 's') + ' to update' : 'Nothing entered yet';
-  document.getElementById('st-save').disabled = !n;
-}
-function saveStock() {
-  var entries = stockEntries();
-  var bad = entries.filter(function(e) { var v = parseFloat(e.value); return isNaN(v) || v < 0 || Math.floor(v) !== v; });
-  if (bad.length) { Plume.tell('Use whole numbers of units, 0 or more.'); return; }
-  var stored = storedProducts();
-  var n = Plume.stockPass(stored, entries, { mode: stMode, date: document.getElementById('st-date').value || todayISO(), note: document.getElementById('st-note').value.trim() });
-  if (!n) return;
-  if (!saveStored(stored)) return;
-  products = stored;
-  stVals = {};
-  Plume.peek.close();
-  toast(n + ' product' + (n === 1 ? '' : 's') + ' updated');
-}
+// Update stock moved to core and the sidebar (2026-10-20), so it opens
+// from any page. A save there calls libChanged(); see the listener in boot.
+function openStock() { Plume.stock.open(); }
 
 // ──────────────────────────────────────────────────────────────────────
 // Line sheet (2026-10-19)
@@ -4264,7 +4152,16 @@ if (typeof Plume === 'undefined') {
     Plume.shell({ module: 'costing' });
     // A supplier renamed from the Suppliers panel changes the names on lots
     // and items; take the fresh copy so the next save does not undo it.
-    Plume.onLibraryChange(function () { ings = Store.getJSON(ING_KEY, []) || []; pkgs = Store.getJSON(PKG_KEY, []) || []; });
+    Plume.onLibraryChange(function () {
+      ings = Store.getJSON(ING_KEY, []) || []; pkgs = Store.getJSON(PKG_KEY, []) || [];
+      // Update stock saves products from the sidebar. Take the stored copy,
+      // keeping any unsaved edits on the open product (only its stock
+      // history comes across).
+      var open = curId ? findProduct(curId) : null;
+      products = storedProducts().map(function (x) { return open && x.id === open.id ? Object.assign(open, { stockLog: x.stockLog }) : x; });
+      if (open) renderRuns(findProduct(curId));
+      renderList();
+    });
     var ic = document.querySelectorAll('[data-ps-icon]');
     for (var k = 0; k < ic.length; k++) ic[k].innerHTML = Plume.icon(ic[k].getAttribute('data-ps-icon'));
     loadData();
