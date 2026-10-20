@@ -3159,7 +3159,8 @@ function renderRuns(p) {
   var bsel = document.getElementById('run-batch');
   bsel.innerHTML = '<option value="">-- No batch linked --</option>';
   if (p.formulaId) {
-    var relevant = batches.filter(function(b) { return b.formulaId === p.formulaId; });
+    // A discarded batch never became product, so it is not offered.
+    var relevant = batches.filter(function(b) { return b.formulaId === p.formulaId && b.status !== 'discarded'; });
     relevant.sort(function(a, b) { return (b.date || '').localeCompare(a.date || ''); });
     relevant.forEach(function(b) {
       var label = (b.batchName || b.formulaName || 'Batch') + ' -- ' + fmtDate(b.date);

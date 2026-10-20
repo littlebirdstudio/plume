@@ -336,7 +336,7 @@ ok('an unknown icon name gives nothing rather than breaking', P.icon('nope') ===
     const names = () => page.evaluate("Array.from(document.querySelectorAll('#tbody tr')).map(function(r){return r.classList.contains('group-row') ? 'G:' + r.innerText.trim().split('\\n')[0] : r.querySelector('.ps-name').textContent;}).join('|')");
     ok('Recent lists newest first', (await names()) === 'Spring|Oat soap|Trial', await names());
     await page.click('[data-bl-view="status"]');
-    ok('the By status tab groups, curing first', (await names()) === 'G:Curing|Oat soap|G:Ready|Spring|G:Depleted|Trial', await names());
+    ok('the By status tab groups, curing first', (await names()) === 'G:Curing|Oat soap|G:Ready|Spring|G:Used up|Trial', await names());
     ok('and drives the old view select', (await page.evaluate("document.getElementById('f-view').value")) === 'status');
     await page.click('[data-bl-view="recent"]');
     await page.click('[data-bl-pill="f-type:test"]');
@@ -369,8 +369,8 @@ ok('an unknown icon name gives nothing rather than breaking', P.icon('nope') ===
     ok('Escape closes a saved batch', await page.evaluate("!document.getElementById('m-detail').classList.contains('open')"));
 
     await page.evaluate("openBatchDetail('b2')"); await page.waitForTimeout(150);
-    ok('a curing batch shows cure pills and Mark ready now', await page.evaluate(
-      "document.getElementById('d-cure-row').style.display === '' && document.querySelector('[data-bl-pill=\"d-cure:4\"]').classList.contains('on') && document.getElementById('d-curing-note').style.display === '' && document.getElementById('d-mark-ready-btn').style.display === ''"));
+    ok('a curing batch shows cure pills, the curing note and a Curing status pill', await page.evaluate(
+      "document.getElementById('d-cure-row').style.display === '' && document.querySelector('[data-bl-pill=\"d-cure:4\"]').classList.contains('on') && document.getElementById('d-curing-note').style.display === '' && document.querySelector('#d-status-pills [data-status=\"curing\"]').classList.contains('on')"));
     ok('an unnamed batch shows the formulation as its title', (await page.evaluate("document.getElementById('d-name').placeholder")) === 'Oat soap');
     await page.evaluate("closeDetail()");
 
@@ -388,6 +388,58 @@ ok('an unknown icon name gives nothing rather than breaking', P.icon('nope') ===
     await phone.evaluate("openBatchDetail('b1'); setBatchTab('runs')"); await phone.waitForTimeout(150);
     ok('a batch fits a phone without sideways scroll', await phone.evaluate("document.documentElement.scrollWidth <= window.innerWidth + 1"));
     await phone.close();
+  }
+
+  console.log('\n4e. Batch status: Used up, Discarded, Ready by itself (2026-10-19)');
+  {
+    const page = await open('batchlog');
+    const day = (d) => page.evaluate("(function(){var x=Plume.parseLocalDate(Plume.todayISO());x.setDate(x.getDate()+" + d + ");return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');})()");
+    const f = [{ id: 'fs', name: 'Oat soap', type: 'Cold Process Soap', lines: [] }, { id: 'fm', name: 'Rose mist', type: 'Toner / mist', lines: [] }];
+    const b = [
+      { id: 'due', date: await day(-30), formulaId: 'fs', formulaName: 'Oat soap', formulaType: 'Cold Process Soap', batchName: 'Due', status: 'curing', cureWeeks: 4, readyDate: await day(-2), ingredientSnapshot: [], packagingRuns: [], committed: true },
+      { id: 'notyet', date: await day(-5), formulaId: 'fs', formulaName: 'Oat soap', formulaType: 'Cold Process Soap', batchName: 'Not yet', status: 'curing', cureWeeks: 4, readyDate: await day(23), ingredientSnapshot: [], packagingRuns: [], committed: true },
+      { id: 'mist', date: await day(-1), formulaId: 'fm', formulaName: 'Rose mist', formulaType: 'Toner / mist', batchName: 'Mist trial', batchType: 'test', status: 'ready', ingredientSnapshot: [], packagingRuns: [], committed: true }];
+    await page.evaluate("localStorage.setItem('aerie-formulations-v1', " + JSON.stringify(JSON.stringify(f)) + ");" +
+      "localStorage.setItem('aerie-batches-v1', " + JSON.stringify(JSON.stringify(b)) + ");");
+    await page.reload(); await page.waitForTimeout(500);
+    ok('curing soap past its ready date turned Ready on load', (await page.evaluate("findBatch('due').status")) === 'ready');
+    ok('and that was saved', (await page.evaluate("JSON.parse(localStorage.getItem('aerie-batches-v1')).find(function(x){return x.id==='due';}).status")) === 'ready');
+    ok('soap not yet due keeps curing', (await page.evaluate("findBatch('notyet').status")) === 'curing');
+
+    await page.evaluate("openBatchDetail('mist')"); await page.waitForTimeout(300);
+    const pills = () => page.evaluate("Array.from(document.querySelectorAll('#d-status-pills .ps-chip')).map(function(e){return e.textContent + (e.classList.contains('on') ? '*' : '');}).join('|')");
+    ok('a mist offers Ready, Used up and Discarded, no Curing', (await pills()) === 'Ready*|Used up|Discarded', await pills());
+    await page.evaluate("PLUME_TEST_ANSWER = false; document.querySelector('#d-status-pills [data-status=\"discarded\"]').click(); PLUME_TEST_ANSWER = undefined;");
+    ok('Discarded asks first; No leaves it alone', (await page.evaluate("findBatch('mist').status")) === 'ready');
+    await page.evaluate("document.querySelector('#d-status-pills [data-status=\"discarded\"]').click()");
+    ok('Yes marks it discarded and saves at once', (await page.evaluate("JSON.parse(localStorage.getItem('aerie-batches-v1')).find(function(x){return x.id==='mist';}).status")) === 'discarded');
+    ok('the pills and note follow', (await pills()) === 'Ready|Used up|Discarded*' && /Wasted/.test(await page.evaluate("document.getElementById('d-status-note').textContent")));
+    ok('the status change does not leave a Save changes behind', await page.evaluate("document.getElementById('d-save-btn').hidden"));
+    await page.evaluate("closeDetail()");
+    ok('the list strikes it through and says Discarded', await page.evaluate(
+      "var r=document.querySelector('tr[onclick*=\"mist\"]'); r.classList.contains('discarded') && /Discarded/.test(r.innerText)"));
+    ok('the summary counts discarded batches', /1 discarded/.test(await page.evaluate("document.getElementById('bl-summary').innerText")));
+    await page.evaluate("blPill('f-view','status')");
+    ok('By status files it under Discarded', /Discarded[\s\S]*Mist trial/.test(await page.evaluate("document.getElementById('tbody').innerText")));
+
+    await page.evaluate("openBatchDetail('notyet')"); await page.waitForTimeout(300);
+    await page.evaluate("document.querySelector('#d-status-pills [data-status=\"ready\"]').click()");
+    ok('Ready ends a cure early, dated today', (await page.evaluate("findBatch('notyet').status + ' ' + (findBatch('notyet').readyDate === Plume.todayISO())")) === 'ready true');
+    await page.evaluate("document.querySelector('#d-status-pills [data-status=\"depleted\"]').click()");
+    ok('Used up is set by hand', (await page.evaluate("findBatch('notyet').status")) === 'depleted');
+    ok('and shows as Used up', /Used up/.test(await page.evaluate("document.getElementById('d-meta').innerText")));
+    await page.close();
+
+    const cost = await open('costing');
+    await cost.evaluate("localStorage.setItem('aerie-formulations-v1', " + JSON.stringify(JSON.stringify(f)) + ");" +
+      "localStorage.setItem('aerie-batches-v1', " + JSON.stringify(JSON.stringify([Object.assign({}, b[2], { status: 'discarded' }), Object.assign({}, b[2], { id: 'mist2', batchName: 'Mist good', status: 'ready' })])) + ");" +
+      "localStorage.setItem('plume-products-v1', " + JSON.stringify(JSON.stringify([{ id: 'pm', name: 'Rose mist 2 oz', status: 'active', formulaId: 'fm', packagingRecipe: [] }])) + ");" +
+      "localStorage.setItem('plume_costing_listorder_v1', '1');");
+    await cost.reload(); await cost.waitForTimeout(500);
+    await cost.evaluate("openProduct('pm')"); await cost.waitForTimeout(200);
+    const opts = await cost.evaluate("Array.from(document.getElementById('run-batch').options).map(function(o){return o.textContent;}).join('|')");
+    ok('Products does not offer a discarded batch for a production run', !/Mist trial/.test(opts) && /Mist good/.test(opts), opts);
+    await cost.close();
   }
 
   console.log('\n5. Phone width');

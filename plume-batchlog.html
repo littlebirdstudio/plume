@@ -249,6 +249,10 @@ body.ps-shell .field input:focus, body.ps-shell .field select:focus, body.ps-she
 .bl-st-ready { background: var(--sage-light); color: var(--sage-dark); }
 .bl-st-curing { background: var(--warning-bg); color: var(--warning); }
 .bl-st-depleted { background: transparent; color: var(--ink-lighter); box-shadow: inset 0 0 0 1px var(--cream-border); }
+.bl-st-discarded { background: var(--danger-bg); color: var(--danger); }
+.bl-row.discarded td { color: var(--ink-lighter); }
+.bl-row.discarded .ps-name { text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--ink) 35%, transparent); }
+.bp-status-note { display: block; font-size: 12px; color: var(--ink-lighter); margin-top: 5px; }
 .bl-st-test { background: color-mix(in srgb, var(--ink) 8%, transparent); color: var(--ink-light); }
 .bl-when { font-size: 12px; color: var(--ink-lighter); display: block; }
 .cure-bar { display: block; width: 90px; height: 4px; border-radius: 2px; background: var(--cream-dark); margin-top: 5px; overflow: hidden; }
@@ -533,6 +537,11 @@ body.ps-shell .pkg-builder-hdr .field input { width: 100%; min-width: 0; }
       </div>
 
       <div class="bp-pane" id="bp-details">
+        <div class="field">
+          <span class="bp-lbl">Status</span>
+          <div class="bp-pills" id="d-status-pills"></div>
+          <span class="bp-status-note" id="d-status-note"></span>
+        </div>
         <div class="bp-fields">
           <div class="field">
             <label for="d-date">Date made</label>
@@ -582,7 +591,7 @@ body.ps-shell .pkg-builder-hdr .field input { width: 100%; min-width: 0; }
         </div>
         <div class="bp-note warn" id="d-curing-note" style="display:none">
           <span id="d-curing-text"></span>
-          <button type="button" class="btn" id="d-mark-ready-btn" onclick="markBatchReady()" style="display:none">Mark ready now</button>
+          <button type="button" class="btn" id="d-mark-ready-btn" onclick="markBatchReady()" hidden>Mark ready now</button>
         </div>
       </div>
 
@@ -685,10 +694,26 @@ function loadData() {
     if (!b.lotDraws) b.lotDraws = [];
     if (!b.packagingDraws) b.packagingDraws = [];
   });
+  autoReadyCured();
   renderStats();
   renderList();
   populateFormulaPicker();
   Plume.renderStorBanner();
+}
+
+// Curing soap turns Ready by itself once its ready date has come (her
+// call, 2026-10-19). Checked each time the page loads; readyDate is left
+// as it was, which is the day it became ready.
+function autoReadyCured() {
+  var today = todayISO(), changed = false;
+  batches.forEach(function(b) {
+    if (b.status === 'curing' && b.readyDate && b.readyDate <= today) {
+      b.status = 'ready';
+      b.updatedAt = new Date().toISOString();
+      changed = true;
+    }
+  });
+  if (changed) saveBatches();
 }
 
 // The three save functions below all report success rather than swallowing
@@ -847,16 +872,18 @@ function findLyeIngredient(lyeType) {
 function renderStats() {
   var el = document.getElementById('bl-summary');
   if (!el) return;
-  var curing = 0, ready = 0, monthCount = 0;
+  var curing = 0, ready = 0, monthCount = 0, discarded = 0;
   var thisMonth = todayISO().slice(0, 7);
   batches.forEach(function(b) {
     if (b.status === 'curing') curing++;
     if (b.status === 'ready')  ready++;
+    if (b.status === 'discarded') discarded++;
     if (b.date && b.date.indexOf(thisMonth) === 0) monthCount++;
   });
   el.innerHTML = '<span><b>' + batches.length + '</b> batch' + (batches.length === 1 ? '' : 'es') + '</span>' +
     '<span><b>' + curing + '</b> curing</span><span><b>' + ready + '</b> ready</span>' +
-    '<span><b>' + monthCount + '</b> this month</span>';
+    '<span><b>' + monthCount + '</b> this month</span>' +
+    (discarded ? '<span><b>' + discarded + '</b> discarded</span>' : '');
   if (Plume.refreshShell) Plume.refreshShell();
 }
 
@@ -928,14 +955,14 @@ function renderList() {
       groups[k].forEach(function(b) { html += rowHtml(b); });
     });
   } else if (viewMode === 'status') {
-    var groups = { curing:[], ready:[], depleted:[] };
+    var groups = { curing:[], ready:[], depleted:[], discarded:[] };
     rows.forEach(function(b) {
       var s = b.status || 'ready';
       if (!groups[s]) groups[s] = [];
       groups[s].push(b);
     });
-    var labels = { curing: 'Curing', ready: 'Ready', depleted: 'Depleted' };
-    ['curing','ready','depleted'].forEach(function(s) {
+    var labels = { curing: 'Curing', ready: 'Ready', depleted: 'Used up', discarded: 'Discarded' };
+    ['curing','ready','depleted','discarded'].forEach(function(s) {
       if (groups[s].length) {
         html += '<tr class="group-row"><td colspan="6"><div class="grp-bar">' + Plume.icon('batches') + labels[s] + '<span class="ct">' + groups[s].length + '</span></div></td></tr>';
         groups[s].forEach(function(b) { html += rowHtml(b); });
@@ -957,7 +984,8 @@ function cureHtml(b, withBar) {
 }
 function statusBadgeHtml(b) {
   if (b.status === 'curing')   return '<span class="bl-st bl-st-curing">Curing</span>';
-  if (b.status === 'depleted') return '<span class="bl-st bl-st-depleted">Depleted</span>';
+  if (b.status === 'depleted') return '<span class="bl-st bl-st-depleted">Used up</span>';
+  if (b.status === 'discarded') return '<span class="bl-st bl-st-discarded">Discarded</span>';
   return '<span class="bl-st bl-st-ready">Ready</span>';
 }
 // Units packaged: the largest component quantity in each run (a run of 6
@@ -982,7 +1010,7 @@ function rowHtml(b) {
   var nameDisplay = b.batchName
     ? '<div class="ps-name">' + esc(b.batchName) + '</div><div class="ps-sub">' + esc(b.formulaName || '') + '</div>'
     : '<div class="ps-name">' + esc(b.formulaName || '(no formula)') + '</div>' + (f && f.type ? '<div class="ps-sub">' + esc(f.type) + '</div>' : '');
-  return '<tr class="bl-row' + (b.status === 'depleted' ? ' dim' : '') + '" onclick="openBatchDetail(\'' + b.id + '\')">' +
+  return '<tr class="bl-row' + (b.status === 'depleted' ? ' dim' : '') + (b.status === 'discarded' ? ' discarded' : '') + '" onclick="openBatchDetail(\'' + b.id + '\')">' +
     '<td>' + fmtDate(b.date) + '</td>' +
     '<td>' + nameDisplay + '</td>' +
     '<td class="ps-num">' + (b.actualYield || b.targetYield || '--') + ' g' +
@@ -1475,9 +1503,9 @@ function openBatchDetail(id) {
     document.getElementById('d-cure').value = String(b.cureWeeks || 4);
   }
 
-  // "Mark ready" button: only for curing soap batches
-  document.getElementById('d-mark-ready-btn').style.display = (b.status === 'curing') ? '' : 'none';
+  // The Ready pill replaced the Mark ready now button (kept, hidden).
   renderCuringNote(b);
+  renderStatusRow(b);
 
   // Ingredient snapshot (read-only)
   renderSnapshot(b);
@@ -1515,6 +1543,53 @@ function renderDetailMeta(b) {
   parts.push(statusBadgeHtml(b));
   document.getElementById('d-meta').innerHTML = parts.join('<span aria-hidden="true">&middot;</span>');
 }
+// Status is set by hand from these pills (curing soap also turns Ready by
+// itself on its date). A change saves at once, like Mark ready did. The
+// select-free design: status has rules the pills enforce (Curing only for
+// soap; Discarded asks first), so they call setBatchStatus directly.
+var STATUS_NOTE = {
+  curing:    'Curing until its ready date, then it turns Ready by itself. Pick Ready to end the cure early.',
+  ready:     'Made and on hand.',
+  depleted:  'All of it has been used or sold.',
+  discarded: 'Wasted. The ingredients stay out of stock, since they were really used. Say why in the notes.'
+};
+function renderStatusRow(b) {
+  var opts = (isSoapType(b.formulaType) ? [['curing', 'Curing']] : [])
+    .concat([['ready', 'Ready'], ['depleted', 'Used up'], ['discarded', 'Discarded']]);
+  var cur = b.status || 'ready';
+  document.getElementById('d-status-pills').innerHTML = opts.map(function(o) {
+    var on = cur === o[0];
+    return '<button type="button" class="ps-chip' + (on ? ' on' : '') + '" aria-pressed="' + on + '" data-status="' + o[0] +
+      '" onclick="setBatchStatus(\'' + o[0] + '\')">' + o[1] + '</button>';
+  }).join('');
+  document.getElementById('d-status-note').textContent = STATUS_NOTE[cur] || '';
+}
+function setBatchStatus(v) {
+  if (!editingBatchId) return;
+  var b = findBatch(editingBatchId);
+  if (!b || (b.status || 'ready') === v) return;
+  var id = b.id;
+  var apply = function() {
+    if (editingBatchId !== id) return;
+    if (v === 'ready' && b.status === 'curing') b.readyDate = todayISO();   // ended early, as Mark ready did
+    if (v === 'curing') b.readyDate = addWeeks(b.date, b.cureWeeks || parseInt(document.getElementById('d-cure').value, 10) || 4);
+    b.status = v;
+    b.updatedAt = new Date().toISOString();
+    saveBatches();
+    renderStatusRow(b);
+    renderDetailMeta(b);
+    renderCuringNote(b);
+    renderStats();
+    renderList();
+  };
+  if (v === 'discarded') {
+    Plume.ask('The ingredients it used stay out of stock, since they were really used. It will not be offered when you log a production run in Products.',
+      apply, { title: 'Mark this batch discarded?', yes: 'Mark discarded' });
+  } else {
+    apply();
+  }
+}
+
 function renderCuringNote(b) {
   var box = document.getElementById('d-curing-note');
   if (b.status !== 'curing') { box.style.display = 'none'; return; }
@@ -2073,7 +2148,7 @@ function markBatchReady() {
     b.updatedAt = new Date().toISOString();
     saveBatches();
     // Update detail UI in place
-    document.getElementById('d-mark-ready-btn').style.display = 'none';
+    renderStatusRow(b);
     // Refresh header meta
     renderDetailMeta(b);
     renderCuringNote(b);

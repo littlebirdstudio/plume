@@ -2539,3 +2539,29 @@ opens the Packaging runs tab before using the run builder, as a person
 would. 18 suites.
 
 **The app-style redesign is finished:** all five modules are in the shell.
+
+### Session 20 (cont.) — Batch status: Used up, Discarded, Ready by itself (core v1.28)
+
+Her problem: a test face spray that will never reach packaging, and more to
+come. Deleting was the wrong tool (it returns the ingredients to stock).
+Also found: "Depleted" existed but nothing could set it.
+
+- **Status row** at the top of a batch's Details tab (`renderStatusRow`,
+  `setBatchStatus`): Ready, Used up, Discarded, plus Curing for soap. A
+  change saves at once (status was never part of Save changes; Mark ready
+  saved at once too). Discarded asks first and keeps the ingredients spent.
+  Ready on a curing batch ends the cure early, dated today (what Mark ready
+  now did; that button is kept, hidden, and `markBatchReady` still works).
+  Picking Curing again recomputes the ready date from date + cure weeks.
+- **Stored values unchanged:** `depleted` is still the stored word; it
+  DISPLAYS as "Used up". `discarded` is the new value.
+- **Ready by itself:** `autoReadyCured()` in `loadData`: curing batches whose
+  readyDate is today or earlier become `ready` and are saved. Her call. Used
+  up stays manual: runs record units, not grams, so Plume cannot tell when
+  bulk is gone.
+- **Discarded in the list:** greyed, name struck through, red "Discarded"
+  tag; its own group in By status; counted in the summary.
+- **Products:** a discarded batch is not offered in the production run's
+  "From batch" choices (`renderRuns`).
+
+**Tests:** `test-shell.js` section 4e (16 checks).
