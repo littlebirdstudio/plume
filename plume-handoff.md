@@ -2701,3 +2701,34 @@ products, not batches." Steps 2 and 3 can happen in either order.
 **Tests:** `test-shell.js` 4c gained checks for status, Duplicate, Save
 packaging, Description and the leave fix; nav order updated.
 `test-costing-tools.js` updated for drafts becoming Active.
+
+### Session 21 (cont.): What's next pointers; packaging stock tracking switch (core v1.32)
+
+Her aim, for herself and for Formula Finch buyers: the order of the work is
+clear without a course. Previewed and approved 2026-10-20.
+
+- **Core `Plume.nextStep(o)`** returns a short dashed note with an icon, a
+  bold lead, text and one button (`go` with `href` or `onclick`), plus an
+  optional plain fallback (`off`). Settings > What's next pointers (Show /
+  Hide) stores `plume-tips` in localStorage (per device, like light/dark);
+  `applyTips()` puts `plume-no-tips` on the html element, and CSS hides the
+  notes and shows the fallbacks. No re-render needed.
+- **Where they appear** (each only until the step is done): empty
+  Ingredients, Packaging, Formulations, Batches and Products lists; a
+  formulation with ingredients that has never been made (`#f-next`, Make a
+  batch); a batch whose formulation has no products (New product from this
+  formulation, `plume-costing.html#new=<formula>`, which opens New product
+  with it chosen); a product with no packaging list; a product whose
+  formulation has no batch (`#run-next`, `plume-batchlog.html#new=`).
+- **Start page:** the five cards run in the order of the work, numbered, each
+  with a count; the first with none is marked Next (not when the pointers
+  are hidden). `index.html` reads counts with `Plume.Store.init`.
+- **Track packaging stock** (Settings > Packaging stock: Track it / Don't
+  track; `plume-track-pkg` in Store, so it travels with a backup). Off is for
+  someone who never enters packaging purchases: `fillShortages` returns none
+  and `fillPull` takes nothing (`run.pkgUntracked`), the fill row says
+  packaging stock is not tracked, and Save packaging no longer gates fills.
+  On by default: short stock still stops a fill (her rule).
+
+**Tests:** new `test/test-next.js` (25 checks); `test-shell.js` and
+`test-theme.js` updated. 20 suites.

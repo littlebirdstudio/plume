@@ -969,6 +969,13 @@ function renderList() {
   });
 
   blSyncPills();
+  if (!batches.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="padding:14px 0">' + Plume.nextStep({ icon: 'batches',
+      text: '<b>Log a batch each time you make a formulation.</b> It takes the ingredients from stock, and the products you fill draw on it. Start one here, or with Make batch on a formulation.',
+      go: 'New batch', onclick: 'openNewBatch()',
+      off: '<div class="bl-empty"><p>No batches yet</p><span>Click New batch to log your first one.</span></div>' }) + '</td></tr>';
+    return;
+  }
   if (!rows.length) {
     tbody.innerHTML = '<tr><td colspan="6"><div class="bl-empty"><p>' +
       (batches.length ? 'No batches match' : 'No batches yet') + '</p>' +
@@ -1935,18 +1942,23 @@ function renderFills(b) {
         ? (p.components || []).some(function(c) { return c.formulaId === b.formulaId; })
         : p.formulaId === b.formulaId;
     });
-    html += '<div class="fill-go"><div class="fill-go-h">Fill from this batch<span>opens the product in Products &amp; Costing, with this batch chosen</span></div>' +
-      (prods.length
-        ? '<div class="fill-go-l">' + prods.map(function(p) {
-            var part = '';
-            if (p.productKind === 'multi') {
-              var c = (p.components || []).filter(function(x) { return x.formulaId === b.formulaId; })[0];
-              part = '<small>' + esc((c && c.label) || 'one part') + '</small>';
-            }
-            return '<a class="go-btn" href="' + costingLink(p.id, b.id) + '">' + Plume.icon('costing') + '<span>' + esc(p.name || '(unnamed)') + '</span>' + part + '<span class="arr" aria-hidden="true">&rsaquo;</span></a>';
-          }).join('') + '</div>'
-        : '<div class="fill-go-none">No products are made from this formulation yet. Add one in <a href="plume-costing.html">Products &amp; Costing</a>.</div>') +
-      '</div>';
+    if (prods.length) {
+      html += '<div class="fill-go"><div class="fill-go-h">Fill from this batch<span>opens the product in Products &amp; Costing, with this batch chosen</span></div>' +
+        '<div class="fill-go-l">' + prods.map(function(p) {
+          var part = '';
+          if (p.productKind === 'multi') {
+            var c = (p.components || []).filter(function(x) { return x.formulaId === b.formulaId; })[0];
+            part = '<small>' + esc((c && c.label) || 'one part') + '</small>';
+          }
+          return '<a class="go-btn" href="' + costingLink(p.id, b.id) + '">' + Plume.icon('costing') + '<span>' + esc(p.name || '(unnamed)') + '</span>' + part + '<span class="arr" aria-hidden="true">&rsaquo;</span></a>';
+        }).join('') + '</div></div>';
+    } else {
+      // What's next (2026-10-20): no products yet for this formulation.
+      html += Plume.nextStep({ icon: 'costing', title: 'Next: set up what you will sell from it.',
+        text: 'No products are made from ' + esc(b.formulaName || 'this formulation') + ' yet. Each size is its own product (3 mL, 5 mL, 10 mL), and they all fill from this batch.',
+        go: 'New product from this formulation', href: 'plume-costing.html#new=' + encodeURIComponent(b.formulaId || ''),
+        off: '<div class="fill-go"><div class="fill-go-none">No products are made from this formulation yet. Add one in <a href="plume-costing.html">Products &amp; Costing</a>.</div></div>' });
+    }
   }
   if (fills.length) {
     html += '<div class="fills-tbl"><div class="fill-it h"><span>Date</span><span>Product</span><span class="r">Units</span><span class="r">Grams</span></div>' +

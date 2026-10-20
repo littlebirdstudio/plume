@@ -35,7 +35,7 @@ var Plume = (function () {
 // (v0.4 / v0.5 / v0.6 across five modules). BUMP IT IN EVERY PULL REQUEST,
 // core change or not: it is how "is this the update I just merged?" is
 // answered by looking, and browsers cache .js files stubbornly.
-var VERSION = '1.31';
+var VERSION = '1.32';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -182,6 +182,7 @@ var KEY_LABELS = {
   'aerie-batches-v1':      'Batches',
   'plume-products-v1':     'Products & costing',
   'plume-linesheet-v1':    'Line sheet (the last one made)',
+  'plume-track-pkg':       'Setting: track packaging stock',
   'aerie-costing-v1':      'Costing (old, unused)'
 };
 
@@ -741,8 +742,86 @@ function renderThemeChoice(container) {
   var opt = function (v, label) {
     return '<button type="button" class="plume-theme-opt' + (c === v ? ' on' : '') + '" onclick="Plume.setTheme(\'' + v + '\')">' + label + '</button>';
   };
+  var on = tipsOn();
+  nextCss();
   el.innerHTML = '<div class="plume-theme-row">' + opt('light', 'Light') + opt('dark', 'Dark') + opt('auto', 'Match my computer') + '</div>' +
-    '<div class="plume-theme-note">Light or dark applies to every module on this device, and so does the palette below.</div>';
+    '<div class="plume-theme-note">Light or dark applies to every module on this device, and so does the palette below.</div>' +
+    '<div class="plume-theme-row plume-tips-row"><span class="plume-theme-note" style="margin:0 6px 0 0">What\u2019s next pointers</span>' +
+      '<button type="button" class="plume-theme-opt' + (on ? ' on' : '') + '" onclick="Plume.setTips(true)">Show</button>' +
+      '<button type="button" class="plume-theme-opt' + (on ? '' : ' on') + '" onclick="Plume.setTips(false)">Hide</button></div>' +
+    '<div class="plume-theme-note">Short notes that point to the next step where it is not done yet.</div>' +
+    '<div class="plume-theme-row plume-tips-row"><span class="plume-theme-note" style="margin:0 6px 0 0">Packaging stock</span>' +
+      '<button type="button" class="plume-theme-opt' + (pkgTracked() ? ' on' : '') + '" onclick="Plume.setPkgTracking(true)">Track it</button>' +
+      '<button type="button" class="plume-theme-opt' + (pkgTracked() ? '' : ' on') + '" onclick="Plume.setPkgTracking(false)">Don\u2019t track</button></div>' +
+    '<div class="plume-theme-note">When tracked, each fill takes its packaging from stock, and stops if stock is short. Turn it off if you don\u2019t enter packaging purchases.</div>';
+}
+
+// ══ What's next pointers (2026-10-20) ═════════════════
+// A short note where the next step of the work is not done yet: an empty
+// module, a formulation never made, a batch with no products, a product
+// with no packaging list or no batch. Each goes away once that step is
+// done. Heide's aim: the order of the work is clear without a course, for
+// her and for Formula Finch buyers. Settings can turn them all off on this
+// device ('plume-tips' = 'off'); then the page shows its plain fallback.
+var TIPS_KEY = 'plume-tips';
+function tipsOn() {
+  try { return window.localStorage.getItem(TIPS_KEY) !== 'off'; } catch (e) { return true; }
+}
+function applyTips() {
+  if (typeof document === 'undefined' || !document.documentElement) return;
+  document.documentElement.classList.toggle('plume-no-tips', !tipsOn());
+}
+function setTips(on) {
+  try { window.localStorage.setItem(TIPS_KEY, on ? 'on' : 'off'); } catch (e) {}
+  applyTips();
+  renderPaletteSwatches();
+}
+// Track packaging stock (2026-10-20): on unless turned off in Settings.
+// Off is for someone who uses Plume without entering packaging purchases:
+// fills then count units and grams, and never check or take packaging
+// stock. Kept in Store, so it travels with a backup.
+var TRACK_PKG_KEY = 'plume-track-pkg';
+function pkgTracked() { return Store.get(TRACK_PKG_KEY) !== 'off'; }
+function setPkgTracking(on) {
+  Store.set(TRACK_PKG_KEY, on ? 'on' : 'off');
+  renderPaletteSwatches();
+  try { window.dispatchEvent(new Event('plume-settings')); } catch (e) {}
+}
+
+function nextCss() {
+  if (document.getElementById('plume-next-css')) return;
+  var css =
+    '.next-step{display:flex;align-items:center;gap:12px;flex-wrap:wrap;border:1.5px dashed color-mix(in srgb,var(--bark) 45%,var(--cream-border));background:color-mix(in srgb,var(--bark) 6%,var(--white));border-radius:11px;padding:10px 14px;font-size:14px;line-height:1.5;color:var(--ink-light);text-align:left;font-family:\'DM Sans\',sans-serif}' +
+    '.next-step .ns-ico{width:30px;height:30px;border-radius:8px;background:var(--white);display:grid;place-items:center;color:var(--bark);flex:none;box-shadow:0 1px 2px rgba(20,20,15,.08)}' +
+    '.next-step .ns-ico .ps-i{width:18px;height:18px}' +
+    '.next-step b{color:var(--ink);font-weight:600}' +
+    '.next-step .ns-t{flex:1 1 260px;min-width:0}' +
+    '.next-step .ns-go{font:inherit;font-size:13.5px;font-weight:500;border:0;background:var(--bark);color:var(--white);border-radius:7px;padding:6px 12px;cursor:pointer;white-space:nowrap;text-decoration:none;display:inline-block}' +
+    '.next-step .ns-go:hover{filter:brightness(1.06)}' +
+    'html.plume-no-tips .next-step{display:none}' +
+    '.next-off{display:none}' +
+    'html.plume-no-tips .next-off{display:block}' +
+    '.plume-tips-row{margin-top:14px}';
+  var s = document.createElement('style');
+  s.id = 'plume-next-css';
+  s.textContent = css;
+  document.head.appendChild(s);
+}
+// o: { icon, title, text, go, href | onclick, off }. title and text are
+// trusted HTML from the module; off is the plain line shown when the
+// pointers are turned off (optional).
+function nextStep(o) {
+  nextCss();
+  applyTips();
+  var go = '';
+  if (o.go) {
+    go = o.href
+      ? '<a class="ns-go" href="' + esc(o.href) + '">' + esc(o.go) + ' &rsaquo;</a>'
+      : '<button type="button" class="ns-go" onclick="' + esc(o.onclick || '') + '">' + esc(o.go) + ' &rsaquo;</button>';
+  }
+  return '<div class="next-step"><span class="ns-ico">' + icon(o.icon || 'sparkle') + '</span><span class="ns-t">' +
+    (o.title ? '<b>' + o.title + '</b> ' : '') + (o.text || '') + '</span>' + go + '</div>' +
+    (o.off ? '<div class="next-off">' + o.off + '</div>' : '');
 }
 
 // ══ App shell (2026-10-18 redesign) ═══════════════════
@@ -1546,6 +1625,7 @@ function boot(cb) {
   injectStyles();
   stampVersion();
   Store.onQuotaError(noteSaveFailed);
+  applyTips();
   Store.init(function () {
     applyPalette(loadPaletteChoice());
     if (cb) cb();
@@ -2724,6 +2804,7 @@ function fillFind(list, id) {
 // entered, entered wrong, or the wrong thing was picked).
 function fillShortages(pkgs, p, units) {
   var out = [];
+  if (!pkgTracked()) return out;
   fillPkgNeeds(p, units).forEach(function (n) {
     var it = fillFind(pkgs, n.packagingId), have = it ? pkStock(it) : 0;
     if (n.quantity > have) out.push({ packagingId: n.packagingId, name: it ? pkDisplay(it) : '(a deleted packaging item)', need: n.quantity, have: have });
@@ -2733,6 +2814,7 @@ function fillShortages(pkgs, p, units) {
 // Takes the packaging out of stock and records it on the run.
 function fillPull(pkgs, p, run) {
   run.packaging = [];
+  if (!pkgTracked()) { run.pkgUntracked = true; return; }
   fillPkgNeeds(p, parseInt(run.units, 10) || 0).forEach(function (n) {
     var it = fillFind(pkgs, n.packagingId);
     if (!it) return;
@@ -2824,6 +2906,8 @@ return {
   shell: shell, refreshShell: refreshShell, toggleSide: toggleSide, icon: icon, BRAND: BRAND,
   peek: { open: openPeek, close: closePeek, isOpen: peekIsOpen },
   isInstalled: isInstalled, install: install, openPage: openPage, resetAppCache: resetAppCache,
+  tipsOn: tipsOn, setTips: setTips, applyTips: applyTips, nextStep: nextStep,
+  pkgTracked: pkgTracked, setPkgTracking: setPkgTracking,
   setTheme: setTheme, isDark: isDark, themeChoice: themeChoice, darkValue: darkValue, applyTheme: applyTheme,
   tell: tell, ask: ask, askValue: askValue,
   parsePh: parsePh, phNum: phNum, phRange: phRange, phTargetText: phTargetText,

@@ -726,6 +726,7 @@ body.ps-shell .inci-list { font-size: 13px; color: var(--ink); }
       </div>
     </div>
 
+    <div id="f-next" style="margin:0 0 14px"></div>
     <div class="var-strip" id="var-strip"></div>
     <div class="var-bar" id="var-bar"></div>
     <div id="arch-bar-ed"></div>
@@ -1535,7 +1536,10 @@ function renderCards() {
   var live = forms.filter(function (f) { return !f.archived; });
   renderListChrome(live);
   if (!forms.length) {
-    el.innerHTML = '<div class="empty"><p>No formulations yet</p><span style="font-size:13px">Click New to start building your first formula.</span></div>';
+    el.innerHTML = Plume.nextStep({ icon: 'formulations',
+      text: '<b>Design your first formulation</b> from your ingredients, in percentages. Plume works out the grams for any batch size.',
+      go: 'New formulation', onclick: 'newFormula()',
+      off: '<div class="empty"><p>No formulations yet</p><span style="font-size:13px">Click New to start building your first formula.</span></div>' });
     return;
   }
 
@@ -1644,6 +1648,19 @@ function openFormula(id) {
 
   showEditor(f.name);
   loadVariantIntoEditor();
+  renderFormNext(f);
+}
+
+// What's next (2026-10-20): a formulation with ingredients that has never
+// been made points to Batches. Gone after its first batch.
+function renderFormNext(f) {
+  var el = document.getElementById('f-next');
+  if (!el) return;
+  var made = (Store.getJSON('aerie-batches-v1', []) || []).some(function (b) { return b && b.formulaId === f.id; });
+  var hasLines = (activeVar(f) && (activeVar(f).lines || []).length) || (f.lines || []).length;
+  el.innerHTML = (!made && hasLines && !f.archived) ? Plume.nextStep({ icon: 'batches', title: 'Not made yet.',
+    text: 'When you are ready to make it, log a batch. That takes the ingredients from stock.',
+    go: 'Make a batch', onclick: 'makeBatchFromFormula()' }) : '';
 }
 
 function restoreSoapSettings(f) {

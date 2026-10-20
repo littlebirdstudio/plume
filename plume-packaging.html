@@ -658,6 +658,13 @@ function renderTable() {
       ' listed under Needs sorting. Open one and save it to give it a kind; Plume fills in what it reads from the old name.</div>'
     : '';
   var tbody = document.getElementById('tbody');
+  if (!list.length && !items.length) {
+    tbody.innerHTML = '<tr class="pk-empty"><td colspan="6" style="padding:14px 0">' + Plume.nextStep({ icon: 'packaging',
+      text: '<b>Add the packaging you buy:</b> bottles, jars, caps, labels and bands. Products list what goes around each unit, and each fill takes it from stock.',
+      go: 'Add an item', onclick: 'openAdd()',
+      off: '<div class="empty-state"><p>No packaging items yet</p><span>Click \u201cNew\u201d to add your first packaging item</span></div>' }) + '</td></tr>';
+    return;
+  }
   if (!list.length) {
     tbody.innerHTML = '<tr class="pk-empty"><td colspan="6"><div class="empty-state"><p>' +
       (items.length ? 'Nothing matches' : 'No packaging items yet') + '</p><span>' +

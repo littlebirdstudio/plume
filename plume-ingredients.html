@@ -2439,6 +2439,13 @@ function renderTable() {
   var tbody = document.getElementById('tbody');
   syncArchiveBar();
   var noActive = ingredients.filter(function(i) { return !i.archived; }).length === 0;
+  if (!list.length && noActive && !ingredients.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="padding:14px 0">' + Plume.nextStep({ icon: 'ingredients', title: 'Start here.',
+      text: 'Add the ingredients you buy, with what you paid. Formulations, batches and costs all build on them. Quick add has a starter list by type.',
+      go: 'Add an ingredient', onclick: 'openAdd()',
+      off: '<div class="empty-state"><p>No ingredients yet</p><span>Click &quot;+ New ingredient&quot; to get started, or use Quick add from Settings for a curated starter list</span></div>' }) + '</td></tr>';
+    return;
+  }
   if (!list.length) {
     // No "but it is in the archive" hint is needed any more: a search now
     // returns archived matches directly, so reaching this really does mean

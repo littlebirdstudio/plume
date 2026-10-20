@@ -72,7 +72,7 @@ html[data-theme="dark"] .hero-logo { filter: invert(1) hue-rotate(180deg); mix-b
   margin: 0 auto;
   padding: 1rem 1.5rem 4rem;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 1.25rem;
 }
 
@@ -134,6 +134,13 @@ html[data-theme="dark"] .hero-logo { filter: invert(1) hue-rotate(180deg); mix-b
   flex: 1;
 }
 
+.card-step { font-size: 12px; color: var(--ink-lighter); letter-spacing: 0.04em; margin-bottom: 0.6rem; }
+.card-next { display: none; color: var(--clay-dark); font-weight: 500; }
+.module-card.now { border-color: var(--clay); box-shadow: 0 0 0 2px color-mix(in srgb, var(--clay) 22%, transparent); }
+.module-card.now .card-next { display: inline; }
+html.plume-no-tips .module-card.now { border-color: var(--cream-border); box-shadow: none; }
+html.plume-no-tips .module-card.now .card-next { display: none; }
+.card-count { margin-top: 0.75rem; font-size: 12.5px; color: var(--sage-dark); min-height: 1.2em; }
 .card-arrow {
   margin-top: 1rem;
   font-size: 11px;
@@ -167,6 +174,8 @@ html[data-theme="dark"] .hero-logo { filter: invert(1) hue-rotate(180deg); mix-b
   font-style: normal;
 }
 
+@media (max-width: 1000px) { .modules { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 700px) { .modules { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 600px) {
   .hero { padding: 2rem 1.5rem 1rem; }
 }
@@ -183,8 +192,11 @@ html[data-theme="dark"] .hero-logo { filter: invert(1) hue-rotate(180deg); mix-b
 </header>
 
 <main class="modules">
-
-  <a href="plume-ingredients.html" class="module-card">
+  <!-- In the order of the work (2026-10-20). Each card shows a count, and
+       the first step not started yet is marked Next (core what's next
+       pointers; Settings can turn them off). -->
+  <a href="plume-ingredients.html" class="module-card" data-step="ingredients">
+    <span class="card-step">1<span class="card-next"> &middot; Next</span></span>
     <svg class="card-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
       <!-- Sprig of leaves -->
       <path d="M24 42 L24 14"/>
@@ -193,11 +205,27 @@ html[data-theme="dark"] .hero-logo { filter: invert(1) hue-rotate(180deg); mix-b
       <path d="M24 36 C 18 36, 14 32, 14 26 C 20 26, 24 30, 24 36 Z"/>
     </svg>
     <div class="card-title">Ingredients</div>
-    <div class="card-desc">Your library of oils, butters, actives, and additives — with supplier lots, costs, and saponification data.</div>
-    <div class="card-arrow">Open <span>→</span></div>
+    <div class="card-desc">What you buy: oils, butters, actives and additives, with supplier lots, costs and saponification data.</div>
+    <div class="card-count" data-count="ingredients"></div>
+    <div class="card-arrow">Open <span>&rarr;</span></div>
   </a>
 
-  <a href="plume-formulations.html" class="module-card">
+  <a href="plume-packaging.html" class="module-card" data-step="packaging">
+    <span class="card-step">2<span class="card-next"> &middot; Next</span></span>
+    <svg class="card-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <!-- Apothecary bottle -->
+      <path d="M20 8 L 28 8 L 28 14 L 32 18 L 32 40 Q 24 43, 16 40 L 16 18 L 20 14 Z"/>
+      <path d="M22 8 L 26 8"/>
+      <path d="M19 26 L 29 26"/>
+    </svg>
+    <div class="card-title">Packaging</div>
+    <div class="card-desc">Bottles, jars, caps, labels and bands, with what you paid for them.</div>
+    <div class="card-count" data-count="packaging"></div>
+    <div class="card-arrow">Open <span>&rarr;</span></div>
+  </a>
+
+  <a href="plume-formulations.html" class="module-card" data-step="formulations">
+    <span class="card-step">3<span class="card-next"> &middot; Next</span></span>
     <svg class="card-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
       <!-- Mortar &amp; pestle (a little stylized) -->
       <path d="M10 22 L 38 22 L 34 38 Q 24 42, 14 38 Z"/>
@@ -206,37 +234,13 @@ html[data-theme="dark"] .hero-logo { filter: invert(1) hue-rotate(180deg); mix-b
       <circle cx="36" cy="8" r="2.5"/>
     </svg>
     <div class="card-title">Formulations</div>
-    <div class="card-desc">Build and refine recipes — cold &amp; hot process soap, lotions, balms — with live cost and quality feedback.</div>
-    <div class="card-arrow">Open <span>→</span></div>
+    <div class="card-desc">Design the recipe in percentages, with live cost and quality feedback. Soap, lotions, balms and more.</div>
+    <div class="card-count" data-count="formulations"></div>
+    <div class="card-arrow">Open <span>&rarr;</span></div>
   </a>
 
-  <a href="plume-packaging.html" class="module-card">
-    <svg class="card-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-      <!-- Apothecary bottle -->
-      <path d="M20 8 L 28 8 L 28 14 L 32 18 L 32 40 Q 24 43, 16 40 L 16 18 L 20 14 Z"/>
-      <path d="M22 8 L 26 8"/>
-      <path d="M19 26 L 29 26"/>
-    </svg>
-    <div class="card-title">Packaging</div>
-    <div class="card-desc">Track bottles, jars, labels, and closures — with photos, pricing, and per-unit costing for finished goods.</div>
-    <div class="card-arrow">Open <span>→</span></div>
-  </a>
-
-  <a href="plume-costing.html" class="module-card">
-    <svg class="card-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-      <!-- Balance scale -->
-      <path d="M24 10 L 24 38"/>
-      <path d="M16 38 L 32 38"/>
-      <path d="M10 18 L 24 14 L 38 18"/>
-      <path d="M6 26 Q 10 18, 14 26 Q 10 30, 6 26 Z"/>
-      <path d="M34 26 Q 38 18, 42 26 Q 38 30, 34 26 Z"/>
-    </svg>
-    <div class="card-title">Products &amp; Costing</div>
-    <div class="card-desc">Define your sellable products — packaging recipes, retail and wholesale prices, per-unit cost breakdowns, ingredient labels, and production-run history.</div>
-    <div class="card-arrow">Open <span>→</span></div>
-  </a>
-
-  <a href="plume-batchlog.html" class="module-card">
+  <a href="plume-batchlog.html" class="module-card" data-step="batches">
+    <span class="card-step">4<span class="card-next"> &middot; Next</span></span>
     <svg class="card-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
       <!-- Stacked jars: production batches on a shelf -->
       <path d="M10 28 L 10 42 L 22 42 L 22 28"/>
@@ -249,10 +253,26 @@ html[data-theme="dark"] .hero-logo { filter: invert(1) hue-rotate(180deg); mix-b
       <path d="M28 36 L 36 36"/>
     </svg>
     <div class="card-title">Batches</div>
-    <div class="card-desc">Log production batches — yield, curing, packaging runs, and full ingredient receipts. Inventory updates automatically when you make and unmake.</div>
-    <div class="card-arrow">Open <span>→</span></div>
+    <div class="card-desc">Commit to making it. A batch logs the bulk you made and takes the ingredients from stock.</div>
+    <div class="card-count" data-count="batches"></div>
+    <div class="card-arrow">Open <span>&rarr;</span></div>
   </a>
 
+  <a href="plume-costing.html" class="module-card" data-step="costing">
+    <span class="card-step">5<span class="card-next"> &middot; Next</span></span>
+    <svg class="card-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <!-- Balance scale -->
+      <path d="M24 10 L 24 38"/>
+      <path d="M16 38 L 32 38"/>
+      <path d="M10 18 L 24 14 L 38 18"/>
+      <path d="M6 26 Q 10 18, 14 26 Q 10 30, 6 26 Z"/>
+      <path d="M34 26 Q 38 18, 42 26 Q 38 30, 34 26 Z"/>
+    </svg>
+    <div class="card-title">Products &amp; Costing</div>
+    <div class="card-desc">Set up what you sell, with packaging and prices, then fill each product from a batch.</div>
+    <div class="card-count" data-count="costing"></div>
+    <div class="card-arrow">Open <span>&rarr;</span></div>
+  </a>
 </main>
 
 <!-- Shown only when Chrome offers to install (core's beforeinstallprompt). -->
@@ -264,7 +284,37 @@ html[data-theme="dark"] .hero-logo { filter: invert(1) hue-rotate(180deg); mix-b
 
 <!-- To stamp the version, register the offline copy and offer the install. -->
 <script src="plume-core.js"></script>
-<script>if (typeof Plume !== 'undefined') Plume.stampVersion();</script>
+<script>
+if (typeof Plume !== 'undefined') {
+  Plume.stampVersion();
+  Plume.applyTips();
+  // Counts for each step, and Next on the first one not started.
+  Plume.Store.init(function () {
+    var n = function (k, liveOnly) {
+      var l = Plume.Store.getJSON(k, []) || [];
+      return liveOnly ? l.filter(function (x) { return x && !x.archived; }).length : l.length;
+    };
+    var c = {
+      ingredients:  [n('aerie-ingredients-v2', true), 'ingredient', 'ingredients'],
+      packaging:    [n('aerie-packaging-v2', true), 'item', 'items'],
+      formulations: [n('aerie-formulations-v1', true), 'formulation', 'formulations'],
+      batches:      [n('aerie-batches-v1'), 'batch', 'batches'],
+      costing:      [n('plume-products-v1', true), 'product', 'products']
+    };
+    var next = null;
+    ['ingredients', 'packaging', 'formulations', 'batches', 'costing'].forEach(function (k) {
+      var el = document.querySelector('[data-count="' + k + '"]');
+      var v = c[k][0];
+      if (el) el.textContent = v ? v + ' ' + (v === 1 ? c[k][1] : c[k][2]) : 'none yet';
+      if (!v && !next) next = k;
+    });
+    if (next) {
+      var card = document.querySelector('[data-step="' + next + '"]');
+      if (card) card.classList.add('now');
+    }
+  });
+}
+</script>
 
 </body>
 </html>
