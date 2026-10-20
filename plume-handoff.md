@@ -92,7 +92,7 @@ Core defines globals with the names modules already use, so **converting a modul
 **A module may override an alias by defining its own function** — this is the intended escape hatch. `plume-ingredients.html` keeps a local `openModal` because it snapshots form state to detect unsaved edits. Share the common case; keep the exception local.
 
 ### Versioning
-`Plume.VERSION` is displayed at the bottom of every converted module's Settings → Storage panel, alongside the active driver name. **Bump it on every core change.** Browsers cache `.js` far more stubbornly than they re-fetch a replaced HTML file, so "is core loaded, and is it the one I just uploaded?" must be answerable by looking. Current: **v1.36** (see the newest session notes at the end; v1.8 added INCI blend splitting; v1.9 added density resolution; v1.10 ranked search results, best match first; v1.11 added pH records; v1.12 made it the one app version, shown in every footer; v1.13 rebuilt Quick add; v1.14 drafted lowdowns; v1.15 replaced the browser pop-ups with in-page dialogs).
+`Plume.VERSION` is displayed at the bottom of every converted module's Settings → Storage panel, alongside the active driver name. **Bump it on every core change.** Browsers cache `.js` far more stubbornly than they re-fetch a replaced HTML file, so "is core loaded, and is it the one I just uploaded?" must be answerable by looking. Current: **v1.37** (see the newest session notes at the end; v1.8 added INCI blend splitting; v1.9 added density resolution; v1.10 ranked search results, best match first; v1.11 added pH records; v1.12 made it the one app version, shown in every footer; v1.13 rebuilt Quick add; v1.14 drafted lowdowns; v1.15 replaced the browser pop-ups with in-page dialogs).
 
 ### Upload order matters
 `plume-core.js` **first**, then the HTML. A module that arrives before core shows the missing-core banner until core lands. Core alone breaks nothing.
@@ -3035,4 +3035,45 @@ a range she entered; not marked draft (the review is the check).
 works only below about 5.5–6; Inolex says 4–8. Look it up, every time.
 
 **Tests:** new `test/test-effective-ph.js` (23). 25 suites.
+
+### Session 23 (cont.): Effective pH ranges and the warning (core v1.37)
+
+**Her point:** "optimal" was the wrong word. Optimal is not the same as
+functional or as unsafe: a preservative has a range it works in, and
+outside it the product may not be protected. The ingredient field is now
+labelled **Effective pH range** (editor, details page; the cheat sheet
+column reads "Effective pH"). **Label only: the stored field is still
+`optimalPh`**, like `chooseWhen` behind "The lowdown".
+
+- **Core:** `effPhRange(text)` reads free text, the FIRST range in it
+  ("3 to 6, with better efficacy at lower pH" is 3-6; "up to 5", "below 6",
+  "4+", "above 4.5" give an open side; anything else is null, never
+  guessed). `effPhIssues(lines, ings, lo, hi)` lists ingredients whose range
+  the pH falls outside (works on formulation lines or a batch's ingredient
+  snapshot). `effPhUnknown` lists preservatives with no range.
+  `isPreservative(ing)`: function category, or function text starting
+  "Preservative" / "broad-spectrum preservative" (not "preservative booster").
+- **Formulations:** under the target pH, inside the colour block
+  (`#ph-range-warn`): "Target reaches pH 6.5, above where Optiphen Plus is
+  effective (4-6)", names linking to the ingredient; a quiet line for a
+  preservative with no range. Recomputed as the target is typed and on every
+  recipe change. Nothing shows without a target.
+- **Batches:** under the final pH (`#d-ph-range`), checked against what went
+  into THAT batch (its ingredient snapshot), not the formulation today.
+- **It checks every ingredient with a range, not only preservatives** (a
+  thickener or active outside its range fails too). Her call is open to
+  narrowing it.
+- **Data:** `plume-starter.js` v2.3. The ten preservatives carry `optimalPh`
+  and `phSource` (where it came from; shown in the review, never stored on
+  an ingredient). From manufacturer pages, suppliers where the maker gives
+  none; where sources disagreed, the cautious range, and the source says so
+  (potassium sorbate and sodium benzoate "up to 5"; Dermosoft 1388 Eco
+  4.0-5.5 from Glenn Corp since Evonik gives no number; Spectrastat G2
+  Natural 4-8 from Inolex challenge testing). "Geogard ECT" added as a
+  former name of Preservative Eco, so her library's record matches.
+- **Settings > Fill in effective pH ranges:** the lowdown review,
+  parametrised by field (`openLowdownReview('optimalPh')`). Only blank
+  ranges, source shown, nothing marked draft (the review is the check).
+
+**Tests:** new `test/test-effective-ph.js` (23 checks). 25 suites.
 
