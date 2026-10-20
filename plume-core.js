@@ -35,7 +35,7 @@ var Plume = (function () {
 // (v0.4 / v0.5 / v0.6 across five modules). BUMP IT IN EVERY PULL REQUEST,
 // core change or not: it is how "is this the update I just merged?" is
 // answered by looking, and browsers cache .js files stubbornly.
-var VERSION = '1.28';
+var VERSION = '1.29';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -2483,10 +2483,14 @@ function pkButtonHtml(select, items) {
   for (var i = 0; i < items.length; i++) if (items[i].id === select.value) { it = items[i]; break; }
   if (!it) return '<span class="pk-thumb">' + pkIcon('other', '') + '</span><span class="pk-pb-t">Pick packaging</span><span class="pk-pb-c">' + icon('chevron') + '</span>';
   return '<span class="pk-thumb">' + pkIconFor(it) + '</span><span class="pk-pb-t">' + esc(pkDisplay(it)) + '</span>' +
-         '<span class="pk-pb-s">' + pkStock(it) + ' in stock</span><span class="pk-pb-c">' + icon('chevron') + '</span>';
+         (select.__pkNoStock ? '' : '<span class="pk-pb-s">' + pkStock(it) + ' in stock</span>') + '<span class="pk-pb-c">' + icon('chevron') + '</span>';
 }
-function pkPicker(select, items) {
+// opts.stock === false leaves the stock count off the button and the list.
+// Products & Costing does that (her call, 2026-10-19): a product's
+// packaging list says what goes around each unit, not what is on hand.
+function pkPicker(select, items, opts) {
   if (!select || select.getAttribute('data-pk-done')) return;
+  if (opts && opts.stock === false) select.__pkNoStock = true;
   pkCss();
   items = items || [];
   select.setAttribute('data-pk-done', '1');
@@ -2500,9 +2504,9 @@ function pkPicker(select, items) {
   select.parentNode.insertBefore(b, select.nextSibling);
   select.__pkBtn = b;
 }
-function pkPickers(root, items) {
+function pkPickers(root, items, opts) {
   var list = (root || document).querySelectorAll('select[data-pk-pick]');
-  for (var i = 0; i < list.length; i++) pkPicker(list[i], items);
+  for (var i = 0; i < list.length; i++) pkPicker(list[i], items, opts);
 }
 function pkOpen(select, items, btn) {
   pkClose();
@@ -2557,7 +2561,7 @@ function pkRenderPop() {
       h += '<div class="pk-pop-i' + (it.id === p.select.value ? ' sel' : '') + (n === p.hi ? ' hi' : '') + '" role="option" data-id="' + esc(it.id) + '" data-n="' + n + '">' +
         '<span class="pk-thumb">' + pkIconFor(it) + '</span>' +
         '<span class="l1">' + (it.kind && it.capacity ? '<span class="pk-size">' + esc(it.capacity) + '</span>' : '') + pkDetailHtml(it) + '</span>' +
-        pkStockHtml(it) + '</div>';
+        (p.select.__pkNoStock ? '' : pkStockHtml(it)) + '</div>';
       n++;
     });
   });
@@ -2602,6 +2606,428 @@ if (typeof document !== 'undefined' && typeof document.addEventListener === 'fun
   }
 }
 
+// ══ Fills (2026-10-19) ════════════════════════════════
+// A batch is bulk: what was made, with the ingredients it took. A fill is
+// production: units of a product filled from that bulk. One fill does
+// three things at once: it counts the units on the product, takes the
+// product's packaging list (times the units) out of packaging stock, and
+// takes the grams (units x net weight, per part for a sample pack) from
+// the batch it came from. Heide chose this on 2026-10-19, retiring the
+// batch's own packaging runs, which kept the two halves apart.
+//
+// A fill is saved as one of the product's productionRuns (the old field
+// name, so backups and older data still load), marked fill: true, with
+//   draws:     [{ batchId, formulaId, grams }]   what it took from each batch
+//   packaging: [{ packagingId, packagingName, quantity }]   what left stock
+// Each packaging item it took from gets an adjustment carrying fillId, so
+// undoing the fill removes exactly those. A batch's grams left are worked
+// out from the fills every time, never stored, so nothing can drift.
+//
+// Runs logged before fills have no draws. One linked to a batch counts
+// units x the product's net weight against it (her call: convert the old
+// runs). They never pulled packaging, so undoing one returns none.
+function batchMadeG(b) {
+  if (!b) return 0;
+  return parseFloat(b.actualYield) || parseFloat(b.targetYield) || 0;
+}
+function fillDraws(run, p) {
+  if (!run) return [];
+  if (run.draws) return run.draws;
+  if (run.batchId && p && p.productKind !== 'multi') {
+    var g = (parseInt(run.units, 10) || 0) * (parseFloat(p.netWtG) || 0);
+    if (g > 0) return [{ batchId: run.batchId, grams: g }];
+  }
+  return [];
+}
+// Every fill (and older run) that drew on a batch, newest first:
+// [{ product, run, grams }]. Grams are this batch's share only.
+function batchFills(batchId, products) {
+  var out = [];
+  (products || []).forEach(function (p) {
+    (p.productionRuns || []).forEach(function (r) {
+      var g = 0, hit = r.batchId === batchId;
+      fillDraws(r, p).forEach(function (d) {
+        if (d.batchId === batchId) { g += parseFloat(d.grams) || 0; hit = true; }
+      });
+      if (hit) out.push({ product: p, run: r, grams: g });
+    });
+  });
+  out.sort(function (a, b) {
+    return (b.run.date || '').localeCompare(a.run.date || '') || (b.run.addedAt || '').localeCompare(a.run.addedAt || '');
+  });
+  return out;
+}
+function batchUsedG(batchId, products) {
+  var t = 0;
+  batchFills(batchId, products).forEach(function (f) { t += f.grams; });
+  return t;
+}
+// Made less filled. Can go below zero when more was filled than the
+// yield says; the page shows that rather than hiding it.
+function batchLeftG(b, products) { return batchMadeG(b) - batchUsedG(b && b.id, products); }
+// The batches a fill can come from: the same formulation, not discarded
+// or used up, newest first.
+function fillBatches(batches, formulaId) {
+  return (batches || []).filter(function (b) {
+    return b && formulaId && b.formulaId === formulaId && b.status !== 'discarded' && b.status !== 'depleted';
+  }).sort(function (a, b) { return (b.date || '').localeCompare(a.date || ''); });
+}
+function batchLabel(b) { return (b && (b.batchName || b.formulaName)) || 'Batch'; }
+// The product's packaging list times the units, one line per item.
+function fillPkgNeeds(p, units) {
+  var need = {}, order = [];
+  ((p && p.packagingRecipe) || []).forEach(function (r) {
+    var q = (parseFloat(r.quantity) || 0) * units;
+    if (!r.packagingId || q <= 0) return;
+    if (!(r.packagingId in need)) { need[r.packagingId] = 0; order.push(r.packagingId); }
+    need[r.packagingId] += q;
+  });
+  return order.map(function (id) { return { packagingId: id, quantity: Math.ceil(need[id] - 1e-9) }; });
+}
+function fillFind(list, id) {
+  for (var i = 0; i < (list || []).length; i++) if (list[i] && list[i].id === id) return list[i];
+  return null;
+}
+// Takes the packaging out of stock and records it on the run.
+function fillPull(pkgs, p, run) {
+  run.packaging = [];
+  fillPkgNeeds(p, parseInt(run.units, 10) || 0).forEach(function (n) {
+    var it = fillFind(pkgs, n.packagingId);
+    if (!it) return;
+    if (!it.adjustments) it.adjustments = [];
+    var why = 'Filled: ' + (p.name || 'a product');
+    it.adjustments.push({ id: 'fill-' + run.id + '-' + it.id, qty: -n.quantity, date: run.date, note: why, reason: why, productId: p.id, fillId: run.id });
+    run.packaging.push({ packagingId: it.id, packagingName: pkDisplay(it), quantity: n.quantity });
+  });
+}
+// Puts a fill's packaging back. Returns how many items it touched.
+function fillReturn(pkgs, runId) {
+  var n = 0;
+  (pkgs || []).forEach(function (it) {
+    if (!it || !it.adjustments) return;
+    var before = it.adjustments.length;
+    it.adjustments = it.adjustments.filter(function (a) { return a.fillId !== runId; });
+    if (it.adjustments.length !== before) n++;
+  });
+  return n;
+}
+function makeFill(p, f, pkgs) {
+  var run = {
+    id:      Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+    date:    f.date || todayISO(),
+    units:   f.units,
+    batchId: (f.draws && f.draws[0] && f.draws[0].batchId) || f.batchId || null,
+    notes:   f.notes || '',
+    addedAt: new Date().toISOString(),
+    fill:    true,
+    draws:   f.draws || []
+  };
+  fillPull(pkgs, p, run);
+  if (!p.productionRuns) p.productionRuns = [];
+  p.productionRuns.push(run);
+  p.updatedAt = run.addedAt;
+  return run;
+}
+// Removes a fill (or an older run) from its product and returns its
+// packaging to stock. The page asks first and saves after.
+function undoFill(p, runId, pkgs) {
+  var run = null;
+  (p.productionRuns || []).forEach(function (r) { if (r.id === runId) run = r; });
+  if (!run) return null;
+  if (run.fill) fillReturn(pkgs, runId);
+  p.productionRuns = p.productionRuns.filter(function (r) { return r.id !== runId; });
+  p.updatedAt = new Date().toISOString();
+  return run;
+}
+// What undoing says: the packaging that goes back, and the grams.
+function undoFillText(p, run) {
+  var bits = [];
+  if (run.fill && run.packaging && run.packaging.length) {
+    bits.push('This puts back into packaging stock:\n' + run.packaging.map(function (c) { return '  ' + c.quantity + ' x ' + c.packagingName; }).join('\n'));
+  } else if (!run.fill) {
+    bits.push('This run was logged before fills, so no packaging was taken for it and none goes back.');
+  }
+  var g = 0;
+  fillDraws(run, p).forEach(function (d) { g += parseFloat(d.grams) || 0; });
+  if (g > 0) bits.push('Its ' + fmtG(g) + ' go back to the batch it came from.');
+  return bits.join('\n\n');
+}
+function fmtG(g) {
+  g = Math.round((parseFloat(g) || 0) * 10) / 10;
+  return (Math.abs(g) >= 1000 ? g.toLocaleString('en-US') : String(g)) + ' g';
+}
+
+// ── The fill panel ──
+// One panel for both doors in:
+//   mode 'product': from a product's Fills tab. Pick how many, and the
+//     batch for each part (a sample pack has a part per formulation).
+//   mode 'batch':   "Fill from this batch". How many of each size made
+//     from that formulation, all poured from this one batch.
+// Over-filling a batch and short packaging warn but do not block (her
+// call): the yield is an estimate, and stock can be fixed afterwards.
+// opts: { mode, product | batch, products, batches, pkgs, forms, crumb,
+//         onCommit(runs) }. The page saves products and packaging in
+//         onCommit; the panel has already changed them in memory.
+var flState = null;
+function fillCss() {
+  if (document.getElementById('plume-fill-css')) return;
+  pkCss();
+  var css =
+    '.fl-ov{position:fixed;inset:0;z-index:200;font-family:\'DM Sans\',sans-serif;color:var(--ink)}' +
+    '.fl-scrim{position:absolute;inset:0;background:rgba(20,22,17,.22)}' +
+    '.fl-panel{position:absolute;top:0;right:0;bottom:0;width:min(620px,100%);background:var(--white);display:flex;flex-direction:column;box-shadow:0 12px 40px rgba(20,20,15,.18),0 2px 6px rgba(20,20,15,.06);animation:fl-in .22s cubic-bezier(.2,.8,.2,1)}' +
+    '@keyframes fl-in{from{transform:translateX(40px);opacity:.4}to{transform:none;opacity:1}}' +
+    '@media (prefers-reduced-motion:reduce){.fl-panel{animation:none}}' +
+    '.fl-top{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--cream-border);font-size:13px;color:var(--ink-lighter);flex:none;min-width:0}' +
+    '.fl-top span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
+    '.fl-body{flex:1;overflow-y:auto;padding:18px 24px 24px;display:flex;flex-direction:column;gap:18px}' +
+    '.fl-head{display:flex;gap:12px;align-items:flex-start}' +
+    '.fl-head h2{margin:0;font-size:22px;font-weight:600;line-height:1.25}' +
+    '.fl-sub{font-size:13.5px;color:var(--ink-light);margin-top:3px}' +
+    '.fl-fields{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:flex-end}' +
+    '.fl-f{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--ink-light);min-width:0}' +
+    '.fl-f.grow{flex:1 1 200px}' +
+    '.fl-f input,.fl-tbl input,.fl-tbl select{font:inherit;font-size:14px;color:var(--ink);background:var(--white);border:1px solid var(--cream-border);border-radius:8px;padding:6px 9px;outline:none;min-width:0}' +
+    '.fl-f input:focus,.fl-tbl input:focus,.fl-tbl select:focus{border-color:var(--bark)}' +
+    '.fl-f.n input{width:110px}' +
+    '.fl-h{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px}' +
+    '.fl-h h3{margin:0;font-size:15px;font-weight:600}' +
+    '.fl-h span{font-size:12.5px;color:var(--ink-lighter)}' +
+    '.fl-tbl{border:1.5px solid var(--cream-border);border-radius:10px;overflow:hidden}' +
+    '.fl-row{display:grid;grid-template-columns:minmax(0,1fr) 96px 76px;gap:12px;align-items:center;padding:9px 12px;border-bottom:1px solid var(--cream-border);font-size:14px}' +
+    '.fl-row.src{grid-template-columns:minmax(0,1fr) minmax(0,1.6fr) 70px}' +
+    '.fl-row:last-child{border-bottom:0}' +
+    '.fl-row.h{background:var(--cream);font-size:12px;color:var(--ink-lighter);padding:7px 12px}' +
+    '.fl-row.on{background:color-mix(in srgb,var(--bark) 6%,var(--white))}' +
+    '.fl-row small{display:block;font-size:12px;color:var(--ink-lighter);margin-top:2px}' +
+    '.fl-row small.over{color:var(--warning);font-weight:500}' +
+    '.fl-row input{text-align:right;width:100%;font-weight:600}' +
+    '.fl-row select{width:100%}' +
+    '.fl-r{text-align:right;font-variant-numeric:tabular-nums}' +
+    '.fl-sum{display:flex;justify-content:space-between;gap:12px;padding:10px 12px;background:var(--cream);font-size:14px;font-weight:600}' +
+    '.fl-sum.over,.fl-warn{color:var(--warning);background:var(--warning-bg)}' +
+    '.fl-warn{padding:10px 12px;font-size:13.5px;font-weight:500;line-height:1.45}' +
+    '.fl-pk{display:flex;align-items:center;gap:10px;padding:7px 12px;border-bottom:1px solid var(--cream-border);font-size:14px}' +
+    '.fl-pk:last-child{border-bottom:0}' +
+    '.fl-pk .pk-thumb{width:28px;height:28px;padding:2px}' +
+    '.fl-pk .t{flex:1;min-width:0}' +
+    '.fl-pk .q{white-space:nowrap;font-variant-numeric:tabular-nums}' +
+    '.fl-pk .q small{color:var(--ink-lighter);font-size:12px;margin-left:4px}' +
+    '.fl-pk.short .q{color:var(--warning);font-weight:600}' +
+    '.fl-none{padding:10px 12px;font-size:13.5px;color:var(--ink-lighter)}' +
+    '.fl-note{font-size:12.5px;color:var(--ink-lighter);line-height:1.45;margin-top:8px}' +
+    '.fl-foot{display:flex;gap:8px;align-items:center;padding:12px 24px;border-top:1px solid var(--cream-border);flex:none;background:var(--white)}' +
+    '.fl-foot .fl-grow{flex:1}' +
+    '@media (max-width:560px){.fl-body{padding:16px}.fl-row{grid-template-columns:minmax(0,1fr) 84px 60px;gap:8px}.fl-row.src{grid-template-columns:minmax(0,1fr) 64px}.fl-row.src select{grid-column:1 / -1;grid-row:2}.fl-foot{padding:12px 16px}}';
+  var s = document.createElement('style');
+  s.id = 'plume-fill-css';
+  s.textContent = css;
+  document.head.appendChild(s);
+}
+function closeFill() {
+  var ov = document.getElementById('fl-ov');
+  if (ov) ov.parentNode.removeChild(ov);
+  window.removeEventListener('keydown', flKey, true);
+  flState = null;
+}
+// Escape closes this panel only, not the batch or product under it.
+function flKey(e) {
+  if (e.key !== 'Escape' || !flState) return;
+  if (document.querySelector('.plume-dlg-ov')) return;
+  if (pkPop) return;
+  e.stopPropagation();
+  closeFill();
+}
+function openFill(opts) {
+  closeFill();
+  fillCss();
+  var o = flState = opts;
+  var p = o.product, b = o.batch;
+  var formName = function (id) { var f = fillFind(o.forms, id); return f ? f.name : ''; };
+  var title, sub, mid;
+  if (o.mode === 'batch') {
+    title = 'Fill from this batch';
+    sub = fmtG(batchLeftG(b, o.products)) + ' of ' + esc(formName(b.formulaId) || b.formulaName || 'this batch') + ' left';
+    // Sizes of one formulation; packs fill from their own page, where each part picks its batch.
+    o.sizes = (o.products || []).filter(function (x) { return x.productKind !== 'multi' && x.formulaId === b.formulaId && x.status !== 'discontinued'; });
+    var packs = (o.products || []).filter(function (x) {
+      return x.productKind === 'multi' && x.status !== 'discontinued' && (x.components || []).some(function (c) { return c.formulaId === b.formulaId; });
+    });
+    o.qty = {};
+    mid = '<section><div class="fl-h"><h3>How many of each</h3><span>each product made from this formulation</span></div><div class="fl-tbl" id="fl-qty">' +
+      (o.sizes.length
+        ? '<div class="fl-row h"><span>Product</span><span class="fl-r">How many</span><span class="fl-r">Grams</span></div>' +
+          o.sizes.map(function (x) {
+            var net = parseFloat(x.netWtG) || 0;
+            return '<div class="fl-row" data-fl-p="' + esc(x.id) + '"><span>' + esc(x.name || '(unnamed)') +
+              '<small>' + (net ? fmtG(net) + ' each' : 'no net weight set, so grams are not counted') + '</small></span>' +
+              '<input type="number" min="0" step="1" inputmode="numeric" placeholder="0" aria-label="How many ' + esc(x.name || '') + '" data-fl-q="' + esc(x.id) + '">' +
+              '<span class="fl-r" data-fl-g="' + esc(x.id) + '">0 g</span></div>';
+          }).join('') + '<div class="fl-sum" id="fl-sum"></div>'
+        : '<div class="fl-none">No products are made from this formulation yet. Add one in Products &amp; Costing first.</div>') +
+      '</div>' +
+      (packs.length ? '<div class="fl-note">Sample packs that use this batch (' + packs.map(function (x) { return esc(x.name || '(unnamed)'); }).join(', ') +
+        ') fill from their own page in Products &amp; Costing, where you pick a batch for each part.</div>' : '') +
+      '</section>';
+  } else {
+    title = 'Fill: ' + esc(p.name || '(unnamed)');
+    var multi = p.productKind === 'multi';
+    o.parts = multi
+      ? (p.components || []).filter(function (c) { return c.formulaId; }).map(function (c) { return { formulaId: c.formulaId, g: parseFloat(c.netWtG) || 0, label: c.label || formName(c.formulaId) }; })
+      : (p.formulaId ? [{ formulaId: p.formulaId, g: parseFloat(p.netWtG) || 0, label: formName(p.formulaId) }] : []);
+    sub = multi ? 'Each part comes from its own batch.' : 'Counts the units, takes the packaging from stock and the grams from the batch.';
+    mid = '<section><div class="fl-h"><h3>Where it comes from</h3>' + (multi ? '' : '<span>the batch you poured from</span>') + '</div><div class="fl-tbl" id="fl-src">' +
+      (o.parts.length
+        ? o.parts.map(function (c, i) {
+            var list = fillBatches(o.batches, c.formulaId);
+            var pick = '';
+            for (var k = 0; k < list.length; k++) if (batchLeftG(list[k], o.products) > 0) { pick = list[k].id; break; }
+            if (!pick && list.length) pick = list[0].id;
+            return '<div class="fl-row src"><span>' + esc(c.label || 'Part') + '<small>' + (c.g ? fmtG(c.g) + ' each' : 'no net weight set, so grams are not counted') +
+              '</small><small class="over" data-fl-over="' + i + '" hidden></small></span>' +
+              '<select data-fl-b="' + i + '" aria-label="Batch for ' + esc(c.label || 'this part') + '">' +
+                list.map(function (x) {
+                  return '<option value="' + esc(x.id) + '"' + (x.id === pick ? ' selected' : '') + '>' + esc(batchLabel(x)) + ' · ' + fmtG(batchLeftG(x, o.products)) + ' left · ' + fmtDate(x.date) + '</option>';
+                }).join('') +
+                '<option value=""' + (pick ? '' : ' selected') + '>No batch: don’t track grams</option>' +
+              '</select><span class="fl-r" data-fl-sg="' + i + '">0 g</span></div>';
+          }).join('')
+        : '<div class="fl-none">This product has no formulation, so no grams are taken from a batch.</div>') +
+      '</div></section>';
+  }
+  var ov = document.createElement('div');
+  ov.className = 'fl-ov';
+  ov.id = 'fl-ov';
+  ov.innerHTML = '<div class="fl-scrim" data-fl-close></div>' +
+    '<aside class="fl-panel" role="dialog" aria-label="' + (o.mode === 'batch' ? 'Fill from this batch' : 'Fill') + '">' +
+      '<div class="fl-top"><button type="button" class="ps-icon-btn" data-fl-close aria-label="Close">' + icon('close') + '</button><span>' + esc(o.crumb || '') + '</span></div>' +
+      '<div class="fl-body">' +
+        '<div class="fl-head"><span class="ps-title-icon">' + icon(o.mode === 'batch' ? 'batches' : 'costing') + '</span><div><h2>' + title + '</h2><div class="fl-sub">' + sub + '</div></div></div>' +
+        '<div class="fl-fields">' +
+          '<label class="fl-f"><span>Date filled</span><input type="date" id="fl-date" value="' + todayISO() + '"></label>' +
+          (o.mode === 'product' ? '<label class="fl-f n"><span>' + (p.productKind === 'multi' ? 'How many packs' : 'How many') + '</span><input type="number" id="fl-units" min="1" step="1" inputmode="numeric" placeholder="0"></label>' : '') +
+          '<label class="fl-f grow"><span>Notes</span><input type="text" id="fl-notes" placeholder="optional: market, shop order, lot code"></label>' +
+        '</div>' + mid +
+        '<section><div class="fl-h"><h3>Packaging this takes from stock</h3><span>from ' + (o.mode === 'batch' ? 'each product’s' : 'its') + ' packaging list</span></div><div class="fl-tbl" id="fl-pkg"></div></section>' +
+      '</div>' +
+      '<div class="fl-foot"><span class="fl-grow"></span><button type="button" class="ps-btn-primary" id="fl-commit">Commit fill</button></div>' +
+    '</aside>';
+  document.body.appendChild(ov);
+  var closers = ov.querySelectorAll('[data-fl-close]');
+  for (var i = 0; i < closers.length; i++) closers[i].onclick = closeFill;
+  ov.addEventListener('input', flRefresh);
+  ov.addEventListener('change', flRefresh);
+  document.getElementById('fl-commit').onclick = commitFill;
+  window.addEventListener('keydown', flKey, true);
+  flRefresh();
+  setTimeout(function () {
+    var first = document.getElementById('fl-units') || ov.querySelector('[data-fl-q]');
+    if (first) first.focus();
+  }, 0);
+}
+function flUnits(v) { return Math.max(0, parseInt(v, 10) || 0); }
+// Works out the fill as it stands: the runs it would write, the grams per
+// batch, and the packaging. Used to draw the panel and to commit.
+function flPlan() {
+  var o = flState, plan = { items: [], byBatch: {}, need: {}, order: [] };
+  var addNeeds = function (p, units) {
+    fillPkgNeeds(p, units).forEach(function (n) {
+      if (!(n.packagingId in plan.need)) { plan.need[n.packagingId] = 0; plan.order.push(n.packagingId); }
+      plan.need[n.packagingId] += n.quantity;
+    });
+  };
+  var addG = function (bid, g) { if (bid && g > 0) plan.byBatch[bid] = (plan.byBatch[bid] || 0) + g; };
+  if (o.mode === 'batch') {
+    o.sizes.forEach(function (x) {
+      var el = document.querySelector('[data-fl-q="' + x.id + '"]');
+      var u = flUnits(el && el.value);
+      var g = u * (parseFloat(x.netWtG) || 0);
+      o.qty[x.id] = u;
+      if (!u) return;
+      plan.items.push({ product: x, units: u, draws: g > 0 ? [{ batchId: o.batch.id, formulaId: o.batch.formulaId, grams: g }] : [], batchId: o.batch.id });
+      addG(o.batch.id, g);
+      addNeeds(x, u);
+    });
+  } else {
+    var u = flUnits(document.getElementById('fl-units').value);
+    var draws = [];
+    o.parts.forEach(function (c, i) {
+      var sel = document.querySelector('[data-fl-b="' + i + '"]');
+      var bid = sel ? sel.value : '';
+      if (bid && u && c.g > 0) { draws.push({ batchId: bid, formulaId: c.formulaId, grams: u * c.g }); addG(bid, u * c.g); }
+    });
+    if (u) { plan.items.push({ product: o.product, units: u, draws: draws }); addNeeds(o.product, u); }
+  }
+  return plan;
+}
+function flRefresh() {
+  var o = flState;
+  if (!o) return;
+  var plan = flPlan();
+  if (o.mode === 'batch') {
+    o.sizes.forEach(function (x) {
+      var g = (o.qty[x.id] || 0) * (parseFloat(x.netWtG) || 0);
+      var cell = document.querySelector('[data-fl-g="' + x.id + '"]');
+      if (cell) cell.textContent = fmtG(g);
+      var row = document.querySelector('[data-fl-p="' + x.id + '"]');
+      if (row) row.classList.toggle('on', !!o.qty[x.id]);
+    });
+    var sum = document.getElementById('fl-sum');
+    if (sum) {
+      var left = batchLeftG(o.batch, o.products), took = plan.byBatch[o.batch.id] || 0, over = took > left + 1e-9;
+      sum.className = 'fl-sum' + (over ? ' over' : '');
+      sum.innerHTML = '<span>' + (over ? 'More than is left: ' : 'Takes ') + fmtG(took) + ' of ' + fmtG(left) + ' left</span><span>' +
+        (over ? 'You can still commit' : fmtG(left - took) + ' after') + '</span>';
+    }
+  } else {
+    var u = flUnits(document.getElementById('fl-units').value);
+    o.parts.forEach(function (c, i) {
+      var sel = document.querySelector('[data-fl-b="' + i + '"]');
+      var bid = sel ? sel.value : '';
+      var g = bid ? u * c.g : 0;
+      var cell = document.querySelector('[data-fl-sg="' + i + '"]');
+      if (cell) cell.textContent = bid ? fmtG(g) : '--';
+      var warn = document.querySelector('[data-fl-over="' + i + '"]');
+      if (!warn) return;
+      var b = bid ? fillFind(o.batches, bid) : null;
+      var left = b ? batchLeftG(b, o.products) : 0;
+      var over = b && (plan.byBatch[bid] || 0) > left + 1e-9;
+      warn.hidden = !over;
+      warn.textContent = over ? 'Only ' + fmtG(Math.max(0, left)) + ' left in that batch. You can still commit.' : '';
+    });
+  }
+  var short = [];
+  var pk = plan.order.map(function (id) {
+    var it = fillFind(o.pkgs, id), have = it ? pkStock(it) : 0, q = plan.need[id], isShort = q > have;
+    var name = it ? pkDisplay(it) : '(a packaging item that was deleted)';
+    if (isShort) short.push(name + ': ' + have + ' in stock');
+    return '<div class="fl-pk' + (isShort ? ' short' : '') + '"><span class="pk-thumb">' + pkIconFor(it) + '</span><span class="t">' + esc(name) + '</span>' +
+      '<span class="q">' + q + '<small>of ' + have + ' in stock</small></span></div>';
+  }).join('');
+  var noList = o.mode === 'batch'
+    ? (plan.items.length ? 'None of these products has a packaging list, so nothing leaves packaging stock.' : 'Type how many above to see the packaging.')
+    : (!(o.product.packagingRecipe || []).length ? 'This product has no packaging list, so nothing leaves packaging stock.' : 'Type how many above to see the packaging.');
+  document.getElementById('fl-pkg').innerHTML = (pk || '<div class="fl-none">' + noList + '</div>') +
+    (short.length ? '<div class="fl-warn">Short on ' + esc(short.join('; ')) + '. You can still commit; that stock would go below zero until you add a purchase.</div>' : '');
+}
+function commitFill() {
+  var o = flState;
+  if (!o) return;
+  var plan = flPlan();
+  if (!plan.items.length) {
+    tell(o.mode === 'batch' ? 'Type how many of at least one product.' : 'Type how many you filled.', { title: 'Nothing to fill yet' });
+    return;
+  }
+  var date = document.getElementById('fl-date').value || todayISO();
+  var notes = (document.getElementById('fl-notes').value || '').trim();
+  var runs = plan.items.map(function (it) {
+    return { product: it.product, run: makeFill(it.product, { date: date, units: it.units, notes: notes, draws: it.draws, batchId: it.batchId }, o.pkgs) };
+  });
+  var done = o.onCommit;
+  closeFill();
+  if (done) done(runs);
+}
+
 return {
   VERSION: VERSION,
   inciSplit: inciSplit, inciMerge: inciMerge, inciMerged: inciMerged,
@@ -2636,6 +3062,10 @@ return {
   pkKindName: pkKindName, pkLooks: pkLooks, pkDisplay: pkDisplay, pkDetailHtml: pkDetailHtml, pkStock: pkStock,
   pkGroups: pkGroups, pkMatches: pkMatches, pkSameKey: pkSameKey, pkGuess: pkGuess, pkCss: pkCss,
   pkPicker: pkPicker, pkPickers: pkPickers, pkClose: pkClose,
+  batchMadeG: batchMadeG, batchLeftG: batchLeftG, batchUsedG: batchUsedG, batchFills: batchFills, batchLabel: batchLabel,
+  fillDraws: fillDraws, fillBatches: fillBatches, fillPkgNeeds: fillPkgNeeds, fillPull: fillPull, fillReturn: fillReturn,
+  makeFill: makeFill, undoFill: undoFill, undoFillText: undoFillText, fmtG: fmtG,
+  openFill: openFill, closeFill: closeFill, commitFill: commitFill,
   boot: boot
 };
 })();

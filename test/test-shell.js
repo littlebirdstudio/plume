@@ -287,7 +287,7 @@ ok('an unknown icon name gives nothing rather than breaking', P.icon('nope') ===
     ok('Label is the first tab', await page.evaluate("!document.getElementById('pp-label').hidden && document.getElementById('pp-runs').hidden"));
     ok('the runs tab shows how many runs', (await page.evaluate("document.getElementById('pt-runs-ct').textContent")) === '1');
     await page.evaluate("setEdTab('runs')");
-    ok('Production runs opens as a tab', await page.evaluate("!document.getElementById('pp-runs').hidden && document.getElementById('pp-label').hidden"));
+    ok('Fills opens as a tab', await page.evaluate("!document.getElementById('pp-runs').hidden && document.getElementById('pp-label').hidden"));
     await page.evaluate("pickKind('multi')");
     ok('Made from switches to components', await page.evaluate(
       "document.getElementById('kind-multi').checked && document.getElementById('multi-mode-fields').style.display === '' && document.getElementById('kind-btn-multi').classList.contains('on')"));
@@ -334,6 +334,8 @@ ok('an unknown icon name gives nothing rather than breaking', P.icon('nope') ===
     const sum = await page.evaluate("document.getElementById('bl-summary').innerText");
     ok('the summary counts batches, curing, ready and this month', /3 batches[\s\S]*1 curing[\s\S]*1 ready[\s\S]*[12] this month/.test(sum), sum);
     const names = () => page.evaluate("Array.from(document.querySelectorAll('#tbody tr')).map(function(r){return r.classList.contains('group-row') ? 'G:' + r.innerText.trim().split('\\n')[0] : r.querySelector('.ps-name').textContent;}).join('|')");
+    ok('the list opens By formulation (her item 1, 2026-10-19)', (await names()) === 'G:Body butter|Spring|G:Oat soap|Oat soap|G:Serum trial|Trial', await names());
+    await page.click('[data-bl-view="recent"]');
     ok('Recent lists newest first', (await names()) === 'Spring|Oat soap|Trial', await names());
     await page.click('[data-bl-view="status"]');
     ok('the By status tab groups, curing first', (await names()) === 'G:Curing|Oat soap|G:Ready|Spring|G:Used up|Trial', await names());
@@ -345,13 +347,13 @@ ok('an unknown icon name gives nothing rather than breaking', P.icon('nope') ===
     const curing = await page.evaluate("Array.from(document.querySelectorAll('#tbody tr')).find(r => r.innerText.indexOf('Oat soap') !== -1).innerText");
     ok('a curing batch shows its ready date and days left', /Curing[\s\S]*ready[\s\S]*18 days/.test(curing), curing);
     ok('with a progress bar', await page.evaluate("!!document.querySelector('#tbody .cure-bar i')"));
-    ok('packaged shows units, not components added up', /1 run[\s\S]*6 units/.test(await page.evaluate("document.querySelector('#tbody tr').innerText")));
+    ok('bulk left replaces the old packaged-units guess', /400 g of 400 g[\s\S]*1 older packaging run/.test(await page.evaluate("document.querySelector('#tbody tr').innerText")));
 
     await page.evaluate("openBatchDetail('b1')"); await page.waitForTimeout(400);
     ok('a batch slides in at the right edge', await page.evaluate(
       "var r=document.querySelector('#m-detail .modal').getBoundingClientRect(); Math.round(r.right) === window.innerWidth && r.top === 0"));
     ok('Details is the first tab', await page.evaluate("!document.getElementById('bp-details').hidden && document.getElementById('bp-ings').hidden && document.getElementById('bp-runs').hidden"));
-    ok('the tabs show counts', (await page.evaluate("document.getElementById('bt-ings-ct').textContent + '/' + document.getElementById('bt-runs-ct').textContent")) === '1/1');
+    ok('the tabs show counts', (await page.evaluate("document.getElementById('bt-ings-ct').textContent + '/' + document.getElementById('bt-runs-ct').textContent")) === '1/');
     ok('the header links to the formulation', (await page.evaluate("document.querySelector('#d-meta a').getAttribute('href')")) === 'plume-formulations.html#f=fb');
     ok('a clean batch reads Saved', /Saved/.test(await page.evaluate("document.getElementById('d-save-state').textContent")) && await page.evaluate("document.getElementById('d-save-btn').hidden"));
     await page.click('[data-bl-pill="d-type-sel:test"]');
@@ -364,7 +366,7 @@ ok('an unknown icon name gives nothing rather than breaking', P.icon('nope') ===
     const ings = await page.evaluate("document.getElementById('d-snapshot').innerText");
     ok('Ingredients lists each line with its cost and a total', /Aloe vera juice[\s\S]*400\.0[\s\S]*\$8\.00[\s\S]*Ingredient cost for 400 g[\s\S]*\$8\.00/.test(ings), ings);
     await page.evaluate("setBatchTab('runs')");
-    ok('the run button says Commit this run', (await page.evaluate("document.getElementById('d-run-commit').textContent")) === 'Commit this run');
+    ok('the Fills tab shows the bulk left and Fill from this batch', /Bulk left[\s\S]*400 g/.test(await page.evaluate("document.getElementById('d-fills').innerText")) && await page.evaluate("!!document.getElementById('d-fill-btn')"));
     await page.keyboard.press('Escape'); await page.waitForTimeout(100);
     ok('Escape closes a saved batch', await page.evaluate("!document.getElementById('m-detail').classList.contains('open')"));
 
@@ -436,9 +438,9 @@ ok('an unknown icon name gives nothing rather than breaking', P.icon('nope') ===
       "localStorage.setItem('plume-products-v1', " + JSON.stringify(JSON.stringify([{ id: 'pm', name: 'Rose mist 2 oz', status: 'active', formulaId: 'fm', packagingRecipe: [] }])) + ");" +
       "localStorage.setItem('plume_costing_listorder_v1', '1');");
     await cost.reload(); await cost.waitForTimeout(500);
-    await cost.evaluate("openProduct('pm')"); await cost.waitForTimeout(200);
-    const opts = await cost.evaluate("Array.from(document.getElementById('run-batch').options).map(function(o){return o.textContent;}).join('|')");
-    ok('Products does not offer a discarded batch for a production run', !/Mist trial/.test(opts) && /Mist good/.test(opts), opts);
+    await cost.evaluate("openProduct('pm'); setEdTab('runs'); openProductFill()"); await cost.waitForTimeout(300);
+    const opts = await cost.evaluate("Array.from(document.querySelector('[data-fl-b]').options).map(function(o){return o.textContent;}).join('|')");
+    ok('a fill does not offer a discarded batch', !/Mist trial/.test(opts) && /Mist good/.test(opts), opts);
     await cost.close();
   }
 

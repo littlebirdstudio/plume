@@ -831,7 +831,7 @@ function renderAdjLog() {
     var pos = a.qty > 0;
     row.innerHTML =
       '<div class="adj-qty ' + (pos ? 'pos' : 'neg') + '">' + (pos ? '+' : '') + a.qty + ' units</div>' +
-      '<div class="adj-note">' + esc(a.note || '\u2014') + '</div>' +
+      '<div class="adj-note">' + esc(a.note || a.reason || '\u2014') + '</div>' +
       '<div class="adj-date">' + (a.date || '') + '</div>';
     container.appendChild(row);
   });

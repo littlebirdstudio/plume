@@ -261,6 +261,32 @@ body.ps-shell .field input:focus, body.ps-shell .field select:focus, body.ps-she
 .bl-empty { padding: 36px 20px; text-align: center; color: var(--ink-lighter); }
 .bl-empty p { margin: 0 0 4px; font-size: 16px; color: var(--ink-light); font-weight: 500; }
 
+/* Bulk left (2026-10-19): made, less what has been filled from it */
+.bl-left { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bl-left small { color: var(--ink-lighter); font-size: 12px; }
+.bl-left.neg { color: var(--warning); }
+.left-bar { display: block; width: 100px; height: 4px; border-radius: 2px; background: var(--cream-dark); margin-top: 5px; overflow: hidden; }
+.left-bar i { display: block; height: 100%; background: var(--sage); }
+#d-fills { display: flex; flex-direction: column; gap: 12px; }
+.bulk-card { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; border: 1.5px solid var(--cream-border); border-radius: 10px; padding: 12px 14px; }
+.bulk-card .ps-grow { flex: 1; }
+.bulk-card .lbl { font-size: 12.5px; color: var(--ink-lighter); }
+.bulk-card .big { font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.bulk-card .big small { font-size: 13px; font-weight: 400; color: var(--ink-lighter); }
+.bulk-card .big.neg { color: var(--warning); }
+.bulk-card .left-bar { width: 170px; height: 6px; border-radius: 3px; }
+.fills-tbl { border: 1.5px solid var(--cream-border); border-radius: 10px; overflow: hidden; }
+.fill-it { display: grid; grid-template-columns: 96px minmax(0,1fr) 56px 70px 28px; gap: 10px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--cream-border); font-size: 14px; }
+.fill-it:last-child { border-bottom: 0; }
+.fill-it.h { background: var(--cream); font-size: 12px; color: var(--ink-lighter); padding: 6px 12px; }
+.fill-it .r { text-align: right; font-variant-numeric: tabular-nums; }
+.fill-it small { display: block; font-size: 12px; color: var(--ink-lighter); }
+.fill-it .x { background: none; border: 0; cursor: pointer; color: var(--ink-lighter); font-size: 14px; padding: 2px 4px; }
+.fill-it .x:hover { color: var(--danger); }
+.bp-legacy .pkg-run-card .pr-del { display: none; }
+.bp-foot .bp-del { color: var(--danger); border: 1px solid var(--danger-border); border-radius: 7px; padding: 5px 10px; }
+.bp-foot .bp-del:hover { background: var(--danger-bg); color: var(--danger); }
+
 /* Side panels (#m-new, #m-detail) */
 #m-new.modal-ov, #m-detail.modal-ov { padding: 0; background: rgba(20,22,17,.22); }
 #m-new.modal-ov.open, #m-detail.modal-ov.open { display: block; }
@@ -371,8 +397,8 @@ body.ps-shell .pkg-builder-hdr .field input { width: 100%; min-width: 0; }
   </div>
 
   <div class="ps-toolbar">
-    <button type="button" class="ps-tab" data-bl-view="recent" onclick="setBlView('recent')">Recent</button>
     <button type="button" class="ps-tab" data-bl-view="formula" onclick="setBlView('formula')">By formulation</button>
+    <button type="button" class="ps-tab" data-bl-view="recent" onclick="setBlView('recent')">Recent</button>
     <button type="button" class="ps-tab" data-bl-view="status" onclick="setBlView('status')">By status</button>
     <div class="ps-tools">
       <button type="button" class="ps-btn-primary" onclick="openNewBatch()"><span data-ps-icon="plus"></span>New batch</button>
@@ -392,8 +418,8 @@ body.ps-shell .pkg-builder-hdr .field input { width: 100%; min-width: 0; }
   </div>
   <!-- The old view and type selects, driven by the tabs and chips above. -->
   <select id="f-view" onchange="renderList()" hidden>
+    <option value="formula" selected>By formula</option>
     <option value="recent">Recent</option>
-    <option value="formula">By formula</option>
     <option value="status">By status</option>
   </select>
   <select id="f-type" onchange="renderList()" hidden>
@@ -411,8 +437,8 @@ body.ps-shell .pkg-builder-hdr .field input { width: 100%; min-width: 0; }
           <th>Batch</th>
           <th class="ps-num" style="width:11%">Yield</th>
           <th style="width:11%">Type</th>
-          <th style="width:18%">Status</th>
-          <th style="width:11%">Packaged</th>
+          <th style="width:15%">Status</th>
+          <th style="width:17%">Bulk left</th>
         </tr>
       </thead>
       <tbody id="tbody"></tbody>
@@ -505,13 +531,6 @@ body.ps-shell .pkg-builder-hdr .field input { width: 100%; min-width: 0; }
   <div class="modal" role="dialog" aria-label="Batch">
     <div class="bp-top">
       <button type="button" class="ps-icon-btn" onclick="closeDetail()" aria-label="Close"><span data-ps-icon="close"></span></button>Batches
-      <span class="ps-grow"></span>
-      <div class="ps-menu-wrap">
-        <button type="button" class="ps-icon-btn" data-ps-menu aria-label="More actions" aria-expanded="false"><span data-ps-icon="more"></span></button>
-        <div class="ps-menu" role="menu">
-          <button type="button" class="ps-menu-danger" onclick="deleteBatch()"><span data-ps-icon="trash"></span>Delete batch</button>
-        </div>
-      </div>
     </div>
     <div class="bp-body">
       <div class="bp-head">
@@ -533,7 +552,7 @@ body.ps-shell .pkg-builder-hdr .field input { width: 100%; min-width: 0; }
       <div class="bp-tabs">
         <button type="button" class="ps-tab on" id="bt-details" onclick="setBatchTab('details')">Details</button>
         <button type="button" class="ps-tab" id="bt-ings" onclick="setBatchTab('ings')">Ingredients<span class="bp-ct" id="bt-ings-ct"></span></button>
-        <button type="button" class="ps-tab" id="bt-runs" onclick="setBatchTab('runs')">Packaging runs<span class="bp-ct" id="bt-runs-ct"></span></button>
+        <button type="button" class="ps-tab" id="bt-runs" onclick="setBatchTab('runs')">Fills<span class="bp-ct" id="bt-runs-ct"></span></button>
       </div>
 
       <div class="bp-pane" id="bp-details">
@@ -606,9 +625,16 @@ body.ps-shell .pkg-builder-hdr .field input { width: 100%; min-width: 0; }
       </div>
 
       <div class="bp-pane" id="bp-runs" hidden>
-        <div class="bp-h3"><span class="ps-muted" id="d-pkg-total"></span></div>
-        <div id="d-pkg-list"></div>
-        <div class="pkg-builder" id="d-pkg-builder">
+        <!-- Fills (2026-10-19): the bulk left, what was filled from it, and
+             Fill from this batch. The packaging run builder below is retired
+             (hidden); runs made with it show as history in d-pkg-list. -->
+        <div id="d-fills"></div>
+        <div class="bp-legacy" id="d-legacy" hidden>
+          <div class="bp-h3"><h3>Packaging runs from before fills</h3><span class="ps-muted">kept as history</span></div>
+          <div class="bp-h3" hidden><span class="ps-muted" id="d-pkg-total"></span></div>
+          <div id="d-pkg-list"></div>
+        </div>
+        <div class="pkg-builder" id="d-pkg-builder" hidden>
           <div class="pkg-builder-hdr">
             <div class="field">
               <label for="d-pkg-date">Run date</label>
@@ -632,6 +658,7 @@ body.ps-shell .pkg-builder-hdr .field input { width: 100%; min-width: 0; }
       </div>
     </div>
     <div class="bp-foot">
+      <button type="button" class="ps-link-btn bp-del" id="d-delete-btn" onclick="deleteBatch()"><span data-ps-icon="trash"></span>Delete batch</button>
       <span class="ps-grow"></span>
       <span id="d-save-state"></span>
       <button type="button" class="ps-btn-primary" id="d-save-btn" onclick="saveBatchEdits()" hidden>Save changes</button>
@@ -669,12 +696,14 @@ var ING_KEY    = 'aerie-ingredients-v2';
 var FORM_KEY   = 'aerie-formulations-v1';
 var PKG_KEY    = 'aerie-packaging-v2';
 var BATCH_KEY  = 'aerie-batches-v1';
+var PRODUCT_KEY = 'plume-products-v1';
 
 // ── In-memory state ──
 var ings    = [];
 var forms   = [];
 var pkgs    = [];
 var batches = [];
+var products = [];   // read for fills: what was filled from each batch
 
 // New-batch form state
 var newPreview = []; // [{ ingredientId, ingredientName, grams, available }]
@@ -686,6 +715,7 @@ function loadData() {
   forms   = Store.getJSON(FORM_KEY,  []) || [];
   pkgs    = Store.getJSON(PKG_KEY,   []) || [];
   batches = Store.getJSON(BATCH_KEY, []) || [];
+  products = Store.getJSON(PRODUCT_KEY, []) || [];
   // Retrofit: pre-Block-4 batches have no `committed` field. Default to false
   // so they show as uncommitted -- existing stock is what it is, and these
   // batches never decremented anything in the first place.
@@ -816,6 +846,11 @@ function gramsToLotQty(g, unit, density) {
 // tab since this page loaded. Reloading before committing avoids it.
 function saveIngredients() {
   if (Store.setJSON(ING_KEY, ings)) { Plume.noteSaveOk(); return true; }
+  Plume.noteSaveFailed();
+  return false;
+}
+function saveProducts() {
+  if (Store.setJSON(PRODUCT_KEY, products)) { Plume.noteSaveOk(); return true; }
   Plume.noteSaveFailed();
   return false;
 }
@@ -988,20 +1023,28 @@ function statusBadgeHtml(b) {
   if (b.status === 'discarded') return '<span class="bl-st bl-st-discarded">Discarded</span>';
   return '<span class="bl-st bl-st-ready">Ready</span>';
 }
-// Units packaged: the largest component quantity in each run (a run of 6
-// jars with 6 labels is 6 units, not 12).
-function runUnits(r) {
-  var m = 0;
-  runComponents(r).forEach(function(c) { m = Math.max(m, parseInt(c.quantity, 10) || 0); });
-  return m;
+// Bulk left: what was made, less what has been filled from it (units x
+// each product's net weight). It replaced a units guess that read the
+// largest component in each packaging run, which miscounted a run of 10 of
+// one bottle and 10 of another as 10 (her item 3, 2026-10-19).
+function leftHtml(b) {
+  if (b.status === 'discarded') return '<span class="ps-muted">--</span>';
+  var made = Plume.batchMadeG(b);
+  if (!made) return '<span class="ps-muted">--</span>';
+  var left = Plume.batchLeftG(b, products);
+  var fills = Plume.batchFills(b.id, products), units = 0;
+  fills.forEach(function(f) { units += parseInt(f.run.units, 10) || 0; });
+  var pct = Math.max(0, Math.min(100, Math.round(left / made * 100)));
+  var runs = (b.packagingRuns || []).length;
+  var what = fills.length ? fills.length + ' fill' + (fills.length === 1 ? '' : 's') + ' &middot; ' + units + ' units'
+    : runs ? runs + ' older packaging run' + (runs === 1 ? '' : 's') : '';
+  return '<span class="bl-left' + (left < 0 ? ' neg' : '') + '">' + Plume.fmtG(left) + ' <small>of ' + Plume.fmtG(made) + '</small></span>' +
+    '<span class="left-bar" aria-hidden="true"><i style="width:' + pct + '%"></i></span>' +
+    (what ? '<span class="bl-when">' + what + '</span>' : '');
 }
 
 function rowHtml(b) {
-  var runs = b.packagingRuns || [];
-  var units = runs.reduce(function(s, r) { return s + runUnits(r); }, 0);
-  var pkgLabel = runs.length === 0
-    ? '<span class="ps-muted">--</span>'
-    : runs.length + (runs.length === 1 ? ' run' : ' runs') + (units ? '<span class="bl-when">' + units + ' units</span>' : '');
+  var pkgLabel = leftHtml(b);
   var typeBadge = b.batchType === 'test'
     ? '<span class="bl-st bl-st-test">Test</span>'
     : '<span class="ps-muted">Production</span>';
@@ -1511,9 +1554,8 @@ function openBatchDetail(id) {
   renderSnapshot(b);
   renderCostRollup(b);
 
-  // Packaging
-  populatePackagingPicker();
-  pendingRunReset();
+  // Fills, and any packaging runs from before them
+  renderFills(b);
   renderPackagingRuns(b);
 
   // Commit state + receipt
@@ -1579,11 +1621,12 @@ function setBatchStatus(v) {
     renderStatusRow(b);
     renderDetailMeta(b);
     renderCuringNote(b);
+    renderFills(b);
     renderStats();
     renderList();
   };
   if (v === 'discarded') {
-    Plume.ask('The ingredients it used stay out of stock, since they were really used. It will not be offered when you log a production run in Products.',
+    Plume.ask('The ingredients it used stay out of stock, since they were really used. It will not be offered for fills.',
       apply, { title: 'Mark this batch discarded?', yes: 'Mark discarded' });
   } else {
     apply();
@@ -1606,7 +1649,7 @@ function setBatchTab(t) {
   });
 }
 function setBatchTabCounts(b) {
-  var n = (b.ingredientSnapshot || []).length, r = (b.packagingRuns || []).length;
+  var n = (b.ingredientSnapshot || []).length, r = Plume.batchFills(b.id, products).length;
   document.getElementById('bt-ings-ct').textContent = n ? String(n) : '';
   document.getElementById('bt-runs-ct').textContent = r ? String(r) : '';
 }
@@ -1808,6 +1851,7 @@ function renderPackagingRuns(b) {
   var runs = b.packagingRuns || [];
   if (document.getElementById('bt-runs-ct')) setBatchTabCounts(b);
   document.getElementById('d-pkg-total').textContent = '';
+  document.getElementById('d-legacy').hidden = !runs.length;
   if (!runs.length) {
     list.innerHTML = '<div class="pkg-empty">No packaging runs yet. A run records filling this batch into jars, bottles or bands, and takes them out of packaging stock.</div>';
     return;
@@ -1851,7 +1895,85 @@ function renderPackagingRuns(b) {
 }
 
 // ──────────────────────────────────────────────────────────────────────
-// Pending run builder
+// Fills (2026-10-19)
+// ──────────────────────────────────────────────────────────────────────
+// The batch is bulk; fills are what was made from it. Each fill lives on
+// its product (Products & Costing) and draws grams from here. Grams left
+// is an estimate: what stays in the bowl is never filled, so she still
+// marks a batch Used up when it is really gone.
+function renderFills(b) {
+  var box = document.getElementById('d-fills');
+  var made = Plume.batchMadeG(b), left = Plume.batchLeftG(b, products);
+  var fills = Plume.batchFills(b.id, products);
+  var closed = b.status === 'discarded' || b.status === 'depleted';
+  var pct = made ? Math.max(0, Math.min(100, Math.round(left / made * 100))) : 0;
+  var html = '<div class="bulk-card"><div><div class="lbl">Bulk left</div>' +
+      '<div class="big' + (left < 0 ? ' neg' : '') + '">' + Plume.fmtG(left) + ' <small>of ' + Plume.fmtG(made) + ' made</small></div>' +
+      '<span class="left-bar" aria-hidden="true"><i style="width:' + pct + '%"></i></span></div>' +
+      '<span class="ps-grow"></span>' +
+      (closed ? '' : '<button type="button" class="ps-btn-primary" id="d-fill-btn" onclick="openBatchFill()">' + Plume.icon('plus') + 'Fill from this batch</button>') +
+    '</div>';
+  html += '<div class="bp-note">' + (closed
+    ? (b.status === 'discarded' ? 'Discarded, so it is not offered for fills.' : 'Marked Used up, so it is not offered for fills. Set it back to Ready to fill from it again.')
+    : 'An estimate: what stays in the bowl never shows up here. Mark the batch Used up when it is really gone.' + (left < 0 ? ' More has been filled than the yield says; check the yield on Details.' : '')) + '</div>';
+  if (fills.length) {
+    html += '<div class="fills-tbl"><div class="fill-it h"><span>Date</span><span>Product</span><span class="r">Units</span><span class="r">Grams</span><span></span></div>' +
+      fills.map(function(f) {
+        return '<div class="fill-it"><span>' + fmtDate(f.run.date) + '</span><span>' + esc(f.product.name || '(unnamed)') +
+          (f.run.fill ? (f.run.notes ? '<small>' + esc(f.run.notes) + '</small>' : '') : '<small>logged before fills</small>') + '</span>' +
+          '<span class="r">' + (parseInt(f.run.units, 10) || 0) + '</span><span class="r">' + (f.grams ? Plume.fmtG(f.grams) : '--') + '</span>' +
+          '<button type="button" class="x" title="Undo this fill" aria-label="Undo this fill" onclick="undoBatchFill(\'' + esc(f.product.id) + '\',\'' + esc(f.run.id) + '\')">&#x2715;</button></div>';
+      }).join('') + '</div>';
+  } else if (!(b.packagingRuns || []).length) {
+    html += '<div class="pkg-empty">Nothing filled from this batch yet.</div>';
+  }
+  box.innerHTML = html;
+}
+function refreshAfterFill(b) {
+  renderFills(b);
+  setBatchTabCounts(b);
+  renderList();
+}
+function openBatchFill() {
+  if (!editingBatchId) return;
+  var b = findBatch(editingBatchId);
+  if (!b) return;
+  // Fresh copies, in case Products or Packaging changed in another tab.
+  products = Store.getJSON(PRODUCT_KEY, []) || [];
+  pkgs = Store.getJSON(PKG_KEY, []) || [];
+  Plume.openFill({
+    mode: 'batch', batch: b,
+    products: products, batches: batches, pkgs: pkgs, forms: forms,
+    crumb: 'Batches \u00b7 ' + Plume.batchLabel(b),
+    onCommit: function() {
+      saveProducts();
+      savePackaging();
+      if (editingBatchId === b.id) refreshAfterFill(b);
+      else renderList();
+    }
+  });
+}
+function undoBatchFill(pid, rid) {
+  var b = editingBatchId ? findBatch(editingBatchId) : null;
+  products = Store.getJSON(PRODUCT_KEY, []) || [];
+  var p = null;
+  for (var i = 0; i < products.length; i++) if (products[i].id === pid) { p = products[i]; break; }
+  var run = null;
+  if (p) (p.productionRuns || []).forEach(function(r) { if (r.id === rid) run = r; });
+  if (!p || !run) { if (b) refreshAfterFill(b); return; }
+  Plume.ask(Plume.undoFillText(p, run) + '\n\nIt comes off ' + (p.name || 'the product') + ' too.', function() {
+    pkgs = Store.getJSON(PKG_KEY, []) || [];
+    Plume.undoFill(p, rid, pkgs);
+    saveProducts();
+    if (run.fill) savePackaging();
+    if (b && editingBatchId === b.id) refreshAfterFill(b);
+    else renderList();
+  }, { title: 'Undo this fill of ' + run.units + ' on ' + fmtDate(run.date) + '?', yes: 'Undo fill', danger: true });
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Pending run builder (retired 2026-10-19; kept for the code paths that
+// still read packagingRuns, and hidden)
 // Holds the in-progress run while the user adds components. On commit, the
 // builder validates stock atomically (across all components), persists, and
 // resets.
@@ -2599,6 +2721,11 @@ function deleteBatch() {
     msg += '\n';
   } else if (runs.length) {
     msg += 'This will also remove ' + runs.length + ' packaging run' + (runs.length === 1 ? '' : 's') + '.\n\n';
+  }
+  var fills = Plume.batchFills(b.id, products);
+  if (fills.length) {
+    msg += fills.length + ' fill' + (fills.length === 1 ? '' : 's') + ' came from this batch. ' + (fills.length === 1 ? 'It stays' : 'They stay') +
+      ' on ' + (fills.length === 1 ? 'its product' : 'their products') + ', and the packaging stays out of stock.\n\n';
   }
   msg += 'This cannot be undone.';
 

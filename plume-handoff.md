@@ -377,7 +377,7 @@ Nav: `Ingredients` · `Formulations` · `Packaging` · `Products & Costing` · `
 Section header: `Batches` title with `+ Add batch` button next to it.
 
 ### Concept
-Tracks actual production runs of the **bulk recipe**. When you "Make it!" from a formulation, a batch is created. The batch holds the ingredient snapshot at make-time, tracks curing status for soaps, and records packaging runs.
+Tracks actual production runs of the **bulk recipe**. When you "Make it!" from a formulation, a batch is created. The batch holds the ingredient snapshot at make-time, tracks curing status for soaps, and shows its **bulk left** (made less what has been filled from it). Since 2026-10-19 packaging leaves stock through **fills** (see session 20, "Fills"), not through the batch's own packaging runs, which are kept as history.
 
 ### Auto-commit model
 Ingredients commit on batch save; packaging commits per-run on add. There is no manual commit/decommit step in the UI anymore. The legacy `commitBatch()` is kept as a safety belt but its UI button is hidden.
@@ -434,7 +434,7 @@ if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
   id, date, formulaId, formulaName, formulaType, batchName, batchType,
   targetYield, actualYield, cureWeeks, readyDate, status, notes,
   ingredientSnapshot: [{ ingredientId, ingredientName, grams }],
-  packagingRuns:       [...],     // multi-component runs
+  packagingRuns:       [...],     // multi-component runs; retired 2026-10-19, kept as history
   committed:           true,      // always true in auto-commit model
   committedAt,
   lotDraws:            [...],     // receipt of what came from which lot
@@ -473,7 +473,10 @@ The salable thing. A "product" defines what you sell — name, SKU, what it's ma
   labelMode:         'inci' | 'common',
   labelOverrideOn:   false,
   labelOverrideText: '',
-  productionRuns:    [{ id, date, units, batchId, notes, addedAt }],
+  productionRuns:    [{ id, date, units, batchId, notes, addedAt,
+                       fill: true, draws: [{ batchId, formulaId, grams }],
+                       packaging: [{ packagingId, packagingName, quantity }] }],
+                     // fills (2026-10-19); older runs lack fill/draws/packaging
   createdAt, updatedAt
 }
 ```
@@ -654,7 +657,7 @@ Heide asked how the data connects "in a big picture way," which is worth recordi
 **Batchlog** = a production event of the *bulk*. "On May 12 I made 800g of the face oil formula, drawing from these lots." Measured in grams of finished bulk.
 **Products & Costing** = the sellable SKU. "I sell face oil in a 30ml amber bottle for $24." Measured in units.
 
-The bridge from bulk to units is the **production run** — bottling 800g of bulk into 25 units. `productionRuns[].batchId` optionally links a run to its bulk origin. One batch can feed multiple runs; one product accumulates runs over time.
+The bridge from bulk to units is the **fill** (called a production run until 2026-10-19): bottling 800g of bulk into 25 units. A fill counts the units on the product, takes the product's packaging list out of stock, and takes the grams from the batch (`draws`, one per part for a sample pack). The batch link is optional; no batch means no grams tracked. One batch can feed many fills; one product accumulates fills over time.
 
 Why record in both places: the batch answers production/traceability questions (how much bulk, which lots, trace a customer complaint back to a lot); the run answers inventory/sales-readiness questions (how many sellable units exist). They're different questions.
 
@@ -1413,8 +1416,8 @@ to pick those up in a fresh chat. Ask her for the list.
 - **Labels are text output, not designed graphics** — design happens in Canva. Soap labels use raw ingredient names (not saponified) per US small-producer practice.
 
 ### Design decisions worth remembering
-- **Per-unit cost is not per-batch profit.** Products cost per unit; batches track bulk. Runs optionally link the two; nothing auto-links.
-- **Batch packaging runs and product production runs record different events.** Don't merge them — explicitly declined.
+- **Per-unit cost is not per-batch profit.** Products cost per unit; batches track bulk. Fills optionally link the two.
+- **Batch packaging runs and product production runs were merged into fills (2026-10-19).** Declined in May 2026 as "different events"; in October she found the split meant packaging only left stock if she went back to the batch, and a batch could not say how much bulk was left. She proposed the merge herself: the batch pulls ingredients and makes bulk; the fill is where filling, labelling and pulling packaging happen.
 - **Costed batch records are historical financial records** — never mutate retroactively.
 - **Wipe over migrate** when a data model changes radically; normalize at read time for minor shape changes (`runComponents()`, absent `productKind`).
 - **Filename stability beats naming purity** — `plume-costing.html` kept its name when the module became "Products & Costing."
@@ -2565,3 +2568,55 @@ Also found: "Depleted" existed but nothing could set it.
   "From batch" choices (`renderRuns`).
 
 **Tests:** `test-shell.js` section 4e (16 checks).
+
+### Session 20 (cont.): Fills, so batches are bulk and fills are production (core v1.29)
+
+Her confusion, in her words: "How do I know from my batch view what I
+actually have available?" A product's production run pulled no stock, a
+batch's packaging run pulled packaging but knew nothing about products, and
+nothing tracked bulk remaining. Her test (10 of one bottle + 10 of another)
+showed as "1 run of 10 units" because the list guessed units from the
+largest component. She proposed the model; preview approved 2026-10-19.
+
+- **A fill** (core `Plume.openFill`, `makeFill`, `undoFill`) counts the units
+  on the product, takes its packaging list × units out of stock (an
+  adjustment per item with `fillId`, `note` and `reason` "Filled: <product>"),
+  and takes units × net weight from the batch. Saved as a `productionRuns`
+  entry (field name kept) with `fill: true`, `draws` and `packaging`.
+- **Two doors, one panel.** Batches: Fills tab > "Fill from this batch":
+  a How many box for each single product of that formulation, a running
+  "Takes X g of Y g left", and the packaging added up. Products & Costing:
+  the Fills tab (was Production runs) > Fill: how many, and a batch pick per
+  part, so **sample packs** draw each part from its own batch. Packs fill only
+  from their product page. "No batch: don't track grams" is always offered.
+- **Warns, never blocks:** filling more than is left, and short packaging
+  (stock may go below zero). Her call. The old run builder blocked on stock.
+- **Bulk left is computed, never stored** (`Plume.batchLeftG` = made, from
+  actualYield or targetYield, less `batchUsedG`). Undoing a fill puts the
+  grams and packaging back. It is an estimate: residue is never filled, so
+  she still marks a batch Used up.
+- **Older data:** production runs from before fills that link a batch count
+  units × net weight against it (her call: "might as well go for it"); they
+  pulled no packaging, so undoing one returns none (`undoFillText` says so).
+  Batch packaging runs show read-only under "Packaging runs from before
+  fills"; nothing is recomputed. The builder (`#d-pkg-builder`) is hidden;
+  its functions remain because commit/decommit and delete still read
+  `packagingRuns`.
+- **Offered batches** (`Plume.fillBatches`): same formulation, not discarded
+  or used up, newest first. A used-up or discarded batch shows no Fill
+  button and says why.
+- **Batches list:** opens By formulation (her item 1); the last column is
+  Bulk left with a bar and "N fills · U units" (item 3). **Delete batch** is a
+  visible red button in the panel footer; the ⋯ menu is gone (item 2). The
+  delete message says fills stay on their products.
+- **Products & Costing:** the Label | Fills | Notes tabs are a filled bar,
+  the active tab in the palette's darkest tone (item 5). The packaging
+  picker leaves out stock there (`Plume.pkPickers(root, items, { stock:
+  false })`; item 4). Fill asks her to save first when the product has
+  unsaved edits, because the editor changes the product in memory.
+- **Packaging:** the adjustment log reads `a.note || a.reason`; batch runs
+  only ever wrote `reason`, so their lines showed a dash.
+
+**Tests:** new `test/test-fills.js` (46 checks). `test-shell.js` 4d and 4e
+updated; `test-packaging.js` section 6 now checks the picker in a product's
+packaging list. 19 suites.
