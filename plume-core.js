@@ -35,7 +35,7 @@ var Plume = (function () {
 // (v0.4 / v0.5 / v0.6 across five modules). BUMP IT IN EVERY PULL REQUEST,
 // core change or not: it is how "is this the update I just merged?" is
 // answered by looking, and browsers cache .js files stubbornly.
-var VERSION = '1.32';
+var VERSION = '1.33';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -736,25 +736,62 @@ function renderThemeChoice(container) {
   if (!el) {
     el = document.createElement('div');
     el.id = 'plume-theme-choice';
-    host.parentNode.insertBefore(el, host);
+    // Most modules wrap the swatches in a div of their own; Products &
+    // Costing puts them straight in the dialog, where inserting before the
+    // wrapper put these choices outside the dialog (fixed 2026-10-20).
+    if (host.classList && host.classList.contains('modal')) host.insertBefore(el, container);
+    else host.parentNode.insertBefore(el, host);
   }
   var c = themeChoice();
   var opt = function (v, label) {
     return '<button type="button" class="plume-theme-opt' + (c === v ? ' on' : '') + '" onclick="Plume.setTheme(\'' + v + '\')">' + label + '</button>';
   };
-  var on = tipsOn();
+  var on = tipsOn(), sz = sizeChoice();
   nextCss();
+  var szOpt = function (v, label) {
+    return '<button type="button" class="plume-theme-opt' + (sz === v ? ' on' : '') + '" onclick="Plume.setSize(\'' + v + '\')">' + label + '</button>';
+  };
   el.innerHTML = '<div class="plume-theme-row">' + opt('light', 'Light') + opt('dark', 'Dark') + opt('auto', 'Match my computer') + '</div>' +
     '<div class="plume-theme-note">Light or dark applies to every module on this device, and so does the palette below.</div>' +
-    '<div class="plume-theme-row plume-tips-row"><span class="plume-theme-note" style="margin:0 6px 0 0">What\u2019s next pointers</span>' +
+    '<div class="plume-set-lbl">Size</div><div class="plume-theme-row">' +
+      szOpt('smaller', 'Smaller') + szOpt('standard', 'Standard') + szOpt('larger', 'Larger') + '</div>' +
+    '<div class="plume-theme-note">For every page on this device. If your browser is zoomed in or out for Plume, set it back to 100%.</div>' +
+    '<div class="plume-set-lbl">What\u2019s next pointers</div><div class="plume-theme-row">' +
       '<button type="button" class="plume-theme-opt' + (on ? ' on' : '') + '" onclick="Plume.setTips(true)">Show</button>' +
       '<button type="button" class="plume-theme-opt' + (on ? '' : ' on') + '" onclick="Plume.setTips(false)">Hide</button></div>' +
     '<div class="plume-theme-note">Short notes that point to the next step where it is not done yet.</div>' +
-    '<div class="plume-theme-row plume-tips-row"><span class="plume-theme-note" style="margin:0 6px 0 0">Packaging stock</span>' +
+    '<div class="plume-set-lbl">Packaging stock</div><div class="plume-theme-row">' +
       '<button type="button" class="plume-theme-opt' + (pkgTracked() ? ' on' : '') + '" onclick="Plume.setPkgTracking(true)">Track it</button>' +
       '<button type="button" class="plume-theme-opt' + (pkgTracked() ? '' : ' on') + '" onclick="Plume.setPkgTracking(false)">Don\u2019t track</button></div>' +
     '<div class="plume-theme-note">When tracked, each fill takes its packaging from stock, and stops if stock is short. Turn it off if you don\u2019t enter packaging purchases.</div>';
 }
+
+// ══ Size (2026-10-20) ═════════════════════════════════
+// One scale for the whole app, chosen in Settings and kept on this device.
+// Plume sizes things in fixed pixels, so the scale is CSS zoom on the root.
+// Standard is the original size (her call, 2026-10-20, after finding her
+// side screen was the cause); Smaller is what she saw at 80% browser zoom;
+// Larger is for anyone who wants it bigger, readers included. Chrome
+// reports element boxes in zoomed pixels while positions set in CSS are
+// zoomed again, so code that places a pop-up from a box divides by zoom()
+// (core's packaging picker, Formulations' phase menu and ingredient list).
+var SIZE_KEY = 'plume-size';
+var SIZES = { smaller: 0.8, standard: 1, larger: 1.15 };
+function sizeChoice() {
+  try { var v = window.localStorage.getItem(SIZE_KEY); return SIZES[v] ? v : 'standard'; } catch (e) { return 'standard'; }
+}
+function zoom() { return SIZES[sizeChoice()] || 1; }
+function applySize() {
+  if (typeof document === 'undefined' || !document.documentElement) return;
+  var z = zoom();
+  document.documentElement.style.zoom = z === 1 ? '' : String(z);
+}
+function setSize(v) {
+  try { window.localStorage.setItem(SIZE_KEY, SIZES[v] ? v : 'standard'); } catch (e) {}
+  applySize();
+  renderPaletteSwatches();
+}
+applySize();
 
 // ══ What's next pointers (2026-10-20) ═════════════════
 // A short note where the next step of the work is not done yet: an empty
@@ -801,7 +838,7 @@ function nextCss() {
     'html.plume-no-tips .next-step{display:none}' +
     '.next-off{display:none}' +
     'html.plume-no-tips .next-off{display:block}' +
-    '.plume-tips-row{margin-top:14px}';
+    '.plume-set-lbl{font-size:12.5px;font-weight:500;color:var(--ink-light);margin:16px 0 6px}';
   var s = document.createElement('style');
   s.id = 'plume-next-css';
   s.textContent = css;
@@ -1626,6 +1663,7 @@ function boot(cb) {
   stampVersion();
   Store.onQuotaError(noteSaveFailed);
   applyTips();
+  applySize();
   Store.init(function () {
     applyPalette(loadPaletteChoice());
     if (cb) cb();
@@ -2602,14 +2640,16 @@ function pkOpen(select, items, btn) {
   document.body.appendChild(el);
   pkPop = { el: el, select: select, items: items, btn: btn, group: '', hi: -1 };
   // Below the button, or above it when the window has no room underneath.
-  var r = btn.getBoundingClientRect();
-  var w = Math.min(Math.max(r.width, 380), window.innerWidth - 16);
-  var left = Math.max(8, Math.min(r.left, window.innerWidth - w - 8));
-  var below = window.innerHeight - r.bottom - 12, above = r.top - 12;
-  var h = Math.min(440, Math.max(below, above));
-  el.style.width = w + 'px'; el.style.left = left + 'px'; el.style.maxHeight = h + 'px';
-  if (below >= 260 || below >= above) el.style.top = (r.bottom + 4) + 'px';
-  else el.style.bottom = (window.innerHeight - r.top + 4) + 'px';
+  // Worked out in screen pixels, then divided by the zoom (see Size).
+  var z = zoom(), r = btn.getBoundingClientRect();
+  var vw = window.innerWidth, vh = window.innerHeight;
+  var w = Math.min(Math.max(r.width, 380 * z), vw - 16);
+  var left = Math.max(8, Math.min(r.left, vw - w - 8));
+  var below = vh - r.bottom - 12, above = r.top - 12;
+  var h = Math.min(440 * z, Math.max(below, above));
+  el.style.width = (w / z) + 'px'; el.style.left = (left / z) + 'px'; el.style.maxHeight = (h / z) + 'px';
+  if (below >= 260 * z || below >= above) el.style.top = ((r.bottom + 4) / z) + 'px';
+  else el.style.bottom = ((vh - r.top + 4) / z) + 'px';
   var input = el.querySelector('input');
   input.oninput = function () { pkPop.hi = -1; pkRenderPop(); };
   input.onkeydown = pkPopKey;
@@ -2906,6 +2946,7 @@ return {
   shell: shell, refreshShell: refreshShell, toggleSide: toggleSide, icon: icon, BRAND: BRAND,
   peek: { open: openPeek, close: closePeek, isOpen: peekIsOpen },
   isInstalled: isInstalled, install: install, openPage: openPage, resetAppCache: resetAppCache,
+  zoom: zoom, setSize: setSize, sizeChoice: sizeChoice, applySize: applySize,
   tipsOn: tipsOn, setTips: setTips, applyTips: applyTips, nextStep: nextStep,
   pkgTracked: pkgTracked, setPkgTracking: setPkgTracking,
   setTheme: setTheme, isDark: isDark, themeChoice: themeChoice, darkValue: darkValue, applyTheme: applyTheme,

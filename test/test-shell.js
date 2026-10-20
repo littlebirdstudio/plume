@@ -309,10 +309,10 @@ ok('an unknown icon name gives nothing rather than breaking', P.icon('nope') ===
     ok('a packaging change lights it up, and the main Save', await page.evaluate("!document.getElementById('pkg-save').disabled && !!document.querySelector('#save-state button')"));
     await page.evaluate("var r=document.getElementById('p-retail'); r.value='41'; r.dispatchEvent(new Event('input'))");
     await page.evaluate("setEdTab('runs'); document.getElementById('run-units').value = '1'; fillTakes();");
-    ok('the fill row waits for the packaging to be saved', await page.evaluate("document.getElementById('run-add').disabled && /Save packaging first/.test(document.getElementById('run-takes').innerText)"));
+    ok('with unsaved changes the button reads Save and fill', await page.evaluate("document.getElementById('run-add').textContent === 'Save and fill' && /Fill saves them first/.test(document.getElementById('run-takes').innerText)"));
     await page.click('#pkg-save'); await page.waitForTimeout(100);
     ok('Save packaging saves only the packaging', await page.evaluate("var sp=JSON.parse(localStorage.getItem('plume-products-v1')).find(p => p.id === 'w4'); sp.packagingRecipe[0].quantity === 2 && sp.retail === 40"));
-    ok('then greys out; the price is still unsaved; the fill row is free', await page.evaluate("document.getElementById('pkg-save').disabled && !!document.querySelector('#save-state button') && !document.getElementById('run-add').disabled"));
+    ok('then greys out; the price is still unsaved', await page.evaluate("document.getElementById('pkg-save').disabled && !!document.querySelector('#save-state button')"));
     await page.evaluate("leaveEditor()");
     ok('leaving without saving puts the product back as saved', (await page.evaluate("findProduct('w4').retail")) === 40);
     await page.evaluate("openProduct('w4'); setEdTab('label')"); await page.waitForTimeout(100);

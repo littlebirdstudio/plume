@@ -1358,12 +1358,13 @@ function openPhaseMenu(idx, anchorEl) {
   }
   menu.innerHTML = html;
   document.body.appendChild(menu);
-  var rect = anchorEl.getBoundingClientRect();
-  // Position below the pill; flip up if too close to the bottom of viewport
+  var rect = anchorEl.getBoundingClientRect(), z = Plume.zoom();
+  // Position below the pill; flip up if too close to the bottom of viewport.
+  // Screen pixels, divided by the app's zoom (core, Size).
   var menuTop = rect.bottom + 4;
-  if (menuTop + 220 > window.innerHeight) menuTop = rect.top - 220;
-  menu.style.left = rect.left + 'px';
-  menu.style.top  = menuTop + 'px';
+  if (menuTop + 220 * z > window.innerHeight) menuTop = rect.top - 220 * z;
+  menu.style.left = (rect.left / z) + 'px';
+  menu.style.top  = (menuTop / z) + 'px';
   setTimeout(function() {
     document.addEventListener('mousedown', closePhaseMenuOnOutside, true);
   }, 0);
@@ -2292,16 +2293,18 @@ function rmLine(idx) { fLines.splice(idx, 1); markDirty(); renderLines(); recalc
 function posDD() {
   var s  = document.getElementById('ing-search');
   var dd = document.getElementById('ing-dd');
+  // Screen pixels, divided by the app's zoom (core, Size).
+  var z  = Plume.zoom();
   var r  = s.getBoundingClientRect();
-  var h  = Math.min(260, dd.scrollHeight);
+  var h  = Math.min(260, dd.scrollHeight) * z;
   var sb = window.innerHeight - r.bottom - 8;
   var sa = r.top - 8;
-  dd.style.left  = r.left + 'px';
-  dd.style.width = Math.max(r.width, 380) + 'px';
+  dd.style.left  = (r.left / z) + 'px';
+  dd.style.width = Math.max(r.width / z, 380) + 'px';
   if (sb >= h || sb >= sa) {
-    dd.style.top = (r.bottom + 4) + 'px'; dd.style.bottom = 'auto'; dd.style.maxHeight = Math.min(260, sb) + 'px';
+    dd.style.top = ((r.bottom + 4) / z) + 'px'; dd.style.bottom = 'auto'; dd.style.maxHeight = Math.min(260, sb / z) + 'px';
   } else {
-    dd.style.bottom = (window.innerHeight - r.top + 4) + 'px'; dd.style.top = 'auto'; dd.style.maxHeight = Math.min(260, sa) + 'px';
+    dd.style.bottom = ((window.innerHeight - r.top + 4) / z) + 'px'; dd.style.top = 'auto'; dd.style.maxHeight = Math.min(260, sa / z) + 'px';
   }
 }
 
