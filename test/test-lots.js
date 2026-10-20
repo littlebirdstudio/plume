@@ -189,7 +189,7 @@ const SEED = `
 
   console.log('\n5. Formulations: the formulation log');
   const fbLog = async () => (await stored('aerie-formulations-v1')).filter(f => f.id === 'fb')[0].variants[0].usageLog || [];
-  await page.goto(previewUrl('formulations') + '#f=fb&v=vb1&b=' + encodeURIComponent(nb.id)); await page.waitForTimeout(1000);
+  await page.goto(previewUrl('formulations') + '#f=fb&v=vb1&b=' + encodeURIComponent(nb.id)); await page.waitForFunction("document.getElementById('m-use') && document.getElementById('m-use').classList.contains('open')", null, { timeout: 10000 }).catch(() => {}); await page.waitForTimeout(200);
   ok('the tabs read Instructions, Formulation log, Change history', await page.evaluate("['et-method','et-log','et-hist'].map(function(i){return document.getElementById(i).innerText.replace(/\\d+$/,'').trim();}).join(' | ')") === 'Instructions | Formulation log | Change history');
   ok('Write a log entry opens a new entry with that batch chosen', await page.evaluate("document.getElementById('m-use').classList.contains('open') && document.getElementById('et-log').classList.contains('on')") &&
      await page.inputValue('#ul-bsel') === nb.id);
@@ -222,9 +222,9 @@ const SEED = `
   await page.fill('#ul-notes', 'A second note'); await page.evaluate("saveUseEntry()"); await page.waitForTimeout(150);
   ok('saving a second entry for a batch is refused', (await fbLog()).length === 1 && /already has a log entry/.test(await page.evaluate("document.getElementById('ul-err').textContent")));
   await page.evaluate("closeModal('m-use')");
-  await page.goto(previewUrl('formulations') + '#f=fb&v=vb1&j=' + encodeURIComponent(e1.id)); await page.waitForTimeout(1000);
+  await page.goto(previewUrl('formulations') + '#f=fb&v=vb1&j=' + encodeURIComponent(e1.id)); await page.waitForFunction("!!document.querySelector('.use-entry.hl')", null, { timeout: 10000 }).catch(() => {});
   ok('a Log entry link opens it picked out', await page.evaluate(`!!document.querySelector('#je-${e1.id}.hl') && document.getElementById('et-log').classList.contains('on')`));
-  await page.goto(previewUrl('formulations') + '#f=fb&b=' + encodeURIComponent(nb.id)); await page.waitForTimeout(1000);
+  await page.goto(previewUrl('formulations') + '#f=fb&b=' + encodeURIComponent(nb.id)); await page.waitForFunction("document.getElementById('m-use') && document.getElementById('m-use').classList.contains('open')", null, { timeout: 10000 }).catch(() => {}); await page.waitForTimeout(200);
   ok('Write a log entry for a batch that has one meanwhile opens that one', await page.evaluate("document.getElementById('m-use').classList.contains('open')") && await page.inputValue('#ul-id') === e1.id);
   await page.evaluate("closeModal('m-use'); openFormula('fa'); setEdTab('log')"); await page.waitForTimeout(250);
   const m1t = await page.evaluate("document.getElementById('je-m1').innerText.replace(/\\s+/g, ' ')");
@@ -263,7 +263,7 @@ const SEED = `
   await page.evaluate("openProduct('pt'); setEdTab('runs')"); await page.waitForTimeout(250);
   const rl = await page.evaluate("document.getElementById('runs-list').innerText.replace(/\\s+/g, ' ')");
   ok('a fill from a deleted batch still shows its lot', /LOT ?261001B batch deleted/.test(rl), rl);
-  await page.goto(previewUrl('costing') + '#lot=b1'); await page.waitForTimeout(1000);
+  await page.goto(previewUrl('costing') + '#lot=b1'); await page.waitForFunction("document.getElementById('m-barcode') && document.getElementById('m-barcode').classList.contains('open') && document.getElementById('bc-lot-code').value !== ''", null, { timeout: 10000 }).catch(() => {});
   ok('#lot= opens the panel on Lot sticker', await page.evaluate("document.getElementById('m-barcode').classList.contains('open') && bcMode() === 'lot' && document.querySelector('[data-bc-pill=\"mode:lot\"]').classList.contains('on')"));
   ok('with the batch\'s code and formulation filled in', await page.inputValue('#bc-lot-code') === '261001' && await page.inputValue('#bc-lot-line2') === 'Rose toner');
   ok('the preview is plain text, no bars', await page.evaluate("/LOT 261001/.test(document.querySelector('#bc-preview svg').textContent) && !document.querySelector('#bc-preview svg rect')"));
