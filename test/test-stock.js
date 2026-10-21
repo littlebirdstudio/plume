@@ -231,20 +231,14 @@ const getBatches = "JSON.parse(localStorage.getItem('aerie-batches-v1'))";
   await page.evaluate("saveIngredient()"); await page.waitForTimeout(300);
   ok('saving the ingredient keeps the lot\'s link to its batch', await page.evaluate(getIngs + ".filter(function (i) { return i.id === 'iold'; })[0].lots[0].madeBatchId") === bs[0].id);
 
-  console.log('\n8b. Ingredients: making one she has as a stock solution');
-  await page.evaluate(`(function () { var l = ${getIngs}; l.push({ id: 'ihy', name: 'Fireweed hydrosol 2', inci: 'Chamerion Angustifolium Flower Water', phase: 'water', noCost: true, lots: [] });
-    localStorage.setItem('aerie-ingredients-v2', JSON.stringify(l)); })()`);
-  await page.reload(); await page.waitForTimeout(400);
-  await page.evaluate("viewIngredient('ihy')"); await page.waitForTimeout(200);
-  ok('its menu offers to make it as a stock solution', /Make it as a stock solution/.test(await page.evaluate("document.getElementById('d-more-menu').innerText")));
-  dialogs.length = 0;
-  await page.evaluate("goToForm = function (id) { window.__went = id; }; makeAsStock()"); await page.waitForTimeout(300);
-  const nf = await page.evaluate("JSON.parse(localStorage.getItem('aerie-formulations-v1')).filter(function (f) { return f.name === 'Fireweed hydrosol 2'; })[0]");
-  const hy = await page.evaluate(getIngs + ".filter(function (i) { return i.id === 'ihy'; })[0]");
-  ok('it asks, then starts a Stock solution formulation named for it, linked', /Make Fireweed hydrosol 2 as a stock solution\?/.test(dialogs.join(' ')) && nf && nf.type === 'Stock solution' && hy.madeBy === nf.id, [nf, hy]);
-  ok('what she has on hand stays free until its first batch', await page.evaluate("Plume.costPerG(" + getIngs + ".filter(function (i) { return i.id === 'ihy'; })[0])") === 0);
-  ok('and opens it', await page.evaluate("window.__went") === nf.id);
-  ok('the menu now opens that formulation instead', /Open its stock solution formulation/.test(await page.evaluate("document.getElementById('d-more-menu').innerText")));
+  console.log('\n8b. Starting a stock solution from Ingredients');
+  ok('the Ingredients menu offers Make a stock solution', await page.evaluate("Array.from(document.querySelectorAll('#ing-more-menu button')).some(function (b) { return /Make a stock solution/.test(b.textContent) && /makeStockSolution/.test(b.getAttribute('onclick')); })"));
+  await page.goto(previewUrl('formulations') + '#new=stock'); await page.waitForTimeout(500);
+  ok('which opens New formulation with Stock solution chosen', await page.evaluate("document.getElementById('m-new').classList.contains('open') && document.getElementById('new-type').value === 'Stock solution'"));
+  ok('and clears the link, so it can be followed again', await page.evaluate("location.hash === ''"));
+  await page.evaluate("closeModal('m-new'); newFormula()");
+  ok('New formulation on its own still starts with no type', await page.evaluate("document.getElementById('new-type').value === ''"));
+  await page.evaluate("closeModal('m-new')");
 
   console.log('\n9. Products & Costing: the label');
   const forms2 = FORMS.map(f => JSON.parse(JSON.stringify(f)));

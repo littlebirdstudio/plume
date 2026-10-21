@@ -1645,11 +1645,12 @@ function renderCards() {
 }
 
 // ── Formula create / open ─────────────────────────────
-function newFormula() {
+function newFormula(type) {
   document.getElementById('new-name').value = '';
   // Both type dropdowns are filled from Plume.PRODUCT_TYPES at the moment
-  // they are shown, so there is exactly one list to edit.
-  Plume.fillTypeSelect(document.getElementById('new-type'), '');
+  // they are shown, so there is exactly one list to edit. Ingredients'
+  // "Make a stock solution" arrives with the type chosen (#new=stock).
+  Plume.fillTypeSelect(document.getElementById('new-type'), typeof type === 'string' ? type : '');
   openModal('m-new');
   setTimeout(function() { document.getElementById('new-name').focus(); }, 100);
 }
@@ -4473,6 +4474,11 @@ if (typeof Plume === 'undefined') {
         openFormula(hp.f);
         if (hp.v || hp.j || hp.b) showLogEntry(hp.v, hp.j, hp.b);
       }
+    }
+    // From Ingredients' menu: start a new stock solution.
+    if (location.hash === '#new=stock') {
+      try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+      newFormula(Plume.STOCK_TYPE);
     }
     // Saving is automatic here, so a link from another tab saves and goes.
     Plume.followLinks({ save: function () { if (curForm() && curVar()) saveFormula(true); } });
