@@ -56,6 +56,7 @@ version, run the suites, and commit the new lockfile together.
 | `test-effective-ph.js` | 23 | Effective pH ranges: reading free-text ranges (open sides, the first range in a sentence); the warning when a version's target or a batch's final pH falls outside an ingredient's range, and the note for a preservative with none; the relabelled field; the starter preservatives' ranges and sources; the review that fills them in |
 | `test-costs.js` | 27 | Incomplete costs: in Products & Costing a missing ingredient or packaging price makes a cost a floor ("at least"), flagged in the list and named, margins "at most"; packs and kits inherit it; core's unit cost still agrees. Formulations names what is not counted, quietly (soap too). Made in-house or free counts as $0 and flags nothing |
 | `test-links.js` | 12 | Links into a page that is already open: a new hash reloads the page so the link acts (lot sticker, back to batch, make batch, log entry, ingredient); unsaved edits ask first; links are cleared once followed so the same one works twice |
+| `test-consign.js` | 25 | Consignment: consigning moves units from the shelf to a shop; Update stock's Consign mode (shop picker, adding a shop, the over-shelf stop); the Consignment panel and settling up (sold, back, what stays, the over-shop stop, shop history); a product's shelf and shops; stock history counting shop sales only, By shop; a consignment that cannot be removed once its units moved on; shops in the export |
 
 ## How they run
 

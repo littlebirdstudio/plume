@@ -92,7 +92,7 @@ Core defines globals with the names modules already use, so **converting a modul
 **A module may override an alias by defining its own function** — this is the intended escape hatch. `plume-ingredients.html` keeps a local `openModal` because it snapshots form state to detect unsaved edits. Share the common case; keep the exception local.
 
 ### Versioning
-`Plume.VERSION` is displayed at the bottom of every converted module's Settings → Storage panel, alongside the active driver name. **Bump it on every core change.** Browsers cache `.js` far more stubbornly than they re-fetch a replaced HTML file, so "is core loaded, and is it the one I just uploaded?" must be answerable by looking. Current: **v1.38** (see the newest session notes at the end; v1.8 added INCI blend splitting; v1.9 added density resolution; v1.10 ranked search results, best match first; v1.11 added pH records; v1.12 made it the one app version, shown in every footer; v1.13 rebuilt Quick add; v1.14 drafted lowdowns; v1.15 replaced the browser pop-ups with in-page dialogs).
+`Plume.VERSION` is displayed at the bottom of every converted module's Settings → Storage panel, alongside the active driver name. **Bump it on every core change.** Browsers cache `.js` far more stubbornly than they re-fetch a replaced HTML file, so "is core loaded, and is it the one I just uploaded?" must be answerable by looking. Current: **v1.39** (see the newest session notes at the end; v1.8 added INCI blend splitting; v1.9 added density resolution; v1.10 ranked search results, best match first; v1.11 added pH records; v1.12 made it the one app version, shown in every footer; v1.13 rebuilt Quick add; v1.14 drafted lowdowns; v1.15 replaced the browser pop-ups with in-page dialogs).
 
 ### Upload order matters
 `plume-core.js` **first**, then the HTML. A module that arrives before core shows the missing-core banner until core lands. Core alone breaks nothing.
@@ -3152,4 +3152,50 @@ units from the shelf to a shop; at a settle-up (hers are irregular) she
 enters what sold, returns go back to the shelf, the rest stays. **No payment
 field:** her point that Plume records no other selling prices, so a payout
 amount would be a mismatch. Not built yet.
+
+### Session 23 (cont.): Consignment (core v1.39)
+
+**Her situation:** items at several shops, settling up "periodically, but
+not on any set schedule". A plain Consigned reason was considered and set
+aside (her own reasoning: the units must later move to sold). **No money is
+recorded** (her call: Plume records no other selling prices).
+
+**Data.** Shops: `plume-shops-v1` (`KEYS.shops`), `[{ id, name, notes,
+archived }]`, exported and imported with the products (Costing's export
+now writes `{ products, shops }`). Stock log entries with a `shopId` carry
+`shopQty`, the change at that shop:
+- `kind:'move'`, qty -n, shopQty +n: consigned (shelf to shop)
+- `kind:'move'`, qty +n, shopQty -n: came back (shop to shelf)
+- `kind:'out'`, `reason:'sold'`, qty 0, shopQty -n: sold at the shop, with
+  `unitCost` on the day like any sale
+**On hand is the shelf** (what can be sold directly or built into kits;
+`onHandParts` gains `moved` and `soldAtShops`). `Plume.atShops(p)` gives
+`{ total, by: { shopId } }`.
+
+**Where it shows.**
+- **Update stock:** a **Consign** chip between the reasons and Reconcile,
+  with a shop picker (and "Add a shop…"). Consigning more than is on the
+  shelf stops it, like the other reasons; no shop picked stops it too.
+- **Consignment** (`Plume.consign.open`), reached from Update stock (a link
+  in Consign's help line and in the panel's foot) and from a product's
+  "at shop" links. NOT in the sidebar: built there first, moved at her word
+  (she does it a few times a year; it did not earn a permanent place). Shop
+  cards (units there, products, last settled), Add a shop; a shop opens to
+  **Settle up**: per product, There / Sold / Back / Left (worked out as she
+  types; more than the shop has stops the save), one date and note, then
+  the shop's history. Consign more (opens Update stock on Consign with the
+  shop picked), Rename or notes.
+- **Products & Costing:** the on-hand box reads "N on your shelf + M at
+  shops", "K sold at shops", "At shops: M at Raven Gallery" (links open the
+  shop); the list adds "+M at shops" under the number; stock changes read
+  "Consigned to", "Sold 4 at", "Back from". A consignment cannot be removed
+  once the shop has fewer than it (`Plume.undoStockBlock`).
+- **Stock history:** shop sales count as Sold; consigning and coming back do
+  not (still hers, like units inside a kit). **By shop** tab when shops exist.
+  Copy as a table gains a Shop column.
+- The generic **Returned** reason stays, for a customer return or
+  consignment from before shops were tracked.
+
+**Tests:** new `test/test-consign.js` (23). `test-kits.js` expects the
+Consign chip. 28 suites.
 

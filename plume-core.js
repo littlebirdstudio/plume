@@ -35,7 +35,7 @@ var Plume = (function () {
 // (v0.4 / v0.5 / v0.6 across five modules). BUMP IT IN EVERY PULL REQUEST,
 // core change or not: it is how "is this the update I just merged?" is
 // answered by looking, and browsers cache .js files stubbornly.
-var VERSION = '1.38';
+var VERSION = '1.39';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -184,12 +184,14 @@ var KEYS = {
   batches:  'aerie-batches-v1',
   products: 'plume-products-v1',
   suppliers:'aerie-suppliers-v1',
+  shops:    'plume-shops-v1',
   brands:   'aerie-brands-v1'
 };
 
 var KEY_LABELS = {
   'aerie-ingredients-v2':  'Ingredients',
   'aerie-suppliers-v1':    'Suppliers',
+  'plume-shops-v1':        'Consignment shops',
   'aerie-brands-v1':       'Brands',
   'aerie-formulations-v1': 'Formulations',
   'aerie-packaging-v2':    'Packaging (incl. photos)',
@@ -930,6 +932,7 @@ var ICONS = {
   costing:      ['0 0 48 48', '<path d="M24 10 L 24 38"/><path d="M16 38 L 32 38"/><path d="M10 18 L 24 14 L 38 18"/><path d="M6 26 Q 10 18, 14 26 Q 10 30, 6 26 Z"/><path d="M34 26 Q 38 18, 42 26 Q 38 30, 34 26 Z"/>'],
   batches:      ['0 0 48 48', '<path d="M10 28 L 10 42 L 22 42 L 22 28"/><path d="M12 24 L 20 24 L 20 28 L 12 28 Z"/><path d="M26 14 L 26 28 L 38 28 L 38 14"/><path d="M28 10 L 36 10 L 36 14 L 28 14 Z"/><path d="M26 30 L 38 30 L 38 42 L 26 42 Z"/>'],
   history:      ['0 0 24 24', '<path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v4h4"/><path d="M12 8v4l3 2"/>'],
+  shop:         ['0 0 24 24', '<path d="M4 10v10h16V10"/><path d="M3 10 5 4h14l2 6"/><path d="M3 10c0 1.7 1.3 3 3 3s3-1.3 3-3c0 1.7 1.3 3 3 3s3-1.3 3-3c0 1.7 1.3 3 3 3s3-1.3 3-3"/><path d="M10 20v-5h4v5"/>'],
   stock:        ['0 0 24 24', '<path d="M4 8h16v12H4z"/><path d="M7 8V5h10v3"/><path d="m9 14 2 2 4-4"/>'],
   suppliers:    ['0 0 24 24', '<path d="M3 21h18"/><path d="M5 21V8l7-4 7 4v13"/><path d="M9 21v-6h6v6"/>'],
   settings:     ['0 0 24 24', '<circle cx="12" cy="12" r="3"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6"/>'],
@@ -1753,6 +1756,28 @@ function injectStyles() {
     '.st-panel .st-cols{font-size:12px;color:var(--ink-lighter);padding:0 4px 4px;text-align:right}' +
     '.st-panel .st-cols span:first-child{text-align:left}' +
     '.st-panel .st-empty{padding:14px 4px;color:var(--ink-lighter);font-size:13.5px}' +
+    /* Consignment (2026-10-20) */
+    '.st-panel .st-shop{display:flex;gap:10px;align-items:center;margin:0 0 10px}.st-panel .st-shop label{font-size:13px;color:var(--ink-light)}' +
+    '.st-panel .st-shop select{font:inherit;font-size:14px;padding:6px 8px;border:1px solid var(--cream-border);border-radius:7px;background:var(--white);color:var(--ink);min-width:0;flex:1}' +
+    '.cs-panel .cs-cards{display:flex;flex-direction:column;gap:8px;margin-top:6px}' +
+    '.cs-panel .cs-card{display:grid;grid-template-columns:minmax(0,1fr) auto 18px;gap:12px;align-items:center;text-align:left;font:inherit;background:var(--white);border:1.5px solid var(--cream-border);border-radius:10px;padding:10px 12px;cursor:pointer;color:var(--ink)}' +
+    '.cs-panel .cs-card:hover{background:var(--cream)}' +
+    '.cs-panel .cs-name{font-size:15px;font-weight:600;min-width:0}.cs-panel .cs-name small{display:block;font-size:12.5px;font-weight:400;color:var(--ink-lighter)}' +
+    '.cs-panel .cs-units{text-align:right;font-size:13px;color:var(--ink-light)}.cs-panel .cs-units b{font-size:16px;color:var(--ink);font-variant-numeric:tabular-nums}' +
+    '.cs-panel .cs-units small{display:block;font-size:12px;color:var(--ink-lighter)}' +
+    '.cs-panel .cs-chev .ps-i{width:16px;height:16px;transform:rotate(-90deg)}' +
+    '.cs-panel .cs-add{margin-top:12px}' +
+    '.cs-panel .cs-back .ps-i{transform:rotate(90deg)}' +
+    '.cs-panel .cs-acts{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 4px}' +
+    '.cs-panel .cs-h{font-size:15px;font-weight:600;margin:18px 0 6px;color:var(--ink)}.cs-panel .cs-h span{font-weight:400;font-size:12.5px;color:var(--ink-lighter);margin-left:6px}' +
+    '.cs-panel .cs-row,.cs-panel .cs-cols{display:grid;grid-template-columns:minmax(0,1fr) 48px 64px 64px 44px;gap:8px;align-items:center}' +
+    '.cs-panel .cs-row{padding:7px 4px;border-bottom:1px solid var(--cream-border)}' +
+    '.cs-panel .cs-row.on{background:var(--clay-light)}' +
+    '.cs-panel .cs-row.over{background:color-mix(in srgb,var(--danger) 10%,var(--white))}' +
+    '.cs-panel .cs-row input{width:100%;box-sizing:border-box;font:inherit;font-size:14px;padding:5px 7px;border:1px solid var(--cream-border);border-radius:7px;text-align:right;background:var(--white);color:var(--ink)}' +
+    '.cs-panel .cs-cols{font-size:12px;color:var(--ink-lighter);padding:0 4px 4px;text-align:right}.cs-panel .cs-cols span:first-child{text-align:left}' +
+    '.cs-panel .cs-hist{border-top:1px solid var(--cream-border)}' +
+    '.cs-panel .cs-ev{display:grid;grid-template-columns:96px minmax(0,1fr) auto;gap:10px;padding:6px 4px;border-bottom:1px solid var(--cream-border);font-size:13px;color:var(--ink-light)}' +
     '.st-panel .st-foot{position:sticky;bottom:-30px;background:var(--white);padding:12px 0 8px;display:flex;gap:10px;align-items:center;border-top:1px solid var(--cream-border);margin-top:12px}' +
     '.st-panel .st-ct{font-size:13px;color:var(--ink-light)}' +
     '' +
@@ -3611,22 +3636,41 @@ var STOCK_REASONS = [
   { key: 'marketing', label: 'Marketing', hint: 'giveaways, demos, samples for shops' },
   { key: 'damaged',   label: 'Damaged',   hint: 'broken, spoiled or spilled' },
   // Adds units back (2026-10-20): consignment that did not sell, a return.
-  { key: 'returned',  label: 'Returned',  hint: 'back from a shop or consignment', back: true }
+  { key: 'returned',  label: 'Returned',  hint: 'a customer return, or consignment from before shops were tracked here', back: true }
 ];
 function reasonBack(k) { for (var i = 0; i < STOCK_REASONS.length; i++) if (STOCK_REASONS[i].key === k) return !!STOCK_REASONS[i].back; return false; }
 function stockReasonLabel(k) {
   for (var i = 0; i < STOCK_REASONS.length; i++) if (STOCK_REASONS[i].key === k) return STOCK_REASONS[i].label;
   return 'Taken out';
 }
+// Consignment (2026-10-20): units moved to a shop leave the SHELF but are
+// still hers. Entries with a shopId carry shopQty, the change at that shop:
+//   kind 'move'  qty -n, shopQty +n   consigned to the shop
+//   kind 'move'  qty +n, shopQty -n   came back from the shop
+//   kind 'out'   qty 0,  shopQty -n   sold at the shop (reason 'sold')
+// On hand is the shelf: what can be sold directly or built into kits.
 function onHandParts(p) {
-  var o = { filled: 0, out: 0, kits: 0, counted: 0, total: 0, byReason: {} };
+  var o = { filled: 0, out: 0, kits: 0, counted: 0, moved: 0, soldAtShops: 0, total: 0, byReason: {} };
   ((p && p.productionRuns) || []).forEach(function (r) { o.filled += parseInt(r.units, 10) || 0; });
   ((p && p.stockLog) || []).forEach(function (e) {
     var q = parseFloat(e.qty) || 0;
     if (e.kind === 'kit') o.kits += q; else if (e.kind === 'count') o.counted += q;
+    else if (e.kind === 'move') o.moved += q;
+    else if (e.shopId) o.soldAtShops += -(parseFloat(e.shopQty) || 0);
     else { o.out += q; var r = e.reason || 'out'; o.byReason[r] = (o.byReason[r] || 0) + q; }
   });
-  o.total = o.filled + o.out + o.kits + o.counted;
+  o.total = o.filled + o.out + o.kits + o.counted + o.moved;
+  return o;
+}
+// Units of a product at shops: { total, by: { shopId: units } }.
+function atShops(p) {
+  var o = { total: 0, by: {} };
+  ((p && p.stockLog) || []).forEach(function (e) {
+    if (!e.shopId) return;
+    var q = parseFloat(e.shopQty) || 0;
+    o.by[e.shopId] = (o.by[e.shopId] || 0) + q;
+    o.total += q;
+  });
   return o;
 }
 function onHand(p) { return onHandParts(p).total; }
@@ -3747,6 +3791,7 @@ function fillUndoBlock(p, run) {
   var o = onHandParts(p), went = [];
   if (o.kits) went.push((-o.kits) + ' into kits');
   if (o.out) went.push((-o.out) + ' off the shelf');
+  if (o.moved < 0) went.push((-o.moved) + ' to shops');
   return 'Only ' + Math.max(0, onHand(p)) + ' of these are on hand' + (went.length ? ' (' + went.join(', ') + ')' : '') +
     ', so reversing this fill of ' + run.units + ' would leave ' + after + '. Reverse the kit builds that used them, or remove the stock changes, first.';
 }
@@ -3822,7 +3867,10 @@ function stTypeKey(p, forms) {
   var f = fillFind(forms, p.formulaId);
   return f ? (f.type || 'No type set') : 'No formulation';
 }
-function stModes() { return STOCK_REASONS.concat([{ key: 'count', label: 'Reconcile', hint: 'how many are on the shelf now' }]); }
+function stModes() {
+  return STOCK_REASONS.concat([{ key: 'consign', label: 'Consign', hint: 'to a shop, to sell for you' }, { key: 'count', label: 'Reconcile', hint: 'how many are on the shelf now' }]);
+}
+var stShop = '';
 function stLabel(m) { var l = stModes(); for (var i = 0; i < l.length; i++) if (l[i].key === m) return l[i]; return l[0]; }
 function stRowsHtml() {
   var prods = stProducts(), forms = Store.getJSON('aerie-formulations-v1', []) || [];
@@ -3850,8 +3898,13 @@ function stHtml() {
     '<div class="st-modes">' + STOCK_REASONS.map(function (r) {
       return '<button type="button" class="ps-chip' + (stMode === r.key ? ' on' : '') + '" onclick="Plume.stock.mode(\'' + r.key + '\')">' + r.label + '<span class="st-mct" data-m="' + r.key + '"></span></button>';
     }).join('') + '<span class="ps-chip-sep"></span>' +
+      '<button type="button" class="ps-chip' + (stMode === 'consign' ? ' on' : '') + '" onclick="Plume.stock.mode(\'consign\')">Consign<span class="st-mct" data-m="consign"></span></button>' +
+      '<span class="ps-chip-sep"></span>' +
       '<button type="button" class="ps-chip' + (stMode === 'count' ? ' on' : '') + '" onclick="Plume.stock.mode(\'count\')">Reconcile<span class="st-mct" data-m="count"></span></button></div>' +
-    '<p class="st-help">' + (stMode === 'count'
+    (stMode === 'consign' ? '<div class="st-shop"><label for="st-shop">To</label><select id="st-shop" onchange="Plume.stock.shop(this.value)">' + stShopOptions() + '</select></div>' : '') +
+    '<p class="st-help">' + (stMode === 'consign'
+      ? '<b>Consign</b>: units go from your shelf to the shop, still yours until they sell. <a href="#" id="st-cs-link" onclick="Plume.consign.open(); return false">Shops and settling up</a>'
+      : stMode === 'count'
       ? 'How many are on the shelf now. Plume records the difference from what it had. Use this to set real numbers.'
       : '<b>' + m.label + '</b>: ' + m.hint + '. ' + (m.back ? 'These go back on hand.' : 'These come off what is on hand.') + ' Switch reasons to enter more; Save records them all.') + '</p>' +
     '<div class="st-fields"><div><label for="st-date">Date</label><input type="date" id="st-date"></div>' +
@@ -3860,10 +3913,28 @@ function stHtml() {
     '<div class="st-cols"><span>Product</span><span>On hand</span><span>' + esc(m.label) + '</span></div>' +
     '<div id="st-rows">' + stRowsHtml() + '</div>' +
     '<div class="st-over" id="st-over" hidden></div>' +
-    '<p class="st-rp"><a href="#" onclick="Plume.stock.history(); return false">Stock history</a>: where units went, by market, month or product, and what they cost.</p>' +
+    '<p class="st-rp"><a href="#" onclick="Plume.stock.history(); return false">Stock history</a>: where units went, by market, month or product, and what they cost. ' +
+      '<a href="#" id="st-cs-foot" onclick="Plume.consign.open(); return false">Consignment</a>: shops and settling up.</p>' +
     '<div class="st-foot"><span class="st-ct" id="st-ct">Nothing entered yet</span><span class="ps-grow"></span>' +
       '<button type="button" class="ps-link-btn" onclick="Plume.peek.close()">Cancel</button>' +
       '<button type="button" class="ps-btn-primary" id="st-save" onclick="Plume.stock.save()" disabled>Save</button></div></div>';
+}
+function stShopOptions() {
+  var shops = shopsAll().filter(function (x) { return !x.archived; });
+  return '<option value="">' + (shops.length ? 'Pick a shop' : 'No shops yet') + '</option>' +
+    shops.map(function (x) { return '<option value="' + esc(x.id) + '"' + (x.id === stShop ? ' selected' : '') + '>' + esc(x.name || 'A shop') + '</option>'; }).join('') +
+    '<option value="__new">Add a shop…</option>';
+}
+function stockShop(v) {
+  if (v !== '__new') { stShop = v; stTyped(); return; }
+  var sel = document.getElementById('st-shop'); if (sel) sel.value = stShop;
+  askValue('The name of the shop.', '', function (name) {
+    var sh = shopAdd(name);
+    if (!sh) return;
+    stShop = sh.id;
+    if (sel) { sel.innerHTML = stShopOptions(); sel.value = stShop; }
+    stTyped();
+  }, { title: 'Add a shop', yes: 'Add' });
 }
 function stKeep() {
   var vals = stVals[stMode] || (stVals[stMode] = {});
@@ -3896,6 +3967,7 @@ function stOver(en) {
   STOCK_REASONS.forEach(function (r) {
     (en[r.key] || []).forEach(function (e) { tot[e.productId] = (tot[e.productId] || 0) + (r.back ? -1 : 1) * (parseFloat(e.value) || 0); });
   });
+  (en.consign || []).forEach(function (e) { tot[e.productId] = (tot[e.productId] || 0) + (parseFloat(e.value) || 0); });
   Object.keys(tot).forEach(function (id) {
     var p = fillFind(prods, id), have = p ? onHand(p) : 0;
     if (!counted[id] && tot[id] > have) out.push({ productId: id, name: p ? (p.name || '(unnamed)') : '', take: tot[id], have: have });
@@ -3925,10 +3997,12 @@ function stTyped() {
     warn.textContent = over.length ? 'More than is on hand: ' + over.map(function (o) { return o.name + ' (' + o.take + ' of ' + o.have + ')'; }).join('; ') +
       '. Log the fill first, or reconcile to what is on the shelf.' : '';
   }
-  var b = document.getElementById('st-save'); if (b) b.disabled = !any || !!over.length;
+  var noShop = !!(en.consign && en.consign.length) && !stShop;
+  if (warn && noShop && !over.length) { warn.hidden = false; warn.textContent = 'Pick the shop the consigned units go to.'; }
+  var b = document.getElementById('st-save'); if (b) b.disabled = !any || !!over.length || noShop;
 }
-function stockOpen() {
-  stMode = 'sold'; stQ = ''; stVals = {};
+function stockOpen(mode, shopId) {
+  stMode = mode || 'sold'; stQ = ''; stVals = {}; stShop = shopId || '';
   openPeek(stHtml(), {
     label: 'Update stock',
     onClose: function () {
@@ -3939,7 +4013,9 @@ function stockOpen() {
   document.getElementById('ps-peek').setAttribute('data-panel', 'stock');
   var b = document.getElementById('ps-nav-stock'); if (b) b.classList.add('on');
   var h = document.getElementById('ps-nav-history'); if (h) h.classList.remove('on');
+  var c = document.getElementById('ps-nav-consign'); if (c) c.classList.remove('on');
   document.getElementById('st-date').value = todayISO();
+  if (stMode !== 'sold') stTyped();
 }
 function stockMode(m) {
   stKeep();
@@ -3961,6 +4037,10 @@ function stockSave() {
   if (stOver(en).length) { stTyped(); return; }
   var prods = stProducts(), date = document.getElementById('st-date').value || todayISO(), note = document.getElementById('st-note').value.trim(), n = 0;
   STOCK_REASONS.forEach(function (r) { if (en[r.key]) n += stockPass(prods, en[r.key], { mode: 'out', reason: r.key, date: date, note: note }); });
+  if (en.consign) {
+    if (!stShop) { stTyped(); return; }
+    n += consignPass(prods, en.consign, stShop, { date: date, note: note });
+  }
   if (en.count) n += stockPass(prods, en.count, { mode: 'count', date: date, note: note });
   if (!n) return;
   if (Store.setJSON('plume-products-v1', prods) === false) { noteSaveFailed(); return; }
@@ -3968,6 +4048,215 @@ function stockSave() {
   libChanged();
   closePeek();
   tell(n + ' stock change' + (n === 1 ? '' : 's') + ' saved.', { title: 'Stock updated' });
+}
+
+// ── Consignment: shops and settling up (2026-10-20) ────────────────────
+// Reached from Update stock (and a product's "at shop" links), not the
+// sidebar: her call, something done a few times a year does not earn a
+// permanent place there.
+// Her shops settle up now and then, on no schedule, and pay what they pay:
+// Plume records only WHERE units are (shelf, a shop, sold there, back home),
+// not money (her call: no other selling prices are recorded here either).
+// Shops: plume-shops-v1, [{ id, name, notes, archived }].
+var SHOPS_KEY = 'plume-shops-v1';
+function shopsAll() { var l = Store.getJSON(SHOPS_KEY, []); return Array.isArray(l) ? l : []; }
+function shopsSave(l) { if (Store.setJSON(SHOPS_KEY, l) === false) { noteSaveFailed(); return false; } return true; }
+function shopName(id) { var x = fillFind(shopsAll(), id); return x ? (x.name || 'A shop') : 'A removed shop'; }
+function shopAdd(name, notes) {
+  name = String(name || '').trim();
+  if (!name) return null;
+  var l = shopsAll();
+  for (var i = 0; i < l.length; i++) if ((l[i].name || '').toLowerCase() === name.toLowerCase()) { if (l[i].archived) { delete l[i].archived; shopsSave(l); } return l[i]; }
+  var sh = { id: 'sh' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name: name, notes: notes || '' };
+  l.push(sh);
+  return shopsSave(l) ? sh : null;
+}
+// Moves units from the shelf to a shop. entries: [{ productId, value }].
+function consignPass(products, entries, shopId, opts) {
+  opts = opts || {};
+  var n = 0, stamp = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  (entries || []).forEach(function (en, i) {
+    var pr = fillFind(products, en.productId), v = parseFloat(en.value);
+    if (!pr || isNaN(v) || v <= 0) return;
+    if (!pr.stockLog) pr.stockLog = [];
+    pr.stockLog.push({ id: 'cs-' + stamp + '-' + i, date: opts.date || todayISO(), kind: 'move', qty: -v, shopId: shopId, shopQty: v,
+      note: opts.note || ('Consigned to ' + shopName(shopId)) });
+    pr.updatedAt = new Date().toISOString();
+    n++;
+  });
+  return n;
+}
+// A settle-up: per product, how many sold at the shop and how many came
+// back. entries: [{ productId, sold, returned }]. Sold units carry the unit
+// cost on the day, like any sale. Returns how many changes it recorded.
+function settlePass(products, shopId, entries, opts) {
+  opts = opts || {};
+  var n = 0, stamp = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  var cd = costData({ products: products }), date = opts.date || todayISO(), note = opts.note || ('Settled up: ' + shopName(shopId));
+  (entries || []).forEach(function (en, i) {
+    var pr = fillFind(products, en.productId);
+    if (!pr) return;
+    var sold = parseFloat(en.sold) || 0, back = parseFloat(en.returned) || 0;
+    if (!pr.stockLog) pr.stockLog = [];
+    if (sold > 0) {
+      var e = { id: 'ss-' + stamp + '-' + i, date: date, kind: 'out', reason: 'sold', qty: 0, shopId: shopId, shopQty: -sold, note: note };
+      var uc = productUnitCost(pr, cd); if (uc > 0) e.unitCost = Math.round(uc * 10000) / 10000;
+      pr.stockLog.push(e); n++;
+    }
+    if (back > 0) {
+      pr.stockLog.push({ id: 'sr-' + stamp + '-' + i, date: date, kind: 'move', qty: back, shopId: shopId, shopQty: -back, note: note });
+      n++;
+    }
+    if (sold > 0 || back > 0) pr.updatedAt = new Date().toISOString();
+  });
+  return n;
+}
+// What a shop holds: [{ p, units, since }] (since: the first consignment
+// date of what is there), largest first within type order by name.
+function shopStock(shopId, products) {
+  var out = [];
+  (products || []).forEach(function (p) {
+    var units = atShops(p).by[shopId] || 0, since = '';
+    ((p && p.stockLog) || []).forEach(function (e) { if (e.shopId === shopId && e.kind === 'move' && (parseFloat(e.shopQty) || 0) > 0 && (!since || e.date < since)) since = e.date; });
+    if (units) out.push({ p: p, units: units, since: since });
+  });
+  out.sort(function (a, b) { return (a.p.name || '').localeCompare(b.p.name || ''); });
+  return out;
+}
+// Everything that happened at a shop, newest first: [{ p, e, what, units }].
+function shopEvents(shopId, products) {
+  var out = [];
+  (products || []).forEach(function (p) {
+    ((p && p.stockLog) || []).forEach(function (e) {
+      if (e.shopId !== shopId) return;
+      var q = parseFloat(e.shopQty) || 0;
+      out.push({ p: p, e: e, what: e.kind === 'out' ? 'Sold' : (q > 0 ? 'Consigned' : 'Came back'), units: Math.abs(q) });
+    });
+  });
+  out.sort(function (a, b) { return (b.e.date || '').localeCompare(a.e.date || '') || String(b.e.id).localeCompare(String(a.e.id)); });
+  return out;
+}
+var csView = '', csVals = {};
+function csListHtml() {
+  var prods = stProducts(), shops = shopsAll().filter(function (x) { return !x.archived; });
+  var cards = shops.map(function (x) {
+    var held = shopStock(x.id, prods), units = 0, last = '';
+    held.forEach(function (h) { units += h.units; });
+    shopEvents(x.id, prods).forEach(function (ev) { if (ev.what !== 'Consigned' && (!last || ev.e.date > last)) last = ev.e.date; });
+    return '<button type="button" class="cs-card" onclick="Plume.consign.shop(' + esc(JSON.stringify(x.id)) + ')"><span class="cs-name">' + esc(x.name || 'A shop') +
+      (x.notes ? '<small>' + esc(x.notes) + '</small>' : '') + '</span>' +
+      '<span class="cs-units"><b>' + units + '</b> unit' + (units === 1 ? '' : 's') + ' there<small>' + held.length + ' product' + (held.length === 1 ? '' : 's') +
+      (last ? ' · last settled ' + esc(fmtDate(last)) : '') + '</small></span><span class="cs-chev">' + icon('chevron') + '</span></button>';
+  }).join('');
+  return '<div class="st-panel cs-panel"><div class="sup-title">' + icon('shop') + '<h2>Consignment</h2></div>' +
+    '<p class="st-help">Units at shops are still yours: they leave your shelf when you consign them and count as sold when the shop reports. Plume tracks units, not money.</p>' +
+    (cards ? '<div class="cs-cards">' + cards + '</div>' : '<div class="st-empty">No shops yet. Add one, then consign units to it from here or from Update stock.</div>') +
+    '<div class="cs-add"><button type="button" class="ps-link-btn" onclick="Plume.consign.add()">' + icon('plus') + 'Add a shop</button></div>' +
+  '</div>';
+}
+function csShopHtml(id) {
+  var x = fillFind(shopsAll(), id);
+  if (!x) return csListHtml();
+  var prods = stProducts(), held = shopStock(id, prods), evs = shopEvents(id, prods), total = 0;
+  held.forEach(function (h) { total += h.units; });
+  return '<div class="st-panel cs-panel"><button type="button" class="ps-link-btn cs-back" onclick="Plume.consign.list()">' + icon('chevron') + 'All shops</button>' +
+    '<div class="sup-title">' + icon('shop') + '<h2>' + esc(x.name || 'A shop') + '</h2></div>' +
+    (x.notes ? '<p class="st-help">' + esc(x.notes) + '</p>' : '') +
+    '<div class="cs-acts"><button type="button" class="ps-link-btn" onclick="Plume.stock.open(\'consign\', ' + esc(JSON.stringify(id)) + ')">' + icon('plus') + 'Consign more</button>' +
+      '<button type="button" class="ps-link-btn" onclick="Plume.consign.edit(' + esc(JSON.stringify(id)) + ')">' + icon('note') + 'Rename or notes</button></div>' +
+    '<h3 class="cs-h">Settle up <span>' + total + ' unit' + (total === 1 ? '' : 's') + ' there now</span></h3>' +
+    (held.length ? '<p class="st-help">Enter what sold and what came back. The rest stays at the shop.</p>' +
+      '<div class="st-fields"><div><label for="cs-date">Date</label><input type="date" id="cs-date" value="' + todayISO() + '"></div>' +
+        '<div><label for="cs-note">Note</label><input type="text" id="cs-note" placeholder="Settled up: ' + esc(x.name || '') + '"></div></div>' +
+      '<div class="cs-cols"><span>Product</span><span>There</span><span>Sold</span><span>Back</span><span>Left</span></div>' +
+      held.map(function (h) {
+        var v = csVals[h.p.id] || {};
+        return '<div class="cs-row" data-pid="' + esc(h.p.id) + '" data-have="' + h.units + '"><div class="st-name">' + esc(h.p.name || '(unnamed)') +
+          (h.since ? '<small>since ' + esc(fmtDate(h.since)) + '</small>' : '') + '</div>' +
+          '<div class="st-have">' + h.units + '</div>' +
+          '<input type="number" min="0" step="1" inputmode="numeric" data-k="sold" value="' + esc(v.sold || '') + '" aria-label="' + esc('Sold: ' + (h.p.name || '')) + '" oninput="Plume.consign.typed()">' +
+          '<input type="number" min="0" step="1" inputmode="numeric" data-k="returned" value="' + esc(v.returned || '') + '" aria-label="' + esc('Came back: ' + (h.p.name || '')) + '" oninput="Plume.consign.typed()">' +
+          '<div class="st-have cs-left">' + h.units + '</div></div>';
+      }).join('') +
+      '<div class="st-over" id="cs-over" hidden></div>' +
+      '<div class="st-foot"><span class="st-ct" id="cs-ct">Nothing entered yet</span><span class="ps-grow"></span>' +
+        '<button type="button" class="ps-btn-primary" id="cs-save" onclick="Plume.consign.save(' + esc(JSON.stringify(id)) + ')" disabled>Save settle-up</button></div>'
+      : '<div class="st-empty">Nothing at this shop now. Consign units to it with Consign more.</div>') +
+    (evs.length ? '<h3 class="cs-h">History</h3><div class="cs-hist">' + evs.map(function (ev) {
+      return '<div class="cs-ev"><span>' + esc(fmtDate(ev.e.date)) + '</span><span>' + esc(ev.p.name || '(unnamed)') + '</span><span>' + ev.what + ' <b>' + ev.units + '</b></span></div>';
+    }).join('') + '</div>' : '') +
+  '</div>';
+}
+function csRender() { var b = document.getElementById('ps-peek-body'); if (b) b.innerHTML = csView ? csShopHtml(csView) : csListHtml(); if (csView) csTyped(); }
+function consignOpen(shopId) {
+  csView = shopId || ''; csVals = {};
+  openPeek(csView ? csShopHtml(csView) : csListHtml(), {
+    label: 'Consignment',
+    onClose: function () { var b = document.getElementById('ps-nav-consign'); if (b) b.classList.remove('on'); }
+  });
+  ['ps-nav-stock', 'ps-nav-history'].forEach(function (k) { var e = document.getElementById(k); if (e) e.classList.remove('on'); });
+  var b = document.getElementById('ps-nav-consign'); if (b) b.classList.add('on');
+}
+function csShow(id) { csView = id; csVals = {}; csRender(); }
+function csList() { csView = ''; csVals = {}; csRender(); }
+function csAdd() {
+  askValue('The name of the shop. You can add notes after.', '', function (name) {
+    var sh = shopAdd(name);
+    if (sh) csShow(sh.id);
+  }, { title: 'Add a shop', yes: 'Add' });
+}
+function csEdit(id) {
+  var l = shopsAll(), x = fillFind(l, id);
+  if (!x) return;
+  askValue('Rename the shop. Its history keeps up.', x.name || '', function (name) {
+    name = String(name || '').trim();
+    if (!name) return;
+    x.name = name;
+    askValue('Notes: who to contact, the split, anything to remember.', x.notes || '', function (notes) {
+      x.notes = String(notes || '').trim();
+      shopsSave(l); csRender();
+    }, { title: 'Notes for ' + name, yes: 'Save' });
+    shopsSave(l); csRender();
+  }, { title: 'Rename ' + (x.name || 'the shop'), yes: 'Next' });
+}
+function csTyped() {
+  var rows = document.querySelectorAll('.cs-row'), any = 0, sold = 0, back = 0, over = [];
+  [].forEach.call(rows, function (r) {
+    var have = parseFloat(r.getAttribute('data-have')) || 0;
+    var s = parseFloat(r.querySelector('[data-k="sold"]').value) || 0, b = parseFloat(r.querySelector('[data-k="returned"]').value) || 0;
+    csVals[r.getAttribute('data-pid')] = { sold: r.querySelector('[data-k="sold"]').value, returned: r.querySelector('[data-k="returned"]').value };
+    var left = have - s - b;
+    r.querySelector('.cs-left').textContent = left;
+    r.classList.toggle('on', s > 0 || b > 0);
+    r.classList.toggle('over', left < 0);
+    if (left < 0) over.push(r.querySelector('.st-name').firstChild.textContent);
+    if (s > 0 || b > 0) any++;
+    sold += s; back += b;
+  });
+  var ct = document.getElementById('cs-ct');
+  if (ct) ct.textContent = any ? [sold ? sold + ' sold' : '', back ? back + ' back' : ''].filter(function (x) { return x; }).join(' · ') : 'Nothing entered yet';
+  var w = document.getElementById('cs-over');
+  if (w) { w.hidden = !over.length; w.textContent = over.length ? 'More than the shop has: ' + over.join(', ') + '.' : ''; }
+  var btn = document.getElementById('cs-save'); if (btn) btn.disabled = !any || !!over.length;
+}
+function csSave(id) {
+  csTyped();
+  var entries = [], bad = false;
+  [].forEach.call(document.querySelectorAll('.cs-row'), function (r) {
+    var s = r.querySelector('[data-k="sold"]').value.trim(), b = r.querySelector('[data-k="returned"]').value.trim();
+    [s, b].forEach(function (v) { if (v !== '' && (isNaN(+v) || +v < 0 || Math.floor(+v) !== +v)) bad = true; });
+    if (s || b) entries.push({ productId: r.getAttribute('data-pid'), sold: s, returned: b });
+  });
+  if (bad) { tell('Use whole numbers of units, 0 or more.'); return; }
+  if (document.getElementById('cs-save').disabled) return;
+  var prods = stProducts();
+  var n = settlePass(prods, id, entries, { date: document.getElementById('cs-date').value || todayISO(), note: document.getElementById('cs-note').value.trim() });
+  if (!n) return;
+  if (Store.setJSON('plume-products-v1', prods) === false) { noteSaveFailed(); return; }
+  csVals = {};
+  libChanged();
+  csRender();
+  tell('Settle-up saved: ' + n + ' change' + (n === 1 ? '' : 's') + '.', { title: 'Saved' });
 }
 
 // ── Stock history: a slide-in panel on every page (2026-10-20) ─────────
@@ -3999,13 +4288,13 @@ function shRows() {
   var b = shBounds(), q = shQ.toLowerCase().trim(), d = costData(), out = [];
   d.products.forEach(function (p) {
     ((p && p.stockLog) || []).forEach(function (e) {
-      if (e.kind === 'kit') return;
+      if (e.kind === 'kit' || e.kind === 'move') return;   // still hers: inside a kit, or at a shop
       if (b[0] && (e.date || '') < b[0]) return;
       if (b[1] && (e.date || '') >= b[1]) return;
       if (q && ((e.note || '') + ' ' + (p.name || '') + ' ' + (p.sku || '')).toLowerCase().indexOf(q) === -1) return;
       var key = e.kind === 'count' ? 'count' : (e.reason || 'out');
       var qty = parseFloat(e.qty) || 0;
-      var units = reasonBack(key) ? qty : -qty;
+      var units = e.shopId ? -(parseFloat(e.shopQty) || 0) : (reasonBack(key) ? qty : -qty);
       var est = !(e.unitCost > 0);
       var uc = est ? productUnitCost(p, d) : e.unitCost;
       out.push({ p: p, e: e, key: key, units: units, cost: units * uc, est: est && units !== 0 });
@@ -4031,13 +4320,14 @@ function shGroups(rows) {
     var k, title, sub, sort;
     if (shGroup === 'month') { k = (r.e.date || '').slice(0, 7) || 'none'; title = k === 'none' ? 'No date' : shMonthName(k); sub = ''; sort = k; }
     else if (shGroup === 'product') { k = r.p.id; title = r.p.name || '(unnamed)'; sub = r.p.netWtDisplay || ''; sort = title.toLowerCase(); }
+    else if (shGroup === 'shop') { k = r.e.shopId || ''; title = r.e.shopId ? shopName(r.e.shopId) : 'Not through a shop'; sub = r.e.shopId ? 'consignment' : 'markets, online, in person'; sort = (r.e.shopId ? '0' : '1') + title.toLowerCase(); }
     else { k = (r.e.date || '') + '|' + (r.e.note || ''); title = r.e.note || 'No note'; sub = r.e.date ? fmtDate(r.e.date) : ''; sort = (r.e.date || '') + '|' + (r.e.note || ''); }
     if (!g[k]) { g[k] = { key: k, title: title, sub: sub, sort: sort, t: shBlank(), rows: [] }; order.push(k); }
     shAdd(g[k].t[r.key], r);
     g[k].rows.push(r);
   });
   var list = order.map(function (k) { return g[k]; });
-  list.sort(function (a, b) { return shGroup === 'product' ? a.sort.localeCompare(b.sort) : b.sort.localeCompare(a.sort); });
+  list.sort(function (a, b) { return (shGroup === 'product' || shGroup === 'shop') ? a.sort.localeCompare(b.sort) : b.sort.localeCompare(a.sort); });
   return list;
 }
 function shDetail(gr) {
@@ -4076,7 +4366,7 @@ function shHtml() {
       return '<button type="button" class="sh-tile' + (shReason === k ? ' on' : '') + '" aria-pressed="' + (shReason === k) + '" title="See what made up this number" onclick="Plume.stock.reason(\'' + k + '\')"><div class="sh-k">' + esc(shLabel(k)) + '</div><div class="sh-n">' + tot[k].units + '</div><div class="sh-c">' + shMoney(tot[k].cost, tot[k].est) + ' at cost</div></button>';
     }).join('') + '</div>' +
     '<button type="button" class="sh-give' + (shReason === 'give' ? ' on' : '') + '" aria-pressed="' + (shReason === 'give') + '" title="See what was given away or used for marketing" onclick="Plume.stock.reason(\'give\')"><b>Giveaways and marketing:</b> ' + give.units + ' unit' + (give.units === 1 ? '' : 's') + ', ' + shMoney(give.cost, give.est) + ' at cost</button>' +
-    '<div class="sh-bar"><div class="sh-tabs">' + [['event', 'By event'], ['month', 'By month'], ['product', 'By product']].map(function (t) {
+    '<div class="sh-bar"><div class="sh-tabs">' + [['event', 'By event'], ['month', 'By month'], ['product', 'By product']].concat(shopsAll().length ? [['shop', 'By shop']] : []).map(function (t) {
       return '<button type="button" class="ps-tab' + (shGroup === t[0] ? ' on' : '') + '" onclick="Plume.stock.group(\'' + t[0] + '\')">' + t[1] + '</button>';
     }).join('') + '</div></div>' +
     '<label class="ps-search sh-search">' + icon('search') + '<input type="search" id="sh-q" placeholder="Search notes or products, e.g. market" value="' + esc(shQ) + '" oninput="Plume.stock.find(this.value)" aria-label="Search stock history"></label>' +
@@ -4091,7 +4381,7 @@ function shHtml() {
         (open ? '<div class="sh-detail">' + shDetail(gr) + '</div>' : '') + '</div>';
     }).join('') : '<div class="st-empty">' + (shReason && !shQ ? 'No ' + esc(pName.toLowerCase()) + ' in this range.' : shQ ? 'Nothing matches “' + esc(shQ) + '” in this range.' : 'Nothing recorded in this range. Update stock records sales, giveaways and returns.') + '</div>') + '</div>' +
     '<p class="sh-foot">Costs are each product’s unit cost on the day the change was saved' + (rows.some(function (r) { return r.est; }) ? '; ~ marks changes from before costs were recorded, which use today’s unit cost' : '') +
-      '. Units built into kits are not counted here; the kit carries them.' + (tot.count.units ? ' Unaccounted is what reconciling found missing (negative: found extra).' : '') + '</p>' +
+      '. Units built into kits are not counted here; the kit carries them. Units at shops count when they sell.' + (tot.count.units ? ' Unaccounted is what reconciling found missing (negative: found extra).' : '') + '</p>' +
     (rows.length ? '<div class="sh-actions"><button type="button" class="ps-link-btn" onclick="Plume.stock.copy()">' + icon('copy') + 'Copy as a table</button></div>' : '') +
   '</div>';
 }
@@ -4123,15 +4413,25 @@ function shFind(v) {
 }
 // Every change in range, one per line, for a spreadsheet or the books.
 function shCopy() {
-  var lines = [['Date', 'Note', 'Product', 'Reason', 'Units', 'Unit cost', 'Cost'].join('\t')];
+  var lines = [['Date', 'Note', 'Product', 'Reason', 'Shop', 'Units', 'Unit cost', 'Cost'].join('\t')];
   shRows().filter(function (r) { return shPick(r.key); }).sort(function (a, b) { return (a.e.date || '').localeCompare(b.e.date || ''); }).forEach(function (r) {
-    lines.push([r.e.date || '', r.e.note || '', r.p.name || '', shLabel(r.key), r.units, (r.units ? Math.abs(r.cost / r.units) : 0).toFixed(2), r.cost.toFixed(2)].join('\t'));
+    lines.push([r.e.date || '', r.e.note || '', r.p.name || '', shLabel(r.key), r.e.shopId ? shopName(r.e.shopId) : '', r.units, (r.units ? Math.abs(r.cost / r.units) : 0).toFixed(2), r.cost.toFixed(2)].join('\t'));
   });
   var text = lines.join('\n'), done = function () { tell('Copied ' + (lines.length - 1) + ' line' + (lines.length === 2 ? '' : 's') + '. Paste into a spreadsheet.', { title: 'Copied' }); };
   try { navigator.clipboard.writeText(text).then(done, function () { tell(text, { title: 'Copy these lines' }); }); }
   catch (e) { tell(text, { title: 'Copy these lines' }); }
 }
 
+// Why a stock change cannot be removed, or ''. Removing a consignment
+// that the shop has since sold or returned would leave it below zero there.
+function undoStockBlock(p, id) {
+  var e = null;
+  ((p && p.stockLog) || []).forEach(function (x) { if (x.id === id) e = x; });
+  if (!e || !e.shopId) return '';
+  var q = parseFloat(e.shopQty) || 0, have = atShops(p).by[e.shopId] || 0;
+  if (have - q < 0) return 'The shop has ' + have + ' of these now, so removing this would leave it below zero. Remove the later sale or return from ' + shopName(e.shopId) + ' first.';
+  return '';
+}
 // Removes one taken-out or counted entry. Kit entries go with their build.
 function undoStock(p, id) {
   if (!p || !p.stockLog) return false;
@@ -4180,7 +4480,10 @@ return {
   kitNeeds: kitNeeds, kitShortages: kitShortages, buildKit: buildKit, undoKitBuild: undoKitBuild,
   undoKitText: undoKitText, kitsUsing: kitsUsing, stockPass: stockPass, undoStock: undoStock,
   STOCK_REASONS: STOCK_REASONS, productUnitCost: productUnitCost, stockReasonLabel: stockReasonLabel, fillUndoBlock: fillUndoBlock,
-  stock: { open: stockOpen, mode: stockMode, search: stockSearch, typed: stTyped, save: stockSave, entries: stEntries,
+  consign: { open: consignOpen, shop: csShow, list: csList, add: csAdd, edit: csEdit, typed: csTyped, save: csSave },
+  shopsAll: shopsAll, shopAdd: shopAdd, shopName: shopName, atShops: atShops, consignPass: consignPass, settlePass: settlePass,
+  shopStock: shopStock, shopEvents: shopEvents, undoStockBlock: undoStockBlock,
+  stock: { open: stockOpen, mode: stockMode, search: stockSearch, typed: stTyped, save: stockSave, entries: stEntries, shop: stockShop,
            history: stockHistory, range: shRangeSet, group: shGroupSet, toggle: shToggle, reason: shReasonSet, find: shFind, copy: shCopy, rows: shRows },
   pkTypeFor: pkTypeFor, pkForProduct: pkForProduct, pkColored: pkColored, pkIsOther: pkIsOther,
   pkIcon: pkIcon, pkIconFor: pkIconFor, pkProducts: pkProducts, pkProductName: pkProductName,

@@ -241,6 +241,8 @@ body.ps-shell .field input:focus, body.ps-shell .field select:focus, body.ps-she
 .prod-row.drag-over-bottom td { box-shadow: inset 0 -2px 0 0 var(--bark); }
 .prod-row.dim td { color: var(--ink-lighter); }
 .cost-flag { color: var(--warning); font-size: 11px; margin-left: 3px; }
+.oh-shops { display: block; font-size: 11.5px; color: var(--ink-lighter); }
+.oh-at { display: block; font-size: 13px; color: var(--ink-light); font-weight: 400; margin-top: 2px; }
 .at-least { font-size: 11px; color: var(--warning); font-weight: 400; }
 .cost-panel-big .at-least, .big .at-least { font-size: 13px; margin-right: 4px; }
 .marg-note { font-size: 11.5px; color: var(--warning); margin-top: 6px; line-height: 1.4; }
@@ -2378,7 +2380,8 @@ function onProdDrop(e, targetId) {
 // Export / import
 // ──────────────────────────────────────────────────────────────────────
 function exportData() {
-  var blob = new Blob([JSON.stringify({ products: products }, null, 2)], { type:'application/json' });
+  // Consignment shops travel with the products whose stock log names them.
+  var blob = new Blob([JSON.stringify({ products: products, shops: Plume.shopsAll() }, null, 2)], { type:'application/json' });
   var a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = 'plume-products-' + todayISO() + '.json';
@@ -2397,6 +2400,12 @@ function importData(e) {
         products.forEach(function(p) { existing[p.id] = true; });
         var added = 0;
         arr.forEach(function(p) { if (!existing[p.id]) { products.push(p); added++; } });
+        if (Array.isArray(data.shops) && data.shops.length) {
+          var shops = Plume.shopsAll(), have = {};
+          shops.forEach(function(x) { have[x.id] = true; });
+          data.shops.forEach(function(x) { if (x && x.id && !have[x.id]) shops.push(x); });
+          Store.setJSON(Plume.KEYS.shops, shops);
+        }
         saveProducts();
         renderList();
         Plume.tell('Imported ' + added + ' new product' + (added === 1 ? '' : 's') + '.');
@@ -2667,7 +2676,8 @@ function prodRowHtml(p, key, nested) {
   var oh = Plume.onHandParts(p);
   var dash = '<span class="ps-muted">--</span>';
   var unitsCell = (oh.filled || (p.stockLog || []).length)
-    ? '<span class="' + (oh.total < 0 ? 'oh-neg' : '') + '" title="' + esc(onHandTitle(p, oh)) + '">' + oh.total + '</span>'
+    ? '<span class="' + (oh.total < 0 ? 'oh-neg' : '') + '" title="' + esc(onHandTitle(p, oh)) + '">' + oh.total + '</span>' +
+      (Plume.atShops(p).total ? '<small class="oh-shops">+' + Plume.atShops(p).total + ' at shops</small>' : '')
     : dash;
   var sub = [p.sku, p.netWtDisplay].filter(function(x) { return x; }).join(' · ');
   return '<tr class="prod-row' + (nested ? ' l2' : '') + (status === 'discontinued' ? ' dim' : '') + '"' +
@@ -2767,6 +2777,8 @@ function onHandTitle(p, oh) {
   if (oh.kits) bits.push((-oh.kits) + ' into kits');
   Object.keys(oh.byReason).forEach(function(r) { bits.push(Math.abs(oh.byReason[r]) + ' ' + Plume.stockReasonLabel(r).toLowerCase()); });
   if (oh.counted) bits.push((oh.counted > 0 ? '+' : '') + oh.counted + ' reconciled');
+  if (oh.moved < 0) bits.push((-oh.moved) + ' at shops');
+  if (oh.soldAtShops) bits.push(oh.soldAtShops + ' sold at shops');
   return bits.join(', ');
 }
 
@@ -3692,10 +3704,18 @@ function renderOnHand(p) {
   if (oh.kits) bits.push('<span>' + (-oh.kits) + ' into kits</span>');
   Object.keys(oh.byReason).forEach(function(r) { bits.push('<span>' + Math.abs(oh.byReason[r]) + ' ' + Plume.stockReasonLabel(r).toLowerCase() + '</span>'); });
   if (oh.counted) bits.push('<span>' + (oh.counted > 0 ? '+' : '') + oh.counted + ' reconciled</span>');
+  if (oh.moved) bits.push('<span>' + (oh.moved < 0 ? (-oh.moved) + ' to shops' : '+' + oh.moved + ' back from shops') + '</span>');
   var into = Plume.kitsUsing(p.id, products);
+  // Consignment (2026-10-20): on hand is the shelf; units at shops are
+  // still hers and listed by shop.
+  var shops = Plume.atShops(p), shopBits = Object.keys(shops.by).filter(function(id) { return shops.by[id]; }).map(function(id) {
+    return '<a href="#" onclick="Plume.consign.open(' + esc(JSON.stringify(id)) + ');return false">' + shops.by[id] + ' at ' + esc(Plume.shopName(id)) + '</a>';
+  });
   document.getElementById('onhand-box').innerHTML =
-    '<div class="oh-big' + (oh.total < 0 ? ' oh-neg' : '') + '">' + oh.total + '<small>on hand</small></div>' +
-    '<div class="oh-parts">' + bits.join('') + '</div>' +
+    '<div class="oh-big' + (oh.total < 0 ? ' oh-neg' : '') + '">' + oh.total + '<small>on your shelf</small>' +
+      (shops.total ? '<small class="oh-at">+ ' + shops.total + ' at shops</small>' : '') + '</div>' +
+    '<div class="oh-parts">' + bits.join('') + (oh.soldAtShops ? '<span>' + oh.soldAtShops + ' sold at shops</span>' : '') + '</div>' +
+    (shopBits.length ? '<div class="oh-parts">At shops: ' + shopBits.join(', ') + '</div>' : '') +
     (into.length ? '<div class="oh-parts">Goes into ' + into.map(function(k) { return '<a href="#" onclick="openProduct(\'' + esc(k.id) + '\');return false">' + esc(k.name || 'a kit') + '</a>'; }).join(', ') + '</div>' : '');
 }
 // Taken out, counts and units into kits, newest first. Kit lines are undone
@@ -3706,8 +3726,11 @@ function renderStockHist(p) {
   if (!log.length) { el.innerHTML = ''; return; }
   el.innerHTML = '<h3>Stock changes</h3>' + log.map(function(e) {
     var q = parseFloat(e.qty) || 0;
-    var what = e.kind === 'count' ? 'Reconciled to ' + e.counted : (e.kind === 'kit' ? 'Into a kit' : Plume.stockReasonLabel(e.reason));
-    return '<div class="sh-row"><span>' + fmtDate(e.date) + '</span><span class="sh-q">' + (q > 0 ? '+' : '') + q + '</span>' +
+    var sq = parseFloat(e.shopQty) || 0;
+    var what = e.kind === 'count' ? 'Reconciled to ' + e.counted : e.kind === 'kit' ? 'Into a kit'
+      : e.kind === 'move' ? (sq > 0 ? 'Consigned to ' : 'Back from ') + Plume.shopName(e.shopId)
+      : e.shopId ? 'Sold ' + (-sq) + ' at ' + Plume.shopName(e.shopId) : Plume.stockReasonLabel(e.reason);
+    return '<div class="sh-row"><span>' + fmtDate(e.date) + '</span><span class="sh-q">' + (e.shopId && e.kind === 'out' ? '&middot;' : (q > 0 ? '+' : '') + q) + '</span>' +
       '<span class="sh-note">' + esc(what) + (e.note && e.kind !== 'kit' ? ': ' + esc(e.note) : '') + (e.kind === 'kit' ? ' (' + esc(String(e.note || '').replace(/^Into kit: /, '')) + ')' : '') + '</span>' +
       (e.kind === 'kit' ? '<span></span>' : '<button title="Remove this change" aria-label="Remove this change" onclick="undoStockLine(\'' + esc(e.id) + '\')">&#x2715;</button>') + '</div>';
   }).join('');
@@ -3715,6 +3738,8 @@ function renderStockHist(p) {
 function undoStockLine(id) {
   if (!curId) return;
   var pid = curId;
+  var block = Plume.undoStockBlock(findProduct(pid), id);
+  if (block) { Plume.tell(block, { title: 'This change stays for now' }); return; }
   Plume.ask('On hand goes back to what it was before this change.', function() {
     var stored = storedProducts(), sp = findIn(stored, pid);
     if (!sp || !Plume.undoStock(sp, id)) return;
