@@ -3357,7 +3357,9 @@ function recalcCost() {
     if (detail.missing.length) {
       warn = '<div class="warn-line"><strong>No cost per gram for</strong> ' +
         detail.missing.map(esc).join(', ') +
-        (detail.missing.length === 1 ? ', so it counts' : ', so they count') + ' as free and this is low. Add a lot price in <a href="plume-ingredients.html" target="plume-ingredients">Ingredients</a>, or mark it made in-house there to count it as $0 on purpose.</div>';
+        (detail.missing.length === 1 ? ', so it counts' : ', so they count') + ' as free and this is low. Add a lot price in <a href="plume-ingredients.html" target="plume-ingredients">Ingredients</a>, or mark it made in-house there to count it as $0 on purpose.' +
+        (ings.some(function(i) { return detail.missing.indexOf(i.name) !== -1 && Plume.stockFormFor(i, forms); })
+          ? ' A stock solution gets its price from its batches: make one in Batches and the price follows.' : '') + '</div>';
     }
   }
   var unpriced = c.pkgRows.filter(function(r) { return r.unitCost === null && !r.missing; });
@@ -3488,10 +3490,11 @@ function formulaLabelItems(f) {
     return { line: l, weight: pct > 0 ? pct : gf };
   }).filter(function(o) { return o.weight > 0; });
   lines.sort(function(a, b) { return b.weight - a.weight; });
-  return lines.map(function(o) {
+  // A stock solution lists as its parts, each at its real share.
+  return Plume.stockLabelItems(lines.map(function(o) {
     var ing = findIng(o.line.ingId);
-    return { inci: (ing && ing.inci) || '', label: (ing && ing.name) || '(unknown)' };
-  }).filter(function(x) { return x.inci; });
+    return { ingId: o.line.ingId, w: o.weight, inci: (ing && ing.inci) || '', label: (ing && ing.name) || '(unknown)' };
+  }), ings, forms).filter(function(x) { return x.inci; });
 }
 
 // Components merged across every formulation a product draws on, so the
@@ -3529,9 +3532,13 @@ function singleFormulaIngredients(f, mode) {
     return Plume.inciMerge(formulaLabelItems(f))
       .map(function(e) { return e.name; }).join(', ');
   }
-  var names = lines.map(function(o) {
-    var ing = findIng(o.line.ingId);
-    return ing ? (ing.name || ing.inci || '(unnamed)') : '(unknown)';
+  // A stock solution names its parts here too: the label says what is in
+  // the bottle. Parts of the same ingredient list once.
+  var names = [];
+  Plume.stockLabelItems(lines.map(function(o) { return { ingId: o.line.ingId, w: o.weight }; }), ings, forms).forEach(function(it) {
+    var ing = findIng(it.ingId);
+    var n = ing ? (ing.name || ing.inci || '(unnamed)') : '(unknown)';
+    if (names.indexOf(n) === -1) names.push(n);
   });
   return names.join(', ');
 }

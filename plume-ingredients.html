@@ -1153,6 +1153,11 @@
   #ing-table tbody td:last-child { border-right: 1px solid var(--cream-border); border-radius: 0 9px 9px 0; }
   #ing-table tbody td:first-child:last-child { border-radius: 9px; }
   #ing-table tbody tr.has-stock td { border-color: color-mix(in srgb, var(--clay-hover) 70%, var(--cream-border)); }
+/* Stock solutions (2026-10-21) */
+.made-from { font-size: 12.5px; color: var(--ink-light); background: var(--sage-light); border-radius: 8px; padding: 8px 12px; margin: 6px 0 10px; line-height: 1.5; }
+.made-from a { color: var(--sage-dark); }
+.made-lot { grid-column: 1 / -1; font-size: 11.5px; color: var(--sage-dark); margin-bottom: 6px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.made-lot .made-miss { color: var(--warning); }
 </style>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#404834">
@@ -1187,6 +1192,7 @@
           <button type="button" class="ps-icon-btn" data-ps-menu aria-label="More actions" aria-expanded="false" id="ing-more-btn"></button>
           <div class="ps-menu" role="menu" id="ing-more-menu">
             <button type="button" onclick="openSeeder()" data-icon="sparkle">Quick add from the starter list</button>
+            <button type="button" onclick="makeStockSolution()" data-icon="formulations">Make a stock solution</button>
             <hr>
             <button type="button" onclick="exportData()" data-icon="download">Export backup</button>
             <button type="button" onclick="document.getElementById('import-file-input').click()" data-icon="upload">Import</button>
@@ -1479,7 +1485,8 @@
       <div style="font-size:12px;color:var(--ink-lighter)" id="lots-summary">No lots added yet.</div>
       <button class="btn btn-sm" onclick="openLotsDrawer()">Manage lots &rsaquo;</button>
     </div>
-    <label class="restrict-toggle" style="margin:4px 0 2px"><input type="checkbox" id="f-nocost"> Made in-house or free: count it as $0 <span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:10px">&mdash; when it has no lot price, so costs are not flagged as missing</span></label>
+    <div class="made-from" id="f-madefrom" hidden></div>
+    <label class="restrict-toggle" id="f-nocost-row" style="margin:4px 0 2px"><input type="checkbox" id="f-nocost"> Made in-house or free: count it as $0 <span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:10px">&mdash; when it has no lot price, so costs are not flagged as missing</span></label>
 
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modal-add')">Cancel</button>
@@ -2750,6 +2757,7 @@ function viewIngredient(id) {
     if (!aDate && bDate) return 1;
     return 0;
   });
+  var madeForm = stockFormOf(i);
   var lotsHtml = sortedLots.length ? sortedLots.map(function(l) {
     var suppObj = suppliers.find(function(s) { return s.name === l.supplier; });
     var buyLink = l.buyLink || '';
@@ -2777,7 +2785,12 @@ function viewIngredient(id) {
     // by decommit because the original lot was deleted. Purely informational
     // -- doesn't affect costing or stock math.
     var resurrectionBanner = '';
-    if (l.wasReversal) {
+    if (l.madeBatchId) {
+      // A lot made here: a batch of this stock solution.
+      resurrectionBanner = '<div class="made-lot">Made in-house in batch ' +
+        Plume.lotChip(l.lotNum || 'no lot code', 'plume-batchlog.html#b=' + encodeURIComponent(l.madeBatchId)).replace('<a ', '<a target="plume-batchlog" ') +
+        (l.madeMissing && l.madeMissing.length ? ' <span class="made-miss">not priced: ' + l.madeMissing.map(esc).join(', ') + ' had no price</span>' : '') + '</div>';
+    } else if (l.wasReversal) {
       resurrectionBanner = '<div style="font-size:10px;color:var(--clay-dark);margin-bottom:6px;grid-column:1/-1;font-style:italic;display:flex;align-items:center;gap:6px"><span style="font-size:13px">\u21BA</span> Auto-created from batch decommit. ' +
         (l.notes ? '<span style="color:var(--ink-lighter);font-style:normal">' + l.notes + '</span>' : '') +
         '</div>';
@@ -2813,7 +2826,8 @@ function viewIngredient(id) {
       '</p></div>' +
       setActiveBtn +
     '</div>';
-  }).join('') : '<p style="font-size:13px;color:var(--ink-lighter)">No supplier lots recorded yet.</p>';
+  }).join('') : '<p style="font-size:13px;color:var(--ink-lighter)">' + (madeForm ? 'No batches of it made yet.' : 'No supplier lots recorded yet.') + '</p>';
+  if (madeForm) lotsHtml = '<div class="made-from">' + madeFromText(madeForm) + '</div>' + lotsHtml;
 
   // Soap data section
   var soapHtml = '';
@@ -3014,6 +3028,7 @@ function openAdd() {
   document.getElementById('f-phase').value = 'water';
   document.getElementById('f-restricted').checked = false;
   document.getElementById('f-nocost').checked = false;
+  renderMadeFrom(null);
   syncRestrictField();
   document.getElementById('lots-container').innerHTML = '';
   clearSoapFields();
@@ -3033,6 +3048,7 @@ function editCurrent() {
   document.getElementById('f-phase').value    = i.phase;
   document.getElementById('f-restricted').checked = i.flag === 'yes';
   document.getElementById('f-nocost').checked = !!i.noCost;
+  renderMadeFrom(i);
   document.getElementById('f-min').value      = i.min      || '';
   document.getElementById('f-max').value      = i.max      || '';
   document.getElementById('f-purpose').value = i.purpose || '';
@@ -3081,6 +3097,34 @@ function editCurrent() {
   openModal('modal-add');
 }
 
+// ── Stock solutions (2026-10-21) ──
+// An ingredient made from a stock-solution formulation (ing.madeBy, linked
+// from the formulation's Stock solution panel). Its lots come from batches
+// of it, priced from what went into each, so the $0 switch does not apply.
+function stockFormOf(i) {
+  if (!i || !i.madeBy) return null;
+  return Plume.stockFormFor(i, Store.getJSON('aerie-formulations-v1', []) || []);
+}
+function madeFromText(f) {
+  return 'Made in-house from <a href="plume-formulations.html#f=' + encodeURIComponent(f.id) + '" target="plume-formulations">' + esc(f.name || 'its formulation') + '</a>, a stock solution. ' +
+    'Each batch of it adds a lot here, priced from what went into it.';
+}
+// The list's ••• menu: "Make a stock solution" opens New formulation in
+// Formulations with the type chosen (her call, 2026-10-21: a stock solution
+// is an ingredient, so Ingredients is a natural place to start one).
+function makeStockSolution() {
+  var a = document.createElement('a');
+  a.href = 'plume-formulations.html#new=stock';
+  a.target = 'plume-formulations';
+  document.body.appendChild(a); a.click(); a.parentNode.removeChild(a);
+}
+function renderMadeFrom(i) {
+  var f = stockFormOf(i), el = document.getElementById('f-madefrom');
+  el.innerHTML = f ? madeFromText(f) : '';
+  el.hidden = !f;
+  document.getElementById('f-nocost-row').style.display = f ? 'none' : '';
+}
+
 function saveIngredient(keepOpen) {
   var name = document.getElementById('f-name').value.trim();
   var inci = document.getElementById('f-inci').value.trim();
@@ -3118,6 +3162,18 @@ function saveIngredient(keepOpen) {
     lots:     getLots(),
     soap:     getSoapData()
   };
+
+  // Fields the lot form does not show (a stock solution's batch link, the
+  // decommit flags) are carried over from the saved lot, or saving the
+  // ingredient would quietly drop them.
+  if (editingId) {
+    var prevIng = ingredients.find(function(x) { return x.id === editingId; });
+    var prevLots = (prevIng && prevIng.lots) || [];
+    data.lots = data.lots.map(function(l) {
+      var old = l.id ? prevLots.filter(function(x) { return x.id === l.id; })[0] : null;
+      return old ? Object.assign({}, old, l) : l;
+    });
+  }
 
   // ── Lot id assignment & active-lot resolution ──
   // 1. Assign stable ids to any new lots (rows without a persisted id).
