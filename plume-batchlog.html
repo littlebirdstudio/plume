@@ -3022,12 +3022,15 @@ function drawnCost(b) {
 }
 function madeCpg(cost, g) { return String(Math.round(cost / g * 1000000) / 1000000); }
 // Adds the lot. Returns it, or null when this batch makes no stock (not a
-// stock solution, no ingredient linked, or already added).
+// stock solution, or already added). With no ingredient linked yet, the
+// first batch creates it (her call, 2026-10-21): named for the formulation,
+// its INCI read off its lines.
 function addMadeLot(b) {
   var f = findFormula(b.formulaId);
-  var ing = Plume.stockIngFor(b.formulaId, ings);
   var g = parseFloat(b.actualYield) || 0;
-  if (!f || !Plume.isStockType(f.type) || !ing || b.madeLotId || !b.committed || g <= 0) return null;
+  if (!f || !Plume.isStockType(f.type) || b.madeLotId || !b.committed || g <= 0) return null;
+  var ing = Plume.stockIngFor(b.formulaId, ings);
+  if (!ing) { ing = Plume.stockNewIng(f, ings, forms); ings.push(ing); b.madeIngNew = true; }
   var c = drawnCost(b), priced = !c.missing.length;
   var lot = {
     id:           'L-made-' + b.id,
@@ -3125,7 +3128,8 @@ function renderNewStockNote() {
   var ing = Plume.stockIngFor(f.id, ings);
   el.innerHTML = ing
     ? '<strong>Stock solution.</strong> Making it adds the yield to ' + ingLink(ing) + ' in Ingredients, as a lot with this batch’s lot code, priced from what goes into it.'
-    : '<strong>Stock solution, not linked to an ingredient yet,</strong> so this batch will not add stock anywhere. Link it in the Stock solution panel of <a href="plume-formulations.html#f=' + encodeURIComponent(f.id) + '" target="plume-formulations">its formulation</a> first.';
+    : '<strong>Stock solution, first batch.</strong> Making it creates <b>' + esc(f.name || 'its ingredient') + '</b> in Ingredients and adds the yield as its first lot, with this batch’s lot code, priced from what goes into it. ' +
+      'Then use it in other formulations like any ingredient. <span class="ps-muted">To add to an ingredient you already have instead, link it in the Stock solution panel of <a href="plume-formulations.html#f=' + encodeURIComponent(f.id) + '" target="plume-formulations">its formulation</a> first.</span>';
   el.hidden = false;
 }
 // Batch details: what this stock batch added, and what is left.
@@ -3137,7 +3141,7 @@ function renderMadeNote(b) {
   if (ml) {
     var made = parseFloat(ml.lot.madeG) || 0, left = madeLotLeftG(ml.lot), used = Math.max(made - left, 0);
     var cpg = parseFloat(ml.lot.costPerG);
-    html = '<strong>Stock solution.</strong> This batch added ' + Plume.fmtG(made) + ' to ' + ingLink(ml.ing) +
+    html = '<strong>Stock solution.</strong> This batch ' + (b.madeIngNew ? 'created ' + ingLink(ml.ing) + ' in Ingredients and added ' + Plume.fmtG(made) + ' to it' : 'added ' + Plume.fmtG(made) + ' to ' + ingLink(ml.ing)) +
       (ml.lot.lotNum ? ' as lot ' + esc(ml.lot.lotNum) : '') +
       (cpg > 0 ? ', at $' + cpg.toFixed(4) + ' per gram' : ml.lot.madeCost === 0 ? ', at no cost' : '') + '. ' +
       Plume.fmtG(left) + ' left' + (used > 0.05 ? '; ' + Plume.fmtG(used) + ' used (see Trace).' : '.');
@@ -3145,10 +3149,11 @@ function renderMadeNote(b) {
       html += ' <span class="nocost">Not priced: ' + ml.lot.madeMissing.map(esc).join(', ') + ' had no price when it was made.</span>';
     }
   } else if (isStock && b.committed) {
+    // A batch made before stock solutions existed.
     var ing = Plume.stockIngFor(b.formulaId, ings);
-    html = ing
-      ? '<strong>Stock solution.</strong> This batch has not added stock to ' + ingLink(ing) + '. <button type="button" class="btn btn-sm" onclick="addMadeLotNow()">Add ' + Plume.fmtG(b.actualYield) + ' to its stock</button>'
-      : '<strong>Stock solution, not linked to an ingredient,</strong> so it added no stock. Link it in <a href="plume-formulations.html#f=' + encodeURIComponent(b.formulaId) + '" target="plume-formulations">its formulation</a>, then add this batch from here.';
+    html = '<strong>Stock solution.</strong> This batch has not added stock to ' + (ing ? ingLink(ing) : 'an ingredient') + '. ' +
+      '<button type="button" class="btn btn-sm" onclick="addMadeLotNow()">Add ' + Plume.fmtG(b.actualYield) + ' to ' + (ing ? 'its stock' : 'Ingredients') + '</button>' +
+      (ing ? '' : ' <span class="ps-muted">This creates ' + esc((f && f.name) || 'its ingredient') + '. To add it to one you already have, link that one in <a href="plume-formulations.html#f=' + encodeURIComponent(b.formulaId) + '" target="plume-formulations">its formulation</a> first.</span>');
   }
   el.innerHTML = html;
   el.hidden = !html;

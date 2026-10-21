@@ -4336,9 +4336,8 @@ function renderStockPanel() {
     .sort(function(a, b) { return (a.name || '').localeCompare(b.name || ''); })
     .map(function(i) { return '<option value="' + esc(i.id) + '">' + esc(i.name || '(unnamed)') + '</option>'; }).join('');
   body.innerHTML = '<div class="stock-p">Make it as a batch, then use it in other formulations like any ingredient. ' +
-    'Each batch adds a lot to that ingredient, priced from what went into it.' +
-    '<div class="sk-acts"><button type="button" class="ps-btn-primary" onclick="createStockIng()">Create its ingredient</button></div>' +
-    '<div class="sk-or">or link one you already have:</div>' +
+    'Its first batch creates <b>' + esc(f.name || 'its ingredient') + '</b> in Ingredients; each batch adds a lot to it, priced from what went into it.' +
+    '<div class="sk-or">To add batches to an ingredient you already have instead, link it:</div>' +
     '<select id="stock-link-sel" aria-label="Link an ingredient you already have" onchange="linkStockIng(this.value)"><option value="">Choose an ingredient…</option>' + opts + '</select></div>';
 }
 // Writes the ingredient library from here. Read fresh first, so an edit
@@ -4355,30 +4354,8 @@ function stockIngWrite(fn) {
 }
 // The type must be saved before the link means anything.
 function stockSaveFirst() { var f = curForm(); if (f && (dirty || f.type !== document.getElementById('f-type').value)) saveFormula(true); return curForm(); }
-// Its INCI, read off what it is made of, in label order.
-function stockInciText() {
-  var fl = fLines.filter(function(l) { return !l.addin && (parseFloat(l.pct) || 0) > 0 && ings.find(function(i) { return i.id === l.ingId; }); });
-  fl.sort(function(a, b) { return (parseFloat(b.pct) || 0) - (parseFloat(a.pct) || 0); });
-  return Plume.inciMerge(Plume.stockLabelItems(fl.map(function(l) { return { ingId: l.ingId, w: parseFloat(l.pct) || 0 }; }), ings, forms))
-    .map(function(e) { return e.name; }).join(', ');
-}
-function createStockIng() {
-  var f = stockSaveFirst();
-  if (!f) return;
-  var top = fLines.filter(function(l) { return !l.addin; }).sort(function(a, b) { return (parseFloat(b.pct) || 0) - (parseFloat(a.pct) || 0); })[0];
-  var topIng = top ? ings.find(function(i) { return i.id === top.ingId; }) : null;
-  var ing = {
-    id:      Date.now().toString() + Math.random().toString(36).slice(2, 6),
-    name:    f.name || 'Stock solution',
-    inci:    stockInciText(),
-    phase:   (topIng && topIng.phase) || 'water',
-    functionCategory: [],
-    madeBy:  f.id,
-    lots:    [],
-    created: new Date().toISOString()
-  };
-  if (stockIngWrite(function(list) { list.push(ing); })) Plume.tell(ing.name + ' is in Ingredients now. Each batch of this formulation adds a lot to it; use it in other formulations like any ingredient.', { title: 'Ingredient created' });
-}
+// Its INCI, read off what it is made of (as edited now), in label order.
+function stockInciText() { return Plume.stockInci(fLines, ings, forms); }
 function linkStockIng(id) {
   if (!id) return;
   var f = stockSaveFirst();
@@ -4394,7 +4371,7 @@ function linkStockIng(id) {
 function unlinkStock() {
   var f = curForm(), ing = f ? Plume.stockIngFor(f.id, ings) : null;
   if (!ing) return;
-  Plume.ask('Its lots stay as they are. New batches of this formulation will no longer add stock to it.', function() {
+  Plume.ask('Its lots stay as they are. New batches of this formulation will no longer add stock to it: the next one creates a new ingredient, unless you link one here first.', function() {
     stockIngWrite(function(list) {
       var i = list.find(function(x) { return x.id === ing.id; });
       if (!i) return false;

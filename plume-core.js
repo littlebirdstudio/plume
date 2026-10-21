@@ -2895,6 +2895,33 @@ function stockLabelItems(items, ings, forms, mixAddins) {
     return c;
   });
 }
+// What a stock solution's own ingredient is called on a label, read off its
+// lines in label order (blends split, parts of a stock inside it opened).
+function stockInci(lines, ings, forms) {
+  var fl = (lines || []).filter(function (l) { return l && !l.addin && (parseFloat(l.pct) || 0) > 0 && findIngIn(ings, l.ingId); });
+  fl.sort(function (a, b) { return (parseFloat(b.pct) || 0) - (parseFloat(a.pct) || 0); });
+  return inciMerge(stockLabelItems(fl.map(function (l) { return { ingId: l.ingId, w: parseFloat(l.pct) || 0 }; }), ings, forms))
+    .map(function (e) { return e.name; }).join(', ');
+}
+// The ingredient a stock solution makes, new: named for the formulation,
+// its INCI read off its lines, in the phase of its largest part. Made by its
+// first batch when none is linked (her call, 2026-10-21), so there is no
+// separate step before the first batch.
+function stockNewIng(f, ings, forms) {
+  var top = ((f && f.lines) || []).filter(function (l) { return !l.addin; })
+    .sort(function (a, b) { return (parseFloat(b.pct) || 0) - (parseFloat(a.pct) || 0); })[0];
+  var topIng = top ? findIngIn(ings, top.ingId) : null;
+  return {
+    id:      Date.now().toString() + Math.random().toString(36).slice(2, 6),
+    name:    (f && f.name) || 'Stock solution',
+    inci:    stockInci(f && f.lines, ings, forms),
+    phase:   (topIng && topIng.phase) || 'water',
+    functionCategory: [],
+    madeBy:  f.id,
+    lots:    [],
+    created: new Date().toISOString()
+  };
+}
 // A formula's lines with the parts of its stock solutions added after them,
 // for checks that ask "is X in this formula" (effective pH). Lines may use
 // ingId or ingredientId (a batch's snapshot); parts always use ingId.
@@ -4579,7 +4606,7 @@ return {
   VERSION: VERSION,
   inciSplit: inciSplit, inciMerge: inciMerge, inciMerged: inciMerged,
   STOCK_TYPE: STOCK_TYPE, isStockType: isStockType, stockIngFor: stockIngFor, stockFormFor: stockFormFor,
-  stockParts: stockParts, stockExpand: stockExpand, stockLabelItems: stockLabelItems, stockWithParts: stockWithParts,
+  stockParts: stockParts, stockExpand: stockExpand, stockLabelItems: stockLabelItems, stockWithParts: stockWithParts, stockInci: stockInci, stockNewIng: stockNewIng,
   Store: Store, KEYS: KEYS, KEY_LABELS: KEY_LABELS,
   esc: esc, openModal: openModal, closeModal: closeModal,
   todayISO: todayISO, parseLocalDate: parseLocalDate, fmtDate: fmtDate, fmtBytes: fmtBytes,

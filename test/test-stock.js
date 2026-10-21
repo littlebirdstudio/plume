@@ -85,22 +85,52 @@ const getBatches = "JSON.parse(localStorage.getItem('aerie-batches-v1'))";
   await page.evaluate("openFormula('ft')"); await page.waitForTimeout(300);
   ok('the panel stays hidden for a toner', await page.evaluate("document.getElementById('sb-stock').style.display === 'none'"));
   await page.evaluate("openFormula('fs')"); await page.waitForTimeout(300);
-  ok('it shows for a stock solution, offering to create its ingredient or link one', await page.evaluate("document.getElementById('sb-stock').style.display !== 'none' && /Create its ingredient/.test(document.getElementById('stock-panel').innerText) && !!document.getElementById('stock-link-sel')"));
-  await page.evaluate("createStockIng()"); await page.waitForTimeout(300);
-  let made = await page.evaluate(getIngs + ".filter(function (i) { return i.madeBy === 'fs'; })");
-  ok('Create its ingredient adds it to Ingredients, linked, with INCI read off its parts', made.length === 1 && made[0].name === 'HA 1% stock' &&
-     made[0].inci === 'Aqua, Sodium Hyaluronate, Phenoxyethanol, Caprylyl Glycol, Sorbic Acid' && made[0].phase === 'water', made);
-  ok('the panel now names it', /Each batch adds stock to\s+HA 1% stock/.test(await page.evaluate("document.getElementById('stock-panel').innerText")));
-  const stockId = made[0].id;
-  await page.evaluate("unlinkStock()"); await page.waitForTimeout(300);
-  ok('Unlink asks, then takes the link off', /Unlink HA 1% stock/.test(dialogs.join(' ')) && (await page.evaluate(getIngs + ".filter(function (i) { return i.madeBy === 'fs'; }).length")) === 0);
+  ok('it shows for a stock solution: the first batch creates its ingredient, or link one', await page.evaluate("document.getElementById('sb-stock').style.display !== 'none' && /Its first batch creates HA 1% stock in Ingredients/.test(document.getElementById('stock-panel').innerText) && !!document.getElementById('stock-link-sel')"));
   await page.evaluate("linkStockIng('iold')"); await page.waitForTimeout(300);
-  ok('or link one she already has', await page.evaluate(getIngs + ".filter(function (i) { return i.id === 'iold'; })[0].madeBy === 'fs'"));
-  await page.evaluate("unlinkStock()"); await page.waitForTimeout(200);
-  await page.evaluate(`linkStockIng('${stockId}')`); await page.waitForTimeout(200);
+  ok('linking one she already has', await page.evaluate(getIngs + ".filter(function (i) { return i.id === 'iold'; })[0].madeBy === 'fs'"));
+  ok('the panel then names it', /Each batch adds stock to\s+HA solution \(old\)/.test(await page.evaluate("document.getElementById('stock-panel').innerText")));
+  await page.evaluate("unlinkStock()"); await page.waitForTimeout(300);
+  ok('Unlink asks, says the next batch would create a new one, then takes the link off', /Unlink HA solution \(old\)/.test(dialogs.join(' ')) && /the next one creates a new ingredient/.test(dialogs.join(' ')) &&
+     (await page.evaluate(getIngs + ".filter(function (i) { return i.madeBy === 'fs'; }).length")) === 0);
 
-  console.log('\n3. Formulations: a toner using the stock');
+  console.log('\n3. Batches: the first batch of a stock');
+  await page.goto(previewUrl('batchlog')); await page.waitForTimeout(500);
+  await page.evaluate("openNewBatch(); document.getElementById('f-formula').value = 'fs'; onFormulaChange(); document.getElementById('f-yield').value = '200'; document.getElementById('f-date').value = '2026-10-12'; onNewDate(); recalcPreview();");
+  await page.waitForTimeout(200);
+  ok('New batch says the first batch creates the ingredient', /first batch\. Making it creates HA 1% stock in Ingredients/.test(await page.evaluate("document.getElementById('new-stock-note').innerText")));
+  await page.evaluate("saveBatch()"); await page.waitForTimeout(300);
+  let ings = await page.evaluate(getIngs);
+  let made = ings.filter(i => i.madeBy === 'fs');
+  ok('making it creates the ingredient, linked, named for it, with INCI read off its parts', made.length === 1 && made[0].name === 'HA 1% stock' &&
+     made[0].inci === 'Aqua, Sodium Hyaluronate, Phenoxyethanol, Caprylyl Glycol, Sorbic Acid' && made[0].phase === 'water', made);
+  const stockId = made[0].id;
+  let st = made[0], sl = st.lots[0];
+  let bs = await page.evaluate(getBatches);
+  const sb = bs[0];
+  // 196 g water at 0.0005 + 2 g HA at 1 + 2 g Optiphen at 0.1 = 2.298, over 200 g.
+  ok('and its first lot: 200 g, the lot code and date, priced from the draws', st.lots.length === 1 && sl.qtyPurchased === '200' && sl.lotNum === '261012' && sl.received === '2026-10-12' &&
+     Math.abs(parseFloat(sl.costPerG) - 0.01149) < 0.00001 && sl.supplier === 'Made in-house' && sl.madeBatchId === sb.id, sl);
+  ok('which prices it', st.activeLotId === sl.id);
+  ok('the batch records its lot', sb.madeIngId === stockId && sb.madeLotId === sl.id);
+  ok('the powder went down', Math.abs(parseFloat(ings.find(i => i.id === 'ia').lots[0].qtyPurchased) - 18) < 0.01);
+  await page.evaluate(`openBatchDetail('${sb.id}')`); await page.waitForTimeout(300);
+  const mn = await page.evaluate("document.getElementById('d-made').innerText");
+  ok('its details say it created the ingredient, what it added and what is left', /This batch created HA 1% stock in Ingredients and added 200 g to it as lot 261012, at \$0\.0115 per gram\. 200 g left\./.test(mn), mn);
+  await page.evaluate("closeDetail()");
+  // A second batch adds to the same ingredient; deleting it (unused) hands the price back.
+  await page.evaluate("openNewBatch(); document.getElementById('f-formula').value = 'fs'; onFormulaChange();");
+  ok('the next batch says it adds to that ingredient', /Making it adds the yield to HA 1% stock/.test(await page.evaluate("document.getElementById('new-stock-note').innerText")));
+  await page.evaluate("document.getElementById('f-yield').value = '100'; recalcPreview(); saveBatch();"); await page.waitForTimeout(300);
+  ings = await page.evaluate(getIngs); made = ings.filter(i => i.madeBy === 'fs');
+  bs = await page.evaluate(getBatches);
+  ok('it adds a second lot to the same ingredient, which now prices it', made.length === 1 && made[0].lots.length === 2 && made[0].activeLotId === bs[1].madeLotId);
+  await page.evaluate(`openBatchDetail('${bs[1].id}')`); await page.evaluate("deleteBatch()"); await page.waitForTimeout(300);
+  ings = await page.evaluate(getIngs); st = ings.find(i => i.id === stockId);
+  ok('deleting it takes its lot out and the first batch prices it again', st.lots.length === 1 && st.activeLotId === sl.id);
+
+  console.log('\n4. Formulations: a toner using the stock');
   // The toner's 10% line becomes the new stock ingredient.
+  await page.goto(previewUrl('formulations')); await page.waitForTimeout(300);
   await page.evaluate(`(function () { var fs = JSON.parse(localStorage.getItem('aerie-formulations-v1'));
     fs.forEach(function (f) { if (f.id !== 'ft') return; [f.lines, f.variants[0].lines].forEach(function (ls) { ls[1].ingId = '${stockId}'; }); });
     localStorage.setItem('aerie-formulations-v1', JSON.stringify(fs)); })()`);
@@ -113,30 +143,12 @@ const getBatches = "JSON.parse(localStorage.getItem('aerie-batches-v1'))";
   ok('Copy copies the same list', await page.evaluate("curInciNames.join(', ')") === inci);
   const phw = await page.evaluate("document.getElementById('ph-range-warn').innerText");
   ok('the effective pH check still names Optiphen Plus', /above where Optiphen Plus is effective/.test(phw), phw);
-  const miss = await page.evaluate("document.getElementById('cost-panel').innerText");
-  ok('with no batch of it made, its cost is not counted, and it says why', /HA 1% stock \(a stock solution, priced by its batches; none priced yet\)/.test(miss), miss);
-
-  console.log('\n4. Batches: making the stock');
-  await page.goto(previewUrl('batchlog')); await page.waitForTimeout(500);
-  await page.evaluate("openNewBatch(); document.getElementById('f-formula').value = 'fs'; onFormulaChange(); document.getElementById('f-yield').value = '200'; document.getElementById('f-date').value = '2026-10-12'; onNewDate(); recalcPreview();");
-  await page.waitForTimeout(200);
-  ok('New batch says making it adds stock to the ingredient', /Making it adds the yield to HA 1% stock/.test(await page.evaluate("document.getElementById('new-stock-note').innerText")));
-  await page.evaluate("saveBatch()"); await page.waitForTimeout(300);
-  let ings = await page.evaluate(getIngs);
-  let st = ings.find(i => i.id === stockId), sl = st.lots[0];
-  let bs = await page.evaluate(getBatches);
-  const sb = bs[0];
-  // 196 g water at 0.0005 + 2 g HA at 1 + 2 g Optiphen at 0.1 = 2.298, over 200 g.
-  ok('the batch adds a lot: 200 g, its lot code and date, priced from its draws', st.lots.length === 1 && sl.qtyPurchased === '200' && sl.lotNum === '261012' && sl.received === '2026-10-12' &&
-     Math.abs(parseFloat(sl.costPerG) - 0.01149) < 0.00001 && sl.supplier === 'Made in-house' && sl.madeBatchId === sb.id, sl);
-  ok('the newest batch prices it', st.activeLotId === sl.id);
-  ok('the batch records its lot', sb.madeIngId === stockId && sb.madeLotId === sl.id);
-  ok('the powder went down', Math.abs(parseFloat(ings.find(i => i.id === 'ia').lots[0].qtyPurchased) - 18) < 0.01);
-  await page.evaluate(`openBatchDetail('${sb.id}')`); await page.waitForTimeout(300);
-  ok('its details say what it added and what is left', /This batch added 200 g to HA 1% stock as lot 261012, at \$0\.0115 per gram\. 200 g left\./.test(await page.evaluate("document.getElementById('d-made').innerText")));
-  await page.evaluate("closeDetail()");
+  ok('the stock is priced from its batch', /\$/.test(await page.evaluate("document.getElementById('cost-panel').innerText")) && !/Not counted/.test(await page.evaluate("document.getElementById('cost-panel').innerText")));
+  const miss = await page.evaluate("(function () { ings.push({ id: 'tmp', name: 'Unmade stock', madeBy: 'fs', lots: [] }); var h = costMissingNote([{ ingId: 'tmp' }]); ings.pop(); return h; })()");
+  ok('a stock with no priced batch is not counted, and the note says why', /Unmade stock<\/a> \(a stock solution, priced by its batches; none priced yet\)/.test(miss), miss);
 
   console.log('\n5. Batches: a toner made with it, and the trace');
+  await page.goto(previewUrl('batchlog')); await page.waitForTimeout(400);
   await page.evaluate("openNewBatch(); document.getElementById('f-formula').value = 'ft'; onFormulaChange(); document.getElementById('f-yield').value = '300'; document.getElementById('f-date').value = '2026-10-16'; onNewDate(); recalcPreview(); saveBatch();");
   await page.waitForTimeout(300);
   bs = await page.evaluate(getBatches);
@@ -177,24 +189,28 @@ const getBatches = "JSON.parse(localStorage.getItem('aerie-batches-v1'))";
   ings = await page.evaluate(getIngs); st = ings.find(i => i.id === stockId);
   ok('the delete message mentions the lot', /Its lot of HA 1% stock \(190 g\) comes out of Ingredients/.test(dialogs.join(' ')), dialogs);
   ok('unused, the stock batch deletes, its lot comes out and nothing prices it', (await page.evaluate(getBatches)).length === 0 && st.lots.length === 0 && !st.activeLotId);
+  ok('the ingredient stays, linked, for the next batch', st.madeBy === 'fs');
   ok('and the powder is back', Math.abs(parseFloat(ings.find(i => i.id === 'ia').lots[0].qtyPurchased) - 20) < 0.01);
 
-  console.log('\n7. A stock batch made before its ingredient was linked');
-  const bare = INGS.map(i => Object.assign({}, i));
-  await page.evaluate(SEED(bare, FORMS)); await page.reload(); await page.waitForTimeout(400);
-  await page.evaluate("openNewBatch(); document.getElementById('f-formula').value = 'fs'; onFormulaChange();");
-  ok('unlinked, New batch says it will not add stock', /not linked to an ingredient yet/.test(await page.evaluate("document.getElementById('new-stock-note').innerText")));
-  await page.evaluate("document.getElementById('f-yield').value = '100'; recalcPreview(); saveBatch();"); await page.waitForTimeout(300);
-  bs = await page.evaluate(getBatches);
-  ok('it is made, adding no lot anywhere', bs.length === 1 && !bs[0].madeLotId);
-  // She links her old solution in Formulations (another window), then adds the batch.
+  console.log('\n7. A stock batch made before stock solutions');
+  // Made as a plain batch: committed, its draws recorded, no lot added anywhere.
+  const B0 = { id: 'b0', date: '2026-09-20', lotCode: '260920', formulaId: 'fs', formulaName: 'HA 1% stock', formulaType: 'Stock solution', batchName: 'HA stock', actualYield: 100, targetYield: 100,
+    status: 'ready', batchType: 'production', committed: true, packagingRuns: [], packagingDraws: [],
+    ingredientSnapshot: [{ ingredientId: 'iw', ingredientName: 'Distilled water', grams: 98 }, { ingredientId: 'ia', ingredientName: 'Sodium hyaluronate', grams: 1 }, { ingredientId: 'iop', ingredientName: 'Optiphen Plus', grams: 1 }],
+    lotDraws: [{ ingredientId: 'iw', ingredientName: 'Distilled water', lotId: 'w1', grams: 98 }, { ingredientId: 'ia', ingredientName: 'Sodium hyaluronate', lotId: 'a1', grams: 1 }, { ingredientId: 'iop', ingredientName: 'Optiphen Plus', lotId: 'o1', grams: 1 }] };
+  await page.evaluate(SEED(INGS, FORMS, [B0])); await page.reload(); await page.waitForTimeout(400);
+  await page.evaluate("openBatchDetail('b0')"); await page.waitForTimeout(200);
+  ok('unlinked, its details offer to add it to Ingredients, creating the ingredient', /Add 100 g to Ingredients/.test(await page.evaluate("document.getElementById('d-made').innerText")) &&
+     /This creates HA 1% stock/.test(await page.evaluate("document.getElementById('d-made').innerText")));
+  // She links her old solution in Formulations (another window) first.
   await page.evaluate(`(function () { var l = ${getIngs}; l.forEach(function (i) { if (i.id === 'iold') i.madeBy = 'fs'; }); localStorage.setItem('aerie-ingredients-v2', JSON.stringify(l)); })()`);
-  await page.evaluate(`openBatchDetail('${bs[0].id}')`); await page.waitForTimeout(200);
-  ok('its details offer to add it to the stock now', /has not added stock to HA solution \(old\)/.test(await page.evaluate("document.getElementById('d-made').innerText")));
+  await page.evaluate("closeDetail(); openBatchDetail('b0')"); await page.waitForTimeout(200);
+  ok('linked, they offer to add it to that one', /has not added stock to HA solution \(old\)/.test(await page.evaluate("document.getElementById('d-made').innerText")));
   await page.evaluate("addMadeLotNow()"); await page.waitForTimeout(200);
   ings = await page.evaluate(getIngs); const old = ings.find(i => i.id === 'iold');
-  ok('it adds the lot, and the old free switch no longer prices it at $0', old.lots.length === 1 && old.lots[0].qtyPurchased === '100' &&
-     (await page.evaluate("Plume.costPerG(" + getIngs + ".filter(function (i) { return i.id === 'iold'; })[0])")) > 0, old.lots);
+  ok('it adds the lot, creates nothing new, and the old free switch no longer prices it at $0', old.lots.length === 1 && old.lots[0].qtyPurchased === '100' &&
+     ings.filter(i => i.madeBy === 'fs').length === 1 && (await page.evaluate("Plume.costPerG(" + getIngs + ".filter(function (i) { return i.id === 'iold'; })[0])")) > 0, old.lots);
+  bs = [B0];
 
   console.log('\n8. Ingredients');
   await page.goto(previewUrl('ingredients')); await page.waitForTimeout(500);
