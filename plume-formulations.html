@@ -418,11 +418,12 @@ span.ing-name-btn{text-decoration:none}
 .cost-miss a{color:inherit}
 /* Stock solutions (2026-10-21) */
 .stock-parts{font-size:11px;color:var(--sage-dark);margin-top:2px;line-height:1.4}
-.stock-p{font-size:12.5px;color:var(--ink-light);line-height:1.5}
-.stock-p a{color:var(--sage-dark)}
-.stock-p .sk-acts{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
-.stock-p select{font:inherit;font-size:12.5px;padding:5px 6px;border:1px solid var(--cream-border);border-radius:6px;background:var(--white);color:var(--ink);max-width:100%}
-.stock-p .sk-or{font-size:11.5px;color:var(--ink-lighter);margin-top:10px}
+.stock-line{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin-top:12px;padding:8px 12px;border-radius:9px;background:color-mix(in srgb,var(--white) 70%,transparent);font-size:13px;color:var(--ink-light);line-height:1.45}
+.stock-line a{color:var(--sage-dark);font-weight:500}
+.stock-line .sk-ico{display:inline-flex;color:var(--sage-dark)}
+.stock-line .sk-muted{color:var(--ink-lighter)}
+.stock-line .fe-lnk{font-size:12.5px}
+.stock-line select{font:inherit;font-size:12.5px;padding:4px 6px;border:1px solid var(--cream-border);border-radius:6px;background:var(--white);color:var(--ink);max-width:100%}
 #cost-panel .at-least{font-size:11px;color:var(--warning);margin-right:4px;font-weight:400}
 .ph-range-warn{margin-top:10px;display:flex;flex-direction:column;gap:4px;font-size:12.5px;line-height:1.45}
 .ph-range-warn .pw{color:var(--warning);background:var(--warning-bg);border-radius:8px;padding:6px 10px}
@@ -754,6 +755,8 @@ body.ps-shell .inci-list { font-size: 13px; color: var(--ink); }
             <div class="ph-err" id="ph-target-err" style="display:none"></div>
           </div>
         </div>
+        <!-- Stock solution (2026-10-21): what it becomes, up top. -->
+        <div class="stock-line" id="f-stock-line" hidden></div>
         <div class="ph-range-warn" id="ph-range-warn" hidden></div>
         <div id="f-ver-lbl" hidden></div>
       </div>
@@ -894,10 +897,6 @@ body.ps-shell .inci-list { font-size: 13px; color: var(--ink); }
             </div>
             <button class="ps-btn-primary fe-make" onclick="makeBatchFromFormula()" title="Open the batch log with this formula and batch size pre-filled">Make batch</button>
           </div>
-        </div>
-        <div class="sb-panel" id="sb-stock" style="display:none">
-          <div class="sb-hdr">Stock solution</div>
-          <div class="sb-body" id="stock-panel"></div>
         </div>
         <div class="sb-panel">
           <div class="sb-hdr">Cost estimate</div>
@@ -4315,30 +4314,40 @@ function openBatchlogFor(f) {
 function fmtStockPct(w) {
   return (w >= 10 ? w.toFixed(1) : w >= 0.1 ? w.toFixed(2) : w.toFixed(3)) + '%';
 }
+// What a stock solution becomes, in the header under its type (her call:
+// the formulation IS the ingredient, so it belongs up top). Before its first
+// batch: that batch creates it. After: the ingredient, linked, and what is on
+// hand. "Already have it as an ingredient?" is the one-time move for a
+// solution she already keeps as an ingredient (her hyaluronic acid solution).
+var stockPickOpen = false;
 function renderStockPanel() {
-  var panel = document.getElementById('sb-stock');
-  if (!panel) return;
+  var el = document.getElementById('f-stock-line');
+  if (!el) return;
   var f = curForm();
   var on = !!f && Plume.isStockType(document.getElementById('f-type').value);
-  panel.style.display = on ? '' : 'none';
-  if (!on) return;
-  var body = document.getElementById('stock-panel');
+  el.hidden = !on;
+  if (!on) { el.innerHTML = ''; stockPickOpen = false; return; }
   var ing = Plume.stockIngFor(f.id, ings);
+  var ico = '<span class="sk-ico">' + Plume.icon('ingredients') + '</span>';
   if (ing) {
     var g = stockG(ing);
-    body.innerHTML = '<div class="stock-p">Each batch adds stock to <a href="plume-ingredients.html#ing=' + encodeURIComponent(ing.id) + '" target="plume-ingredients"><b>' + esc(ing.name) + '</b></a>, ' +
-      'as its own lot with the batch’s lot code, priced from what went into it. Use that ingredient in other formulations.' +
-      '<div class="sk-or">On hand: ' + (g > 0 ? Plume.fmtG(g) : 'none yet') + '</div>' +
-      '<div class="sk-acts"><button type="button" class="fe-lnk" onclick="unlinkStock()">Unlink</button></div></div>';
+    el.innerHTML = ico + '<span>This stock solution is the ingredient <a href="plume-ingredients.html#ing=' + encodeURIComponent(ing.id) + '" target="plume-ingredients">' + esc(ing.name) + '</a>' +
+      ' <span class="sk-muted">&middot; ' + (g > 0 ? Plume.fmtG(g) + ' on hand' : 'none on hand') + ' &middot; each batch adds a lot to it</span></span>' +
+      '<button type="button" class="fe-lnk" onclick="unlinkStock()">Unlink</button>';
     return;
   }
-  var opts = ings.filter(function(i) { return !i.archived && !Plume.stockFormFor(i, forms); })
-    .sort(function(a, b) { return (a.name || '').localeCompare(b.name || ''); })
-    .map(function(i) { return '<option value="' + esc(i.id) + '">' + esc(i.name || '(unnamed)') + '</option>'; }).join('');
-  body.innerHTML = '<div class="stock-p">Make it as a batch, then use it in other formulations like any ingredient. ' +
-    'Its first batch creates <b>' + esc(f.name || 'its ingredient') + '</b> in Ingredients; each batch adds a lot to it, priced from what went into it.' +
-    '<div class="sk-or">To add batches to an ingredient you already have instead, link it:</div>' +
-    '<select id="stock-link-sel" aria-label="Link an ingredient you already have" onchange="linkStockIng(this.value)"><option value="">Choose an ingredient…</option>' + opts + '</select></div>';
+  var html = ico + '<span>Its first batch creates this stock solution as an ingredient, named <b>' + esc(document.getElementById('f-name').value.trim() || f.name || 'for it') + '</b>.</span>';
+  if (!stockPickOpen) {
+    html += '<button type="button" class="fe-lnk" onclick="stockPickOpen = true; renderStockPanel()">Already have it as an ingredient?</button>';
+  } else {
+    var opts = ings.filter(function(i) { return !i.archived && !Plume.stockFormFor(i, forms); })
+      .sort(function(a, b) { return (a.name || '').localeCompare(b.name || ''); })
+      .map(function(i) { return '<option value="' + esc(i.id) + '">' + esc(i.name || '(unnamed)') + '</option>'; }).join('');
+    html += '<span class="sk-muted">Use it instead, so batches add to it:</span>' +
+      '<select id="stock-link-sel" aria-label="The ingredient this stock solution is" onchange="linkStockIng(this.value)"><option value="">Choose the ingredient…</option>' + opts + '</select>' +
+      '<button type="button" class="fe-lnk" onclick="stockPickOpen = false; renderStockPanel()">Cancel</button>';
+  }
+  el.innerHTML = html;
 }
 // Writes the ingredient library from here. Read fresh first, so an edit
 // made in Ingredients in another window is not written over.
@@ -4358,6 +4367,7 @@ function stockSaveFirst() { var f = curForm(); if (f && (dirty || f.type !== doc
 function stockInciText() { return Plume.stockInci(fLines, ings, forms); }
 function linkStockIng(id) {
   if (!id) return;
+  stockPickOpen = false;
   var f = stockSaveFirst();
   if (!f) return;
   var inci = stockInciText();

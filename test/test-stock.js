@@ -73,22 +73,30 @@ const getBatches = "JSON.parse(localStorage.getItem('aerie-batches-v1'))";
   ok('a stock that contains itself stops instead of looping', /g:/.test(core.loop) && /loop:/.test(core.loop), core.loop);
   ok('an ingredient whose formulation is no longer a stock solution is just an ingredient', core.notStock === null);
   const cpg = await page.evaluate(`[
-    Plume.costPerG({ madeBy: 'fs', noCost: true, lots: [] }),
-    Plume.costPerG({ madeBy: 'fs', activeLotId: 'm', lots: [{ id: 'm', costPerG: '', madeCost: 0 }] }),
+    Plume.costPerG({ madeBy: 'fs', noCost: true, activeLotId: 'm', lots: [{ id: 'm', costPerG: '', madeBatchId: 'b', madeCost: null }] }),
+    Plume.costPerG({ madeBy: 'fs', activeLotId: 'm', lots: [{ id: 'm', costPerG: '', madeBatchId: 'b', madeCost: 0 }] }),
+    Plume.costPerG({ madeBy: 'fs', noCost: true, lots: [{ id: 'h', costPerG: 0 }] }),
     Plume.costPerG({ noCost: true, lots: [] })
   ]`);
-  ok('a stock is never free by the switch; free only when its batch cost nothing', cpg[0] === null && cpg[1] === 0 && cpg[2] === 0, cpg);
+  ok('once a batch prices a stock, the free switch no longer applies: an unpriced batch stays unpriced', cpg[0] === null, cpg);
+  ok('a batch made only from free things is $0', cpg[1] === 0, cpg);
+  ok('stock she had before keeps the free switch until the first batch', cpg[2] === 0 && cpg[3] === 0, cpg);
 
   console.log('\n2. Formulations: the Stock solution panel');
   await page.evaluate(SEED(INGS, FORMS)); await page.reload(); await page.waitForTimeout(500);
   ok('Stock solution is a type', await page.evaluate("Plume.PRODUCT_TYPES.indexOf('Stock solution') !== -1"));
   await page.evaluate("openFormula('ft')"); await page.waitForTimeout(300);
-  ok('the panel stays hidden for a toner', await page.evaluate("document.getElementById('sb-stock').style.display === 'none'"));
+  ok('the stock line stays hidden for a toner', await page.evaluate("document.getElementById('f-stock-line').hidden"));
   await page.evaluate("openFormula('fs')"); await page.waitForTimeout(300);
-  ok('it shows for a stock solution: the first batch creates its ingredient, or link one', await page.evaluate("document.getElementById('sb-stock').style.display !== 'none' && /Its first batch creates HA 1% stock in Ingredients/.test(document.getElementById('stock-panel').innerText) && !!document.getElementById('stock-link-sel')"));
+  const line = () => page.evaluate("document.getElementById('f-stock-line').innerText.replace(/\\s+/g, ' ')");
+  ok('a stock solution says, up top, that its first batch creates it as an ingredient', await page.evaluate("!document.getElementById('f-stock-line').hidden") &&
+     /Its first batch creates this stock solution as an ingredient, named HA 1% stock/.test(await line()), await line());
+  ok('linking one she already has is tucked behind a link', /Already have it as an ingredient\?/.test(await line()) && !(await page.$('#stock-link-sel')));
+  await page.evaluate("stockPickOpen = true; renderStockPanel()");
+  ok('which opens the picker', !!(await page.$('#stock-link-sel')));
   await page.evaluate("linkStockIng('iold')"); await page.waitForTimeout(300);
   ok('linking one she already has', await page.evaluate(getIngs + ".filter(function (i) { return i.id === 'iold'; })[0].madeBy === 'fs'"));
-  ok('the panel then names it', /Each batch adds stock to\s+HA solution \(old\)/.test(await page.evaluate("document.getElementById('stock-panel').innerText")));
+  ok('the line then names it', /This stock solution is the ingredient HA solution \(old\) · none on hand/.test(await line()), await line());
   await page.evaluate("unlinkStock()"); await page.waitForTimeout(300);
   ok('Unlink asks, says the next batch would create a new one, then takes the link off', /Unlink HA solution \(old\)/.test(dialogs.join(' ')) && /the next one creates a new ingredient/.test(dialogs.join(' ')) &&
      (await page.evaluate(getIngs + ".filter(function (i) { return i.madeBy === 'fs'; }).length")) === 0);
@@ -222,6 +230,21 @@ const getBatches = "JSON.parse(localStorage.getItem('aerie-batches-v1'))";
   ok('the editor shows the link and hides the $0 switch', await page.evaluate("!document.getElementById('f-madefrom').hidden && document.getElementById('f-nocost-row').style.display === 'none'"));
   await page.evaluate("saveIngredient()"); await page.waitForTimeout(300);
   ok('saving the ingredient keeps the lot\'s link to its batch', await page.evaluate(getIngs + ".filter(function (i) { return i.id === 'iold'; })[0].lots[0].madeBatchId") === bs[0].id);
+
+  console.log('\n8b. Ingredients: making one she has as a stock solution');
+  await page.evaluate(`(function () { var l = ${getIngs}; l.push({ id: 'ihy', name: 'Fireweed hydrosol 2', inci: 'Chamerion Angustifolium Flower Water', phase: 'water', noCost: true, lots: [] });
+    localStorage.setItem('aerie-ingredients-v2', JSON.stringify(l)); })()`);
+  await page.reload(); await page.waitForTimeout(400);
+  await page.evaluate("viewIngredient('ihy')"); await page.waitForTimeout(200);
+  ok('its menu offers to make it as a stock solution', /Make it as a stock solution/.test(await page.evaluate("document.getElementById('d-more-menu').innerText")));
+  dialogs.length = 0;
+  await page.evaluate("goToForm = function (id) { window.__went = id; }; makeAsStock()"); await page.waitForTimeout(300);
+  const nf = await page.evaluate("JSON.parse(localStorage.getItem('aerie-formulations-v1')).filter(function (f) { return f.name === 'Fireweed hydrosol 2'; })[0]");
+  const hy = await page.evaluate(getIngs + ".filter(function (i) { return i.id === 'ihy'; })[0]");
+  ok('it asks, then starts a Stock solution formulation named for it, linked', /Make Fireweed hydrosol 2 as a stock solution\?/.test(dialogs.join(' ')) && nf && nf.type === 'Stock solution' && hy.madeBy === nf.id, [nf, hy]);
+  ok('what she has on hand stays free until its first batch', await page.evaluate("Plume.costPerG(" + getIngs + ".filter(function (i) { return i.id === 'ihy'; })[0])") === 0);
+  ok('and opens it', await page.evaluate("window.__went") === nf.id);
+  ok('the menu now opens that formulation instead', /Open its stock solution formulation/.test(await page.evaluate("document.getElementById('d-more-menu').innerText")));
 
   console.log('\n9. Products & Costing: the label');
   const forms2 = FORMS.map(f => JSON.parse(JSON.stringify(f)));

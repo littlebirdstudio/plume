@@ -1264,6 +1264,11 @@
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12L6 8l4-4"/></svg>
         Back to library
       </button>
+      <!-- More for this ingredient (2026-10-21): making it as a stock solution. -->
+      <div class="ps-menu-wrap" style="margin-left:auto">
+        <button type="button" class="ps-icon-btn" data-ps-menu aria-label="More for this ingredient" aria-expanded="false" id="d-more-btn"></button>
+        <div class="ps-menu" role="menu" id="d-more-menu"></div>
+      </div>
     </div>
     <div id="d-arch-banner" style="display:none;padding:10px 14px;margin-bottom:12px;border:1px solid var(--cream-border);border-radius:4px;background:var(--cream);font-size:13px;color:var(--ink-light);line-height:1.45"></div>
     <div class="detail-card">
@@ -2709,6 +2714,7 @@ function viewIngredient(id) {
   trackRecentlyViewed(id);
   showDetail();
   syncArchiveUI(i);
+  renderDetailMenu(i);
 
   var lots = migrateLots(i);
   var lotBrands = [];
@@ -3107,6 +3113,52 @@ function stockFormOf(i) {
 function madeFromText(f) {
   return 'Made in-house from <a href="plume-formulations.html#f=' + encodeURIComponent(f.id) + '" target="plume-formulations">' + esc(f.name || 'its formulation') + '</a>, a stock solution. ' +
     'Each batch of it adds a lot here, priced from what went into it.';
+}
+// The profile's menu. An ingredient she makes from a recipe (her hyaluronic
+// acid solution) can be made as a stock solution: this starts that
+// formulation, linked, so each batch of it adds a lot here. One already made
+// that way opens its formulation instead.
+function renderDetailMenu(i) {
+  var f = stockFormOf(i);
+  document.getElementById('d-more-menu').innerHTML = f
+    ? '<button type="button" onclick="openStockForm()">' + Plume.icon('formulations') + 'Open its stock solution formulation</button>'
+    : '<button type="button" onclick="makeAsStock()">' + Plume.icon('formulations') + 'Make it as a stock solution</button>';
+}
+function goToForm(id) {
+  var a = document.createElement('a');
+  a.href = 'plume-formulations.html#f=' + encodeURIComponent(id);
+  a.target = 'plume-formulations';
+  document.body.appendChild(a); a.click(); a.parentNode.removeChild(a);
+}
+function openStockForm() {
+  var f = stockFormOf(ingredients.find(function(x) { return x.id === viewingId; }));
+  if (f) goToForm(f.id);
+}
+function makeAsStock() {
+  var i = ingredients.find(function(x) { return x.id === viewingId; });
+  if (!i) return;
+  Plume.ask('Plume starts a formulation called ' + (i.name || 'this ingredient') + ', of type Stock solution, linked to this ingredient. ' +
+    'Write its recipe there, then make it in Batches: each batch adds a lot here, priced from what went into it, and its lots trace back to their supplier lots.',
+    function() {
+      Store.refresh('aerie-formulations-v1');
+      var forms = Store.getJSON('aerie-formulations-v1', []) || [];
+      var now = new Date().toISOString();
+      var vid = String(Date.now()) + '-' + Math.random().toString(36).slice(2, 7);
+      var f = {
+        id: String(Date.now() + 1) + '-' + Math.random().toString(36).slice(2, 7),
+        name: i.name || 'Stock solution', type: Plume.STOCK_TYPE, notes: '', formNotes: '',
+        variants: [{ vid: vid, num: 1, label: '', status: 'draft', lines: [], instructions: '', batchSize: '', phMin: '', phMax: '',
+                     addinsInTotal: false, usageLog: [], history: [], branchedFrom: null, branchNote: '', createdAt: now, updatedAt: now }],
+        activeVariantId: vid, lines: [], status: 'draft', instructions: '', phMin: '', phMax: '', version: 1,
+        createdAt: now, updatedAt: now
+      };
+      forms.push(f);
+      if (!Store.setJSON('aerie-formulations-v1', forms)) { Plume.noteSaveFailed(); return; }
+      i.madeBy = f.id;   // its batches price it from the first one on
+      saveData();
+      viewIngredient(i.id);
+      goToForm(f.id);
+    }, { title: 'Make ' + (i.name || 'this ingredient') + ' as a stock solution?', yes: 'Start its formulation' });
 }
 function renderMadeFrom(i) {
   var f = stockFormOf(i), el = document.getElementById('f-madefrom');
@@ -4455,6 +4507,7 @@ if (typeof Plume === 'undefined') {
     document.getElementById('ing-search-icon').innerHTML = Plume.icon('search');
     document.getElementById('ing-new-icon').innerHTML = Plume.icon('plus');
     document.getElementById('ing-more-btn').innerHTML = Plume.icon('more');
+    document.getElementById('d-more-btn').innerHTML = Plume.icon('more');
     var mi = document.querySelectorAll('#ing-more-menu [data-icon]');
     for (var k = 0; k < mi.length; k++) mi[k].insertAdjacentHTML('afterbegin', Plume.icon(mi[k].getAttribute('data-icon')));
     renderPhaseChips();

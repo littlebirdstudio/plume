@@ -268,11 +268,14 @@ function fmtBytes(b) {
 // A priced lot still wins.
 function costPerG(ing) {
   var c = costPerGFromLots(ing);
-  // A stock solution she makes here is priced by its batches, never by the
-  // free flag; a batch made only from free things is priced at $0.
+  // A stock solution she makes here is priced by its batches: once a batch
+  // prices it, the free flag no longer applies (a batch with an unpriced
+  // part stays unpriced, rather than quietly $0). A batch made only from
+  // free things is $0. Stock she had before it was a stock solution keeps
+  // the flag until its first batch.
   if (c === null && ing && ing.madeBy) {
     var al = (ing.lots || []).filter(function (l) { return l.id === ing.activeLotId; })[0];
-    return al && al.madeCost === 0 ? 0 : null;
+    if (al && al.madeBatchId) return al.madeCost === 0 ? 0 : null;
   }
   return (c === null && ing && ing.noCost) ? 0 : c;
 }
