@@ -3176,7 +3176,10 @@ now writes `{ products, shops }`). Stock log entries with a `shopId` carry
 - **Update stock:** a **Consign** chip between the reasons and Reconcile,
   with a shop picker (and "Add a shop…"). Consigning more than is on the
   shelf stops it, like the other reasons; no shop picked stops it too.
-- **Consignment** in the sidebar under Stock (`Plume.consign.open`): shop
+- **Consignment** (`Plume.consign.open`), reached from Update stock (a link
+  in Consign's help line and in the panel's foot) and from a product's
+  "at shop" links. NOT in the sidebar: built there first, moved at her word
+  (she does it a few times a year; it did not earn a permanent place). Shop
   cards (units there, products, last settled), Add a shop; a shop opens to
   **Settle up**: per product, There / Sold / Back / Left (worked out as she
   types; more than the shop has stops the save), one date and note, then

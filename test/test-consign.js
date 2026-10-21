@@ -65,8 +65,12 @@ const SEED = `
   ok('the list shows the shelf, with what is at shops beneath', /14\s*\+6 at shops/.test(await page.evaluate("Array.from(document.querySelectorAll('tr.prod-row')).map(r => r.innerText).filter(t => /Spritz 60 mL/.test(t))[0] || ''")));
 
   console.log('\n3. Consignment: shops and settling up');
-  ok('the sidebar has Consignment under Stock', await page.evaluate("!!document.getElementById('ps-nav-consign')"));
-  await page.click('#ps-nav-consign'); await page.waitForTimeout(250);
+  ok('Consignment has no sidebar entry (her call: rarely used)', await page.evaluate("!document.getElementById('ps-nav-consign')"));
+  await page.evaluate("Plume.stock.open()"); await page.waitForTimeout(200);
+  ok('Update stock links to it at the foot', await page.evaluate("!!document.getElementById('st-cs-foot')"));
+  await page.evaluate("Plume.stock.mode('consign')"); await page.waitForTimeout(150);
+  ok('and from Consign itself', await page.evaluate("!!document.getElementById('st-cs-link')"));
+  await page.click('#st-cs-link'); await page.waitForTimeout(250);
   const card = await page.evaluate("document.querySelector('.cs-card').innerText.replace(/\\s+/g, ' ')");
   ok('each shop shows what is there', /Raven Gallery 10 units there 2 products/.test(card), card);
   await page.click('.cs-card'); await page.waitForTimeout(200);

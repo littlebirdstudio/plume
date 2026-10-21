@@ -998,7 +998,6 @@ function shell(opts) {
       '<div class="ps-nav-h">Stock</div>' +
       '<nav class="ps-nav-list" aria-label="Stock">' +
         '<button type="button" class="ps-nav" id="ps-nav-stock" onclick="Plume.stock.open()" title="Sold, gifted, marketing, damaged, returned, or reconcile to a count">' + icon('stock') + '<span class="ps-nav-label">Update stock</span></button>' +
-        '<button type="button" class="ps-nav" id="ps-nav-consign" onclick="Plume.consign.open()" title="Units at shops on consignment, and settling up">' + icon('shop') + '<span class="ps-nav-label">Consignment</span></button>' +
         '<button type="button" class="ps-nav" id="ps-nav-history" onclick="Plume.stock.history()" title="Where your stock went: by market or event, month or product, and what it cost">' + icon('history') + '<span class="ps-nav-label">Stock history</span></button>' +
       '</nav>' +
       '<div class="ps-grow"></div>' +
@@ -3904,7 +3903,7 @@ function stHtml() {
       '<button type="button" class="ps-chip' + (stMode === 'count' ? ' on' : '') + '" onclick="Plume.stock.mode(\'count\')">Reconcile<span class="st-mct" data-m="count"></span></button></div>' +
     (stMode === 'consign' ? '<div class="st-shop"><label for="st-shop">To</label><select id="st-shop" onchange="Plume.stock.shop(this.value)">' + stShopOptions() + '</select></div>' : '') +
     '<p class="st-help">' + (stMode === 'consign'
-      ? '<b>Consign</b>: units go from your shelf to the shop, still yours until they sell. Settle up in Consignment when the shop reports.'
+      ? '<b>Consign</b>: units go from your shelf to the shop, still yours until they sell. <a href="#" id="st-cs-link" onclick="Plume.consign.open(); return false">Shops and settling up</a>'
       : stMode === 'count'
       ? 'How many are on the shelf now. Plume records the difference from what it had. Use this to set real numbers.'
       : '<b>' + m.label + '</b>: ' + m.hint + '. ' + (m.back ? 'These go back on hand.' : 'These come off what is on hand.') + ' Switch reasons to enter more; Save records them all.') + '</p>' +
@@ -3914,7 +3913,8 @@ function stHtml() {
     '<div class="st-cols"><span>Product</span><span>On hand</span><span>' + esc(m.label) + '</span></div>' +
     '<div id="st-rows">' + stRowsHtml() + '</div>' +
     '<div class="st-over" id="st-over" hidden></div>' +
-    '<p class="st-rp"><a href="#" onclick="Plume.stock.history(); return false">Stock history</a>: where units went, by market, month or product, and what they cost.</p>' +
+    '<p class="st-rp"><a href="#" onclick="Plume.stock.history(); return false">Stock history</a>: where units went, by market, month or product, and what they cost. ' +
+      '<a href="#" id="st-cs-foot" onclick="Plume.consign.open(); return false">Consignment</a>: shops and settling up.</p>' +
     '<div class="st-foot"><span class="st-ct" id="st-ct">Nothing entered yet</span><span class="ps-grow"></span>' +
       '<button type="button" class="ps-link-btn" onclick="Plume.peek.close()">Cancel</button>' +
       '<button type="button" class="ps-btn-primary" id="st-save" onclick="Plume.stock.save()" disabled>Save</button></div></div>';
@@ -4051,6 +4051,9 @@ function stockSave() {
 }
 
 // ── Consignment: shops and settling up (2026-10-20) ────────────────────
+// Reached from Update stock (and a product's "at shop" links), not the
+// sidebar: her call, something done a few times a year does not earn a
+// permanent place there.
 // Her shops settle up now and then, on no schedule, and pay what they pay:
 // Plume records only WHERE units are (shelf, a shop, sold there, back home),
 // not money (her call: no other selling prices are recorded here either).
