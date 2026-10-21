@@ -35,7 +35,7 @@ var Plume = (function () {
 // (v0.4 / v0.5 / v0.6 across five modules). BUMP IT IN EVERY PULL REQUEST,
 // core change or not: it is how "is this the update I just merged?" is
 // answered by looking, and browsers cache .js files stubbornly.
-var VERSION = '1.39';
+var VERSION = '1.40';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -268,6 +268,12 @@ function fmtBytes(b) {
 // A priced lot still wins.
 function costPerG(ing) {
   var c = costPerGFromLots(ing);
+  // A stock solution she makes here is priced by its batches, never by the
+  // free flag; a batch made only from free things is priced at $0.
+  if (c === null && ing && ing.madeBy) {
+    var al = (ing.lots || []).filter(function (l) { return l.id === ing.activeLotId; })[0];
+    return al && al.madeCost === 0 ? 0 : null;
+  }
   return (c === null && ing && ing.noCost) ? 0 : c;
 }
 function costPerGFromLots(ing) {
@@ -2294,8 +2300,8 @@ function effPhIssues(lines, ings, lo, hi) {
     var ing = findIngIn(ings, id), r = ing ? effPhRange(ing.optimalPh) : null;
     if (!r) return;
     var top = hi !== null ? hi : lo, bot = lo !== null ? lo : hi;
-    if (r.max !== null && top > r.max) out.push({ ing: ing, range: r, side: 'high', at: top });
-    else if (r.min !== null && bot < r.min) out.push({ ing: ing, range: r, side: 'low', at: bot });
+    if (r.max !== null && top > r.max) out.push({ ing: ing, range: r, side: 'high', at: top, via: l.via || null });
+    else if (r.min !== null && bot < r.min) out.push({ ing: ing, range: r, side: 'low', at: bot, via: l.via || null });
   });
   return out;
 }
@@ -2316,7 +2322,8 @@ function effPhUnknown(lines, ings) {
 // by the caller ('target' or 'final').
 function effPhIssueText(x, what) {
   var lead = what === 'final' ? 'Final pH ' + x.at + ' is' : (x.side === 'high' ? 'Target reaches pH ' + x.at + ',' : 'Target starts at pH ' + x.at + ',');
-  return lead + ' ' + (x.side === 'high' ? 'above' : 'below') + ' where ' + (x.ing.name || 'an ingredient') + ' is effective (' + effPhText(x.range) + ').';
+  return lead + ' ' + (x.side === 'high' ? 'above' : 'below') + ' where ' + (x.ing.name || 'an ingredient') +
+    (x.via ? ' (in ' + (x.via.name || 'a stock solution') + ')' : '') + ' is effective (' + effPhText(x.range) + ').';
 }
 
 // Does a formula have a water phase? pH only means something when there is
@@ -2394,7 +2401,7 @@ var PRODUCT_TYPES = [
   'Facial serum', 'Face cream', 'Face oil', 'Face balm', 'Eye cream',
   'Toner / mist', 'Cleanser', 'Exfoliant / scrub', 'Mask',
   'Body lotion', 'Body butter', 'Body oil', 'Lip balm',
-  'Hair serum', 'Hair mask', 'Shampoo bar', 'Deodorant', 'Other',
+  'Hair serum', 'Hair mask', 'Shampoo bar', 'Deodorant', 'Stock solution', 'Other',
   '---',
   'Cold Process Soap', 'Hot Process Soap'
 ];
@@ -2664,7 +2671,11 @@ function buildSkincareSheet(o) {
       '<th style="text-align:left;padding-bottom:6px;border-bottom:2px solid #333">INCI</th>' +
       '<th class="pc" style="padding-bottom:6px;border-bottom:2px solid #333">%</th>' +
       '</tr></thead><tbody>' + rows + '</tbody></table></div>',
-    inci: fl.map(function (l) { return findIngIn(ings, l.ingId).inci; }).join(', '),
+    // With the formulations at hand, a stock solution lists as its parts.
+    inci: o.forms
+      ? inciMerge(stockLabelItems(fl.map(function (l) { return { ingId: l.ingId, w: parseFloat(l.pct) || 0 }; }), ings, o.forms))
+          .map(function (e) { return e.name; }).join(', ')
+      : fl.map(function (l) { return findIngIn(ings, l.ingId).inci; }).join(', '),
     scaleLabel: 'Batch: ' + bs + 'g'
   };
 }
@@ -2774,6 +2785,130 @@ function inciMerge(items) {
 // tells the user what was merged.
 function inciMerged(entries) {
   return (entries || []).filter(function (e) { return e.sources.length > 1; });
+}
+
+// ══ Stock solutions (2026-10-21) ══════════════════════
+// A stock solution (a 1% hyaluronic acid solution, say) is made as a batch
+// and then used as an ingredient in other formulations. Its formulation has
+// the type 'Stock solution'; the ingredient it makes carries
+// madeBy: <formulation id>, set from the formulation's Stock solution panel.
+// Each batch of it adds a lot to that ingredient (Batches does that), priced
+// from what went into it and coded with the batch's lot code, so a serum's
+// lot traces back through the stock to the supplier lots.
+//
+// Here: the link both ways, what a stock is made of, and opening it into
+// its parts wherever a finished formula's make-up matters: the INCI list
+// and its order, the effective pH check, and how much of each part the
+// product really holds (10% of a 1% solution is 0.1%).
+var STOCK_TYPE = 'Stock solution';
+function isStockType(t) { return t === STOCK_TYPE; }
+// The ingredient a stock-solution formulation makes, if one is linked.
+function stockIngFor(formulaId, ings) {
+  if (!formulaId) return null;
+  for (var i = 0; i < (ings || []).length; i++) if (ings[i] && ings[i].madeBy === formulaId) return ings[i];
+  return null;
+}
+// The formulation an ingredient is made from. Only while that formulation
+// is still a stock solution: changing its type unlinks it in effect.
+function stockFormFor(ing, forms) {
+  if (!ing || !ing.madeBy) return null;
+  for (var i = 0; i < (forms || []).length; i++) {
+    var f = forms[i];
+    if (f && f.id === ing.madeBy && isStockType(f.type)) return f;
+  }
+  return null;
+}
+// What a stock is made of, from the version in use, as shares of 100.
+// Add-ins are left out: a stock solution is weighed by percentage.
+function stockParts(f) {
+  var out = [], tot = 0;
+  ((f && f.lines) || []).forEach(function (l) {
+    if (!l || l.addin || !l.ingId) return;
+    var p = parseFloat(l.pct) || 0;
+    if (p > 0) { out.push({ ingId: l.ingId, pct: p }); tot += p; }
+  });
+  if (!tot) return [];
+  out.forEach(function (o) { o.pct = o.pct * 100 / tot; });
+  return out;
+}
+// Opens every stock solution in a list of entries into its parts. Each
+// entry is { ingId, w } (w: its share of the whole, in %) plus whatever the
+// caller carries. A part comes back as a copy of its stock's entry with the
+// part's ingId, w scaled to the whole, and via: the stock ingredient (the
+// outermost one). A stock inside a stock opens too, four deep at most, and
+// a stock that contains itself stops rather than looping.
+function stockExpand(entries, ings, forms, depth, seen) {
+  depth = depth || 0;
+  var out = [];
+  (entries || []).forEach(function (e) {
+    var ing = findIngIn(ings, e && e.ingId);
+    var f = depth < 4 ? stockFormFor(ing, forms) : null;
+    var parts = f && !(seen && seen[f.id]) ? stockParts(f) : [];
+    if (!parts.length) { out.push(e); return; }
+    var s2 = {}; for (var k in (seen || {})) s2[k] = true; s2[f.id] = true;
+    var sub = parts.map(function (p) {
+      var c = {}; for (var key in e) c[key] = e[key];
+      c.ingId = p.ingId; c.w = (parseFloat(e.w) || 0) * p.pct / 100; c.via = e.via || ing;
+      return c;
+    });
+    out = out.concat(stockExpand(sub, ings, forms, depth + 1, s2));
+  });
+  return out;
+}
+// Label items for INCI with stock solutions opened. items are in label
+// order, each { ingId, w, addin } plus anything else; inci, flag and label
+// are filled in from the ingredient. A formula with no stock solution comes
+// back in exactly the order given, so its list does not move. When a stock
+// opens, the same ingredient arriving twice (water on its own and water in
+// the stock) adds up, and the entries re-sort by their real share. Add-ins
+// keep their place after the rest, unless mixAddins (add-ins counted in the
+// total, so they sort in with everything else).
+function stockLabelItems(items, ings, forms, mixAddins) {
+  var opened = stockExpand(items, ings, forms);
+  var any = opened.some(function (e) { return e.via; });
+  if (any) {
+    var by = {}, merged = [];
+    opened.forEach(function (e) {
+      var k = (e.addin ? 'a:' : 'f:') + e.ingId;
+      var w = parseFloat(e.w) || 0;
+      if (by[k]) {
+        by[k].w += w;
+        if (e.via && by[k].vias.indexOf(e.via) < 0) by[k].vias.push(e.via);
+        if (!e.via) by[k].direct = true;
+        return;
+      }
+      var c = {}; for (var key in e) c[key] = e[key];
+      c.w = w; c.vias = e.via ? [e.via] : []; c.direct = !e.via;
+      by[k] = c; merged.push(c);
+    });
+    var main = merged.filter(function (e) { return mixAddins || !e.addin; });
+    var adds = merged.filter(function (e) { return !mixAddins && e.addin; });
+    main.sort(function (a, b) { return b.w - a.w; });
+    opened = main.concat(adds);
+  }
+  return opened.map(function (e) {
+    var ing = findIngIn(ings, e.ingId), c = {};
+    for (var key in e) c[key] = e[key];
+    if (ing) { c.inci = ing.inci || ''; c.flag = ing.flag; c.label = ing.name || ''; }
+    var vias = e.vias || (e.via ? [e.via] : []);
+    if (vias.length) c.label = (c.label || 'an ingredient') + ' (in ' + vias.map(function (v) { return v.name || 'a stock solution'; }).join(' and ') + (e.direct ? ', and on its own' : '') + ')';
+    return c;
+  });
+}
+// A formula's lines with the parts of its stock solutions added after them,
+// for checks that ask "is X in this formula" (effective pH). Lines may use
+// ingId or ingredientId (a batch's snapshot); parts always use ingId.
+function stockWithParts(lines, ings, forms) {
+  var out = (lines || []).slice();
+  (lines || []).forEach(function (l) {
+    var id = l && (l.ingId || l.ingredientId);
+    var ing = findIngIn(ings, id);
+    if (!stockFormFor(ing, forms)) return;
+    stockExpand([{ ingId: id, w: 100 }], ings, forms).forEach(function (p) {
+      if (p.via) out.push({ ingId: p.ingId, pct: p.w, via: p.via });
+    });
+  });
+  return out;
 }
 
 // ── Packaging kinds, drawings, colors (core v1.22, 2026-10-18) ──────────
@@ -4443,6 +4578,8 @@ function undoStock(p, id) {
 return {
   VERSION: VERSION,
   inciSplit: inciSplit, inciMerge: inciMerge, inciMerged: inciMerged,
+  STOCK_TYPE: STOCK_TYPE, isStockType: isStockType, stockIngFor: stockIngFor, stockFormFor: stockFormFor,
+  stockParts: stockParts, stockExpand: stockExpand, stockLabelItems: stockLabelItems, stockWithParts: stockWithParts,
   Store: Store, KEYS: KEYS, KEY_LABELS: KEY_LABELS,
   esc: esc, openModal: openModal, closeModal: closeModal,
   todayISO: todayISO, parseLocalDate: parseLocalDate, fmtDate: fmtDate, fmtBytes: fmtBytes,

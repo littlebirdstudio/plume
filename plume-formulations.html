@@ -416,6 +416,13 @@ span.ing-name-btn{text-decoration:none}
 .use-empty{color:var(--ink-lighter);font-style:italic}
 .cost-miss{font-size:11px;color:var(--ink-lighter);margin-top:6px;line-height:1.4}
 .cost-miss a{color:inherit}
+/* Stock solutions (2026-10-21) */
+.stock-parts{font-size:11px;color:var(--sage-dark);margin-top:2px;line-height:1.4}
+.stock-p{font-size:12.5px;color:var(--ink-light);line-height:1.5}
+.stock-p a{color:var(--sage-dark)}
+.stock-p .sk-acts{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+.stock-p select{font:inherit;font-size:12.5px;padding:5px 6px;border:1px solid var(--cream-border);border-radius:6px;background:var(--white);color:var(--ink);max-width:100%}
+.stock-p .sk-or{font-size:11.5px;color:var(--ink-lighter);margin-top:10px}
 #cost-panel .at-least{font-size:11px;color:var(--warning);margin-right:4px;font-weight:400}
 .ph-range-warn{margin-top:10px;display:flex;flex-direction:column;gap:4px;font-size:12.5px;line-height:1.45}
 .ph-range-warn .pw{color:var(--warning);background:var(--warning-bg);border-radius:8px;padding:6px 10px}
@@ -887,6 +894,10 @@ body.ps-shell .inci-list { font-size: 13px; color: var(--ink); }
             </div>
             <button class="ps-btn-primary fe-make" onclick="makeBatchFromFormula()" title="Open the batch log with this formula and batch size pre-filled">Make batch</button>
           </div>
+        </div>
+        <div class="sb-panel" id="sb-stock" style="display:none">
+          <div class="sb-hdr">Stock solution</div>
+          <div class="sb-body" id="stock-panel"></div>
         </div>
         <div class="sb-panel">
           <div class="sb-hdr">Cost estimate</div>
@@ -2098,14 +2109,19 @@ function recalcSoap() {
 // set, is where it warns. An ingredient marked made in-house counts as $0
 // and is not named. Skincare and soap alike. '' when every line has a price.
 function costMissingNote(lines) {
-  var seen = {}, names = [];
+  var seen = {}, names = [], stocks = [];
   (lines || []).forEach(function(l) {
     var i = ings.find(function(x) { return x.id === l.ingId; });
     if (!i || seen[i.id] || bestCpg(i) !== null) return;
     seen[i.id] = true;
-    names.push('<a href="plume-ingredients.html#ing=' + encodeURIComponent(i.id) + '" target="plume-ingredients">' + esc(i.name || 'an ingredient') + '</a>');
+    var a = '<a href="plume-ingredients.html#ing=' + encodeURIComponent(i.id) + '" target="plume-ingredients">' + esc(i.name || 'an ingredient') + '</a>';
+    // A stock solution is priced by its batches, not by hand.
+    (Plume.stockFormFor(i, forms) ? stocks : names).push(a);
   });
-  return names.length ? '<div class="cost-miss">Not counted: ' + names.join(', ') + ' (no price yet). If ' + (names.length === 1 ? 'it is' : 'they are') + ' made in-house, mark ' + (names.length === 1 ? 'it' : 'them') + ' so in Ingredients.</div>' : '';
+  var html = '';
+  if (names.length) html += '<div class="cost-miss">Not counted: ' + names.join(', ') + ' (no price yet). If ' + (names.length === 1 ? 'it is' : 'they are') + ' made in-house, mark ' + (names.length === 1 ? 'it' : 'them') + ' so in Ingredients.</div>';
+  if (stocks.length) html += '<div class="cost-miss">Not counted: ' + stocks.join(', ') + ' (a stock solution, priced by ' + (stocks.length === 1 ? 'its' : 'their') + ' batches; none priced yet).</div>';
+  return html;
 }
 
 // ── Skincare rendering ────────────────────────────────
@@ -2236,6 +2252,14 @@ function buildRow(l, idx, ing, bs, isAddin) {
   }
   row += '</div>';
   row += '<div class="ing-inci">' + esc(ing.inci) + '</div>';
+  // A stock solution: what it puts into this formula, part by part.
+  if (!isAddin && effPct > 0 && Plume.stockFormFor(ing, forms)) {
+    var parts = Plume.stockExpand([{ ingId: ing.id, w: effPct }], ings, forms).filter(function(p) { return p.via; });
+    if (parts.length) row += '<div class="stock-parts">In this formula: ' + parts.map(function(p) {
+      var pi = resolveIng(p.ingId);
+      return esc(pi.name) + ' ' + fmtStockPct(p.w);
+    }).join(' &middot; ') + '</div>';
+  }
   if (ing.missing) {
     row += '<div class="warn-txt">This ingredient was deleted from the library. Its ' +
       'percentage still counts toward the total, so the formula is short until you ' +
@@ -2471,7 +2495,8 @@ function toggleAddin() {
 
 // ── Skincare recalc ───────────────────────────────────
 function recalc() {
-  if (isSoap()) { recalcSoap(); return; }
+  renderStockPanel();
+  if (isSoap()) { curInciNames = null; recalcSoap(); return; }
   var bs    = parseFloat(document.getElementById('batch-sz').value) || 100;
   var addinsCount = getAddinsInTotal();
   var total = 0;
@@ -2536,14 +2561,22 @@ function recalc() {
   });
   var all = fl2.concat(al);
   if (!all.length) {
+    curInciNames = [];
     iEl.innerHTML = '<div style="font-size:12px;color:var(--ink-lighter)">INCI list generates as you add ingredients.</div>';
   } else {
-    iEl.innerHTML = inciPanelHtml(all.map(function(l) {
+    // A stock solution in the formula lists as its parts, each at its real
+    // share (Plume.stockLabelItems); nothing moves when there is none.
+    var items = Plume.stockLabelItems(all.map(function(l) {
       var ing = ings.find(function(x) { return x.id === l.ingId; });
-      return { inci: ing.inci, flag: ing.flag, addin: l.addin, label: ing.name };
-    }), 'add-ins after formula ingredients');
+      var gw  = bs > 0 ? (parseFloat(l.gramsFixed) || 0) / bs * 100 : 0;
+      return { ingId: l.ingId, w: (l.addin || l.pinned) ? gw : (parseFloat(l.pct) || 0),
+               inci: ing.inci, flag: ing.flag, addin: l.addin, label: ing.name };
+    }), ings, forms, addinsCount);
+    curInciNames = Plume.inciMerge(items.filter(function(it) { return !it.addin; })).map(function(e) { return e.name; });
+    iEl.innerHTML = inciPanelHtml(items, 'add-ins after formula ingredients');
   }
 }
+var curInciNames = null;
 
 // One renderer for both the skincare and the soap panel. Entries are
 // components, not ingredients, so a blend contributes several lines and a
@@ -2589,8 +2622,9 @@ function inciPanelHtml(items, footNote) {
 function copyInci() {
   var fl  = fLines.filter(function(l) { return !l.addin && ings.find(function(i) { return i.id === l.ingId; }); });
   fl.sort(function(a, b) { return (parseFloat(b.pct)||0) - (parseFloat(a.pct)||0); });
-  // Copies what the panel shows: components, deduped, in the same order.
-  var txt = Plume.inciMerge(fl.map(function(l) {
+  // Copies what the panel shows: components, deduped, in the same order
+  // (stock solutions opened, for a skincare formula).
+  var txt = curInciNames ? curInciNames.join(', ') : Plume.inciMerge(fl.map(function(l) {
     return { inci: ings.find(function(i) { return i.id === l.ingId; }).inci };
   })).map(function(e) { return e.name; }).join(', ');
   navigator.clipboard.writeText(txt).then(function() {
@@ -3820,10 +3854,12 @@ function renderPhRangeWarn() {
   var lo = Plume.phNum(document.getElementById('f-ph-min').value), hi = Plume.phNum(document.getElementById('f-ph-max').value);
   if (!phApplies() || (lo === null && hi === null)) { box.hidden = true; box.innerHTML = ''; return; }
   var link = function (ing) { return '<a href="plume-ingredients.html#ing=' + encodeURIComponent(ing.id) + '" target="plume-ingredients">' + esc(ing.name || 'an ingredient') + '</a>'; };
-  var html = Plume.effPhIssues(fLines, ings, lo, hi).map(function (x) {
+  // A stock solution's parts count: its preservative works at this pH.
+  var withParts = Plume.stockWithParts(fLines, ings, forms);
+  var html = Plume.effPhIssues(withParts, ings, lo, hi).map(function (x) {
     return '<div class="pw">' + esc(Plume.effPhIssueText(x, 'target')).replace(esc(x.ing.name || ''), '<b>' + link(x.ing) + '</b>') + '</div>';
   }).join('');
-  html += Plume.effPhUnknown(fLines, ings).map(function (ing) {
+  html += Plume.effPhUnknown(withParts, ings).map(function (ing) {
     return '<div class="pu">No effective pH range is recorded for ' + link(ing) + ', so Plume cannot check it against the target.</div>';
   }).join('');
   box.innerHTML = html;
@@ -4271,6 +4307,102 @@ function openBatchlogFor(f) {
   Plume.openPage(url);
 }
 
+// ── Stock solutions (2026-10-21) ──
+// A formulation of type Stock solution is made as a batch and used in other
+// formulations as an ingredient. This panel links it to that ingredient
+// (ing.madeBy = this formulation's id): it creates one, or links one she
+// already has. Batches then adds a lot to it with each batch.
+function fmtStockPct(w) {
+  return (w >= 10 ? w.toFixed(1) : w >= 0.1 ? w.toFixed(2) : w.toFixed(3)) + '%';
+}
+function renderStockPanel() {
+  var panel = document.getElementById('sb-stock');
+  if (!panel) return;
+  var f = curForm();
+  var on = !!f && Plume.isStockType(document.getElementById('f-type').value);
+  panel.style.display = on ? '' : 'none';
+  if (!on) return;
+  var body = document.getElementById('stock-panel');
+  var ing = Plume.stockIngFor(f.id, ings);
+  if (ing) {
+    var g = stockG(ing);
+    body.innerHTML = '<div class="stock-p">Each batch adds stock to <a href="plume-ingredients.html#ing=' + encodeURIComponent(ing.id) + '" target="plume-ingredients"><b>' + esc(ing.name) + '</b></a>, ' +
+      'as its own lot with the batch’s lot code, priced from what went into it. Use that ingredient in other formulations.' +
+      '<div class="sk-or">On hand: ' + (g > 0 ? Plume.fmtG(g) : 'none yet') + '</div>' +
+      '<div class="sk-acts"><button type="button" class="fe-lnk" onclick="unlinkStock()">Unlink</button></div></div>';
+    return;
+  }
+  var opts = ings.filter(function(i) { return !i.archived && !Plume.stockFormFor(i, forms); })
+    .sort(function(a, b) { return (a.name || '').localeCompare(b.name || ''); })
+    .map(function(i) { return '<option value="' + esc(i.id) + '">' + esc(i.name || '(unnamed)') + '</option>'; }).join('');
+  body.innerHTML = '<div class="stock-p">Make it as a batch, then use it in other formulations like any ingredient. ' +
+    'Each batch adds a lot to that ingredient, priced from what went into it.' +
+    '<div class="sk-acts"><button type="button" class="ps-btn-primary" onclick="createStockIng()">Create its ingredient</button></div>' +
+    '<div class="sk-or">or link one you already have:</div>' +
+    '<select id="stock-link-sel" aria-label="Link an ingredient you already have" onchange="linkStockIng(this.value)"><option value="">Choose an ingredient…</option>' + opts + '</select></div>';
+}
+// Writes the ingredient library from here. Read fresh first, so an edit
+// made in Ingredients in another window is not written over.
+function stockIngWrite(fn) {
+  Store.refresh(ING_KEY);
+  var fresh = Store.getJSON(ING_KEY, []) || [];
+  if (fn(fresh) === false) return false;
+  if (!Store.setJSON(ING_KEY, fresh)) { Plume.noteSaveFailed(); return false; }
+  Plume.noteSaveOk();
+  ings = fresh;
+  renderLines(); recalc();
+  return true;
+}
+// The type must be saved before the link means anything.
+function stockSaveFirst() { var f = curForm(); if (f && (dirty || f.type !== document.getElementById('f-type').value)) saveFormula(true); return curForm(); }
+// Its INCI, read off what it is made of, in label order.
+function stockInciText() {
+  var fl = fLines.filter(function(l) { return !l.addin && (parseFloat(l.pct) || 0) > 0 && ings.find(function(i) { return i.id === l.ingId; }); });
+  fl.sort(function(a, b) { return (parseFloat(b.pct) || 0) - (parseFloat(a.pct) || 0); });
+  return Plume.inciMerge(Plume.stockLabelItems(fl.map(function(l) { return { ingId: l.ingId, w: parseFloat(l.pct) || 0 }; }), ings, forms))
+    .map(function(e) { return e.name; }).join(', ');
+}
+function createStockIng() {
+  var f = stockSaveFirst();
+  if (!f) return;
+  var top = fLines.filter(function(l) { return !l.addin; }).sort(function(a, b) { return (parseFloat(b.pct) || 0) - (parseFloat(a.pct) || 0); })[0];
+  var topIng = top ? ings.find(function(i) { return i.id === top.ingId; }) : null;
+  var ing = {
+    id:      Date.now().toString() + Math.random().toString(36).slice(2, 6),
+    name:    f.name || 'Stock solution',
+    inci:    stockInciText(),
+    phase:   (topIng && topIng.phase) || 'water',
+    functionCategory: [],
+    madeBy:  f.id,
+    lots:    [],
+    created: new Date().toISOString()
+  };
+  if (stockIngWrite(function(list) { list.push(ing); })) Plume.tell(ing.name + ' is in Ingredients now. Each batch of this formulation adds a lot to it; use it in other formulations like any ingredient.', { title: 'Ingredient created' });
+}
+function linkStockIng(id) {
+  if (!id) return;
+  var f = stockSaveFirst();
+  if (!f) return;
+  var inci = stockInciText();
+  stockIngWrite(function(list) {
+    var i = list.find(function(x) { return x.id === id; });
+    if (!i) return false;
+    i.madeBy = f.id;
+    if (!i.inci) i.inci = inci;
+  });
+}
+function unlinkStock() {
+  var f = curForm(), ing = f ? Plume.stockIngFor(f.id, ings) : null;
+  if (!ing) return;
+  Plume.ask('Its lots stay as they are. New batches of this formulation will no longer add stock to it.', function() {
+    stockIngWrite(function(list) {
+      var i = list.find(function(x) { return x.id === ing.id; });
+      if (!i) return false;
+      delete i.madeBy;
+    });
+  }, { title: 'Unlink ' + (ing.name || 'this ingredient') + '?', yes: 'Unlink' });
+}
+
 function printFormula() {
   var f = forms.find(function (x) { return x.id === curId; });
   if (!f) return;
@@ -4289,6 +4421,7 @@ function printFormula() {
     variantTitle: ((f.variants || []).length > 1 && pv) ? varTitle(pv) : '',
     lines:        fLines,
     ings:         ings,
+    forms:        forms,
     batchSize:    parseFloat(document.getElementById('batch-sz').value) || 100,
     isSoap:       isSoap(),
     phMin:        Plume.parsePh(document.getElementById('f-ph-min').value) || '',
