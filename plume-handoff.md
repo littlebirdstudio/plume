@@ -92,7 +92,7 @@ Core defines globals with the names modules already use, so **converting a modul
 **A module may override an alias by defining its own function** — this is the intended escape hatch. `plume-ingredients.html` keeps a local `openModal` because it snapshots form state to detect unsaved edits. Share the common case; keep the exception local.
 
 ### Versioning
-`Plume.VERSION` is displayed at the bottom of every converted module's Settings → Storage panel, alongside the active driver name. **Bump it on every core change.** Browsers cache `.js` far more stubbornly than they re-fetch a replaced HTML file, so "is core loaded, and is it the one I just uploaded?" must be answerable by looking. Current: **v1.39** (see the newest session notes at the end; v1.8 added INCI blend splitting; v1.9 added density resolution; v1.10 ranked search results, best match first; v1.11 added pH records; v1.12 made it the one app version, shown in every footer; v1.13 rebuilt Quick add; v1.14 drafted lowdowns; v1.15 replaced the browser pop-ups with in-page dialogs).
+`Plume.VERSION` is displayed at the bottom of every converted module's Settings → Storage panel, alongside the active driver name. **Bump it on every core change.** Browsers cache `.js` far more stubbornly than they re-fetch a replaced HTML file, so "is core loaded, and is it the one I just uploaded?" must be answerable by looking. Current: **v1.40** (see the newest session notes at the end; v1.8 added INCI blend splitting; v1.9 added density resolution; v1.10 ranked search results, best match first; v1.11 added pH records; v1.12 made it the one app version, shown in every footer; v1.13 rebuilt Quick add; v1.14 drafted lowdowns; v1.15 replaced the browser pop-ups with in-page dialogs).
 
 ### Upload order matters
 `plume-core.js` **first**, then the HTML. A module that arrives before core shows the missing-core banner until core lands. Core alone breaks nothing.
@@ -3198,4 +3198,79 @@ now writes `{ products, shops }`). Stock log entries with a `shopId` carry
 
 **Tests:** new `test/test-consign.js` (23). `test-kits.js` expects the
 Consign chip. 28 suites.
+
+### Session 24 (21 October 2026): Stock solutions (core v1.40)
+
+**Her problem:** she makes a hyaluronic acid solution from powder and uses it
+in toners and serums. Marked "made in-house" it counted as $0, the powder
+only went down by hand, a toner's lot could not trace back to the powder,
+and labels showed the solution's typed INCI rather than its parts. She chose
+"make it as a batch" (option 1) over a recipe on the ingredient.
+
+**The model.**
+- New type **'Stock solution'** in `PRODUCT_TYPES` (before 'Other').
+- The ingredient it makes carries **`ing.madeBy = <formulation id>`**. The link
+  counts only while that formulation's type is still Stock solution
+  (`Plume.stockFormFor`).
+- **The first batch creates the ingredient** when none is linked (her call):
+  named for the formulation, INCI read off its lines (`Plume.stockInci`),
+  phase of its largest part (`Plume.stockNewIng`). Later batches add to it.
+- **Each committed batch adds a lot** (`addMadeLot` in Batches): id
+  `L-made-<batch id>`, supplier "Made in-house", `lotNum` = the batch's lot
+  code, `received` = its date, qty = yield in g, `costPerG` from the lots it
+  drew on (`drawnCost`; a lot with no price falls back to the ingredient's
+  price now; with neither, `madeMissing` names it and `costPerG` is blank).
+  Lot fields `madeBatchId`, `madeG`, `madeCost`, `madeMissing`. The new lot
+  becomes `activeLotId` (the newest batch prices it). The batch records
+  `madeIngId`, `madeLotId` (and `madeIngNew` when it created the ingredient).
+- **costPerG:** for a `madeBy` ingredient whose active lot is a made lot,
+  that lot decides (blank stays null, never $0 by the free flag; `madeCost`
+  0 is $0). Stock she had before linking keeps `noCost` until the first batch.
+- **Edits follow:** yield, lot code and date changes move to the lot
+  (`madeLotSync`); the yield cannot drop below what other batches used.
+- **No delete or decommit while used** (`madeLotBlocked` names the batches);
+  unused, the lot comes out with it and the newest remaining made lot prices
+  it (`removeMadeLot`).
+- **Batches made before** (committed, no lot): the details offer "Add N g to
+  its stock" / "to Ingredients" (`addMadeLotNow`).
+
+**Opening a stock into its parts (core).** `stockParts(f)` (shares of 100, no
+add-ins), `stockExpand(entries, ings, forms)` (each `{ingId, w}` opened,
+`via` = the stock; four deep; a loop stops), `stockLabelItems(items, ings,
+forms, mixAddins)` (INCI items: the same ingredient adds up, re-sorted by
+real share; a formula with no stock keeps its order exactly),
+`stockWithParts(lines, ...)` (for the effective pH check; the issue text
+says "(in <stock>)"). Named `stockExpand`, not `stockOpen`: core already has
+`stockOpen`, the Update stock panel, and a second declaration silently
+replaced it.
+
+**Where it shows.**
+- **Formulations:** a line in the header under the type: "Its first batch
+  creates this stock solution as an ingredient, named X", with "Already have
+  it as an ingredient?" opening a picker (the one-time move for a solution
+  she already keeps as an ingredient); once linked, "This stock solution is
+  the ingredient X · N g on hand", with Unlink. A stock line in another
+  formula shows "In this formula: Distilled water 9.80% · Sodium hyaluronate
+  0.10% · ...". INCI panel and Copy, pH warning, bench sheet INCI (core
+  `buildSkincareSheet` with `o.forms`) open stocks. The cost note names an
+  unpriced stock separately ("priced by its batches; none priced yet").
+- **Ingredients:** ••• menu beside New: **Make a stock solution** opens
+  Formulations at `#new=stock`, the New formulation window with the type
+  chosen (her idea: a stock solution is an ingredient). A per-ingredient menu
+  was tried and dropped. A linked ingredient shows "Made in-house from
+  <formulation>" above its lots and in the editor (the $0 switch hidden);
+  made lots carry "Made in-house in batch LOT ...". `saveIngredient` now
+  carries over lot fields the form does not show (made links, decommit
+  flags), which it used to drop.
+- **Batches:** New batch says what making it does (creates, or adds to).
+  Details: "This batch created/added 200 g to X as lot 261012, at $... per
+  gram. N g left; M used." Trace: a made lot shows its batch's lot chip
+  (opens it) and, beneath, the stock batch's own supplier lots scaled to the
+  grams used (one level). A stock batch's Trace has **Used in**.
+  `refreshLibrary()` re-reads ingredients and formulations when New batch or
+  a batch opens.
+- **Products & Costing:** label INCI and common names open stocks; the
+  missing-cost warning says a stock is priced by its batches.
+
+**Tests:** new `test/test-stock.js` (63). 29 suites.
 
