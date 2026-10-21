@@ -142,7 +142,9 @@ const PKGS = [
   {
     const page = await open('ingredients');
     ok('the old modal is gone', await page.evaluate("!document.getElementById('modal-suppliers')"));
-    await page.evaluate("location.hash='#suppliers'"); await page.reload(); await page.waitForTimeout(500);
+    // Since v1.38 an open page reloads itself on a new link, so no reload here.
+    await page.evaluate("location.hash='#suppliers'");
+    await page.waitForFunction("document.getElementById('ps-peek') && document.getElementById('ps-peek').classList.contains('open') && !!document.querySelector('.sup-list')", null, { timeout: 10000 }).catch(() => {});
     ok('an old #suppliers link opens the panel', await page.evaluate("document.getElementById('ps-peek').classList.contains('open') && !!document.querySelector('.sup-list')"));
     ok('names are shown as text, never as markup', await page.evaluate(
       "Plume.suppliers.add(); document.getElementById('sup-name').value='<b>Bold</b> Co'; Plume.suppliers.save(); !document.querySelector('.sup-name b') && document.body.textContent.indexOf('<b>Bold</b> Co')!==-1"));

@@ -92,7 +92,7 @@ Core defines globals with the names modules already use, so **converting a modul
 **A module may override an alias by defining its own function** — this is the intended escape hatch. `plume-ingredients.html` keeps a local `openModal` because it snapshots form state to detect unsaved edits. Share the common case; keep the exception local.
 
 ### Versioning
-`Plume.VERSION` is displayed at the bottom of every converted module's Settings → Storage panel, alongside the active driver name. **Bump it on every core change.** Browsers cache `.js` far more stubbornly than they re-fetch a replaced HTML file, so "is core loaded, and is it the one I just uploaded?" must be answerable by looking. Current: **v1.37** (see the newest session notes at the end; v1.8 added INCI blend splitting; v1.9 added density resolution; v1.10 ranked search results, best match first; v1.11 added pH records; v1.12 made it the one app version, shown in every footer; v1.13 rebuilt Quick add; v1.14 drafted lowdowns; v1.15 replaced the browser pop-ups with in-page dialogs).
+`Plume.VERSION` is displayed at the bottom of every converted module's Settings → Storage panel, alongside the active driver name. **Bump it on every core change.** Browsers cache `.js` far more stubbornly than they re-fetch a replaced HTML file, so "is core loaded, and is it the one I just uploaded?" must be answerable by looking. Current: **v1.38** (see the newest session notes at the end; v1.8 added INCI blend splitting; v1.9 added density resolution; v1.10 ranked search results, best match first; v1.11 added pH records; v1.12 made it the one app version, shown in every footer; v1.13 rebuilt Quick add; v1.14 drafted lowdowns; v1.15 replaced the browser pop-ups with in-page dialogs).
 
 ### Upload order matters
 `plume-core.js` **first**, then the HTML. A module that arrives before core shows the missing-core banner until core lands. Core alone breaks nothing.
@@ -3076,4 +3076,80 @@ column reads "Effective pH"). **Label only: the stored field is still
   ranges, source shown, nothing marked draft (the review is the check).
 
 **Tests:** new `test/test-effective-ph.js` (23 checks). 25 suites.
+
+### Session 23 (cont.): Incomplete costs say so; made in-house counts as $0 (core v1.38)
+
+**The bug:** Products & Costing's `formulationCostDetail` counted an
+ingredient with no price as free and still reported the cost as known; the
+"missing" warning appeared only when EVERY line lacked a price. A serum
+missing one price showed a low unit cost and high margins, silently, and
+packs and kits inherited it. Formulations showed a small grey count for
+skincare and nothing for soap.
+
+**Now, in Products & Costing:** `formulationCostDetail` returns `missing`
+(names) and `complete`. `computeProductCost` returns `costComplete` (every
+ingredient AND packaging item priced) besides `ingCostKnown`. Incomplete:
+"at least $X" in the list (with the old dot) and the cost card, a warning
+naming the ingredients (and any unpriced packaging), margins marked "at most",
+the formulation hint "at least $... per gram", "&ge;" in the pack component
+editor. Packs name the part and its missing ingredient; kits inherit a part's
+incomplete cost. A pack now counts a partly priced component's floor rather
+than $0, which is what core's `productUnitCost` always did (they agree).
+
+**Her calls, mid-build:**
+- Some ingredients she makes herself (hydrosols, a hyaluronic acid solution)
+  have no price she can put on them, and that must not hold anything up.
+  **Ingredient flag `noCost`**, a tick under Supplier lots in the editor:
+  "Made in-house or free: count it as $0". Core's `costPerG` returns 0 for
+  it when no lot has a price (a priced lot still wins), so nothing anywhere
+  flags it. The list shows "in-house" in place of the price.
+- Someone who formulates and does not sell should not be flagged. So
+  **Formulations stays quiet**: a small grey "Not counted: X (no price yet).
+  If it is made in-house, mark it so in Ingredients." (skincare and soap), no
+  "at least", no warning colour. The warning lives in Products & Costing.
+
+**Tests:** new `test/test-costs.js` (27 checks). 26 suites.
+`test-costing-tools.js` "it opens as a panel at the right edge" failed once
+in a full run and passed on two reruns (animation timing); watch for it.
+
+### Session 23 (cont.): Links into a page that is already open (core v1.38)
+
+**Her report:** Lot sticker in a batch "takes me into the P&C fields".
+Cause: module links open in NAMED windows (`target="plume-costing"`), so
+when that tab is already open, `plume-costing.html#lot=<id>` only changes
+its hash, which loads nothing and runs no handler: the tab came forward as
+it was. Every cross-module link with a hash had this (Fill from this batch,
+Back to batch, Make batch, Write a log entry / Log entry, Used in names,
+View in library). It had looked fine because a fresh tab runs the handler
+at boot.
+
+**Fix:** `Plume.followLinks({ save, dirty })`, called by Ingredients,
+Formulations, Batches and Products & Costing after boot. On a new hash the
+page reloads, so the link acts as in a fresh tab and with fresh data.
+Formulations saves first (it saves as it goes); the others ask first when
+something is unsaved (Products & Costing: `unsaved()`; Batches: a dirty
+batch panel or an open New batch; Ingredients: a changed edit form). The
+hash is cleared while asking, and every page now clears a hash once
+followed (Formulations and Ingredients did not), so the same link works
+twice. New suite `test/test-links.js` (12 checks). 27 suites.
+
+**Note:** in the artifact preview such links may still do nothing: the
+preview frame does not pass `#key=value` hashes.
+
+### Session 23 (cont.): The lot sticker stays with the batch (core v1.38)
+
+Her call: printing a lot sticker should not leave the batch. The drawing
+and printing moved to core (`Plume.lotStickerSvg`, `Plume.printLotStickers`,
+size remembered per device under `plume-lot-sticker`). The batch header's
+**Lot sticker** button opens a small block in the batch panel: second line
+(the formulation's name by default), width, height, copies (starting at the
+units filled from the batch), a preview, Print stickers. The Barcodes
+panel's Lot sticker mode uses the same core functions and stays, as does
+its `#lot=` link for anything bookmarked.
+
+**Consignment, decided so far:** shops as places stock can be; Consign moves
+units from the shelf to a shop; at a settle-up (hers are irregular) she
+enters what sold, returns go back to the shelf, the rest stays. **No payment
+field:** her point that Plume records no other selling prices, so a payout
+amount would be a mismatch. Not built yet.
 

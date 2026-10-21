@@ -35,7 +35,7 @@ var Plume = (function () {
 // (v0.4 / v0.5 / v0.6 across five modules). BUMP IT IN EVERY PULL REQUEST,
 // core change or not: it is how "is this the update I just merged?" is
 // answered by looking, and browsers cache .js files stubbornly.
-var VERSION = '1.37';
+var VERSION = '1.38';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -259,7 +259,16 @@ function fmtBytes(b) {
 // referenceOnly lots are watchlist entries — prices noted but never
 // bought. They are excluded from cost AND stock. Including them in step 3
 // is exactly the bug that made Formulations disagree with Costing.
+// Made in-house or free (2026-10-20, her call): an ingredient she makes
+// herself (a hydrosol, a hyaluronic acid solution) may have no price she can
+// put on it, and that must not hold anything up. With noCost set and no
+// priced lot, it counts as $0 on purpose, so nothing flags it as missing.
+// A priced lot still wins.
 function costPerG(ing) {
+  var c = costPerGFromLots(ing);
+  return (c === null && ing && ing.noCost) ? 0 : c;
+}
+function costPerGFromLots(ing) {
   if (!ing) return null;
   var lots = (ing.lots || []).filter(function (l) { return !l.referenceOnly; });
 
@@ -1065,6 +1074,36 @@ var supQuery = '';
 var libListeners = [];
 // Modules that hold ingredients or packaging in memory register here, so a
 // rename made from the panel reaches what they will save next.
+// Links into a page that is ALREADY OPEN in its own tab (2026-10-20). Module
+// links open in named windows (target="plume-costing"), so when that tab is
+// open a link like plume-costing.html#lot=<id> only changes its hash, which
+// loads nothing: the tab came forward showing whatever it showed, and the
+// lot sticker, fill, log entry or batch never opened. Every page now
+// reloads on a new hash, so a link behaves as it does in a fresh tab, with
+// fresh data. opts.save() runs first (a page that saves as it goes);
+// opts.dirty() asks first when something is not saved. The hash is cleared
+// while asking, so staying and clicking the same link again still works.
+function followLinks(opts) {
+  opts = opts || {};
+  window.addEventListener('hashchange', function () {
+    var h = location.hash;
+    if (!h || h === '#') return;
+    var target = location.pathname + location.search + h;
+    var go = function () {
+      try { history.replaceState(null, '', target); } catch (e) {}
+      location.reload();
+    };
+    if (opts.save) { try { opts.save(); } catch (e) {} }
+    if (opts.dirty && opts.dirty()) {
+      try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+      ask('This page has changes that are not saved. Follow the link and lose them?', go,
+        { title: 'Leave unsaved changes?', yes: 'Follow the link', no: 'Stay here', danger: true });
+      return;
+    }
+    go();
+  });
+}
+
 function onLibraryChange(fn) { if (typeof fn === 'function') libListeners.push(fn); }
 function libChanged() { libListeners.forEach(function (fn) { try { fn(); } catch (e) {} }); refreshShell(); }
 
@@ -3329,6 +3368,55 @@ function lotCheck(code, batches, exceptId) {
   return { code: c };
 }
 function batchLot(b) { return (b && b.lotCode) || ''; }
+// Lot stickers (2026-10-20; moved here from the barcode tool the same day,
+// her call: the sticker stays with the batch). Plain text, no barcode:
+// "LOT 261020" as large as fits, an optional second line beneath. SVG in
+// mils so it prints at exact size, one sticker per page like a sticker roll.
+var LOT_STICKER_KEY = 'plume-lot-sticker';
+function lotStickerSize() {
+  var s = null;
+  try { s = JSON.parse(localStorage.getItem(LOT_STICKER_KEY) || 'null'); } catch (e) {}
+  return { w: (s && s.w) || 1.5, h: (s && s.h) || 0.5 };
+}
+function lotStickerRemember(w, h) {
+  try { localStorage.setItem(LOT_STICKER_KEY, JSON.stringify({ w: w, h: h })); } catch (e) {}
+}
+function lotStickerSvg(code, line2, wIn, hIn) {
+  var W = wIn * 1000, H = hIn * 1000, pad = Math.min(W, H) * 0.08;
+  var main = 'LOT ' + code;
+  var mainH = line2 ? (H - 2 * pad) * 0.62 : (H - 2 * pad) * 0.8;
+  var mainSize = Math.min(mainH, (W - 2 * pad) / (main.length * 0.62));
+  var subSize = line2 ? Math.min((H - 2 * pad) * 0.26, (W - 2 * pad) / (line2.length * 0.55)) : 0;
+  var gap = line2 ? subSize * 0.35 : 0;
+  var block = mainSize * 0.78 + (line2 ? gap + subSize * 0.78 : 0);
+  var y0 = (H - block) / 2 + mainSize * 0.78;
+  var out = '<text x="' + (W / 2).toFixed(1) + '" y="' + y0.toFixed(1) + '" font-family="Helvetica,Arial,sans-serif" font-size="' + mainSize.toFixed(1) +
+    '" font-weight="700" text-anchor="middle" fill="#000" letter-spacing="' + (mainSize * 0.02).toFixed(1) + '">' + esc(main) + '</text>';
+  if (line2) {
+    out += '<text x="' + (W / 2).toFixed(1) + '" y="' + (y0 + gap + subSize * 0.78).toFixed(1) + '" font-family="Helvetica,Arial,sans-serif" font-size="' + subSize.toFixed(1) +
+      '" text-anchor="middle" fill="#000">' + esc(line2) + '</text>';
+  }
+  return '<svg xmlns="http://www.w3.org/2000/svg" class="bc-lot-svg" viewBox="0 0 ' + W.toFixed(1) + ' ' + H.toFixed(1) + '" width="' + wIn + 'in" height="' + hIn + 'in">' + out + '</svg>';
+}
+// Opens the print window. Returns false when the browser blocked it.
+function printLotStickers(code, line2, wIn, hIn, copies) {
+  copies = Math.max(1, Math.min(500, parseInt(copies, 10) || 1));
+  var svg = lotStickerSvg(code, line2, wIn, hIn), labels = '';
+  for (var i = 0; i < copies; i++) labels += '<div class="lbl">' + svg + '</div>';
+  var css = '@page { size: ' + wIn + 'in ' + hIn + 'in; margin: 0; }' +
+    'html, body { margin:0; padding:0; }' +
+    '.lbl { width:' + wIn + 'in; height:' + hIn + 'in; display:flex; align-items:center; justify-content:center; overflow:hidden; ' +
+      'page-break-after:always; break-after:page; box-sizing:border-box; }' +
+    '.lbl:last-child { page-break-after:auto; break-after:auto; }' +
+    '.lbl svg { display:block; }';
+  var win = window.open('', '_blank');
+  if (!win) return false;
+  win.document.write('<!DOCTYPE html><html><head><title>' + esc('Lot ' + code + ' stickers') + '</title><style>' + css + '</style></head><body>' + labels +
+    '<scr' + 'ipt>window.onload=function(){window.print();};<\/scr' + 'ipt></body></html>');
+  win.document.close();
+  return true;
+}
+
 // The chip: "LOT 261020", a link when href is given.
 function lotChip(code, href) {
   if (!code) return '';
@@ -4076,7 +4164,7 @@ return {
   peek: { open: openPeek, close: closePeek, isOpen: peekIsOpen },
   suppliers: { open: openSuppliers, add: supAdd, edit: supEdit, cancel: supCancel, save: supSave,
                remove: supRemove, match: supMatch, search: supSearch, nameTyped: supNameTyped, usage: supUsage, list: supAll },
-  onLibraryChange: onLibraryChange,
+  onLibraryChange: onLibraryChange, followLinks: followLinks,
   isInstalled: isInstalled, install: install, openPage: openPage, resetAppCache: resetAppCache,
   zoom: zoom, setSize: setSize, sizeChoice: sizeChoice, applySize: applySize,
   tipsOn: tipsOn, setTips: setTips, applyTips: applyTips, nextStep: nextStep,
@@ -4104,7 +4192,7 @@ return {
   fillShortages: fillShortages, fillPull: fillPull, fillReturn: fillReturn,
   makeFill: makeFill, undoFill: undoFill, undoFillText: undoFillText, fmtG: fmtG,
   lotBase: lotBase, lotNorm: lotNorm, lotsInUse: lotsInUse, nextLotCode: nextLotCode, lotCheck: lotCheck,
-  batchLot: batchLot, lotChip: lotChip, drawLot: drawLot, varTitle: varTitle, findVariant: findVariant, batchVersion: batchVersion,
+  batchLot: batchLot, lotChip: lotChip, lotStickerSvg: lotStickerSvg, printLotStickers: printLotStickers, lotStickerSize: lotStickerSize, lotStickerRemember: lotStickerRemember, drawLot: drawLot, varTitle: varTitle, findVariant: findVariant, batchVersion: batchVersion,
   migrateBatches: migrateBatches, logEntryFor: logEntryFor,
   boot: boot
 };

@@ -115,7 +115,7 @@ const PRODUCTS = [
   await page.evaluate("openBatchDetail('bb'); setBatchTab('runs')"); await page.waitForTimeout(300);
   ok('older packaging runs stay as history', await page.evaluate("!document.getElementById('d-legacy').hidden && /Market stock/.test(document.getElementById('d-legacy').innerText)"));
   await page.evaluate("closeDetail()"); await page.waitForTimeout(300);
-  await page.goto(previewUrl('batchlog') + '#b=bs'); await page.reload(); await page.waitForTimeout(600);
+  await page.goto(previewUrl('batchlog') + '#b=bs'); await page.waitForFunction("document.getElementById('m-detail') && document.getElementById('m-detail').classList.contains('open') && !document.getElementById('bp-runs').hidden", null, { timeout: 10000 }).catch(() => {}); await page.waitForTimeout(200);
   ok('#b= opens that batch on Filled (the Back link)', await page.evaluate("document.getElementById('m-detail').classList.contains('open') && findBatch(editingBatchId).id === 'bs' && !document.getElementById('bp-runs').hidden"));
 
   console.log('\n4. Products & Costing: the fill row');
@@ -201,14 +201,14 @@ const PRODUCTS = [
   ok('20 packs need 20 pouches and stop', await page.evaluate("document.getElementById('run-add').disabled") && /Bag \/ pouch · 3 × 4 in · Kraft: needs 20, 13 in stock/.test(await takes()));
 
   console.log('\n9. Arriving from a batch');
-  await page.goto(previewUrl('costing') + '#p=duo&fill=bs'); await page.reload(); await page.waitForTimeout(600);
+  await page.goto(previewUrl('costing') + '#p=duo&fill=bs'); await page.waitForFunction("typeof curId !== 'undefined' && curId === 'duo' && !!document.getElementById('run-units')", null, { timeout: 10000 }).catch(() => {}); await page.waitForTimeout(300);
   ok('the product opens on Fills', await page.evaluate("curId === 'duo' && !document.getElementById('pp-runs').hidden"));
   ok('with that batch chosen for its part, the other part on its own oldest', (await page.evaluate("Array.from(document.querySelectorAll('#run-parts select')).map(s => s.value).join()")) === 'bo,bs');
   ok('the cursor in Packs, and a link back to the batch', await page.evaluate("document.activeElement.id === 'run-units'") &&
      (await page.evaluate("var a=document.getElementById('run-back'); !a.hidden && a.getAttribute('href') === 'plume-batchlog.html#b=bs' && /Back to Serum, October/.test(a.textContent)")));
   await page.evaluate("leaveEditor(); openProduct('p10'); setEdTab('runs')"); await page.waitForTimeout(150);
   ok('another product does not keep the link or the choice', await page.evaluate("document.getElementById('run-back').hidden") && (await page.evaluate("document.getElementById('run-b0').value")) === 'ss');
-  await page.goto(previewUrl('costing') + '#p=p5'); await page.reload(); await page.waitForTimeout(500);
+  await page.goto(previewUrl('costing') + '#p=p5'); await page.waitForFunction("typeof curId !== 'undefined' && curId === 'p5'", null, { timeout: 10000 }).catch(() => {}); await page.waitForTimeout(300);
   ok('#p= alone opens a product on Fills', await page.evaluate("curId === 'p5' && !document.getElementById('pp-runs').hidden && document.getElementById('run-back').hidden"));
   await ctx.close();
 

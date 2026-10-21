@@ -43,7 +43,9 @@ const PRODUCTS = [
 
   console.log('\n1. Barcode panel');
   await page.evaluate("openBarcode('W4OZ', 'Whip 4 oz')");
-  await page.waitForTimeout(200);
+  // The panel slides in; wait for it to arrive rather than a fixed 200 ms,
+  // which a slow runner sometimes missed.
+  await page.waitForFunction("(function(){var r=document.querySelector('#m-barcode .modal').getBoundingClientRect(); return Math.round(r.right) === window.innerWidth;})()", null, { timeout: 5000 }).catch(() => {});
   ok('it opens as a panel at the right edge', await page.evaluate(
     "var r=document.querySelector('#m-barcode .modal').getBoundingClientRect(); document.getElementById('m-barcode').classList.contains('open') && Math.round(r.right) === window.innerWidth && r.top === 0"));
   const on = () => page.evaluate("Array.from(document.querySelectorAll('#m-barcode .ps-chip.on')).map(e => e.getAttribute('data-bc-pill') || e.textContent.trim()).join('|')");
