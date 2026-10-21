@@ -168,8 +168,8 @@ console.log('\n1. Units on hand and kits, in core');
   await page.waitForTimeout(200);
   ok('it opens the panel with every active product and what is on hand', await page.evaluate(
     "document.querySelectorAll('#st-rows .st-row').length === 5 && document.querySelector('#st-rows .st-row[data-pid=\"full\"] .st-have').textContent === '8'"));
-  ok('the reasons are Sold, Gifted, Marketing, Damaged, Returned, then Reconcile', (await page.evaluate(
-    "Array.from(document.querySelectorAll('.st-modes .ps-chip')).map(function(b){return b.firstChild.textContent;}).join(',')")) === 'Sold,Gifted,Marketing,Damaged,Returned,Reconcile');
+  ok('the reasons are Sold, Gifted, Marketing, Damaged, Returned, then Consign and Reconcile', (await page.evaluate(
+    "Array.from(document.querySelectorAll('.st-modes .ps-chip')).map(function(b){return b.firstChild.textContent;}).join(',')")) === 'Sold,Gifted,Marketing,Damaged,Returned,Consign,Reconcile');
   ok('Save waits until something is entered', await page.evaluate("document.getElementById('st-save').disabled"));
   const type = async (pid, v) => { await page.fill('#st-rows input[data-pid="' + pid + '"]', v); await page.dispatchEvent('#st-rows input[data-pid="' + pid + '"]', 'input'); };
   await type('full', '3');
