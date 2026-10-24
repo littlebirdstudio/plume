@@ -35,7 +35,7 @@ var Plume = (function () {
 // (v0.4 / v0.5 / v0.6 across five modules). BUMP IT IN EVERY PULL REQUEST,
 // core change or not: it is how "is this the update I just merged?" is
 // answered by looking, and browsers cache .js files stubbornly.
-var VERSION = '1.40';
+var VERSION = '1.41';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -2790,6 +2790,24 @@ function inciMerged(entries) {
   return (entries || []).filter(function (e) { return e.sources.length > 1; });
 }
 
+// ══ Certifications (2026-10-24) ═══════════════════════
+// Ticked on a lot (a purchase), not the ingredient: the same oil from two
+// suppliers can differ. Each is a plain boolean on the lot, so the lot form's
+// data-field read-back keeps them; 'organic' is the lot's original Organic
+// tick. certOther holds anything else she types (Fair for Life, say).
+var CERTS = [
+  { key: 'organic', label: 'Organic' },
+  { key: 'cosmos',  label: 'COSMOS' },
+  { key: 'ecocert', label: 'Ecocert' },
+  { key: 'natrue',  label: 'NATRUE' }
+];
+function lotCerts(lot) {
+  if (!lot) return [];
+  var out = CERTS.filter(function (c) { return lot[c.key] === true || lot[c.key] === 'true'; }).map(function (c) { return c.label; });
+  String(lot.certOther || '').split(',').forEach(function (t) { t = t.trim(); if (t) out.push(t); });
+  return out;
+}
+
 // ══ Stock solutions (2026-10-21) ══════════════════════
 // A stock solution (a 1% hyaluronic acid solution, say) is made as a batch
 // and then used as an ingredient in other formulations. Its formulation has
@@ -4608,6 +4626,7 @@ function undoStock(p, id) {
 return {
   VERSION: VERSION,
   inciSplit: inciSplit, inciMerge: inciMerge, inciMerged: inciMerged,
+  CERTS: CERTS, lotCerts: lotCerts,
   STOCK_TYPE: STOCK_TYPE, isStockType: isStockType, stockIngFor: stockIngFor, stockFormFor: stockFormFor,
   stockParts: stockParts, stockExpand: stockExpand, stockLabelItems: stockLabelItems, stockWithParts: stockWithParts, stockInci: stockInci, stockNewIng: stockNewIng,
   Store: Store, KEYS: KEYS, KEY_LABELS: KEY_LABELS,

@@ -42,7 +42,7 @@ const PRODUCTS = [
   ok('Ingredients: Start here, with Add an ingredient', /Start here/.test(await page.evaluate("document.getElementById('tbody').innerText")) &&
      /Add an ingredient/.test(await page.evaluate("document.querySelector('#tbody .ns-go').textContent")));
   await page.evaluate("document.querySelector('#tbody .ns-go').click()"); await page.waitForTimeout(200);
-  ok('and the button opens a new ingredient', await page.evaluate("document.getElementById('modal-add').classList.contains('open') || !!document.querySelector('.modal-ov.open')"));
+  ok('and the button opens Quick add for a new ingredient', await page.evaluate("document.getElementById('modal-quick').classList.contains('open') || !!document.querySelector('.modal-ov.open')"));
   await page.goto(previewUrl('packaging')); await page.waitForTimeout(500);
   ok('Packaging: add the packaging you buy', /Add the packaging you buy/.test(await page.evaluate("document.getElementById('tbody').innerText")));
   await page.goto(previewUrl('formulations')); await page.waitForTimeout(500);
