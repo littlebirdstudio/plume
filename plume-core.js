@@ -2797,7 +2797,10 @@ function inciMerged(entries) {
 // tick. certOther holds anything else she types (Fair for Life, say).
 var CERTS = [
   { key: 'organic', label: 'Organic' },
-  { key: 'cosmos',  label: 'COSMOS' },
+  // COSMOS keeps two lists (her point, 2026-10-24): Certified raw materials
+  // have organic content; Approved ones meet the standard without it.
+  { key: 'cosmosCert',     label: 'COSMOS Certified' },
+  { key: 'cosmosApproved', label: 'COSMOS Approved' },
   { key: 'ecocert', label: 'Ecocert' },
   { key: 'natrue',  label: 'NATRUE' }
 ];

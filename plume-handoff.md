@@ -3302,11 +3302,16 @@ added; a typed supplier not saved joins `aerie-suppliers-v1`
 (`qaEnsureSupplier`), so the lot editor's supplier select shows it. A
 backdrop click with something typed asks first.
 
-**Certifications** (her ask), on the LOT: core `Plume.CERTS` (organic, cosmos,
-ecocert, natrue: booleans on the lot; `organic` is the old Organic tick) and
+**Certifications** (her ask), on the LOT: core `Plume.CERTS` (organic,
+cosmosCert, cosmosApproved, ecocert, natrue: booleans on the lot; `organic` is
+the old Organic tick; COSMOS split in two at her point: Certified raw
+materials have organic content, Approved ones do not) and
 `certOther` (comma list); `Plume.lotCerts(lot)` gives the labels. Lot editor:
 a Certifications line replaces the Organic tick under Brand. Shown on the
-profile header (lot in use) and lot cards. Not yet anywhere else.
+profile header (lot in use) and lot cards. Not yet anywhere else. Next: marking them on product labels (her choice):
+per product, tick which certifications to mark, each with its own symbol
+(*, †, ‡) and an editable footnote under the INCI list, read from each
+ingredient's lot in use.
 
 **Tests:** new `test/test-quickadd.js` (28); `test-next.js` expects Quick add
 from the empty state. 30 suites.
