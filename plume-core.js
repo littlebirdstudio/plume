@@ -2961,6 +2961,10 @@ function rtStyle() {
   var st = document.createElement('style'); st.id = 'plume-rt-css'; st.textContent = RT_CSS; document.head.appendChild(st);
 }
 
+// Recommended % as shown beside its label: the number or range alone, since
+// the label already says % (her call, 2026-10-24). "2–5%" reads "2–5".
+function recText(v) { return String(v == null ? '' : v).replace(/\s*%\s*/g, '').trim(); }
+
 // ══ Certifications (2026-10-24) ═══════════════════════
 // Ticked on a lot (a purchase), not the ingredient: the same oil from two
 // suppliers can differ. Each is a plain boolean on the lot, so the lot form's
@@ -4803,7 +4807,7 @@ function undoStock(p, id) {
 return {
   VERSION: VERSION,
   inciSplit: inciSplit, inciMerge: inciMerge, inciMerged: inciMerged,
-  CERTS: CERTS, lotCerts: lotCerts, activeLot: activeLot,
+  CERTS: CERTS, lotCerts: lotCerts, activeLot: activeLot, recText: recText,
   rt: { toHtml: rtToHtml, plain: rtPlain, fromEl: rtFromEl, editor: rtEditor, attach: rtAttach, refresh: rtRefresh, refreshAll: rtRefreshAll },
   STOCK_TYPE: STOCK_TYPE, isStockType: isStockType, stockIngFor: stockIngFor, stockFormFor: stockFormFor,
   stockParts: stockParts, stockExpand: stockExpand, stockLabelItems: stockLabelItems, stockWithParts: stockWithParts, stockInci: stockInci, stockNewIng: stockNewIng,

@@ -2267,7 +2267,7 @@ function buildRow(l, idx, ing, bs, isAddin) {
       'percentage still counts toward the total, so the formula is short until you ' +
       'replace it or remove the line.</div>';
   }
-  if (!isAddin && ing.useRate) row += '<div class="rec-note">Recommended ' + esc(ing.useRate) + '</div>';
+  if (!isAddin && ing.useRate) row += '<div class="rec-note">Recommended %: ' + esc(Plume.recText(ing.useRate)) + '</div>';
   var solNote = isAddin ? '' : solubilityNote(ing, ePh);
   if (solNote) row += '<div class="sol-note">' + esc(solNote) + '</div>';
   if (sst === 'partial') row += '<div class="stock-note">' + Math.round(sg) + 'g on hand &middot; need ' + gNum.toFixed(1) + 'g</div>';
@@ -4249,9 +4249,6 @@ function showIngDetail(ingId) {
   var ing = ings.find(function(i) { return i.id === ingId; });
   if (!ing) return;
   document.getElementById('id-name').textContent = ing.name;
-  var lots  = ing.lots || (ing.cost ? [{ costPerG: ing.cost }] : []);
-  var costs = lots.map(function(l) { return parseFloat(l.costPerG); }).filter(function(c) { return !isNaN(c) && c > 0; });
-  var bc    = costs.length ? Math.min.apply(null, costs) : null;
   var html  = '<div style="font-size:12px;font-style:italic;color:var(--ink-lighter);margin-bottom:0.5rem">' + esc(ing.inci) + '</div>';
   var cats = Plume.funcCats(ing);
   if (cats.length) {
@@ -4270,12 +4267,14 @@ function showIngDetail(ingId) {
   html += '<div class="id-field"><label>Phase</label><p>' + ing.phase + '</p></div>';
   html += '<div class="id-field"><label>Restricted</label><p>' + (ing.flag==='yes' ? 'Yes -- has limits' : 'No') + '</p></div>';
   html += '<div class="id-field"><label>Usage rate</label><p>' + (ing.min||ing.max ? (ing.min||'0') + '% -- ' + (ing.max||'100') + '%' : '--') + '</p></div>';
-  html += '<div class="id-field"><label>Best cost/g</label><p>' + (bc !== null ? '$' + bc.toFixed(4) : '--') + '</p></div>';
-  // Solubility and recommended usage (2026-10-24, her ask).
+  // What helps write the instructions (2026-10-24, her call): solubility and
+  // its note, and the effective pH range. Cost and suppliers left the popup;
+  // the recommended % is on the line itself.
   var SOL = { water: 'Water-soluble', oil: 'Oil-soluble', both: 'Water and oil', 'water-dispersible': 'Disperses in water', 'oil-dispersible': 'Disperses in oil' };
-  html += '<div class="id-field"><label>Solubility</label><p>' + (ing.solubility ? esc(SOL[ing.solubility] || ing.solubility) : '--') + '</p></div>';
-  html += '<div class="id-field"><label>Recommended</label><p>' + (ing.useRate ? esc(ing.useRate) : '--') + '</p></div>';
+  html += '<div class="id-field"><label>Effective pH</label><p>' + (ing.optimalPh ? esc(ing.optimalPh) : '--') + '</p></div>';
   html += '</div>';
+  html += '<div class="id-field"><label>Solubility</label><p>' + (ing.solubility ? esc(SOL[ing.solubility] || ing.solubility) : '--') +
+    (ing.solNote ? '<span style="display:block;font-size:12px;color:var(--ink-light);margin-top:2px">' + esc(ing.solNote) + '</span>' : '') + '</p></div>';
   // Stock on hand -- sits between the static-facts grid and the longer fields
   // because it changes with use and is the most actionable piece of info.
   var sgD = stockG(ing);
@@ -4286,13 +4285,6 @@ function showIngDetail(ingId) {
   if (ing.function)     html += '<div class="id-field"><label>Function</label><p>' + esc(ing.function) + '</p></div>';
   if (ing.dermalLimits) html += '<div class="id-field"><label>Dermal limits</label><p style="white-space:pre-wrap;line-height:1.6">' + esc(ing.dermalLimits) + '</p></div>';
   if (ing.notes)        html += '<div class="id-field"><label>Notes</label><div style="line-height:1.6;font-size:13px">' + Plume.rt.toHtml(ing.notes) + '</div></div>';
-  if (lots.length) {
-    html += '<div class="id-field"><label>Suppliers</label>';
-    lots.forEach(function(l) {
-      if (l.supplier || l.costPerG) html += '<p style="font-size:12px;color:var(--ink-light)">' + esc(l.supplier||'--') + (l.costPerG ? ' &middot; $' + parseFloat(l.costPerG).toFixed(4) + '/g' : '') + '</p>';
-    });
-    html += '</div>';
-  }
   if (ing.link) html += '<div class="id-field"><label>Resource</label><p><a href="' + ing.link + '" target="_blank" rel="noopener" style="color:var(--sage)">Open link</a></p></div>';
   html += '<div style="margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--cream-border);text-align:right"><a href="plume-ingredients.html#ing=' + encodeURIComponent(ing.id) + '" target="_blank" rel="noopener" style="font-size:12px;color:var(--sage);text-decoration:none">View in library &rarr;</a></div>';
   document.getElementById('id-body').innerHTML = html;

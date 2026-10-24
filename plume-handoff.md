@@ -3358,14 +3358,22 @@ changes). Every field kept its id; the old props/soap folding code is gone
 a field in another tab open that tab (`editCurrent('stock')`).
 
 **New fields (her asks):** `solubility` ('' | water | oil | both |
-water-dispersible | oil-dispersible), separate from phase; `useRate` (free
-text, "0.5%" or "2–5%"), separate from min/max. **Chelator** joins
+water-dispersible | oil-dispersible), separate from phase, with `solNote`
+(how to get it in: "heat to dissolve", "disperse in glycerin first"), shown
+under it on the page and in the popup; `useRate` (free text), separate from
+min/max, labelled **Recommended %** everywhere (her call), its value shown
+without the % sign (`Plume.recText`: "2–5%" reads "2–5"). The editor's (and
+Quick add's) phase list gains **Active** and **Other**: Formulations already
+had both, and six starter items are Active, but the editor's select lacked
+them, so editing such an ingredient silently dropped its phase. **Chelator** joins
 `FUNCTION_CATEGORIES` after Preservative. **Formulations:** a new skincare
 line starts at the recommended usage, the low end of a range
 (`recStartPct`); a line shows "Recommended …"; `solubilityNote` warns
 (gently) when an oil-soluble or oil-dispersible ingredient sits in the water
 phase, or a water one in the oil phase; cool-down takes either. The
-ingredient popup (`showIngDetail`) shows solubility and recommended usage.
+ingredient popup (`showIngDetail`) is for writing instructions (her call):
+it shows the effective pH range and solubility with its note; best cost/g,
+the supplier list and recommended % left it (the % is on the line).
 
 **Rich text (core `Plume.rt`).** Bold, italic, bulleted lists in the lowdown,
 What I had in mind, formulating notes, expanded details and claims. Stored as
@@ -3393,6 +3401,6 @@ several ingredients only when every one does. Footnotes for the marks used
 appear under the list and in Copy. Not applied to "Use my own text". Kits
 use each part's own marks. Saved, duplicated, exported with the product.
 
-**Tests:** new `test/test-ingpage.js` (43); `test-costs.js` opens the Stock
+**Tests:** new `test/test-ingpage.js` (44); `test-costs.js` opens the Stock
 tab. 31 suites.
 

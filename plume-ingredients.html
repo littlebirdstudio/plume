@@ -1213,6 +1213,7 @@
 .ds-h .detail-section-title { margin-bottom: 0; color: var(--ink); font-weight: 600; }
 .ds-count { font-size: 12px; color: var(--ink-lighter); }
 .ds-count.full { color: var(--sage-dark); }
+.ds-sub { display: block; font-size: 12px; color: var(--ink-light); margin-top: 2px; line-height: 1.45; }
 .ds-edit { margin-left: auto; font: inherit; font-size: 12.5px; font-weight: 500; color: var(--bark); background: none; border: 0; border-radius: 6px; padding: 5px 10px; cursor: pointer; min-height: 30px; }
 .ds-edit:hover { background: var(--cream); color: var(--bark-dark); }
 .ds-empty { font-size: 12.5px; color: var(--ink-light); background: var(--cream); border-radius: 8px; padding: 8px 12px; line-height: 1.5; margin-top: 2px; }
@@ -1408,7 +1409,9 @@
             <option value="water">Water</option>
             <option value="oil">Oil</option>
             <option value="cool-down">Cool-down</option>
+            <option value="active">Active</option>
             <option value="add-in">Add-in</option>
+            <option value="other">Other</option>
           </select>
         </div>
         <div class="field">
@@ -1422,10 +1425,14 @@
             <option value="oil-dispersible">Disperses in oil</option>
           </select>
         </div>
+        <div class="field form-full">
+          <label for="f-solnote">Solubility note <span class="hint">— how to get it in, for writing instructions</span></label>
+          <input type="text" id="f-solnote" placeholder="e.g. heat to 70 °C to dissolve; disperse in glycerin first">
+        </div>
         <div class="form-full form-row3">
           <div class="field">
-            <label for="f-userate">Recommended usage <span class="hint">— typical</span></label>
-            <input type="text" id="f-userate" placeholder="e.g. 0.5% or 2–5%">
+            <label for="f-userate">Recommended % <span class="hint">— typical</span></label>
+            <input type="text" id="f-userate" placeholder="e.g. 0.5 or 2–5">
           </div>
           <div class="field">
             <label for="f-min">Min usage %</label>
@@ -1436,7 +1443,7 @@
             <input type="number" id="f-max" placeholder="100" step="0.01" min="0">
           </div>
         </div>
-        <div class="form-full ed-hint">Recommended is the usual amount; min and max are the limits Formulations warns about.</div>
+        <div class="form-full ed-hint">Recommended % is the usual amount, and where a new line in a formulation starts; min and max are the limits Formulations warns about.</div>
       </div>
     </div>
 
@@ -1642,7 +1649,9 @@
             <option value="water">Water</option>
             <option value="oil">Oil</option>
             <option value="cool-down">Cool-down</option>
+            <option value="active">Active</option>
             <option value="add-in">Add-in</option>
+            <option value="other">Other</option>
           </select>
         </div>
         <div class="field"><label for="qa-min">Min usage %</label><input type="number" id="qa-min" step="0.01" min="0" placeholder="0"></div>
@@ -2994,8 +3003,8 @@ function viewIngredient(id) {
   var cpg = bestCpg(i);
   var glanceOpt = [
     { label: 'Usage rate', v: (i.min || i.max) ? (i.min || '0') + '% – ' + (i.max || '100') + '%' : '', name: 'usage rate', tab: 'basics', id: 'f-min' },
-    { label: 'Recommended usage', v: i.useRate, name: 'recommended usage', tab: 'basics', id: 'f-userate' },
-    { label: 'Solubility', v: SOL[i.solubility] || i.solubility, name: 'solubility', tab: 'basics', id: 'f-solubility' },
+    { label: 'Recommended %', v: Plume.recText(i.useRate), name: 'recommended %', tab: 'basics', id: 'f-userate' },
+    { label: 'Solubility', v: SOL[i.solubility] || i.solubility, name: 'solubility', tab: 'basics', id: 'f-solubility', note: i.solNote },
     { label: 'Substitutes', v: i.substitution, name: 'substitutes', tab: 'glance', id: 'f-substitution' },
     { label: 'Secondary functions', v: i.function2, name: 'secondary functions', tab: 'glance', id: 'f-function2' }
   ];
@@ -3005,7 +3014,7 @@ function viewIngredient(id) {
       '<div class="detail-field"><label>The lowdown</label>' + noteEditHtml(i, 'chooseWhen') + '</div>' +
     '</div>' +
     '<div class="detail-grid">' +
-      gFilled.map(function (f) { return field(f.label, esc(String(f.v))); }).join('') +
+      gFilled.map(function (f) { return field(f.label, esc(String(f.v)) + (f.note ? '<small class="ds-sub">' + esc(f.note) + '</small>' : '')); }).join('') +
       field('Used in', typeof PlumeCheat !== 'undefined' ? PlumeCheat.usedInHtml(PlumeCheat.usageMap()[i.id] || [], 8) : '—') +
       field('Total stock', stockTxt) +
       field('Price per gram', cpg !== null ? (cpg === 0 && i.noCost ? 'in-house ($0)' : '$' + cpg.toFixed(4)) : dash) +
@@ -3415,6 +3424,7 @@ function openAdd() {
   document.getElementById('f-choose').value  = '';
   renderFuncChips([]);
   document.getElementById('f-solubility').value = '';
+  document.getElementById('f-solnote').value = '';
   document.getElementById('f-userate').value = '';
   loadLinks([]);
   document.getElementById('f-lowstock-unit').value = 'g';
@@ -3471,6 +3481,7 @@ function editCurrent(tab, focusId) {
   document.getElementById('f-general-info').value       = i.generalInfo       || '';
   document.getElementById('f-claims').value             = i.claims            || '';
   document.getElementById('f-solubility').value = i.solubility || '';
+  document.getElementById('f-solnote').value    = i.solNote    || '';
   document.getElementById('f-userate').value    = i.useRate    || '';
   syncRestrictField();
   loadLinks(migrateLinks(i));
@@ -3543,6 +3554,7 @@ function saveIngredient(keepOpen) {
     inci:     inci,
     phase:    document.getElementById('f-phase').value,
     solubility: document.getElementById('f-solubility').value,
+    solNote:  document.getElementById('f-solnote').value.trim(),
     useRate:  document.getElementById('f-userate').value.trim(),
     flag:     document.getElementById('f-restricted').checked ? 'yes' : 'no',
     noCost:   document.getElementById('f-nocost').checked,
@@ -4515,7 +4527,7 @@ document.querySelectorAll('.modal-overlay').forEach(function(el) {
 // are serialized to a stable string so order-equivalent rows compare
 // equal.
 var _editFormSnapshot = null;
-var EDIT_FIELD_IDS = ['f-name','f-inci','f-phase','f-solubility','f-userate','f-min','f-max',
+var EDIT_FIELD_IDS = ['f-name','f-inci','f-phase','f-solubility','f-solnote','f-userate','f-min','f-max',
   'f-purpose','f-choose','f-function-notes','f-function2','f-notes',
   'f-density','f-lowstock','f-lowstock-unit',
   'f-absorption-rate','f-heat-stability','f-melting-point','f-oxidation-stability',

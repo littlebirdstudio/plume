@@ -22,7 +22,7 @@ const INGS = [
     lots: [lot('j1', 900, 0.038, { organic: true, cosmosCert: true, buyLink: 'https://example.com/jojoba' }), lot('j2', 100, 0.05)] },
   { id: 'ir', name: 'Rosehip seed oil', inci: 'Rosa Canina Seed Oil', phase: 'oil', lots: [lot('r1', 250, 0.088, { organic: true })] },
   { id: 'ie', name: 'Vitamin E', inci: 'Tocopherol', phase: 'oil', lots: [lot('e1', 100, 0.12)] },
-  { id: 'ig', name: 'Glycerin', inci: 'Glycerin', phase: 'water', solubility: 'water', useRate: '2–5%', lots: [lot('g1', 500, 0.01, { natural: true })] },
+  { id: 'ig', name: 'Glycerin', inci: 'Glycerin', phase: 'water', solubility: 'water', solNote: 'Warm to dissolve', useRate: '2–5%', lots: [lot('g1', 500, 0.01, { natural: true })] },
   { id: 'im', name: 'Mystery blend', inci: 'Glycerin, Tocopherol', phase: 'water', lots: [lot('m1', 50, 0.2)] }
 ];
 const V = (vid, lines) => ({ vid, num: 1, label: '', status: 'draft', lines, instructions: '', batchSize: 100, usageLog: [], history: [] });
@@ -63,7 +63,7 @@ const getIngs = "JSON.parse(localStorage.getItem('aerie-ingredients-v2'))";
   console.log('\n2. The page');
   await page.evaluate("viewIngredient('ij')"); await page.waitForTimeout(250);
   const body = await page.evaluate("document.getElementById('d-body').innerText.replace(/\\s+/g, ' ')");
-  ok('At a glance shows recommended usage and solubility, apart from the usage rate', /USAGE RATE 1% – 100%/i.test(body) && /RECOMMENDED USAGE 5–30%/i.test(body) && /SOLUBILITY Oil-soluble/i.test(body), body.slice(0, 400));
+  ok('At a glance shows recommended usage and solubility, apart from the usage rate', /USAGE RATE 1% – 100%/i.test(body) && /RECOMMENDED % 5–30 /i.test(body) && /SOLUBILITY Oil-soluble/i.test(body), body.slice(0, 400));
   ok('empty fields fold into one line', /Not filled in: substitutes, secondary functions\./.test(body), body);
   ok('Properties says how full it is, and names what is missing', /PROPERTIES & CHARACTERISTICS 2 of 10 filled/i.test(body) && /Not filled in: heat stability, melting point, oxidation stability, scent, effective pH range, dermal limits, claims, density/.test(body), body);
   await page.evaluate("viewIngredient('ir')"); await page.waitForTimeout(150);
@@ -91,6 +91,7 @@ const getIngs = "JSON.parse(localStorage.getItem('aerie-ingredients-v2'))";
   ok('typing in a tab gives it a dot', await page.evaluate("!document.querySelector('#ed-tabs [data-tab=soap] .ed-dot').hidden"));
   ok('Chelator is a function', await page.evaluate("Array.from(document.querySelectorAll('#f-function-cats input')).some(function (b) { return b.value === 'Chelator'; })"));
   ok('solubility and recommended usage load', await page.evaluate("document.getElementById('f-solubility').value === 'oil' && document.getElementById('f-userate').value === '5–30%'"));
+  ok('the phase list includes Active and Other', await page.evaluate("Array.from(document.getElementById('f-phase').options).map(function (o) { return o.value; }).join() === 'water,oil,cool-down,active,add-in,other'"));
   ok('the text-heavy fields are rich boxes, the hidden field keeping the marks', await page.evaluate("document.getElementById('f-choose').style.display === 'none' && document.querySelectorAll('#modal-add .rt-wrap').length === 5 && !!document.querySelector('#modal-add .rt-wrap .rt-ed strong')"));
   // Bold a word the way the toolbar does, then save.
   await page.evaluate(`(function () {
@@ -99,11 +100,12 @@ const getIngs = "JSON.parse(localStorage.getItem('aerie-ingredients-v2'))";
     ed.innerHTML = '<div>Now <b>bolder</b></div><ul><li>a</li></ul>';
     ed.dispatchEvent(new Event('input', { bubbles: true }));
     document.getElementById('f-solubility').value = 'both';
+    document.getElementById('f-solnote').value = 'Melt with the oils';
     document.getElementById('f-userate').value = '10%';
     saveIngredient(false);
   })()`); await page.waitForTimeout(250);
   let ij = (await page.evaluate(getIngs)).find(i => i.id === 'ij');
-  ok('saving keeps the marks, solubility and recommended usage', ij.notes === 'Now **bolder**\n- a' && ij.solubility === 'both' && ij.useRate === '10%' && ij.soap && ij.soap.naoh === 0.07, ij);
+  ok('saving keeps the marks, solubility and recommended usage', ij.notes === 'Now **bolder**\n- a' && ij.solubility === 'both' && ij.solNote === 'Melt with the oils' && ij.useRate === '10%' && ij.soap && ij.soap.naoh === 0.07, ij);
   ok('fields it did not touch keep their marks', ij.chooseWhen === '**Very stable** and *never* rancid', ij.chooseWhen);
 
   console.log('\n4. Typing straight onto the page');
@@ -118,14 +120,14 @@ const getIngs = "JSON.parse(localStorage.getItem('aerie-ingredients-v2'))";
   await page.goto(previewUrl('formulations')); await page.waitForTimeout(400);
   await page.evaluate("openFormula('fm'); addIng('ig')"); await page.waitForTimeout(200);
   ok('a new line starts at the recommended usage (the low end of a range)', await page.evaluate("fLines[fLines.length - 1].pct === '2'"));
-  ok('and the line shows it', /Recommended 2–5%/.test(await page.evaluate("document.getElementById('phase-groups').innerText")));
+  ok('and the line shows it, as Recommended %', /Recommended %: 2–5/.test(await page.evaluate("document.getElementById('phase-groups').innerText")));
   await page.evaluate("addIng('ir')"); await page.waitForTimeout(100);
   ok('an ingredient with no recommendation starts empty', await page.evaluate("fLines[fLines.length - 1].pct === ''"));
   await page.evaluate("fLines[0].phase = 'oil'; renderLines()"); await page.waitForTimeout(100);
   ok('a water-soluble ingredient in the oil phase gets a gentle note', /Water-soluble, but in the oil phase/.test(await page.evaluate("document.getElementById('phase-groups').innerText")));
   await page.evaluate("fLines[0].phase = 'cool-down'; renderLines()");
   ok('the cool-down phase takes either', !/Water-soluble, but/.test(await page.evaluate("document.getElementById('phase-groups').innerText")));
-  ok('the ingredient popup shows solubility and recommended usage', await page.evaluate("showIngDetail('ig'); /Solubility\\s*Water-soluble/i.test(document.getElementById('id-body').innerText) && /Recommended\\s*2–5%/i.test(document.getElementById('id-body').innerText)"));
+  ok('the ingredient popup shows solubility with its note and the effective pH, not cost, suppliers or recommended', await page.evaluate("(function () { showIngDetail('ig'); var t = document.getElementById('id-body').innerText; return /Solubility\\s*Water-soluble\\s*Warm to dissolve/i.test(t) && /Effective pH\\s*--/i.test(t) && !/cost/i.test(t) && !/Suppliers/i.test(t) && !/Recommended/i.test(t); })()"), await page.evaluate("document.getElementById('id-body').innerText"));
   ok('the ingredient popup shows the formatted lowdown', await page.evaluate("showIngDetail('ij'); !!document.querySelector('strong') && /Very stable/.test(document.body.innerText)"));
 
   console.log('\n6. Label marks');
