@@ -3404,3 +3404,13 @@ use each part's own marks. Saved, duplicated, exported with the product.
 **Tests:** new `test/test-ingpage.js` (44); `test-costs.js` opens the Stock
 tab. 31 suites.
 
+**Offered and not chosen (session 25):** certifications as an Ingredients list
+filter, a formulation certification summary, and on the batch Trace. Her
+call: "I just want to be able to mark the ingredients in the labels." Label
+marks only.
+
+**Where things stand (end of session 25):** PRs #44 (stock solutions), #45
+(Quick add, certifications), #46 (purchase link) merged. PR #47 (this
+section: ingredient page, tabs, rich text, label marks, solubility,
+Recommended %) open; she continues in a new chat.
+
