@@ -3336,7 +3336,11 @@ price per gram), Properties & characteristics ("N of 10 filled"; density and
 restricted use always shown), My formulating notes, Expanded ingredient
 details (word count, three-line preview, Read more: `toggleGeneralInfo`),
 Resource links, Soap data, Supplier lots. Empty fields fold into one "Not
-filled in: …. Add" line. Every section's Edit calls `editCurrent(tab)`. Lots
+filled in: …" line where each field name is its own link to the tab that
+holds it, with the cursor in that field (`editCurrent(tab, focusId)`,
+`focusIngField`; her catch: usage rate lives in Basics, not At a glance).
+Every section's Edit (reads "Add" when the section is empty; same action)
+calls `editCurrent(tab)`. Lots
 are a compact table (`.lt-row`): supplier with active / reference-only tags,
 brand, purchase and order #, certification badges, made-in-house / decommit
 notes; lot #, received and best by, qty, cost/g, Reorder / Receipt, Set as
@@ -3360,7 +3364,8 @@ text, "0.5%" or "2–5%"), separate from min/max. **Chelator** joins
 line starts at the recommended usage, the low end of a range
 (`recStartPct`); a line shows "Recommended …"; `solubilityNote` warns
 (gently) when an oil-soluble or oil-dispersible ingredient sits in the water
-phase, or a water one in the oil phase; cool-down takes either.
+phase, or a water one in the oil phase; cool-down takes either. The
+ingredient popup (`showIngDetail`) shows solubility and recommended usage.
 
 **Rich text (core `Plume.rt`).** Bold, italic, bulleted lists in the lowdown,
 What I had in mind, formulating notes, expanded details and claims. Stored as
@@ -3388,6 +3393,6 @@ several ingredients only when every one does. Footnotes for the marks used
 appear under the list and in Copy. Not applied to "Use my own text". Kits
 use each part's own marks. Saved, duplicated, exported with the product.
 
-**Tests:** new `test/test-ingpage.js` (40); `test-costs.js` opens the Stock
+**Tests:** new `test/test-ingpage.js` (43); `test-costs.js` opens the Stock
 tab. 31 suites.
 

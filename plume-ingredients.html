@@ -1216,7 +1216,8 @@
 .ds-edit { margin-left: auto; font: inherit; font-size: 12.5px; font-weight: 500; color: var(--bark); background: none; border: 0; border-radius: 6px; padding: 5px 10px; cursor: pointer; min-height: 30px; }
 .ds-edit:hover { background: var(--cream); color: var(--bark-dark); }
 .ds-empty { font-size: 12.5px; color: var(--ink-light); background: var(--cream); border-radius: 8px; padding: 8px 12px; line-height: 1.5; margin-top: 2px; }
-.ds-empty button { font: inherit; font-weight: 500; color: var(--sage-dark); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; }
+.ds-empty button { font: inherit; font-weight: 500; color: var(--sage-dark); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; text-decoration-color: var(--sage-border); text-underline-offset: 2px; }
+.ds-empty button:hover { color: var(--ink); text-decoration-color: currentColor; }
 .rt-text { font-size: 14px; color: var(--ink); line-height: 1.6; }
 .rt-text strong { font-weight: 600; }
 .notes-box.rt-text { white-space: normal; font-size: 13px; }
@@ -2977,7 +2978,11 @@ function viewIngredient(id) {
         (o.count ? '<span class="ds-count' + (o.full ? ' full' : '') + '">' + o.count + '</span>' : '') +
         '<button type="button" class="ds-edit" onclick="editCurrent(\'' + o.tab + '\')">' + (o.editLabel || 'Edit') + '</button></div>' +
       (o.body || '') +
-      (o.empties && o.empties.length ? '<div class="ds-empty">Not filled in: ' + o.empties.join(', ') + '. <button type="button" onclick="editCurrent(\'' + o.tab + '\')">Add</button></div>' : '') +
+      // Each missing field is its own link, to the tab that holds it and the
+      // field itself (her catch: usage rate sits in Basics, not At a glance).
+      (o.empties && o.empties.length ? '<div class="ds-empty">Not filled in: ' + o.empties.map(function (f) {
+        return '<button type="button" onclick="editCurrent(\'' + (f.tab || o.tab) + '\', \'' + f.id + '\')" title="Add ' + esc(f.name) + '">' + esc(f.name) + '</button>';
+      }).join(', ') + '.</div>' : '') +
     '</div>';
   };
   var rich = function (v) { return '<div class="rt-text">' + Plume.rt.toHtml(v) + '</div>'; };
@@ -2988,11 +2993,11 @@ function viewIngredient(id) {
   var stockTxt = (tg !== null ? tg.toFixed(0) + 'g' : '—') + (thresh ? ' <span style="font-size:11px;color:' + (low ? 'var(--warning)' : 'var(--success)') + '">' + (low ? '▼ low — threshold ' + thresh : '✓ above ' + thresh) + '</span>' : '');
   var cpg = bestCpg(i);
   var glanceOpt = [
-    { label: 'Usage rate', v: (i.min || i.max) ? (i.min || '0') + '% – ' + (i.max || '100') + '%' : '', name: 'usage rate' },
-    { label: 'Recommended usage', v: i.useRate, name: 'recommended usage' },
-    { label: 'Solubility', v: SOL[i.solubility] || i.solubility, name: 'solubility' },
-    { label: 'Substitutes', v: i.substitution, name: 'substitutes' },
-    { label: 'Secondary functions', v: i.function2, name: 'secondary functions' }
+    { label: 'Usage rate', v: (i.min || i.max) ? (i.min || '0') + '% – ' + (i.max || '100') + '%' : '', name: 'usage rate', tab: 'basics', id: 'f-min' },
+    { label: 'Recommended usage', v: i.useRate, name: 'recommended usage', tab: 'basics', id: 'f-userate' },
+    { label: 'Solubility', v: SOL[i.solubility] || i.solubility, name: 'solubility', tab: 'basics', id: 'f-solubility' },
+    { label: 'Substitutes', v: i.substitution, name: 'substitutes', tab: 'glance', id: 'f-substitution' },
+    { label: 'Secondary functions', v: i.function2, name: 'secondary functions', tab: 'glance', id: 'f-function2' }
   ];
   var gFilled = glanceOpt.filter(function (f) { return has(f.v); });
   var glanceBody =
@@ -3009,21 +3014,21 @@ function viewIngredient(id) {
       '<div class="detail-field"><label>What I had in mind</label>' + noteEditHtml(i, 'purpose') + '</div>' +
     '</div>';
   var glanceHtml = section({ tab: 'glance', title: 'At a glance', body: glanceBody,
-    empties: glanceOpt.filter(function (f) { return !has(f.v); }).map(function (f) { return f.name; }) });
+    empties: glanceOpt.filter(function (f) { return !has(f.v); }) });
 
   // Properties & characteristics
   var dField = densityField(i);
   var props = [
-    { label: 'Absorption rate',     v: i.absorptionRate,     name: 'absorption rate' },
-    { label: 'Heat stability',      v: i.heatStability,      name: 'heat stability' },
-    { label: 'Melting point',       v: i.meltingPoint,       name: 'melting point' },
-    { label: 'Oxidation stability', v: i.oxidationStability, name: 'oxidation stability' },
-    { label: 'Color',               v: i.colour,             name: 'color' },
-    { label: 'Scent',               v: i.scent,              name: 'scent' },
-    { label: 'Effective pH range',  v: i.optimalPh,          name: 'effective pH range' },
-    { label: 'Dermal limits',       v: i.dermalLimits,       name: 'dermal limits' },
-    { label: 'Claims',              v: i.claims,             name: 'claims', rich: true, span: '1 / -1' },
-    { label: 'Density (g/mL)',      v: i.density,            name: 'density' }
+    { label: 'Absorption rate',     v: i.absorptionRate,     name: 'absorption rate',     id: 'f-absorption-rate' },
+    { label: 'Heat stability',      v: i.heatStability,      name: 'heat stability',      id: 'f-heat-stability' },
+    { label: 'Melting point',       v: i.meltingPoint,       name: 'melting point',       id: 'f-melting-point' },
+    { label: 'Oxidation stability', v: i.oxidationStability, name: 'oxidation stability', id: 'f-oxidation-stability' },
+    { label: 'Color',               v: i.colour,             name: 'color',               id: 'f-colour' },
+    { label: 'Scent',               v: i.scent,              name: 'scent',               id: 'f-scent' },
+    { label: 'Effective pH range',  v: i.optimalPh,          name: 'effective pH range',  id: 'f-optimal-ph' },
+    { label: 'Dermal limits',       v: i.dermalLimits,       name: 'dermal limits',       id: 'f-dermal-limits' },
+    { label: 'Claims',              v: i.claims,             name: 'claims',              id: 'f-claims' },
+    { label: 'Density (g/mL)',      v: i.density,            name: 'density',             id: 'f-density' }
   ];
   var pFilled = props.filter(function (f) { return has(f.v); });
   var propsBody = '<div class="detail-grid">' +
@@ -3034,7 +3039,7 @@ function viewIngredient(id) {
     (has(i.claims) ? '<div class="detail-field" style="grid-column:1 / -1"><label>Claims — supplier-stated</label>' + rich(i.claims) + '</div>' : '') +
     '</div>';
   var propsHtml = section({ tab: 'props', title: 'Properties &amp; characteristics', count: pFilled.length + ' of ' + props.length + ' filled', full: pFilled.length === props.length,
-    body: propsBody, empties: props.filter(function (f) { return !has(f.v); }).map(function (f) { return f.name; }) });
+    body: propsBody, empties: props.filter(function (f) { return !has(f.v); }) });
 
   // Notes & reference
   var notesHtml = section({ tab: 'notes', key: 'notes', title: 'My formulating notes', count: has(i.notes) ? '' : 'not filled in', editLabel: has(i.notes) ? 'Edit' : 'Add',
@@ -3433,7 +3438,7 @@ function openAdd() {
   openModal('modal-add');
 }
 
-function editCurrent(tab) {
+function editCurrent(tab, focusId) {
   var i = ingredients.find(function(x) { return x.id === viewingId; });
   if (!i) return;
   editingId = viewingId;
@@ -3488,6 +3493,17 @@ function editCurrent(tab) {
   setIngTab(typeof tab === 'string' ? tab : 'basics');
   renderIngTabDots();
   openModal('modal-add');
+  if (focusId) focusIngField(focusId);
+}
+// Puts the cursor in one field (a rich box when the field has one).
+function focusIngField(id) {
+  setTimeout(function () {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var rich = el.style.display === 'none' && el.nextSibling && el.nextSibling.querySelector ? el.nextSibling.querySelector('.rt-ed') : null;
+    var target = rich || el;
+    try { target.focus(); target.scrollIntoView({ block: 'center' }); } catch (e) {}
+  }, 60);
 }
 
 // ── Stock solutions (2026-10-21) ──
