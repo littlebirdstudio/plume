@@ -53,6 +53,7 @@ const getIngs = "JSON.parse(localStorage.getItem('aerie-ingredients-v2'))";
   await page.fill('#qa-sup', 'Lotioncrafter'); await page.fill('#qa-order', 'LC-88123'); await page.fill('#qa-received', '2026-10-20');
   await page.fill('#qa-size', '16'); await page.selectOption('#qa-unit', 'oz'); await page.fill('#qa-price', '12.50'); await page.dispatchEvent('#qa-price', 'input');
   ok('cost per gram fills in as she types', /\$0\.0276/.test(await page.evaluate("document.getElementById('qa-cpg').innerText")));
+  await page.fill('#qa-link', 'lotioncrafter.com/products/jojoba-oil');
   await page.check('#qa-c-organic'); await page.check('#qa-c-cosmosCert'); await page.fill('#qa-c-other', 'Fair for Life');
   await page.click('text=Save & add another'); await page.waitForTimeout(200);
   let ings = await page.evaluate(getIngs);
@@ -61,9 +62,10 @@ const getIngs = "JSON.parse(localStorage.getItem('aerie-ingredients-v2'))";
   ok('it saves, starting from the starter entry (its lowdown comes along as a draft)', jo && jo.chooseWhen && jo.chooseWhenDraft === true && jo.functionCategory.join() === 'Emollient', jo);
   ok('with the purchase as its first, active lot', l && jo.activeLotId === l.id && l.supplier === 'Lotioncrafter' && l.orderNum === 'LC-88123' && l.received === '2026-10-20' &&
      l.purchaseSize === '16' && l.purchaseUnit === 'oz' && l.qtyPurchased === '16' && l.qtyUnit === 'oz' && l.costPerG === '0.0276', l);
+  ok('the purchase link goes on the lot, with https:// added', l && l.buyLink === 'https://lotioncrafter.com/products/jojoba-oil', l && l.buyLink);
   ok('and its certifications on the lot', l && l.organic === true && l.cosmosCert === true && l.cosmosApproved === false && l.ecocert === false && l.certOther === 'Fair for Life');
   ok('a new supplier joins the supplier list', await page.evaluate("JSON.parse(localStorage.getItem('aerie-suppliers-v1')).some(function (s) { return s.name === 'Lotioncrafter'; })"));
-  ok('the form clears but keeps the supplier, order # and date', await page.evaluate("qaVal('qa-name') === '' && qaVal('qa-size') === '' && !document.getElementById('qa-c-cosmosCert').checked && qaVal('qa-sup') === 'Lotioncrafter' && qaVal('qa-order') === 'LC-88123' && qaVal('qa-received') === '2026-10-20'"));
+  ok('the form clears but keeps the supplier, order # and date', await page.evaluate("qaVal('qa-name') === '' && qaVal('qa-size') === '' && qaVal('qa-link') === '' && !document.getElementById('qa-c-cosmosCert').checked && qaVal('qa-sup') === 'Lotioncrafter' && qaVal('qa-order') === 'LC-88123' && qaVal('qa-received') === '2026-10-20'"));
   ok('and says so', /Kept for the next one: supplier Lotioncrafter, order #LC-88123/.test(await page.evaluate("document.getElementById('qa-kept').innerText")));
   ok('what was added is listed', /Jojoba oil/.test(await page.evaluate("document.getElementById('qa-done').innerText")));
 

@@ -1172,6 +1172,7 @@
 .qa-buy-h span { font-weight: 300; text-transform: none; letter-spacing: 0; font-size: 11.5px; color: var(--ink-lighter); }
 .qa-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
 .qa-grid .span2 { grid-column: span 2; }
+.qa-grid .qa-full { grid-column: 1 / -1; }
 .qa-cpg { min-height: 38px; display: flex; align-items: center; font-size: 15px; font-weight: 500; color: var(--sage-dark); }
 .qa-cpg.none { font-size: 12.5px; font-weight: 400; color: var(--ink-lighter); }
 .qa-certs { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; margin-top: 12px; font-size: 13px; color: var(--ink); }
@@ -1586,6 +1587,7 @@
         <div class="field"><label for="qa-price">Price paid ($)</label><input type="number" id="qa-price" step="0.01" min="0" placeholder="0.00" oninput="qaCost()"></div>
         <div class="field"><label for="qa-lot">Lot #</label><input type="text" id="qa-lot" placeholder="optional"></div>
         <div class="field span2"><label>Cost per gram</label><div class="qa-cpg none" id="qa-cpg">Fills in from the size and price</div></div>
+        <div class="field qa-full"><label for="qa-link">Purchase link <span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:10px">— the product page, for reordering</span></label><input type="url" id="qa-link" placeholder="https://…" autocomplete="off"></div>
       </div>
       <div class="qa-certs" id="qa-certs"></div>
       <div class="qa-kept" id="qa-kept" hidden></div>
@@ -3158,7 +3160,7 @@ function qaRenderCerts() {
 }
 // Clears the form. keepOrder leaves the supplier, order # and date.
 function qaClear(keepOrder) {
-  ['qa-name', 'qa-inci', 'qa-min', 'qa-max', 'qa-size', 'qa-price', 'qa-lot'].forEach(function(id) { document.getElementById(id).value = ''; });
+  ['qa-name', 'qa-inci', 'qa-min', 'qa-max', 'qa-size', 'qa-price', 'qa-lot', 'qa-link'].forEach(function(id) { document.getElementById(id).value = ''; });
   document.getElementById('qa-phase').value = 'water';
   document.getElementById('qa-unit').value = 'g';
   if (!keepOrder) {
@@ -3254,7 +3256,7 @@ function qaBuild() {
   ing.functionCategory = qaReadFuncs();
   if (!ing.flag) ing.flag = 'no';
   var p = qaPurchase(), sup = qaVal('qa-sup');
-  var bought = sup || qaVal('qa-order') || p.size || p.price > 0 || qaVal('qa-lot');
+  var bought = sup || qaVal('qa-order') || p.size || p.price > 0 || qaVal('qa-lot') || qaVal('qa-link');
   var certs = {}, anyCert = false;
   Plume.CERTS.forEach(function(c) { certs[c.key] = document.getElementById('qa-c-' + c.key).checked; anyCert = anyCert || certs[c.key]; });
   if (bought || anyCert || qaVal('qa-c-other')) {
@@ -3264,7 +3266,7 @@ function qaBuild() {
       costPerG: p.cpg !== null ? p.cpg.toFixed(4) : '',
       qtyPurchased: p.size, qtyUnit: p.unit,
       lotNum: qaVal('qa-lot'), received: qaVal('qa-received'), bestBy: '', orderNum: qaVal('qa-order'),
-      buyLink: '', receiptLink: '', referenceOnly: false, certOther: qaVal('qa-c-other')
+      buyLink: qaLink(qaVal('qa-link')), receiptLink: '', referenceOnly: false, certOther: qaVal('qa-c-other')
     };
     Plume.CERTS.forEach(function(c) { lot[c.key] = certs[c.key]; });
     ing.lots = [lot];
@@ -3272,6 +3274,8 @@ function qaBuild() {
   }
   return ing;
 }
+// A pasted link without its https:// still opens (Reorder ↗ on the lot).
+function qaLink(u) { u = String(u || '').trim(); return u && !/^https?:\/\//i.test(u) ? 'https://' + u : u; }
 // A supplier typed here that the list does not have yet is added to it, so
 // the lot editor's supplier list shows it.
 function qaEnsureSupplier(name) {
