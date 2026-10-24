@@ -109,7 +109,7 @@ const SEED = `
 
   console.log('\n5. Made in-house or free');
   await page.goto(previewUrl('ingredients')); await page.waitForTimeout(500);
-  await page.evaluate("viewingId = 'ih'; editFromList = true; editCurrent()"); await page.waitForTimeout(200);
+  await page.evaluate("viewingId = 'ih'; editFromList = true; editCurrent('stock')"); await page.waitForTimeout(200);
   ok('the editor offers it under the lots, off by default', await page.evaluate("!document.getElementById('f-nocost').checked"));
   await page.check('#f-nocost'); await page.evaluate("saveIngredient(false)"); await page.waitForTimeout(250);
   ok('it saves on the ingredient', await page.evaluate("JSON.parse(localStorage.getItem('aerie-ingredients-v2')).filter(function(i){return i.id==='ih';})[0].noCost === true"));

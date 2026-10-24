@@ -35,7 +35,7 @@ var Plume = (function () {
 // (v0.4 / v0.5 / v0.6 across five modules). BUMP IT IN EVERY PULL REQUEST,
 // core change or not: it is how "is this the update I just merged?" is
 // answered by looking, and browsers cache .js files stubbornly.
-var VERSION = '1.42';
+var VERSION = '1.43';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -278,6 +278,18 @@ function costPerG(ing) {
     if (al && al.madeBatchId) return al.madeCost === 0 ? 0 : null;
   }
   return (c === null && ing && ing.noCost) ? 0 : c;
+}
+// The lot in use, by the same cascade as cost: the designated active lot,
+// else the cheapest priced purchased lot, else the first purchased one.
+// Labels read certifications from it (2026-10-24).
+function activeLot(ing) {
+  var lots = ((ing && ing.lots) || []).filter(function (l) { return !l.referenceOnly; });
+  if (!lots.length) return null;
+  if (ing.activeLotId) { var m = lots.filter(function (l) { return l.id === ing.activeLotId; })[0]; if (m) return m; }
+  var priced = lots.filter(function (l) { var c = parseFloat(l.costPerG); return !isNaN(c) && c > 0; });
+  if (!priced.length) return lots[0];
+  priced.sort(function (a, b) { return parseFloat(a.costPerG) - parseFloat(b.costPerG); });
+  return priced[0];
 }
 function costPerGFromLots(ing) {
   if (!ing) return null;
@@ -2143,7 +2155,8 @@ function boot(cb) {
 var FUNCTION_CATEGORIES = [
   // 'Base / solvent' added 2026-10-17: water, hydrosols and aloe juice had no
   // function that fit and landed in "No function set" on the cheat sheet.
-  'Emollient', 'Humectant', 'Base / solvent', 'Emulsifier', 'Preservative', 'Active',
+  // 'Chelator' added 2026-10-24 (her ask, now that she has several).
+  'Emollient', 'Humectant', 'Base / solvent', 'Emulsifier', 'Preservative', 'Chelator', 'Active',
   'pH Adjuster', 'Thickener', 'Solubilizer', 'Surfactant', 'Exfoliant',
   'Essential oil', 'Fragrance', 'Colorant', 'Other'
 ];
@@ -2790,6 +2803,164 @@ function inciMerged(entries) {
   return (entries || []).filter(function (e) { return e.sources.length > 1; });
 }
 
+// ══ Rich text (2026-10-24) ════════════════════════════
+// Bold, italic and bulleted lists in the text-heavy ingredient fields (the
+// lowdown, What I had in mind, formulating notes, expanded details, claims).
+// Her call: she sees the formatting as she types; it is SAVED as plain text
+// with simple marks, **bold**, *italic* and "- " at the start of a list line,
+// so backups, search and exports stay readable and nothing stored is HTML.
+// toHtml escapes first and only then adds its own tags, so a stored value
+// can never inject markup.
+function rtInline(t) {
+  return t.replace(/\*\*([^*\n]+?)\*\*/g, '<strong>$1</strong>')
+          .replace(/(^|[^*])\*([^*\n]+?)\*(?!\*)/g, '$1<em>$2</em>');
+}
+function rtToHtml(md) {
+  try { rtStyle(); } catch (e) {}
+  var lines = esc(String(md == null ? '' : md)).split('\n'), out = '', list = false, para = [];
+  var flush = function () { if (para.length) { out += para.map(rtInline).join('<br>'); para = []; } };
+  lines.forEach(function (ln) {
+    var m = /^\s*[-•]\s+(.*)$/.exec(ln);
+    if (m) {
+      if (!list) { flush(); out += (out ? '' : '') + '<ul class="rt-ul">'; list = true; }
+      out += '<li>' + rtInline(m[1]) + '</li>';
+    } else {
+      if (list) { out += '</ul>'; list = false; }
+      para.push(ln);
+    }
+  });
+  if (list) out += '</ul>';
+  flush();
+  return out;
+}
+// The words alone, for one-line summaries and title attributes.
+function rtPlain(md) {
+  return String(md == null ? '' : md).replace(/\*\*([^*\n]+?)\*\*/g, '$1').replace(/(^|[^*])\*([^*\n]+?)\*(?!\*)/g, '$1$2').replace(/^\s*[-•]\s+/gm, '');
+}
+// The marks back out of an edited box. Chrome's editing writes <b>/<strong>,
+// <i>/<em>, <div> or <br> for new lines, and <ul><li> for lists.
+function rtFromEl(root) {
+  var lines = [], cur = '';
+  var push = function () { lines.push(cur); cur = ''; };
+  var walk = function (n, wrap) {
+    if (n.nodeType === 3) { cur += n.nodeValue.replace(/ /g, ' '); return; }
+    if (n.nodeType !== 1) return;
+    var tag = n.nodeName.toLowerCase();
+    if (tag === 'br') { push(); return; }
+    var bold = tag === 'b' || tag === 'strong' || /bold|[6-9]00/.test(n.style && n.style.fontWeight || '');
+    var ital = tag === 'i' || tag === 'em' || (n.style && n.style.fontStyle === 'italic');
+    if (tag === 'ul' || tag === 'ol') {
+      if (cur) push();
+      Array.prototype.forEach.call(n.childNodes, function (li) {
+        cur = '- '; Array.prototype.forEach.call(li.childNodes || [], function (c) { walk(c); }); push();
+      });
+      return;
+    }
+    var block = tag === 'div' || tag === 'p';
+    if (block && cur) push();
+    var start = cur.length;
+    Array.prototype.forEach.call(n.childNodes, function (c) { walk(c); });
+    if (bold || ital) {
+      var inner = cur.slice(start), lead = inner.match(/^\s*/)[0], trail = inner.match(/\s*$/)[0], core = inner.trim();
+      if (core) { var m = bold ? '**' : '*'; if (bold && ital) m = '***'; cur = cur.slice(0, start) + lead + m + core + (m === '***' ? '***' : m) + trail; }
+    }
+    if (block) push();
+  };
+  Array.prototype.forEach.call(root.childNodes, function (c) { walk(c); });
+  if (cur) push();
+  while (lines.length && !lines[lines.length - 1].trim()) lines.pop();
+  return lines.join('\n').replace(/\*\*\*([^*]+)\*\*\*/g, '***$1***');
+}
+// An editing box with a small toolbar. opts.single: one line (Enter does not
+// start a new one, no list button). Returns { wrap, ed, get, set, focus }.
+var RT_ICONS = { b: '<b>B</b>', i: '<i style="font-family:Georgia,serif">I</i>', ul: '&bull;&thinsp;List' };
+function rtEditor(value, opts) {
+  opts = opts || {};
+  rtStyle();
+  var wrap = document.createElement('div');
+  wrap.className = 'rt-wrap' + (opts.single ? ' rt-single' : '');
+  var bar = document.createElement('div');
+  bar.className = 'rt-bar';
+  var btns = [['b', 'bold', 'Bold'], ['i', 'italic', 'Italic']];
+  if (!opts.single) btns.push(['ul', 'insertUnorderedList', 'Bulleted list']);
+  btns.forEach(function (b) {
+    var x = document.createElement('button');
+    x.type = 'button'; x.className = 'rt-btn'; x.innerHTML = RT_ICONS[b[0]]; x.title = b[2]; x.setAttribute('aria-label', b[2]);
+    x.onmousedown = function (e) { e.preventDefault(); };   // keep the selection
+    x.onclick = function (e) { e.preventDefault(); ed.focus(); try { document.execCommand(b[1], false, null); } catch (err) {} if (opts.onInput) opts.onInput(); };
+    bar.appendChild(x);
+  });
+  var ed = document.createElement('div');
+  ed.className = 'rt-ed';
+  ed.contentEditable = 'true';
+  ed.setAttribute('role', 'textbox');
+  if (!opts.single) ed.setAttribute('aria-multiline', 'true');
+  if (opts.label) ed.setAttribute('aria-label', opts.label);
+  if (opts.placeholder) ed.setAttribute('data-ph', opts.placeholder);
+  ed.innerHTML = rtToHtml(value);
+  ed.addEventListener('input', function () { if (opts.onInput) opts.onInput(); });
+  ed.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && opts.single) { e.preventDefault(); if (opts.onEnter) opts.onEnter(); }
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'b' || e.key === 'i')) { e.preventDefault(); try { document.execCommand(e.key === 'b' ? 'bold' : 'italic', false, null); } catch (err) {} if (opts.onInput) opts.onInput(); }
+  });
+  // Pasted text arrives as plain text, so a web page's styling never comes in.
+  ed.addEventListener('paste', function (e) {
+    var t = (e.clipboardData || window.clipboardData);
+    if (!t) return;
+    e.preventDefault();
+    var txt = t.getData('text/plain') || '';
+    if (opts.single) txt = txt.replace(/\s*\n\s*/g, ' ');
+    try { document.execCommand('insertText', false, txt); } catch (err) {}
+    if (opts.onInput) opts.onInput();
+  });
+  wrap.appendChild(bar); wrap.appendChild(ed);
+  return {
+    wrap: wrap, ed: ed,
+    get: function () { return rtFromEl(ed); },
+    set: function (v) { ed.innerHTML = rtToHtml(v); },
+    focus: function () {
+      ed.focus();
+      try { var r = document.createRange(); r.selectNodeContents(ed); r.collapse(false); var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r); } catch (err) {}
+    }
+  };
+}
+// A form field made rich: the original input or textarea stays in the form,
+// hidden, and always holds the marked-up text, so saving, loading and the
+// unsaved-changes check read it exactly as before. refresh() after setting
+// its value from code.
+var rtAttached = {};
+function rtAttach(id, opts) {
+  var el = document.getElementById(id);
+  if (!el || rtAttached[id]) return null;
+  opts = opts || {};
+  var r = rtEditor(el.value, {
+    single: opts.single, placeholder: el.getAttribute('placeholder') || '', label: opts.label,
+    onInput: function () { el.value = r.get(); el.dispatchEvent(new Event('input', { bubbles: true })); }
+  });
+  el.style.display = 'none';
+  el.parentNode.insertBefore(r.wrap, el.nextSibling);
+  if (opts.tall) r.ed.style.minHeight = opts.tall;
+  rtAttached[id] = r;
+  return r;
+}
+function rtRefresh(id) { var r = rtAttached[id], el = document.getElementById(id); if (r && el) r.set(el.value); }
+function rtRefreshAll() { Object.keys(rtAttached).forEach(rtRefresh); }
+var RT_CSS = '.rt-wrap{border:1px solid var(--cream-border);border-radius:4px;background:var(--white)}' +
+  '.rt-wrap:focus-within{border-color:var(--bark-light)}' +
+  '.rt-bar{display:flex;gap:2px;padding:3px 4px;border-bottom:1px solid var(--cream-dark)}' +
+  '.rt-btn{font:inherit;font-size:13px;min-width:30px;height:28px;padding:0 8px;border:0;border-radius:4px;background:none;color:var(--ink-light);cursor:pointer}' +
+  '.rt-btn:hover{background:var(--cream);color:var(--ink)}' +
+  '.rt-ed{font-family:"DM Sans",sans-serif;font-size:13px;line-height:1.55;color:var(--ink);padding:8px 10px;min-height:60px;outline:none;white-space:pre-wrap;word-wrap:break-word}' +
+  '.rt-single .rt-ed{min-height:0;white-space:normal}' +
+  '.rt-ed:empty:before{content:attr(data-ph);color:var(--ink-lighter)}' +
+  '.rt-ed ul,.rt-ul{margin:4px 0;padding-left:20px}.rt-ul li,.rt-ed li{margin:1px 0}' +
+  '.rt-text strong,.rt-ed b,.rt-ed strong{font-weight:600}';
+// Injected the first time a box is made or rich text is shown.
+function rtStyle() {
+  if (typeof document === 'undefined' || !document.head || !document.getElementById || document.getElementById('plume-rt-css')) return;
+  var st = document.createElement('style'); st.id = 'plume-rt-css'; st.textContent = RT_CSS; document.head.appendChild(st);
+}
+
 // ══ Certifications (2026-10-24) ═══════════════════════
 // Ticked on a lot (a purchase), not the ingredient: the same oil from two
 // suppliers can differ. Each is a plain boolean on the lot, so the lot form's
@@ -2802,7 +2973,10 @@ var CERTS = [
   { key: 'cosmosCert',     label: 'COSMOS Certified' },
   { key: 'cosmosApproved', label: 'COSMOS Approved' },
   { key: 'ecocert', label: 'Ecocert' },
-  { key: 'natrue',  label: 'NATRUE' }
+  { key: 'natrue',  label: 'NATRUE' },
+  // A classification (ISO 16128 natural origin) more than a certification;
+  // on the lot because the same INCI can be plant-derived or synthetic.
+  { key: 'natural', label: 'Naturally derived' }
 ];
 function lotCerts(lot) {
   if (!lot) return [];
@@ -4629,7 +4803,8 @@ function undoStock(p, id) {
 return {
   VERSION: VERSION,
   inciSplit: inciSplit, inciMerge: inciMerge, inciMerged: inciMerged,
-  CERTS: CERTS, lotCerts: lotCerts,
+  CERTS: CERTS, lotCerts: lotCerts, activeLot: activeLot,
+  rt: { toHtml: rtToHtml, plain: rtPlain, fromEl: rtFromEl, editor: rtEditor, attach: rtAttach, refresh: rtRefresh, refreshAll: rtRefreshAll },
   STOCK_TYPE: STOCK_TYPE, isStockType: isStockType, stockIngFor: stockIngFor, stockFormFor: stockFormFor,
   stockParts: stockParts, stockExpand: stockExpand, stockLabelItems: stockLabelItems, stockWithParts: stockWithParts, stockInci: stockInci, stockNewIng: stockNewIng,
   Store: Store, KEYS: KEYS, KEY_LABELS: KEY_LABELS,

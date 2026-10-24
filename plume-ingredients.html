@@ -1197,6 +1197,46 @@
 .lot-certs input[type=checkbox] { margin: 0; }
 .lot-certs input[type=text] { font: inherit; font-size: 12px; padding: 4px 6px; border: 1px solid var(--cream-border); border-radius: 3px; width: 150px; background: var(--white); color: var(--ink); }
 @media (max-width: 700px) { .qa-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* Editor tabs (2026-10-24) */
+.hint { font-weight: 300; text-transform: none; letter-spacing: 0; font-size: 10px; }
+.ed-hint { font-size: 12px; color: var(--ink-lighter); line-height: 1.45; }
+.ed-tabs { display: flex; flex-wrap: wrap; gap: 2px; border-bottom: 1px solid var(--cream-border); margin: -4px 0 18px; }
+.ed-tab { font: inherit; font-size: 13.5px; background: none; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; padding: 9px 12px; color: var(--ink-light); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; min-height: 40px; }
+.ed-tab:hover { color: var(--ink); }
+.ed-tab.on { color: var(--ink); border-bottom-color: var(--bark); font-weight: 500; }
+.ed-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--sage); display: inline-block; }
+.ed-dot[hidden] { display: none; }
+.ed-pane { min-height: 360px; }
+/* The ingredient page, tidied (2026-10-24) */
+.ds-first { margin-top: 0; padding-top: 0; border-top: 0; }
+.ds-h { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 0.75rem; }
+.ds-h .detail-section-title { margin-bottom: 0; color: var(--ink); font-weight: 600; }
+.ds-count { font-size: 12px; color: var(--ink-lighter); }
+.ds-count.full { color: var(--sage-dark); }
+.ds-edit { margin-left: auto; font: inherit; font-size: 12.5px; font-weight: 500; color: var(--bark); background: none; border: 0; border-radius: 6px; padding: 5px 10px; cursor: pointer; min-height: 30px; }
+.ds-edit:hover { background: var(--cream); color: var(--bark-dark); }
+.ds-empty { font-size: 12.5px; color: var(--ink-light); background: var(--cream); border-radius: 8px; padding: 8px 12px; line-height: 1.5; margin-top: 2px; }
+.ds-empty button { font: inherit; font-weight: 500; color: var(--sage-dark); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; }
+.rt-text { font-size: 14px; color: var(--ink); line-height: 1.6; }
+.rt-text strong { font-weight: 600; }
+.notes-box.rt-text { white-space: normal; font-size: 13px; }
+.ds-clamp { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.ds-clamp.open { display: block; -webkit-line-clamp: unset; }
+.ds-more { font: inherit; font-size: 12.5px; font-weight: 500; color: var(--sage-dark); background: none; border: 0; padding: 6px 0 0; cursor: pointer; }
+.lt { border: 1px solid var(--cream-border); border-radius: 8px; overflow: hidden; }
+.lt-row { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 0.9fr) minmax(0, 1fr) 80px 76px minmax(0, 1.1fr); gap: 10px; padding: 9px 12px; border-bottom: 1px solid var(--cream-dark); font-size: 13px; align-items: baseline; }
+.lt-row:last-child { border-bottom: 0; }
+.lt-row.lt-h { background: var(--cream); font-size: 10.5px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-lighter); padding: 7px 12px; }
+.lt-row.on { background: color-mix(in srgb, var(--sage-light) 55%, var(--white)); }
+.lt-row.ref { color: var(--ink-light); }
+.lt-row b { font-weight: 500; }
+.lt-row small { display: block; font-size: 11.5px; color: var(--ink-lighter); margin-top: 2px; }
+.lt-row .r { text-align: right; font-variant-numeric: tabular-nums; }
+.lt-tag { display: inline-block; margin-left: 6px; font-size: 10px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-lighter); }
+.lt-tag.on { color: var(--sage-dark); }
+.lt-note.made { color: var(--sage-dark); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.lt-act { display: flex; flex-wrap: wrap; gap: 6px 10px; justify-content: flex-end; align-items: center; }
+@media (max-width: 760px) { .lt-row { grid-template-columns: minmax(0, 1fr) 70px 70px; } .lt-row > span:nth-child(2), .lt-row > span:nth-child(3), .lt-row > span:nth-child(6) { display: none; } }
 </style>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#404834">
@@ -1331,41 +1371,38 @@
   <div class="modal">
     <div class="modal-header">
       <div class="modal-title" id="modal-add-title">New ingredient</div>
-      <button class="modal-close" onclick="closeModal('modal-add')">×</button>
+      <button class="modal-close" onclick="closeModal('modal-add')" aria-label="Close">×</button>
     </div>
 
-    <div class="form-grid">
-      <div class="field">
-        <label>Common name *</label>
-        <input type="text" id="f-name" placeholder="e.g. Rosehip seed oil">
-      </div>
-      <div class="field">
-        <label>INCI name *</label>
-        <input type="text" id="f-inci" placeholder="e.g. Rosa Canina Seed Oil" oninput="renderDensityHint()">
-      </div>
-      <div class="field form-full">
-        <label>Functions <span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:10px">— pick every one that applies</span></label>
-        <div class="fcat-grid" id="f-function-cats"></div>
-      </div>
-      <div class="field">
-        <label>Function notes <span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:10px">— descriptive depth</span></label>
-        <input type="text" id="f-function-notes" placeholder="e.g. humectant, film-forming, surface hydration">
-      </div>
-      <div class="field">
-        <label>Secondary functions <span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:10px">— optional notes</span></label>
-        <input type="text" id="f-function2" placeholder="e.g. also antioxidant, brightening">
-      </div>
-      <div class="field form-full">
-        <label>The lowdown <span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:10px">— strengths and catches, compared with similar ingredients</span> <span class="draft-tag" id="f-choose-draft" style="display:none" title="Drafted by Plume. Changing the text makes it yours.">draft</span></label>
-        <input type="text" id="f-choose" maxlength="200" placeholder="e.g. natural-leaning, broad-spectrum — but a strong smell that shows in mists">
-      </div>
-      <div class="field form-full">
-        <label>Substitutes <span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:10px">— what else could do this job</span></label>
-        <input type="text" id="f-substitution" placeholder="e.g. Mango butter">
-      </div>
-      <div class="form-full form-row3">
+    <!-- Tabs (2026-10-24, her pick of the "Ingredient entry options"): the
+         same sections as the ingredient's page. A dot marks a tab with
+         something in it. Every field keeps its id, so saving and loading are
+         unchanged. -->
+    <div class="ed-tabs" role="tablist" id="ed-tabs">
+      <button type="button" role="tab" class="ed-tab on" data-tab="basics" onclick="setIngTab('basics')">Basics</button>
+      <button type="button" role="tab" class="ed-tab" data-tab="glance" onclick="setIngTab('glance')">At a glance<span class="ed-dot" aria-label="has content"></span></button>
+      <button type="button" role="tab" class="ed-tab" data-tab="props" onclick="setIngTab('props')">Properties<span class="ed-dot" aria-label="has content"></span></button>
+      <button type="button" role="tab" class="ed-tab" data-tab="notes" onclick="setIngTab('notes')">Notes &amp; reference<span class="ed-dot" aria-label="has content"></span></button>
+      <button type="button" role="tab" class="ed-tab" data-tab="stock" onclick="setIngTab('stock')">Stock &amp; cost<span class="ed-dot" aria-label="has content"></span></button>
+      <button type="button" role="tab" class="ed-tab" data-tab="soap" onclick="setIngTab('soap')">Soap<span class="ed-dot" aria-label="has content"></span></button>
+    </div>
+
+    <div class="ed-pane" data-pane="basics">
+      <div class="form-grid">
         <div class="field">
-          <label>Phase</label>
+          <label for="f-name">Common name *</label>
+          <input type="text" id="f-name" placeholder="e.g. Rosehip seed oil">
+        </div>
+        <div class="field">
+          <label for="f-inci">INCI name *</label>
+          <input type="text" id="f-inci" placeholder="e.g. Rosa Canina Seed Oil" oninput="renderDensityHint()">
+        </div>
+        <div class="field form-full">
+          <label>Functions <span class="hint">— pick every one that applies</span></label>
+          <div class="fcat-grid" id="f-function-cats"></div>
+        </div>
+        <div class="field">
+          <label for="f-phase">Phase <span class="hint">— where it goes in a formula</span></label>
           <select id="f-phase" onchange="renderDensityHint()">
             <option value="water">Water</option>
             <option value="oil">Oil</option>
@@ -1374,76 +1411,121 @@
           </select>
         </div>
         <div class="field">
-          <label>Min usage %</label>
-          <input type="number" id="f-min" placeholder="0" step="0.01" min="0">
+          <label for="f-solubility">Solubility <span class="hint">— what it dissolves in</span></label>
+          <select id="f-solubility">
+            <option value="">Not set</option>
+            <option value="water">Water-soluble</option>
+            <option value="oil">Oil-soluble</option>
+            <option value="both">Water and oil</option>
+            <option value="water-dispersible">Disperses in water</option>
+            <option value="oil-dispersible">Disperses in oil</option>
+          </select>
         </div>
-        <div class="field">
-          <label>Max usage %</label>
-          <input type="number" id="f-max" placeholder="100" step="0.01" min="0">
+        <div class="form-full form-row3">
+          <div class="field">
+            <label for="f-userate">Recommended usage <span class="hint">— typical</span></label>
+            <input type="text" id="f-userate" placeholder="e.g. 0.5% or 2–5%">
+          </div>
+          <div class="field">
+            <label for="f-min">Min usage %</label>
+            <input type="number" id="f-min" placeholder="0" step="0.01" min="0">
+          </div>
+          <div class="field">
+            <label for="f-max">Max usage %</label>
+            <input type="number" id="f-max" placeholder="100" step="0.01" min="0">
+          </div>
         </div>
-      </div>
-      <div class="field form-full">
-        <label>What I had in mind <span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:10px">— a note to future you: why you bought it</span></label>
-        <textarea id="f-purpose" maxlength="300" rows="2" style="min-height:0" placeholder="e.g. a whisper of body in serums — the ones with niacinamide"></textarea>
+        <div class="form-full ed-hint">Recommended is the usual amount; min and max are the limits Formulations warns about.</div>
       </div>
     </div>
 
-    <div class="section-divider" id="props-section-divider" style="cursor:pointer" onclick="togglePropsSection()">
-      Properties &amp; characteristics
-      <span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:11px;color:var(--ink-lighter)">Reference data — <span id="props-toggle-label">show</span></span>
-    </div>
-    <div id="props-fields" style="display:none">
-      <div class="form-grid" style="margin-bottom:14px">
+    <div class="ed-pane" data-pane="glance" hidden>
+      <div class="form-grid">
         <div class="field form-full">
-          <label>Claims <span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:10px">— what the supplier says it does; reference only, not label copy</span></label>
-          <textarea id="f-claims" maxlength="500" rows="2" style="min-height:0" placeholder="e.g. supplier states: 24-hour hydration, barrier support"></textarea>
+          <label for="f-choose">The lowdown <span class="hint">— strengths and catches, compared with similar ingredients</span> <span class="draft-tag" id="f-choose-draft" style="display:none" title="Drafted by Plume. Changing the text makes it yours.">draft</span></label>
+          <input type="text" id="f-choose" maxlength="200" placeholder="e.g. natural-leaning, broad-spectrum — but a strong smell that shows in mists">
         </div>
         <div class="field form-full">
-          <label class="restrict-toggle"><input type="checkbox" id="f-restricted" onchange="syncRestrictField()"> Restricted use <span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:10px">— has usage or safety limits</span></label>
-          <input type="text" id="f-restrictions" style="display:none;margin-top:6px" placeholder="e.g. Max 1% in leave-on; avoid in pregnancy">
+          <label for="f-substitution">Substitutes <span class="hint">— what else could do this job</span></label>
+          <input type="text" id="f-substitution" placeholder="e.g. Mango butter">
+        </div>
+        <div class="field form-full">
+          <label for="f-purpose">What I had in mind <span class="hint">— a note to future you: why you bought it</span></label>
+          <textarea id="f-purpose" maxlength="300" rows="2" style="min-height:0" placeholder="e.g. a whisper of body in serums — the ones with niacinamide"></textarea>
         </div>
         <div class="field">
-          <label>Absorption rate</label>
+          <label for="f-function-notes">Function notes <span class="hint">— descriptive depth</span></label>
+          <input type="text" id="f-function-notes" placeholder="e.g. humectant, film-forming, surface hydration">
+        </div>
+        <div class="field">
+          <label for="f-function2">Secondary functions <span class="hint">— optional notes</span></label>
+          <input type="text" id="f-function2" placeholder="e.g. also antioxidant, brightening">
+        </div>
+      </div>
+    </div>
+
+    <div class="ed-pane" data-pane="props" hidden>
+      <div id="props-fields" class="form-grid">
+        <div class="field">
+          <label for="f-absorption-rate">Absorption rate</label>
           <input type="text" id="f-absorption-rate" placeholder="e.g. Fast, Medium, Slow">
         </div>
         <div class="field">
-          <label>Heat stability</label>
+          <label for="f-heat-stability">Heat stability</label>
           <input type="text" id="f-heat-stability" placeholder="e.g. Good, Fair, Poor">
         </div>
         <div class="field">
-          <label>Melting point</label>
+          <label for="f-melting-point">Melting point</label>
           <input type="text" id="f-melting-point" placeholder="e.g. 25 – 35 °C (77 – 95 °F)">
         </div>
         <div class="field">
-          <label>Oxidation stability</label>
+          <label for="f-oxidation-stability">Oxidation stability</label>
           <input type="text" id="f-oxidation-stability" placeholder="e.g. Good, Fair, Poor">
         </div>
         <div class="field">
-          <label>Colour</label>
+          <label for="f-colour">Color</label>
           <input type="text" id="f-colour" placeholder="e.g. Pale yellow">
         </div>
         <div class="field">
-          <label>Scent</label>
+          <label for="f-scent">Scent</label>
           <input type="text" id="f-scent" placeholder="e.g. Nutty, mild">
         </div>
         <div class="field">
-          <label title="The pH range it works in. Outside it, it may not do its job; for a preservative, the product may not be protected. Formulations warns when a target or a batch falls outside it.">Effective pH range</label>
+          <label for="f-optimal-ph" title="The pH range it works in. Outside it, it may not do its job; for a preservative, the product may not be protected. Formulations warns when a target or a batch falls outside it.">Effective pH range</label>
           <input type="text" id="f-optimal-ph" placeholder="e.g. 3 – 5.5, or up to 6">
         </div>
         <div class="field">
-          <label>Dermal limits <span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:10px">— for essential oils</span></label>
+          <label for="f-dermal-limits">Dermal limits <span class="hint">— for essential oils</span></label>
           <input type="text" id="f-dermal-limits" placeholder="e.g. 1% leave-on / 5% rinse-off">
         </div>
+        <div class="field">
+          <label for="f-density">Density (g/mL) <span class="hint">— for mL and fl oz purchases</span></label>
+          <input type="number" id="f-density" placeholder="1.00 (water default)" step="0.001" min="0.1" max="3" oninput="onDensityChange()">
+          <div class="density-flag" id="f-density-flag" style="display:none"></div>
+        </div>
         <div class="field form-full">
-          <label>Expanded ingredient details <span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:10px">— reference / educational content</span></label>
-          <textarea id="f-general-info" placeholder="Extended descriptive content — formulation guidance, source, characteristics, challenges…" style="min-height:120px"></textarea>
+          <label class="restrict-toggle"><input type="checkbox" id="f-restricted" onchange="syncRestrictField()"> Restricted use <span class="hint">— has usage or safety limits</span></label>
+          <input type="text" id="f-restrictions" style="display:none;margin-top:6px" placeholder="e.g. Max 1% in leave-on; avoid in pregnancy">
+        </div>
+        <div class="field form-full">
+          <label for="f-claims">Claims <span class="hint">— what the supplier says it does; reference only, not label copy</span></label>
+          <textarea id="f-claims" maxlength="500" rows="2" style="min-height:0" placeholder="e.g. supplier states: 24-hour hydration, barrier support"></textarea>
         </div>
       </div>
     </div>
 
-    <div class="form-grid">
-      <div class="field form-full">
-        <label>Resource links</label>
+    <div class="ed-pane" data-pane="notes" hidden>
+      <div class="form-grid">
+        <div class="field form-full">
+          <label for="f-notes">My formulating notes</label>
+          <textarea id="f-notes" placeholder="Formulation tips, compatibility, storage conditions, allergen info…"></textarea>
+        </div>
+        <div class="field form-full">
+          <label for="f-general-info">Expanded ingredient details <span class="hint">— reference and background</span></label>
+          <textarea id="f-general-info" placeholder="Formulation guidance, source, characteristics, challenges…" style="min-height:120px"></textarea>
+        </div>
+        <div class="field form-full">
+          <label>Resource links</label>
         <div id="links-section">
           <div class="link-row" style="margin-bottom:6px">
             <span class="link-row-label">SDS</span>
@@ -1460,36 +1542,37 @@
           <div id="extra-links-container"></div>
           <button type="button" class="btn btn-sm" style="margin-top:4px" onclick="addExtraLink()">+ Add link</button>
         </div>
-      </div>
-      <div class="field">
-        <label>Density (g/mL) <span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:10px">— for liquid/fl oz purchases</span></label>
-        <input type="number" id="f-density" placeholder="1.00 (water default)" step="0.001" min="0.1" max="3" oninput="onDensityChange()">
-        <div class="density-flag" id="f-density-flag" style="display:none"></div>
-      </div>
-      <div class="field">
-        <label>Low stock alert <span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:10px">— alert when total stock falls below</span></label>
-        <div style="display:flex;gap:6px;align-items:center">
-          <input type="number" id="f-lowstock" placeholder="e.g. 2" step="0.01" min="0" style="font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 10px;border:1px solid var(--cream-border);border-radius:3px;background:var(--white);color:var(--ink);outline:none;flex:1">
-          <select id="f-lowstock-unit" style="font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 10px;border:1px solid var(--cream-border);border-radius:3px;background:var(--white);color:var(--ink);outline:none">
-            <option value="g">g</option>
-            <option value="mL">mL</option>
-            <option value="fl oz">fl oz</option>
-            <option value="oz">oz (wt)</option>
-            <option value="lb">lb</option>
-          </select>
         </div>
-      </div>
-      <div class="field form-full">
-        <label>My formulating notes</label>
-        <textarea id="f-notes" placeholder="Formulation tips, compatibility, storage conditions, allergen info…"></textarea>
       </div>
     </div>
 
-    <div class="section-divider" id="soap-section-divider" style="cursor:pointer" onclick="toggleSoapSection()">
-      Soap / saponification data
-      <span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:11px;color:var(--ink-lighter)" id="soap-section-hint">For oils &amp; butters used in cold/hot process soap — <span id="soap-toggle-label">show</span></span>
+    <div class="ed-pane" data-pane="stock" hidden>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:4px 0 10px">
+        <div style="font-size:13px;color:var(--ink-light)" id="lots-summary">No lots added yet.</div>
+        <button class="btn btn-sm" onclick="openLotsDrawer()">Manage lots &rsaquo;</button>
+      </div>
+      <div class="made-from" id="f-madefrom" hidden></div>
+      <label class="restrict-toggle" id="f-nocost-row" style="margin:4px 0 14px"><input type="checkbox" id="f-nocost"> Made in-house or free: count it as $0 <span class="hint">&mdash; when it has no lot price, so costs are not flagged as missing</span></label>
+      <div class="form-grid">
+        <div class="field">
+          <label for="f-lowstock">Low stock alert <span class="hint">— alert when total stock falls below</span></label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="number" id="f-lowstock" placeholder="e.g. 2" step="0.01" min="0" style="font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 10px;border:1px solid var(--cream-border);border-radius:3px;background:var(--white);color:var(--ink);outline:none;flex:1">
+            <select id="f-lowstock-unit" aria-label="Low stock unit" style="font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 10px;border:1px solid var(--cream-border);border-radius:3px;background:var(--white);color:var(--ink);outline:none">
+              <option value="g">g</option>
+              <option value="mL">mL</option>
+              <option value="fl oz">fl oz</option>
+              <option value="oz">oz (wt)</option>
+              <option value="lb">lb</option>
+            </select>
+          </div>
+        </div>
+      </div>
     </div>
-    <div id="soap-fields" style="display:none">
+
+    <div class="ed-pane" data-pane="soap" hidden>
+      <div class="ed-hint" style="margin-bottom:12px">For oils and butters used in cold or hot process soap.</div>
+      <div id="soap-fields">
       <div class="form-grid" style="margin-bottom:14px">
         <div class="field">
           <label>NaOH SAP value <span style="font-weight:300;text-transform:none;letter-spacing:0">(bar soap)</span></label>
@@ -1514,18 +1597,8 @@
       <div style="margin-top:8px;margin-bottom:4px">
         <span style="font-size:11px;color:var(--ink-lighter)" id="fa-total-display"></span>
       </div>
+      </div>
     </div>
-
-    <div class="section-divider">
-      Supplier lots
-      <span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:11px;color:var(--ink-lighter)">One row per purchase / supplier</span>
-    </div>
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0 4px">
-      <div style="font-size:12px;color:var(--ink-lighter)" id="lots-summary">No lots added yet.</div>
-      <button class="btn btn-sm" onclick="openLotsDrawer()">Manage lots &rsaquo;</button>
-    </div>
-    <div class="made-from" id="f-madefrom" hidden></div>
-    <label class="restrict-toggle" id="f-nocost-row" style="margin:4px 0 2px"><input type="checkbox" id="f-nocost"> Made in-house or free: count it as $0 <span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:10px">&mdash; when it has no lot price, so costs are not flagged as missing</span></label>
 
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modal-add')">Cancel</button>
@@ -1742,8 +1815,6 @@ var suppliers         = [];
 var brands            = [];
 var editingId         = null;
 var viewingId         = null;
-var soapSectionOpen   = false;
-var propsSectionOpen  = false;
 var FA_FIELDS = ['lauric','myristic','palmitic','stearic','ricinoleic','oleic','linoleic','linolenic'];
 
 // ── Helpers ───────────────────────────────────────────
@@ -2054,16 +2125,45 @@ function isExpiring(lots) {
 }
 
 // ── Soap data helpers ─────────────────────────────────
-function toggleSoapSection() {
-  soapSectionOpen = !soapSectionOpen;
-  document.getElementById('soap-fields').style.display = soapSectionOpen ? 'block' : 'none';
-  document.getElementById('soap-toggle-label').textContent = soapSectionOpen ? 'hide' : 'show';
-}
+// The editor's sections are tabs now (2026-10-24); these older names open them.
+function toggleSoapSection()  { setIngTab('soap'); }
+function togglePropsSection() { setIngTab('props'); }
 
-function togglePropsSection() {
-  propsSectionOpen = !propsSectionOpen;
-  document.getElementById('props-fields').style.display = propsSectionOpen ? 'block' : 'none';
-  document.getElementById('props-toggle-label').textContent = propsSectionOpen ? 'hide' : 'show';
+// ── Editor tabs (2026-10-24) ──
+// Basics, At a glance, Properties, Notes & reference, Stock & cost, Soap: the
+// same sections as the ingredient's page, whose Edit links open the
+// matching tab. A dot marks a tab holding something, so nothing filled in
+// is hidden behind a tab without saying so.
+var ingTab = 'basics';
+function setIngTab(t) {
+  ingTab = t || 'basics';
+  var tabs = document.querySelectorAll('#ed-tabs .ed-tab');
+  for (var k = 0; k < tabs.length; k++) {
+    var on = tabs[k].getAttribute('data-tab') === ingTab;
+    tabs[k].classList.toggle('on', on);
+    tabs[k].setAttribute('aria-selected', on ? 'true' : 'false');
+  }
+  var panes = document.querySelectorAll('#modal-add .ed-pane');
+  for (var j = 0; j < panes.length; j++) panes[j].hidden = panes[j].getAttribute('data-pane') !== ingTab;
+}
+function ingPaneHasContent(pane) {
+  if (pane.getAttribute('data-pane') === 'stock' && getLots().length) return true;
+  var els = pane.querySelectorAll('input, textarea');
+  for (var k = 0; k < els.length; k++) {
+    var el = els[k];
+    if (el.type === 'checkbox') { if (el.checked) return true; continue; }
+    if (String(el.value || '').trim()) return true;
+  }
+  return false;
+}
+function renderIngTabDots() {
+  var tabs = document.querySelectorAll('#ed-tabs .ed-tab');
+  for (var k = 0; k < tabs.length; k++) {
+    var t = tabs[k].getAttribute('data-tab'), dot = tabs[k].querySelector('.ed-dot');
+    if (!dot) continue;
+    var pane = document.querySelector('#modal-add .ed-pane[data-pane="' + t + '"]');
+    dot.hidden = !(pane && ingPaneHasContent(pane));
+  }
 }
 
 // ── Palettes ──────────────────────────────────────────
@@ -2101,9 +2201,6 @@ function clearSoapFields() {
   document.getElementById('f-sap-koh').value  = '';
   FA_FIELDS.forEach(function(f) { document.getElementById('f-fa-' + f).value = ''; });
   document.getElementById('fa-total-display').textContent = '';
-  soapSectionOpen = false;
-  document.getElementById('soap-fields').style.display = 'none';
-  document.getElementById('soap-toggle-label').textContent = 'show';
 }
 
 function getSoapData() {
@@ -2135,9 +2232,6 @@ function loadSoapFields(soap) {
   }
   var hasAny = soap.naoh || soap.koh || (soap.fa && Object.keys(soap.fa).length);
   if (hasAny) {
-    soapSectionOpen = true;
-    document.getElementById('soap-fields').style.display = 'block';
-    document.getElementById('soap-toggle-label').textContent = 'hide';
     updateFaTotal();
   }
 }
@@ -2673,7 +2767,7 @@ function draftTagHtml(i) {
 function noteBodyHtml(i, field, compact) {
   var v = i[field] || '';
   if (!v) return notePlaceholder(field, compact);
-  return '<span class="note-text">' + esc(v) + '</span>' + (isDraftNote(i, field) ? draftTagHtml(i) : '');
+  return '<span class="note-text rt-text">' + Plume.rt.toHtml(v) + '</span>' + (isDraftNote(i, field) ? draftTagHtml(i) : '');
 }
 function noteEditHtml(i, field, compact) {
   var tip = field === 'purpose' ? 'Click to edit \u2014 Enter for a new line, click away to save' : 'Click to edit';
@@ -2692,27 +2786,28 @@ function confirmDraft(e, id) {
 }
 function startNoteEdit(e, el) {
   if (e) e.stopPropagation();
-  if (el.querySelector('textarea')) return;
+  if (el.querySelector('.rt-wrap')) return;
   var ing = ingredients.find(function (x) { return x.id === el.getAttribute('data-id'); });
   if (!ing) return;
   var field = el.getAttribute('data-field');
-  var ta = document.createElement('textarea');
-  ta.rows = field === 'purpose' ? 3 : 2;
-  ta.maxLength = field === 'purpose' ? 300 : 200;
-  ta.value = ing[field] || '';
-  el.innerHTML = ''; el.appendChild(ta);
-  var cancelled = false;
-  ta.onclick = function (ev) { ev.stopPropagation(); };
-  ta.onkeydown = function (ev) {
-    if (ev.key === 'Escape') { cancelled = true; ta.blur(); }
-    // The reminder note is a little notepad: Enter starts a new line so it
-    // can hold a short list, and clicking away saves. Choose it when is a
-    // single line, so Enter saves it.
-    else if (ev.key === 'Enter' && !ev.shiftKey && field !== 'purpose') { ev.preventDefault(); ta.blur(); }
-  };
-  ta.onblur = function () { commitNote(ing, field, ta.value, cancelled); };
-  ta.focus();
-  try { ta.setSelectionRange(ta.value.length, ta.value.length); } catch (err) {}
+  // Bold, italic (and lists in the reminder note) since 2026-10-24. The
+  // reminder note is a little notepad: Enter starts a new line, clicking
+  // away saves. The lowdown is a single line, so Enter saves it.
+  var cancelled = false, done = false;
+  var r = Plume.rt.editor(ing[field] || '', {
+    single: field !== 'purpose',
+    label: field === 'purpose' ? 'What I had in mind' : 'The lowdown',
+    onEnter: function () { r.ed.blur(); }
+  });
+  el.innerHTML = ''; el.appendChild(r.wrap);
+  r.wrap.onclick = function (ev) { ev.stopPropagation(); };
+  r.ed.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') { cancelled = true; r.ed.blur(); } });
+  r.ed.addEventListener('blur', function () {
+    if (done) return;
+    done = true;
+    commitNote(ing, field, r.get(), cancelled);
+  });
+  r.focus();
 }
 function commitNote(ing, field, value, cancelled) {
   var v = String(value || '').trim();
@@ -2865,76 +2960,93 @@ function viewIngredient(id) {
     return 0;
   });
   var madeForm = stockFormOf(i);
-  var lotsHtml = sortedLots.length ? sortedLots.map(function(l) {
-    var suppObj = suppliers.find(function(s) { return s.name === l.supplier; });
-    var buyLink = l.buyLink || '';
-    var purchaseStr = '';
-    if (l.purchaseSize && l.purchaseUnit) {
-      purchaseStr = l.purchaseSize + ' ' + l.purchaseUnit;
-      if (l.purchasePrice) purchaseStr += ' for $' + parseFloat(l.purchasePrice).toFixed(2);
-    }
-    var isActive = (l.id === activeLotId) && !l.referenceOnly;
-    // Top-of-card banner: shows reference-only state OR active-for-costing state.
-    // A lot can be neither (a regular non-active purchased lot) — no banner.
-    var headerBanner = '';
-    if (l.referenceOnly) {
-      headerBanner = '<div style="font-size:9px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--clay-dark);margin-bottom:8px;grid-column:1/-1;border-bottom:1px dashed var(--cream-border);padding-bottom:6px">Reference only · price comparison</div>';
-    } else if (isActive) {
-      // Show received date if available, formatted compactly. The "(default)"
-      // qualifier appears when this lot is active by fallback rather than
-      // explicit user choice, so the user understands the system picked it.
-      var rcv = l.received ? ' · received ' + formatDateShort(l.received) : '';
-      var qualifier = hasExplicitActive ? '' : ' (default)';
-      headerBanner = '<div style="font-size:9px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--sage-dark);margin-bottom:8px;grid-column:1/-1;border-bottom:1px dashed var(--sage-border);padding-bottom:6px;display:flex;justify-content:space-between;align-items:center"><span>Active for costing' + qualifier + rcv + '</span></div>';
-    }
-    // Resurrection / reversal indicator: appears on lots that were depleted
-    // and then had stock returned via batch decommit, or were auto-created
-    // by decommit because the original lot was deleted. Purely informational
-    // -- doesn't affect costing or stock math.
-    var resurrectionBanner = '';
-    if (l.madeBatchId) {
-      // A lot made here: a batch of this stock solution.
-      resurrectionBanner = '<div class="made-lot">Made in-house in batch ' +
-        Plume.lotChip(l.lotNum || 'no lot code', 'plume-batchlog.html#b=' + encodeURIComponent(l.madeBatchId)).replace('<a ', '<a target="plume-batchlog" ') +
-        (l.madeMissing && l.madeMissing.length ? ' <span class="made-miss">not priced: ' + l.madeMissing.map(esc).join(', ') + ' had no price</span>' : '') + '</div>';
-    } else if (l.wasReversal) {
-      resurrectionBanner = '<div style="font-size:10px;color:var(--clay-dark);margin-bottom:6px;grid-column:1/-1;font-style:italic;display:flex;align-items:center;gap:6px"><span style="font-size:13px">\u21BA</span> Auto-created from batch decommit. ' +
-        (l.notes ? '<span style="color:var(--ink-lighter);font-style:normal">' + l.notes + '</span>' : '') +
-        '</div>';
-    } else if (l.wasResurrected) {
-      var resDate = l.resurrectedAt ? new Date(l.resurrectedAt).toLocaleDateString() : '';
-      resurrectionBanner = '<div style="font-size:10px;color:var(--sage-dark);margin-bottom:6px;grid-column:1/-1;font-style:italic;display:flex;align-items:center;gap:6px"><span style="font-size:13px">\u21BA</span> Resurrected from depleted' + (resDate ? ' on ' + resDate : '') + ' (batch decommit returned stock to this lot).</div>';
-    }
-    // "Set as active" action — appears only on non-active purchased lots
-    // with a valid cost/g. (No point setting an active lot you can't cost from.)
-    var canSetActive = !l.referenceOnly && !isActive && l.costPerG && parseFloat(l.costPerG) > 0;
-    var setActiveBtn = canSetActive
-      ? '<div style="grid-column:1/-1;display:flex;justify-content:flex-end;margin-top:4px"><button class="btn btn-sm" style="font-size:11px;padding:4px 10px" onclick="setActiveLot(\'' + i.id + '\',\'' + l.id + '\')">Set as active</button></div>'
-      : '';
-    return '<div class="lot-detail-card' + (l.referenceOnly ? ' lot-detail-card-reference' : '') + (isActive ? ' lot-detail-card-active' : '') + '" style="grid-template-columns:repeat(4,1fr)">' +
-      headerBanner +
-      resurrectionBanner +
-      '<div class="lf"><label>Supplier</label><p>' + (l.supplier || '\u2014') +
-        (suppObj && suppObj.webLink ? ' <a class="detail-link" href="' + suppObj.webLink + '" target="_blank" rel="noopener" style="font-size:11px">site &#8599;</a>' : '') + '</p></div>' +
-      '<div class="lf"><label>Brand</label><p>' + (l.brand || '\u2014') +
-        (Plume.lotCerts(l).length ? ' ' + certBadgesHtml(l) : '') +
-      '</p></div>' +
-      '<div class="lf"><label>Cost / g</label><p>' + (l.costPerG ? '$' + parseFloat(l.costPerG).toFixed(4) : '\u2014') + '</p></div>' +
-      '<div class="lf"><label>Purchase</label><p style="font-size:12px">' + (purchaseStr || '\u2014') + '</p></div>' +
-      '<div class="lf"><label>Qty purchased</label><p>' + ((l.qtyPurchased || l.stock) ? (l.qtyPurchased || l.stock) + ' ' + (l.qtyUnit || l.stockUnit || 'g') : '\u2014') + '</p></div>' +
-      '<div class="lf"><label>Lot #</label><p>' + (l.lotNum || '\u2014') + '</p></div>' +
-      '<div class="lf"><label>Received</label><p>' + (l.received || '\u2014') + '</p></div>' +
-      '<div class="lf"><label>Best by</label><p class="' + (l.bestBy && new Date(l.bestBy) < new Date(new Date().setMonth(new Date().getMonth()+3)) ? 'expiry-warn' : '') + '">' + (l.bestBy || '\u2014') + '</p></div>' +
-      '<div class="lf"><label>Order #</label><p>' + (l.orderNum || '\u2014') + '</p></div>' +
-      '<div class="lf" style="grid-column:span 2"><label>Links</label><p style="display:flex;gap:8px;flex-wrap:wrap">' +
-        (buyLink ? '<a class="detail-link" href="' + buyLink + '" target="_blank" rel="noopener">Reorder &#8599;</a>' : '') +
-        (l.receiptLink ? '<a class="detail-link" href="' + l.receiptLink + '" target="_blank" rel="noopener">Receipt &#8599;</a>' : '') +
-        (!buyLink && !l.receiptLink ? '\u2014' : '') +
-      '</p></div>' +
-      setActiveBtn +
+
+  // ── The page, tidied (2026-10-24, her pick of the "Ingredient entry
+  // options", Option 1). Each section says how full it is; filled fields
+  // show, empty ones fold into one "Not filled in" line with an Add link;
+  // each section's Edit opens the editor on its tab. Lots are a compact
+  // table rather than a card per lot.
+  var dash = '<span style="color:var(--ink-lighter)">—</span>';
+  var field = function (label, html, span) {
+    return '<div class="detail-field"' + (span ? ' style="grid-column:' + span + '"' : '') + '><label>' + label + '</label><p>' + html + '</p></div>';
+  };
+  var has = function (v) { return v !== undefined && v !== null && String(v).trim() !== ''; };
+  var section = function (o) {
+    return '<div class="detail-section" id="ds-' + o.tab + '-' + (o.key || o.tab) + '">' +
+      '<div class="ds-h"><span class="detail-section-title">' + o.title + '</span>' +
+        (o.count ? '<span class="ds-count' + (o.full ? ' full' : '') + '">' + o.count + '</span>' : '') +
+        '<button type="button" class="ds-edit" onclick="editCurrent(\'' + o.tab + '\')">' + (o.editLabel || 'Edit') + '</button></div>' +
+      (o.body || '') +
+      (o.empties && o.empties.length ? '<div class="ds-empty">Not filled in: ' + o.empties.join(', ') + '. <button type="button" onclick="editCurrent(\'' + o.tab + '\')">Add</button></div>' : '') +
     '</div>';
-  }).join('') : '<p style="font-size:13px;color:var(--ink-lighter)">' + (madeForm ? 'No batches of it made yet.' : 'No supplier lots recorded yet.') + '</p>';
-  if (madeForm) lotsHtml = '<div class="made-from">' + madeFromText(madeForm) + '</div>' + lotsHtml;
+  };
+  var rich = function (v) { return '<div class="rt-text">' + Plume.rt.toHtml(v) + '</div>'; };
+
+  // At a glance
+  var SOL = { water: 'Water-soluble', oil: 'Oil-soluble', both: 'Water and oil', 'water-dispersible': 'Disperses in water', 'oil-dispersible': 'Disperses in oil' };
+  var tg = calcTotalStockG(i), low = isLowStock(i), unit = i.lowStockUnit || 'g', thresh = i.lowStock ? i.lowStock + ' ' + unit : null;
+  var stockTxt = (tg !== null ? tg.toFixed(0) + 'g' : '—') + (thresh ? ' <span style="font-size:11px;color:' + (low ? 'var(--warning)' : 'var(--success)') + '">' + (low ? '▼ low — threshold ' + thresh : '✓ above ' + thresh) + '</span>' : '');
+  var cpg = bestCpg(i);
+  var glanceOpt = [
+    { label: 'Usage rate', v: (i.min || i.max) ? (i.min || '0') + '% – ' + (i.max || '100') + '%' : '', name: 'usage rate' },
+    { label: 'Recommended usage', v: i.useRate, name: 'recommended usage' },
+    { label: 'Solubility', v: SOL[i.solubility] || i.solubility, name: 'solubility' },
+    { label: 'Substitutes', v: i.substitution, name: 'substitutes' },
+    { label: 'Secondary functions', v: i.function2, name: 'secondary functions' }
+  ];
+  var gFilled = glanceOpt.filter(function (f) { return has(f.v); });
+  var glanceBody =
+    '<div class="detail-grid" style="grid-template-columns:1fr">' +
+      '<div class="detail-field"><label>The lowdown</label>' + noteEditHtml(i, 'chooseWhen') + '</div>' +
+    '</div>' +
+    '<div class="detail-grid">' +
+      gFilled.map(function (f) { return field(f.label, esc(String(f.v))); }).join('') +
+      field('Used in', typeof PlumeCheat !== 'undefined' ? PlumeCheat.usedInHtml(PlumeCheat.usageMap()[i.id] || [], 8) : '—') +
+      field('Total stock', stockTxt) +
+      field('Price per gram', cpg !== null ? (cpg === 0 && i.noCost ? 'in-house ($0)' : '$' + cpg.toFixed(4)) : dash) +
+    '</div>' +
+    '<div class="detail-grid" style="grid-template-columns:1fr">' +
+      '<div class="detail-field"><label>What I had in mind</label>' + noteEditHtml(i, 'purpose') + '</div>' +
+    '</div>';
+  var glanceHtml = section({ tab: 'glance', title: 'At a glance', body: glanceBody,
+    empties: glanceOpt.filter(function (f) { return !has(f.v); }).map(function (f) { return f.name; }) });
+
+  // Properties & characteristics
+  var dField = densityField(i);
+  var props = [
+    { label: 'Absorption rate',     v: i.absorptionRate,     name: 'absorption rate' },
+    { label: 'Heat stability',      v: i.heatStability,      name: 'heat stability' },
+    { label: 'Melting point',       v: i.meltingPoint,       name: 'melting point' },
+    { label: 'Oxidation stability', v: i.oxidationStability, name: 'oxidation stability' },
+    { label: 'Color',               v: i.colour,             name: 'color' },
+    { label: 'Scent',               v: i.scent,              name: 'scent' },
+    { label: 'Effective pH range',  v: i.optimalPh,          name: 'effective pH range' },
+    { label: 'Dermal limits',       v: i.dermalLimits,       name: 'dermal limits' },
+    { label: 'Claims',              v: i.claims,             name: 'claims', rich: true, span: '1 / -1' },
+    { label: 'Density (g/mL)',      v: i.density,            name: 'density' }
+  ];
+  var pFilled = props.filter(function (f) { return has(f.v); });
+  var propsBody = '<div class="detail-grid">' +
+    pFilled.filter(function (f) { return f.name !== 'claims' && f.name !== 'density'; }).map(function (f) { return field(f.label, esc(String(f.v))); }).join('') +
+    // Density is always shown: an assumed one is still what stock and cost use.
+    field('Density (g/mL)', esc(String(dField.value || '1')) + (dField.note ? ' <span style="font-size:11px;color:var(--ink-lighter)">(' + esc(String(dField.note)) + ')</span>' : (!dField.value ? ' <span style="font-size:11px;color:var(--ink-lighter)">(assumed, water)</span>' : ''))) +
+    field('Restricted use', i.flag === 'yes' ? ('Yes' + (i.restrictions ? ' — ' + esc(i.restrictions) : '')) : (i.restrictions ? 'Not flagged — ' + esc(i.restrictions) : 'No')) +
+    (has(i.claims) ? '<div class="detail-field" style="grid-column:1 / -1"><label>Claims — supplier-stated</label>' + rich(i.claims) + '</div>' : '') +
+    '</div>';
+  var propsHtml = section({ tab: 'props', title: 'Properties &amp; characteristics', count: pFilled.length + ' of ' + props.length + ' filled', full: pFilled.length === props.length,
+    body: propsBody, empties: props.filter(function (f) { return !has(f.v); }).map(function (f) { return f.name; }) });
+
+  // Notes & reference
+  var notesHtml = section({ tab: 'notes', key: 'notes', title: 'My formulating notes', count: has(i.notes) ? '' : 'not filled in', editLabel: has(i.notes) ? 'Edit' : 'Add',
+    body: has(i.notes) ? '<div class="notes-box rt-text">' + Plume.rt.toHtml(i.notes) + '</div>' : '' });
+  var words = has(i.generalInfo) ? String(i.generalInfo).trim().split(/\s+/).length : 0;
+  var detailsHtml = section({ tab: 'notes', key: 'details', title: 'Expanded ingredient details', count: words ? 'about ' + (words < 20 ? words : Math.round(words / 10) * 10) + ' words' : 'not filled in', editLabel: words ? 'Edit' : 'Add',
+    body: words ? '<div class="rt-text ds-clamp" id="general-info-body">' + Plume.rt.toHtml(i.generalInfo) + '</div>' +
+      '<button type="button" class="ds-more" id="general-info-toggle" onclick="toggleGeneralInfo()">Read more</button>' : '' });
+  var allLinks = migrateLinks(i);
+  var linksHtml = section({ tab: 'notes', key: 'links', title: 'Resource links', count: allLinks.length ? String(allLinks.length) : 'none yet', editLabel: allLinks.length ? 'Edit' : 'Add',
+    body: allLinks.length ? '<p style="display:flex;flex-wrap:wrap;gap:12px;font-size:14px">' + allLinks.map(function (l) {
+      return '<a class="detail-link" href="' + l.url + '" target="_blank" rel="noopener">' + esc(l.label) + ' &#8599;</a>'; }).join('') + '</p>' : '' });
 
   // Soap data section
   var soapHtml = '';
@@ -2958,108 +3070,56 @@ function viewIngredient(id) {
             '<div style="font-size:14px;color:var(--ink)">' + s.fa[k] + '%</div></div>';
         }).join('') + '</div>';
     }
-    soapHtml = '<div class="detail-section"><div class="detail-section-title">Soap / saponification data</div>' + sapHtml + faHtml + '</div>';
+    soapHtml = sapHtml + faHtml;
   }
 
-  // Properties section — only render fields with values
-  var dField = densityField(i);
-  var propsFields = [
-    { label: 'Absorption rate',     value: i.absorptionRate    },
-    { label: 'Heat stability',      value: i.heatStability     },
-    { label: 'Melting point',       value: i.meltingPoint      },
-    { label: 'Oxidation stability', value: i.oxidationStability},
-    { label: 'Colour',              value: i.colour            },
-    { label: 'Scent',               value: i.scent             },
-    { label: 'Effective pH range',  value: i.optimalPh         },
-    { label: 'Dermal limits',       value: i.dermalLimits      },
-    { label: 'Restricted use',      value: i.flag === 'yes' ? ('Yes' + (i.restrictions ? ' \u2014 ' + i.restrictions : '')) : (i.restrictions ? 'Not flagged \u2014 ' + i.restrictions : 'No') },
-    // An inferred density is still the number the stock and cost figures are
-    // built on, so showing a blank here while quietly using 0.92 elsewhere
-    // would hide the one assumption most likely to be wrong.
-    { label: 'Density (g/mL)',      value: dField.value, note: dField.note }
-  ];
-  var propsHtml = '';
-  if (propsFields.length) {
-    propsHtml = '<div class="detail-section"><div class="detail-section-title">Properties &amp; characteristics</div>' +
-      '<div class="detail-grid">' +
-      propsFields.map(function(f) {
-        // Both value and note are escaped. A field that wants emphasis sets
-        // `note`, and the renderer supplies the markup, so no field can ever
-        // inject its own.
-        return '<div class="detail-field"><label>' + f.label + '</label><p>' +
-          (f.value && String(f.value).trim() ? esc(String(f.value)) : '<span style="color:var(--ink-lighter)">\u2014</span>') +
-          (f.note ? ' <span style="font-size:11px;color:var(--ink-lighter)">(' + esc(String(f.note)) + ')</span>' : '') +
-          '</p></div>';
-      }).join('') +
-      '</div>' +
-      // Claims sit apart from the measured properties above, and say whose
-      // words they are. They are the supplier's marketing copy, kept for
-      // reference while formulating -- not something to put on a label.
-      '<div style="margin-top:1rem">' +
-        '<div class="detail-field"><label>Claims \u2014 supplier-stated</label>' +
-        (i.claims && i.claims.trim()
-          ? '<p style="white-space:pre-wrap">' + esc(i.claims) + '</p>'
-          : '<p><span style="color:var(--ink-lighter)">\u2014</span></p>') +
-        '</div>' +
-      '</div>' +
-      '</div>';
-  }
+  var soapSec = section({ tab: 'soap', title: 'Soap data', count: soapHtml ? '' : 'not filled in', editLabel: soapHtml ? 'Edit' : 'Add', body: soapHtml });
 
-  // Expanded ingredient details — collapsible, only if content present
-  var generalInfoHtml = '';
-  if (i.generalInfo && i.generalInfo.trim()) {
-    generalInfoHtml =
-      '<div class="detail-section">' +
-        '<div class="detail-section-title" style="cursor:pointer;user-select:none" onclick="toggleGeneralInfo()">' +
-          '<span id="general-info-toggle" style="display:inline-block;width:12px;color:var(--ink-lighter);font-size:10px">\u25b8</span> ' +
-          'Expanded ingredient details' +
-          '<span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:11px;color:var(--ink-lighter);margin-left:8px">click to expand</span>' +
-        '</div>' +
-        '<div id="general-info-body" style="display:none;white-space:pre-wrap;font-size:13px;line-height:1.6;color:var(--ink);padding-top:8px">' +
-          esc(i.generalInfo) +
-        '</div>' +
-      '</div>';
-  }
+  // Supplier lots: one row each.
+  var lotCount = sortedLots.filter(function (l) { return !l.referenceOnly; }).length;
+  var lotsBody = (madeForm ? '<div class="made-from">' + madeFromText(madeForm) + '</div>' : '') +
+    (sortedLots.length ? '<div class="lt">' +
+      '<div class="lt-row lt-h"><span>Supplier</span><span>Lot</span><span>Received</span><span class="r">Qty</span><span class="r">Cost/g</span><span></span></div>' +
+      sortedLots.map(function (l) {
+        var isActive = (l.id === activeLotId) && !l.referenceOnly;
+        var suppObj = suppliers.find(function (x) { return x.name === l.supplier; });
+        var tags = (isActive ? ' <span class="lt-tag on">active' + (hasExplicitActive ? '' : ' (default)') + '</span>' : '') +
+          (l.referenceOnly ? ' <span class="lt-tag">reference only</span>' : '');
+        var notes = '';
+        if (l.madeBatchId) notes += '<small class="lt-note made">Made in-house in batch ' + Plume.lotChip(l.lotNum || 'no lot code', 'plume-batchlog.html#b=' + encodeURIComponent(l.madeBatchId)).replace('<a ', '<a target="plume-batchlog" ') + (l.madeMissing && l.madeMissing.length ? ' <span class="made-miss">not priced: ' + l.madeMissing.map(esc).join(', ') + ' had no price</span>' : '') + '</small>';
+        else if (l.wasReversal) notes += '<small class="lt-note">↺ Auto-created from a batch decommit.' + (l.notes ? ' ' + esc(l.notes) : '') + '</small>';
+        else if (l.wasResurrected) notes += '<small class="lt-note">↺ Stock returned by a batch decommit' + (l.resurrectedAt ? ' on ' + new Date(l.resurrectedAt).toLocaleDateString() : '') + '.</small>';
+        var purchase = l.purchaseSize && l.purchaseUnit ? l.purchaseSize + ' ' + l.purchaseUnit + (l.purchasePrice ? ' for $' + parseFloat(l.purchasePrice).toFixed(2) : '') : '';
+        var soon = l.bestBy && new Date(l.bestBy) < new Date(new Date().setMonth(new Date().getMonth() + 3));
+        var links = (l.buyLink ? '<a class="detail-link" href="' + esc(l.buyLink) + '" target="_blank" rel="noopener">Reorder &#8599;</a>' : '') +
+          (l.receiptLink ? '<a class="detail-link" href="' + esc(l.receiptLink) + '" target="_blank" rel="noopener">Receipt &#8599;</a>' : '');
+        var canSetActive = !l.referenceOnly && !isActive && l.costPerG && parseFloat(l.costPerG) > 0;
+        return '<div class="lt-row' + (isActive ? ' on' : '') + (l.referenceOnly ? ' ref' : '') + '">' +
+          '<span><b>' + esc(l.supplier || '—') + '</b>' + (suppObj && suppObj.webLink ? ' <a class="detail-link" href="' + esc(suppObj.webLink) + '" target="_blank" rel="noopener" style="font-size:11px">site &#8599;</a>' : '') + tags +
+            (l.brand ? '<small>' + esc(l.brand) + '</small>' : '') + (purchase ? '<small>' + esc(purchase) + (l.orderNum ? ' · order ' + esc(l.orderNum) : '') + '</small>' : (l.orderNum ? '<small>order ' + esc(l.orderNum) + '</small>' : '')) +
+            (Plume.lotCerts(l).length ? '<small>' + certBadgesHtml(l) + '</small>' : '') + notes + '</span>' +
+          '<span>' + (l.lotNum ? esc(l.lotNum) : dash) + '</span>' +
+          '<span>' + (l.received ? esc(fmtDate(l.received)) : dash) + (l.bestBy ? '<small class="' + (soon ? 'expiry-warn' : '') + '">best by ' + esc(fmtDate(l.bestBy)) + '</small>' : '') + '</span>' +
+          '<span class="r">' + ((l.qtyPurchased || l.stock) ? esc(String(l.qtyPurchased || l.stock)) + ' ' + esc(l.qtyUnit || l.stockUnit || 'g') : dash) + '</span>' +
+          '<span class="r">' + (l.costPerG ? '$' + parseFloat(l.costPerG).toFixed(4) : dash) + '</span>' +
+          '<span class="lt-act">' + links + (canSetActive ? '<button class="btn btn-sm" onclick="setActiveLot(\'' + i.id + '\',\'' + l.id + '\')">Set as active</button>' : '') + '</span>' +
+        '</div>';
+      }).join('') + '</div>'
+    : '<p style="font-size:13px;color:var(--ink-lighter)">' + (madeForm ? 'No batches of it made yet.' : 'No supplier lots recorded yet.') + '</p>');
+  var lotsSec = '<div class="detail-section"><div class="ds-h"><span class="detail-section-title">Supplier lots</span>' +
+    '<span class="ds-count">' + (lotCount ? lotCount + ' lot' + (lotCount === 1 ? '' : 's') + (tg !== null ? ', ' + tg.toFixed(0) + ' g' : '') : 'none yet') + '</span>' +
+    '<button type="button" class="ds-edit" onclick="openLotsFromDetails()">Manage lots</button></div>' + lotsBody + '</div>';
 
-  // The details page shows EVERY field, empty ones as a quiet dash, so it is
-  // the full picture and Edit only ever means "change something".
   document.getElementById('d-body').innerHTML =
-    '<div class="detail-grid" style="grid-template-columns:1fr 1fr">' +
-      '<div class="detail-field"><label>The lowdown</label>' + noteEditHtml(i, 'chooseWhen') + '</div>' +
-      '<div class="detail-field"><label>Substitutes</label><p>' + (i.substitution ? esc(i.substitution) : '\u2014') + '</p></div>' +
-      '<div class="detail-field" style="grid-column:1 / -1"><label>What I had in mind</label>' + noteEditHtml(i, 'purpose') + '</div>' +
-    '</div>' +
-    '<div class="detail-grid">' +
-      '<div class="detail-field"><label>Usage rate</label><p>' + (i.min || i.max ? (i.min||'0') + '% \u2013 ' + (i.max||'100') + '%' : '\u2014') + '</p></div>' +
-      '<div class="detail-field"><label>Secondary functions</label><p>' + (i.function2 ? esc(i.function2) : '\u2014') + '</p></div>' +
-      '<div class="detail-field"><label>Used in</label><p>' + (typeof PlumeCheat !== 'undefined' ? PlumeCheat.usedInHtml(PlumeCheat.usageMap()[i.id] || [], 8) : '\u2014') + '</p></div>' +
-      (function() { var tg = calcTotalStockG(i); var s = tg !== null ? tg.toFixed(0) + 'g' : '\u2014'; var low = isLowStock(i); var unit = i.lowStockUnit || 'g'; var thresh = i.lowStock ? i.lowStock + ' ' + unit : null; return '<div class="detail-field"><label>Total stock</label><p>' + s + (thresh ? ' <span style="font-size:11px;color:' + (low ? 'var(--warning)' : 'var(--success)') + '">' + (low ? '\u25bc low \u2014 threshold ' + thresh : '\u2713 above ' + thresh) + '</span>' : '') + '</p></div>'; })() +
-      (function() {
-        var allLinks = migrateLinks(i);
-        if (!allLinks.length) return '<div class="detail-field"><label>Resource links</label><p>\u2014</p></div>';
-        return '<div class="detail-field" style="grid-column:span 2"><label>Resource links</label><p style="display:flex;flex-wrap:wrap;gap:10px">' +
-          allLinks.map(function(l) {
-            return '<a class="detail-link" href="' + l.url + '" target="_blank" rel="noopener">' + esc(l.label) + ' &#8599;</a>';
-          }).join('') +
-        '</p></div>';
-      })() +
-    '</div>' +
-    propsHtml +
-    '<div class="detail-section"><div class="detail-section-title">My formulating notes</div>' +
-      (i.notes ? '<div class="notes-box">' + i.notes + '</div>' : '<p style="font-size:13px;color:var(--ink-lighter)">\u2014</p>') + '</div>' +
-    (generalInfoHtml || '<div class="detail-section"><div class="detail-section-title">Expanded ingredient details</div><p style="font-size:13px;color:var(--ink-lighter)">\u2014</p></div>') +
-    soapHtml +
-    '<div class="detail-section"><div class="detail-section-title" style="display:flex;align-items:center;gap:12px">Supplier lots' +
-      '<button class="btn btn-sm" style="letter-spacing:0;text-transform:none" onclick="openLotsFromDetails()">Manage lots &rsaquo;</button></div>' + lotsHtml + '</div>';
+    glanceHtml.replace('class="detail-section"', 'class="detail-section ds-first"') +
+    propsHtml + notesHtml + detailsHtml + linksHtml + soapSec + lotsSec;
 }
 
 function toggleGeneralInfo() {
-  var body   = document.getElementById('general-info-body');
-  var toggle = document.getElementById('general-info-toggle');
-  if (!body || !toggle) return;
-  var open = body.style.display !== 'none';
-  body.style.display = open ? 'none' : 'block';
-  toggle.textContent = open ? '\u25b8' : '\u25be';
+  var body = document.getElementById('general-info-body'), btn = document.getElementById('general-info-toggle');
+  if (!body || !btn) return;
+  var open = body.classList.toggle('open');
+  btn.textContent = open ? 'Show less' : 'Read more';
 }
 
 // ── Restricted use ────────────────────────────────────
@@ -3349,10 +3409,8 @@ function openAdd() {
   document.getElementById('f-purpose').value = '';
   document.getElementById('f-choose').value  = '';
   renderFuncChips([]);
-  // Reset props section to collapsed for a fresh entry
-  propsSectionOpen = false;
-  document.getElementById('props-fields').style.display = 'none';
-  document.getElementById('props-toggle-label').textContent = 'show';
+  document.getElementById('f-solubility').value = '';
+  document.getElementById('f-userate').value = '';
   loadLinks([]);
   document.getElementById('f-lowstock-unit').value = 'g';
   document.getElementById('f-density-flag').style.display = 'none';
@@ -3369,10 +3427,13 @@ function openAdd() {
   addLotRow();
   updateLotsSummary();
   renderDensityHint();
+  Plume.rt.refreshAll();
+  setIngTab('basics');
+  renderIngTabDots();
   openModal('modal-add');
 }
 
-function editCurrent() {
+function editCurrent(tab) {
   var i = ingredients.find(function(x) { return x.id === viewingId; });
   if (!i) return;
   editingId = viewingId;
@@ -3404,13 +3465,8 @@ function editCurrent() {
   document.getElementById('f-restrictions').value       = i.restrictions      || '';
   document.getElementById('f-general-info').value       = i.generalInfo       || '';
   document.getElementById('f-claims').value             = i.claims            || '';
-  // Auto-expand the section if any of those fields hold a value
-  var hasPropsData = !!(i.absorptionRate || i.heatStability || i.meltingPoint
-    || i.oxidationStability || i.colour || i.scent || i.optimalPh
-    || i.dermalLimits || i.restrictions || i.generalInfo || i.claims || i.flag === 'yes');
-  propsSectionOpen = hasPropsData;
-  document.getElementById('props-fields').style.display = hasPropsData ? 'block' : 'none';
-  document.getElementById('props-toggle-label').textContent = hasPropsData ? 'hide' : 'show';
+  document.getElementById('f-solubility').value = i.solubility || '';
+  document.getElementById('f-userate').value    = i.useRate    || '';
   syncRestrictField();
   loadLinks(migrateLinks(i));
   document.getElementById('f-notes').value    = i.notes    || '';
@@ -3428,6 +3484,9 @@ function editCurrent() {
   updateLotsSummary();
   loadSoapFields(i.soap || null);
   renderDensityHint();
+  Plume.rt.refreshAll();
+  setIngTab(typeof tab === 'string' ? tab : 'basics');
+  renderIngTabDots();
   openModal('modal-add');
 }
 
@@ -3467,6 +3526,8 @@ function saveIngredient(keepOpen) {
     name:     name,
     inci:     inci,
     phase:    document.getElementById('f-phase').value,
+    solubility: document.getElementById('f-solubility').value,
+    useRate:  document.getElementById('f-userate').value.trim(),
     flag:     document.getElementById('f-restricted').checked ? 'yes' : 'no',
     noCost:   document.getElementById('f-nocost').checked,
     min:      document.getElementById('f-min').value,
@@ -4093,6 +4154,7 @@ function updateLotsSummary() {
   var unique = suppliers.filter(function(s, i) { return suppliers.indexOf(s) === i; });
   el.textContent = rows.length + ' lot' + (rows.length !== 1 ? 's' : '') +
     (unique.length ? ' \u00b7 ' + unique.join(', ') : '');
+  renderIngTabDots();
 }
 function toggleInlineSupplierForm(forceOpen) {
   var form = document.getElementById('inline-supplier-form');
@@ -4437,7 +4499,7 @@ document.querySelectorAll('.modal-overlay').forEach(function(el) {
 // are serialized to a stable string so order-equivalent rows compare
 // equal.
 var _editFormSnapshot = null;
-var EDIT_FIELD_IDS = ['f-name','f-inci','f-phase','f-min','f-max',
+var EDIT_FIELD_IDS = ['f-name','f-inci','f-phase','f-solubility','f-userate','f-min','f-max',
   'f-purpose','f-choose','f-function-notes','f-function2','f-notes',
   'f-density','f-lowstock','f-lowstock-unit',
   'f-absorption-rate','f-heat-stability','f-melting-point','f-oxidation-stability',
@@ -4815,6 +4877,15 @@ if (typeof Plume === 'undefined') {
     renderPhaseChips();
     fillFunctionFilter();
     loadData();
+    // Rich text in the text-heavy fields (2026-10-24).
+    Plume.rt.attach('f-choose', { single: true, label: 'The lowdown' });
+    Plume.rt.attach('f-purpose', { label: 'What I had in mind' });
+    Plume.rt.attach('f-notes', { label: 'My formulating notes', tall: '90px' });
+    Plume.rt.attach('f-general-info', { label: 'Expanded ingredient details', tall: '150px' });
+    Plume.rt.attach('f-claims', { label: 'Claims' });
+    // Tab dots follow what is typed.
+    document.getElementById('modal-add').addEventListener('input', renderIngTabDots);
+    document.getElementById('modal-add').addEventListener('change', renderIngTabDots);
     if (Store.get('plume_ing_view') === 'cheat') setIngView('cheat');
     // Older links and bookmarks to Suppliers land here.
     if (location.hash === '#suppliers') { openSuppliers(); try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {} }
