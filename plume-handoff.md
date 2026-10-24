@@ -92,7 +92,7 @@ Core defines globals with the names modules already use, so **converting a modul
 **A module may override an alias by defining its own function** — this is the intended escape hatch. `plume-ingredients.html` keeps a local `openModal` because it snapshots form state to detect unsaved edits. Share the common case; keep the exception local.
 
 ### Versioning
-`Plume.VERSION` is displayed at the bottom of every converted module's Settings → Storage panel, alongside the active driver name. **Bump it on every core change.** Browsers cache `.js` far more stubbornly than they re-fetch a replaced HTML file, so "is core loaded, and is it the one I just uploaded?" must be answerable by looking. Current: **v1.40** (see the newest session notes at the end; v1.8 added INCI blend splitting; v1.9 added density resolution; v1.10 ranked search results, best match first; v1.11 added pH records; v1.12 made it the one app version, shown in every footer; v1.13 rebuilt Quick add; v1.14 drafted lowdowns; v1.15 replaced the browser pop-ups with in-page dialogs).
+`Plume.VERSION` is displayed at the bottom of every converted module's Settings → Storage panel, alongside the active driver name. **Bump it on every core change.** Browsers cache `.js` far more stubbornly than they re-fetch a replaced HTML file, so "is core loaded, and is it the one I just uploaded?" must be answerable by looking. Current: **v1.41** (see the newest session notes at the end; v1.8 added INCI blend splitting; v1.9 added density resolution; v1.10 ranked search results, best match first; v1.11 added pH records; v1.12 made it the one app version, shown in every footer; v1.13 rebuilt Quick add; v1.14 drafted lowdowns; v1.15 replaced the browser pop-ups with in-page dialogs).
 
 ### Upload order matters
 `plume-core.js` **first**, then the HTML. A module that arrives before core shows the missing-core banner until core lands. Core alone breaks nothing.
@@ -3273,4 +3273,46 @@ replaced it.
   missing-cost warning says a stock is priced by its batches.
 
 **Tests:** new `test/test-stock.js` (63). 29 suites.
+
+### Session 25 (24 October 2026): Quick add, certifications (core v1.41)
+
+**Her problem:** entering new ingredients took "an embarrassing amount of
+time". She reviewed three mockups on a design canvas (Ingredient entry
+options) and chose: Quick add for new ingredients (this PR), Option 1
+(tidied profile: fill counts, empty fields folded into one line, Read more,
+compact lot table, per-section Edit) for the ingredient page, and Option 2
+(tabs) for the full editor, with per-section Edit opening the matching tab,
+plus rich text (bold, italic, bullets, stored as plain-text marks) on the
+lowdown, What I had in mind, formulating notes, expanded details and claims.
+Those are the next PR.
+
+**Quick add** (`#modal-quick`, `openQuickAdd`): + New and the empty-state
+button open it; the full editor (`openAdd`) stays for Add more details and
+Edit. Name, INCI, functions, phase, min/max, and "What you bought": supplier
+(datalist of saved suppliers and names on lots), order #, received (today),
+size + unit (g, oz, lb, mL, fl oz), price, lot #, cost per gram live
+(`qaPurchase`; volume units use `Plume.densityFor` and say which density),
+certifications. Typing a name: a library duplicate is pointed out ("Open
+it"); up to three starter-list matches not in the library ("Use this" fills
+the form; saving then starts from `starterToIngredient`, so its lowdown
+arrives as a draft and its notes and properties come along). The purchase
+becomes lot `L1`, active, `qtyPurchased` = size. "Save & add another" keeps
+supplier, order # and date (her ask: one order, many items) and lists what was
+added; a typed supplier not saved joins `aerie-suppliers-v1`
+(`qaEnsureSupplier`), so the lot editor's supplier select shows it. A
+backdrop click with something typed asks first.
+
+**Certifications** (her ask), on the LOT: core `Plume.CERTS` (organic,
+cosmosCert, cosmosApproved, ecocert, natrue: booleans on the lot; `organic` is
+the old Organic tick; COSMOS split in two at her point: Certified raw
+materials have organic content, Approved ones do not) and
+`certOther` (comma list); `Plume.lotCerts(lot)` gives the labels. Lot editor:
+a Certifications line replaces the Organic tick under Brand. Shown on the
+profile header (lot in use) and lot cards. Not yet anywhere else. Next: marking them on product labels (her choice):
+per product, tick which certifications to mark, each with its own symbol
+(*, †, ‡) and an editable footnote under the INCI list, read from each
+ingredient's lot in use.
+
+**Tests:** new `test/test-quickadd.js` (28); `test-next.js` expects Quick add
+from the empty state. 30 suites.
 

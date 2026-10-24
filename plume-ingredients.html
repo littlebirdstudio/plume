@@ -1158,6 +1158,44 @@
 .made-from a { color: var(--sage-dark); }
 .made-lot { grid-column: 1 / -1; font-size: 11.5px; color: var(--sage-dark); margin-bottom: 6px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .made-lot .made-miss { color: var(--warning); }
+/* Quick add (2026-10-24) */
+#modal-quick .modal { max-width: 780px; }
+.qa-sub { font-size: 12.5px; color: var(--ink-light); margin-left: 10px; margin-right: auto; }
+.qa-hint { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; border-radius: 9px; padding: 9px 12px; font-size: 13px; line-height: 1.45; }
+.qa-hint.sug { background: var(--sage-light); border: 1px solid var(--sage-border); color: var(--ink); }
+.qa-hint.dup { background: var(--warning-bg); border: 1px solid var(--warning-border); color: var(--ink); }
+.qa-hint i { color: var(--ink-light); }
+.qa-hint .btn { margin-left: auto; }
+.qa-hint + .qa-hint { margin-top: 6px; }
+.qa-buy { border: 1px solid var(--cream-border); border-radius: 12px; padding: 14px 16px 16px; margin-top: 18px; }
+.qa-buy-h { font-size: 11px; font-weight: 500; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-light); margin-bottom: 10px; }
+.qa-buy-h span { font-weight: 300; text-transform: none; letter-spacing: 0; font-size: 11.5px; color: var(--ink-lighter); }
+.qa-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.qa-grid .span2 { grid-column: span 2; }
+.qa-cpg { min-height: 38px; display: flex; align-items: center; font-size: 15px; font-weight: 500; color: var(--sage-dark); }
+.qa-cpg.none { font-size: 12.5px; font-weight: 400; color: var(--ink-lighter); }
+.qa-certs { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; margin-top: 12px; font-size: 13px; color: var(--ink); }
+.qa-certs .qa-cl { font-size: 11px; font-weight: 500; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-light); }
+.qa-certs label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; min-height: 30px; }
+.qa-certs input[type=checkbox] { width: 16px; height: 16px; margin: 0; }
+.qa-certs input[type=text] { font: inherit; font-size: 13px; padding: 6px 8px; border: 1px solid var(--cream-border); border-radius: 4px; width: 160px; background: var(--white); color: var(--ink); }
+.qa-kept { font-size: 12px; color: var(--ink-lighter); margin-top: 8px; }
+.qa-err { color: var(--danger); font-size: 13px; text-align: right; margin-top: 10px; min-height: 0; }
+.qa-done { margin-top: 16px; border-top: 1px solid var(--cream-border); padding-top: 12px; }
+.qa-done-h { font-size: 11px; font-weight: 500; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-light); margin-bottom: 4px; }
+.qa-done-r { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; font-size: 13.5px; padding: 6px 0; border-bottom: 1px solid var(--cream-dark); }
+.qa-done-r:last-child { border-bottom: 0; }
+.qa-done-r button { font: inherit; font-size: 13.5px; font-weight: 500; background: none; border: 0; padding: 0; color: var(--ink); cursor: pointer; text-decoration: underline; text-decoration-color: var(--cream-border); }
+.qa-done-r i { color: var(--ink-light); font-size: 12.5px; }
+.qa-done-r .qa-x { margin-left: auto; font-size: 12.5px; color: var(--ink-light); }
+.cert-badges { display: flex; flex-wrap: wrap; gap: 4px; }
+.cert-badge { display: inline-block; background: var(--sage-light); color: var(--sage-dark); font-size: 9.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; padding: 2px 7px; border-radius: 3px; }
+.lot-certs { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; font-size: 12px; color: var(--ink-light); padding: 2px 0 6px; }
+.lot-certs .lc-l { font-size: 10px; font-weight: 500; letter-spacing: .1em; text-transform: uppercase; }
+.lot-certs label { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
+.lot-certs input[type=checkbox] { margin: 0; }
+.lot-certs input[type=text] { font: inherit; font-size: 12px; padding: 4px 6px; border: 1px solid var(--cream-border); border-radius: 3px; width: 150px; background: var(--white); color: var(--ink); }
+@media (max-width: 700px) { .qa-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 </style>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#404834">
@@ -1187,7 +1225,7 @@
       <button type="button" class="ps-tab" id="vt-cheat" onclick="setIngView('cheat')">Cheat sheet</button>
       <div class="ps-tools">
         <button type="button" class="ps-chip" id="ing-arch-btn" style="display:none" onclick="toggleShowArchivedIngs()" aria-pressed="false" title="Show archived ingredients in the list. Searching always finds them."></button>
-        <button type="button" class="ps-btn-primary" id="ing-new-btn" onclick="openAdd()"><span id="ing-new-icon"></span>New</button>
+        <button type="button" class="ps-btn-primary" id="ing-new-btn" onclick="openQuickAdd()"><span id="ing-new-icon"></span>New</button>
         <div class="ps-menu-wrap">
           <button type="button" class="ps-icon-btn" data-ps-menu aria-label="More actions" aria-expanded="false" id="ing-more-btn"></button>
           <div class="ps-menu" role="menu" id="ing-more-menu">
@@ -1498,6 +1536,71 @@
 
 
 <!-- Seeder modal -->
+<!-- Quick add (2026-10-24): the essentials of a new ingredient and what was
+     bought, on one screen; "Save & add another" keeps the supplier, order #
+     and date for the next item from the same order. -->
+<div class="modal-overlay" id="modal-quick">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">New ingredient</div>
+      <span class="qa-sub">The essentials. The rest can wait.</span>
+      <button class="modal-close" onclick="closeQuickAdd()" aria-label="Close">×</button>
+    </div>
+    <div class="form-grid">
+      <div class="field">
+        <label for="qa-name">Common name *</label>
+        <input type="text" id="qa-name" placeholder="e.g. Jojoba oil" oninput="qaTyped()" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="qa-inci">INCI name *</label>
+        <input type="text" id="qa-inci" placeholder="e.g. Simmondsia Chinensis Seed Oil" oninput="qaCost()">
+      </div>
+      <div class="form-full" id="qa-hint"></div>
+      <div class="field form-full">
+        <label>Functions <span style="font-weight:300;text-transform:none;letter-spacing:0;font-size:10px">— pick every one that applies</span></label>
+        <div class="fcat-grid" id="qa-funcs"></div>
+      </div>
+      <div class="form-full form-row3">
+        <div class="field">
+          <label for="qa-phase">Phase</label>
+          <select id="qa-phase" onchange="qaCost()">
+            <option value="water">Water</option>
+            <option value="oil">Oil</option>
+            <option value="cool-down">Cool-down</option>
+            <option value="add-in">Add-in</option>
+          </select>
+        </div>
+        <div class="field"><label for="qa-min">Min usage %</label><input type="number" id="qa-min" step="0.01" min="0" placeholder="0"></div>
+        <div class="field"><label for="qa-max">Max usage %</label><input type="number" id="qa-max" step="0.01" min="0" placeholder="100"></div>
+      </div>
+    </div>
+    <div class="qa-buy">
+      <div class="qa-buy-h">What you bought <span>optional; it becomes the first lot</span></div>
+      <div class="qa-grid">
+        <div class="field span2"><label for="qa-sup">Supplier</label><input type="text" id="qa-sup" list="qa-sup-list" placeholder="e.g. Mountain Rose Herbs" autocomplete="off"><datalist id="qa-sup-list"></datalist></div>
+        <div class="field"><label for="qa-order">Order #</label><input type="text" id="qa-order" placeholder="optional"></div>
+        <div class="field"><label for="qa-received">Received</label><input type="date" id="qa-received"></div>
+        <div class="field"><label for="qa-size">Size</label><input type="number" id="qa-size" step="0.01" min="0" placeholder="e.g. 16" oninput="qaCost()"></div>
+        <div class="field"><label for="qa-unit">Unit</label>
+          <select id="qa-unit" onchange="qaCost()"><option value="g">g</option><option value="oz">oz (wt)</option><option value="lb">lb</option><option value="mL">mL</option><option value="fl oz">fl oz</option></select></div>
+        <div class="field"><label for="qa-price">Price paid ($)</label><input type="number" id="qa-price" step="0.01" min="0" placeholder="0.00" oninput="qaCost()"></div>
+        <div class="field"><label for="qa-lot">Lot #</label><input type="text" id="qa-lot" placeholder="optional"></div>
+        <div class="field span2"><label>Cost per gram</label><div class="qa-cpg none" id="qa-cpg">Fills in from the size and price</div></div>
+      </div>
+      <div class="qa-certs" id="qa-certs"></div>
+      <div class="qa-kept" id="qa-kept" hidden></div>
+    </div>
+    <div class="qa-err" id="qa-err"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="qaMore()" title="Save this and open the full editor for everything else">Add more details…</button>
+      <span style="flex:1"></span>
+      <button class="btn" onclick="qaSave(false)">Save</button>
+      <button class="btn btn-primary" onclick="qaSave(true)">Save &amp; add another</button>
+    </div>
+    <div class="qa-done" id="qa-done" hidden></div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-seeder">
   <div class="modal" style="max-width:700px">
     <div class="modal-header">
@@ -2414,7 +2517,7 @@ function renderTable() {
   if (!list.length && noActive && !ingredients.length) {
     tbody.innerHTML = '<tr><td colspan="6" style="padding:14px 0">' + Plume.nextStep({ icon: 'ingredients', title: 'Start here.',
       text: 'Add the ingredients you buy, with what you paid. Formulations, batches and costs all build on them. Quick add has a starter list by type.',
-      go: 'Add an ingredient', onclick: 'openAdd()',
+      go: 'Add an ingredient', onclick: 'openQuickAdd()',
       off: '<div class="empty-state"><p>No ingredients yet</p><span>Click &quot;+ New ingredient&quot; to get started, or use Quick add from Settings for a curated starter list</span></div>' }) + '</td></tr>';
     return;
   }
@@ -2732,6 +2835,8 @@ function viewIngredient(id) {
         return '<span class="phase-badge" style="background:var(--cream-dark);color:var(--bark-dark)">' + esc(c) + '</span>';
       }).join('') +
       (i.flag === 'yes' ? '<span style="font-size:11px;background:var(--warning-bg);color:var(--warning);padding:3px 10px;border-radius:20px;font-weight:500">Restricted use</span>' : '') +
+      // Certifications of the lot in use (2026-10-24).
+      certBadgesHtml(getActiveLot(i)) +
     '</div>';
 
   // Identify the active lot for costing. activeLot is null if there are no
@@ -2810,7 +2915,7 @@ function viewIngredient(id) {
       '<div class="lf"><label>Supplier</label><p>' + (l.supplier || '\u2014') +
         (suppObj && suppObj.webLink ? ' <a class="detail-link" href="' + suppObj.webLink + '" target="_blank" rel="noopener" style="font-size:11px">site &#8599;</a>' : '') + '</p></div>' +
       '<div class="lf"><label>Brand</label><p>' + (l.brand || '\u2014') +
-        (l.organic ? ' <span style="display:inline-block;background:var(--sage-light);color:var(--sage-dark);font-size:9px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;padding:2px 6px;border-radius:3px;margin-left:4px;vertical-align:middle">Organic</span>' : '') +
+        (Plume.lotCerts(l).length ? ' ' + certBadgesHtml(l) : '') +
       '</p></div>' +
       '<div class="lf"><label>Cost / g</label><p>' + (l.costPerG ? '$' + parseFloat(l.costPerG).toFixed(4) : '\u2014') + '</p></div>' +
       '<div class="lf"><label>Purchase</label><p style="font-size:12px">' + (purchaseStr || '\u2014') + '</p></div>' +
@@ -3001,6 +3106,231 @@ function fillFunctionFilter() {
       return '<option value="' + esc(c) + '">' + esc(c) + '</option>';
     }).join('');
   el.value = cur;
+}
+
+// ── Quick add (2026-10-24) ────────────────────────────
+// New opens this short form rather than the full editor (her call: entering
+// ingredients took far too long). Name, INCI, functions, phase and usage,
+// plus what was bought, which becomes the first lot. Typing a name offers
+// the starter list's entry (filling INCI, function, phase and usage, and
+// bringing its lowdown and notes along) and warns when the library already
+// has it. "Save & add another" keeps the supplier, order # and date, for the
+// rest of the same order. "Add more details…" saves and opens the editor.
+var qaStarter = null;   // the starter item "Use this" filled the form from
+var qaSession = [];     // ingredients added since Quick add opened
+function openQuickAdd() {
+  qaSession = [];
+  qaClear(false);
+  document.getElementById('qa-done').hidden = true;
+  qaSupplierList();
+  openModal('modal-quick');
+  setTimeout(function() { var n = document.getElementById('qa-name'); if (n) n.focus(); }, 60);
+}
+function closeQuickAdd() { closeModal('modal-quick'); }
+function qaVal(id) { var el = document.getElementById(id); return el ? String(el.value || '').trim() : ''; }
+// Saved suppliers first, then any name already on a lot.
+function qaSupplierList() {
+  var seen = {}, names = [];
+  var add = function(n) { n = String(n || '').trim(); var k = n.toLowerCase(); if (n && !seen[k]) { seen[k] = true; names.push(n); } };
+  (Plume.suppliers.list() || []).forEach(function(x) { add(x.name); });
+  ingredients.forEach(function(i) { (i.lots || []).forEach(function(l) { add(l.supplier); }); });
+  names.sort(function(a, b) { return a.toLowerCase().localeCompare(b.toLowerCase()); });
+  document.getElementById('qa-sup-list').innerHTML = names.map(function(n) { return '<option value="' + esc(n) + '"></option>'; }).join('');
+}
+function qaRenderFuncs(selected) {
+  var list = Plume.FUNCTION_CATEGORIES.slice();
+  (selected || []).forEach(function(c) { if (list.indexOf(c) === -1) list.push(c); });
+  document.getElementById('qa-funcs').innerHTML = list.map(function(c) {
+    var on = (selected || []).indexOf(c) !== -1;
+    return '<label class="fcat-chip' + (on ? ' on' : '') + '"><input type="checkbox" value="' + esc(c) + '"' + (on ? ' checked' : '') +
+      ' onchange="this.parentNode.classList.toggle(\'on\', this.checked); qaCost()">' + esc(c) + '</label>';
+  }).join('');
+}
+function qaReadFuncs() {
+  var boxes = document.querySelectorAll('#qa-funcs input:checked'), out = [];
+  for (var k = 0; k < boxes.length; k++) out.push(boxes[k].value);
+  return out;
+}
+function qaRenderCerts() {
+  document.getElementById('qa-certs').innerHTML = '<span class="qa-cl">Certifications</span>' +
+    Plume.CERTS.map(function(c) { return '<label><input type="checkbox" id="qa-c-' + c.key + '"> ' + esc(c.label) + '</label>'; }).join('') +
+    '<label>Other <input type="text" id="qa-c-other" placeholder="e.g. Fair for Life" aria-label="Other certification"></label>';
+}
+// Clears the form. keepOrder leaves the supplier, order # and date.
+function qaClear(keepOrder) {
+  ['qa-name', 'qa-inci', 'qa-min', 'qa-max', 'qa-size', 'qa-price', 'qa-lot'].forEach(function(id) { document.getElementById(id).value = ''; });
+  document.getElementById('qa-phase').value = 'water';
+  document.getElementById('qa-unit').value = 'g';
+  if (!keepOrder) {
+    document.getElementById('qa-sup').value = '';
+    document.getElementById('qa-order').value = '';
+    document.getElementById('qa-received').value = todayISO();
+  }
+  qaStarter = null;
+  qaRenderFuncs([]);
+  qaRenderCerts();
+  document.getElementById('qa-err').textContent = '';
+  document.getElementById('qa-kept').hidden = true;
+  qaHint();
+  qaCost();
+}
+function qaTyped() {
+  // Typing a different name drops a starter fill that no longer matches it.
+  if (qaStarter && seederNameKey(qaVal('qa-name')) !== seederNameKey(qaStarter.name)) qaStarter = null;
+  document.getElementById('qa-err').textContent = '';
+  qaHint();
+}
+function qaHint() {
+  var el = document.getElementById('qa-hint');
+  var name = qaVal('qa-name'), key = seederNameKey(name), html = '';
+  if (key.length >= 2) {
+    var dup = ingredients.filter(function(i) { return seederNameKey(i.name) === key; })[0];
+    if (dup) html += '<div class="qa-hint dup"><span>Already in your library: <b>' + esc(dup.name) + '</b>' + (dup.archived ? ' (archived)' : '') + '.</span>' +
+      '<button type="button" class="btn btn-sm" onclick="qaOpen(\'' + dup.id + '\')">Open it</button></div>';
+  }
+  if (qaStarter) {
+    html += '<div class="qa-hint sug"><span>Filled from the starter list: <b>' + esc(qaStarter.name) + '</b>. Its lowdown and notes come along too; check them in its profile.</span></div>';
+  } else if (key.length >= 3 && SEEDER_ITEMS.length) {
+    var have = libraryNameSet(), shown = 0;
+    SEEDER_ITEMS.forEach(function(it, idx) {
+      if (shown >= 3 || seederInLib(it, have)) return;
+      var keys = [it.name].concat(it.aka || []).map(seederNameKey);
+      var hit = keys.some(function(k) { return k.indexOf(key) === 0; }) || (key.length >= 4 && keys.some(function(k) { return k.indexOf(key) !== -1; }));
+      if (!hit) return;
+      shown++;
+      html += '<div class="qa-hint sug"><span>From the starter list: <b>' + esc(it.name) + '</b> · <i>' + esc(it.inci) + '</i></span>' +
+        '<button type="button" class="btn btn-sm" onclick="qaUseStarter(' + idx + ')">Use this</button></div>';
+    });
+  }
+  el.innerHTML = html;
+}
+function qaUseStarter(idx) {
+  var it = SEEDER_ITEMS[idx];
+  if (!it) return;
+  qaStarter = it;
+  document.getElementById('qa-name').value = it.name;
+  document.getElementById('qa-inci').value = it.inci || '';
+  var ph = document.getElementById('qa-phase'), phase = it.phase || 'water';
+  if (!Array.prototype.some.call(ph.options, function(o) { return o.value === phase; })) {
+    var o = document.createElement('option'); o.value = phase; o.textContent = phase.charAt(0).toUpperCase() + phase.slice(1); ph.appendChild(o);
+  }
+  ph.value = phase;
+  document.getElementById('qa-min').value = it.min || '';
+  document.getElementById('qa-max').value = it.max || '';
+  qaRenderFuncs(Plume.funcCats(it));
+  qaHint();
+  qaCost();
+}
+// The grams the purchase holds, and its cost per gram, as typed.
+function qaPurchase() {
+  var size = qaVal('qa-size'), unit = document.getElementById('qa-unit').value, price = parseFloat(qaVal('qa-price'));
+  var vol = unit === 'mL' || unit === 'fl oz';
+  var dens = vol ? Plume.densityFor({ inci: qaVal('qa-inci'), phase: document.getElementById('qa-phase').value, functionCategory: qaReadFuncs() }) : null;
+  var g = lotSizeToGrams(size, unit, dens ? dens.value : 1);
+  return { size: size, unit: unit, price: price, grams: g, cpg: g && price > 0 ? price / g : null, dens: dens };
+}
+function qaCost() {
+  var p = qaPurchase(), el = document.getElementById('qa-cpg');
+  if (p.cpg === null) { el.className = 'qa-cpg none'; el.textContent = 'Fills in from the size and price'; return; }
+  el.className = 'qa-cpg';
+  el.innerHTML = '$' + p.cpg.toFixed(4) + (p.dens ? ' <span style="font-size:12px;font-weight:400;color:var(--ink-lighter);margin-left:6px">using ' + p.dens.value + ' g/mL (' + esc(p.dens.why || 'assumed') + ')</span>' : '');
+}
+// The ingredient as typed, or null with the reason shown.
+function qaBuild() {
+  var name = qaVal('qa-name'), inci = qaVal('qa-inci');
+  if (!name || !inci) {
+    document.getElementById('qa-err').textContent = 'A common name and an INCI name are needed to save.';
+    document.getElementById(name ? 'qa-inci' : 'qa-name').focus();
+    return null;
+  }
+  var ing = qaStarter ? starterToIngredient(qaStarter) : {
+    id: Date.now().toString() + Math.random().toString(36).slice(2, 6), created: new Date().toISOString(), lots: []
+  };
+  ing.name = name;
+  ing.inci = inci;
+  ing.phase = document.getElementById('qa-phase').value;
+  ing.min = qaVal('qa-min');
+  ing.max = qaVal('qa-max');
+  ing.functionCategory = qaReadFuncs();
+  if (!ing.flag) ing.flag = 'no';
+  var p = qaPurchase(), sup = qaVal('qa-sup');
+  var bought = sup || qaVal('qa-order') || p.size || p.price > 0 || qaVal('qa-lot');
+  var certs = {}, anyCert = false;
+  Plume.CERTS.forEach(function(c) { certs[c.key] = document.getElementById('qa-c-' + c.key).checked; anyCert = anyCert || certs[c.key]; });
+  if (bought || anyCert || qaVal('qa-c-other')) {
+    var lot = {
+      id: 'L1', supplier: sup, brand: '',
+      purchaseSize: p.size, purchaseUnit: p.unit, purchasePrice: p.price > 0 ? String(p.price) : '',
+      costPerG: p.cpg !== null ? p.cpg.toFixed(4) : '',
+      qtyPurchased: p.size, qtyUnit: p.unit,
+      lotNum: qaVal('qa-lot'), received: qaVal('qa-received'), bestBy: '', orderNum: qaVal('qa-order'),
+      buyLink: '', receiptLink: '', referenceOnly: false, certOther: qaVal('qa-c-other')
+    };
+    Plume.CERTS.forEach(function(c) { lot[c.key] = certs[c.key]; });
+    ing.lots = [lot];
+    ing.activeLotId = 'L1';
+  }
+  return ing;
+}
+// A supplier typed here that the list does not have yet is added to it, so
+// the lot editor's supplier list shows it.
+function qaEnsureSupplier(name) {
+  name = String(name || '').replace(/\s+/g, ' ').trim();
+  if (!name) return;
+  Store.refresh(SUPPLIERS_KEY);
+  var list = Store.getJSON(SUPPLIERS_KEY, []) || [];
+  if (list.some(function(x) { return String(x.name || '').trim().toLowerCase() === name.toLowerCase(); })) { suppliers = list; return; }
+  list.push({ id: String(Date.now()) + Math.random().toString(36).slice(2, 6), name: name, webLink: '', notes: '' });
+  if (Store.setJSON(SUPPLIERS_KEY, list)) suppliers = list;
+}
+function qaSave(again) {
+  var ing = qaBuild();
+  if (!ing) return null;
+  var lot = ing.lots && ing.lots[0];
+  if (lot && lot.supplier) qaEnsureSupplier(lot.supplier);
+  ingredients.push(ing);
+  if (!saveData()) { ingredients.pop(); return null; }
+  renderTable(); renderStats();
+  var extra = lot ? [lot.supplier, lot.qtyPurchased ? lot.qtyPurchased + ' ' + lot.qtyUnit : '', lot.costPerG ? '$' + lot.costPerG + '/g' : ''].filter(Boolean).join(', ') : 'no purchase yet';
+  qaSession.unshift({ id: ing.id, name: ing.name, inci: ing.inci, extra: extra });
+  qaRenderDone();
+  if (again) {
+    var kept = [qaVal('qa-sup') && 'supplier ' + qaVal('qa-sup'), qaVal('qa-order') && 'order #' + qaVal('qa-order'), qaVal('qa-received') && 'received ' + fmtDate(qaVal('qa-received'))].filter(Boolean);
+    qaClear(true);
+    var k = document.getElementById('qa-kept');
+    k.textContent = kept.length ? 'Kept for the next one: ' + kept.join(', ') + '.' : '';
+    k.hidden = !kept.length;
+    document.getElementById('qa-name').focus();
+  } else {
+    closeQuickAdd();
+  }
+  return ing;
+}
+function qaRenderDone() {
+  var el = document.getElementById('qa-done');
+  el.hidden = !qaSession.length;
+  el.innerHTML = '<div class="qa-done-h">Added just now · ' + qaSession.length + '</div>' + qaSession.map(function(d) {
+    return '<div class="qa-done-r"><button type="button" onclick="qaOpen(\'' + d.id + '\')">' + esc(d.name) + '</button><i>' + esc(d.inci) + '</i><span class="qa-x">' + esc(d.extra) + '</span></div>';
+  }).join('');
+}
+function qaOpen(id) { closeQuickAdd(); viewIngredient(id); }
+// Saves what is typed and opens the full editor on it; with no name yet,
+// opens the editor with whatever was typed.
+function qaMore() {
+  if (qaVal('qa-name') && qaVal('qa-inci')) {
+    var ing = qaSave(false);
+    if (ing) { viewIngredient(ing.id); editCurrent(); }
+    return;
+  }
+  var name = qaVal('qa-name'), inci = qaVal('qa-inci');
+  closeQuickAdd();
+  openAdd();
+  document.getElementById('f-name').value = name;
+  document.getElementById('f-inci').value = inci;
+}
+function certBadgesHtml(lot) {
+  var c = Plume.lotCerts(lot);
+  return c.length ? '<span class="cert-badges">' + c.map(function(t) { return '<span class="cert-badge">' + esc(t) + '</span>'; }).join('') + '</span>' : '';
 }
 
 // ── Add / Edit modal ──────────────────────────────────
@@ -3479,10 +3809,6 @@ function addLotRow(lot) {
         lotInp({ field:'brand', placeholder:'e.g. NOW, Timeless',
                  value: brandName, list:'brand-datalist',
                  onblur:'saveNewBrand(this.value)' }) +
-        '<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink-light);text-transform:none;letter-spacing:0;font-weight:400;margin-top:4px;cursor:pointer">' +
-          '<input type="checkbox" data-field="organic"' + (isOrganic ? ' checked' : '') + ' style="margin:0;cursor:pointer">' +
-          'Organic' +
-        '</label>' +
       '</div>' +
       '<div class="lf"><label>Purchase size</label>' +
         '<div style="display:flex;gap:4px;align-items:center">' +
@@ -3570,7 +3896,15 @@ function addLotRow(lot) {
       '</label>' +
     '</div>';
 
-  div.innerHTML = header + line1 + line2 + line3 + actions;
+  // ── Line 4: certifications (2026-10-24), on the purchase ──
+  var certLine = '<div class="lot-certs"><span class="lc-l">Certifications</span>' +
+    Plume.CERTS.map(function(c) {
+      var on = lot && (lot[c.key] === true || lot[c.key] === 'true');
+      return '<label><input type="checkbox" data-field="' + c.key + '"' + (on ? ' checked' : '') + '> ' + esc(c.label) + '</label>';
+    }).join('') +
+    '<label>Other <input type="text" data-field="certOther" placeholder="e.g. Fair for Life" value="' + esc((lot && lot.certOther) || '') + '"></label></div>';
+
+  div.innerHTML = header + line1 + line2 + line3 + certLine + actions;
   c.appendChild(div);
 
   // Apply reference-only state if loading a lot that was saved as such
@@ -4080,6 +4414,13 @@ document.querySelectorAll('.modal-overlay').forEach(function(el) {
       Plume.ask('Your changes since opening this ingredient will be lost.', function () {
         el.classList.remove('open');
       }, { title: 'Discard unsaved changes to this ingredient?', yes: 'Discard', no: 'Keep editing', danger: true });
+      return;
+    }
+    // Quick add: a click outside with something typed asks first.
+    if (el.id === 'modal-quick' && (qaVal('qa-name') || qaVal('qa-inci') || qaVal('qa-size') || qaVal('qa-price'))) {
+      Plume.ask('What you typed for this ingredient will be lost. The ones you already saved stay.', function () {
+        el.classList.remove('open');
+      }, { title: 'Close Quick add?', yes: 'Close', no: 'Keep typing', danger: true });
       return;
     }
     el.classList.remove('open');
