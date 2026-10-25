@@ -3480,3 +3480,29 @@ between two digits (optionally with a space after it) is now part of the
 name: 2,3-Butanediol, 1,2-Hexanediol, 1,3-Propanediol. Every INCI list goes
 through `inciSplit` (Formulations panel and Copy, bench sheet, product
 labels), so one fix covers them. `test-inci.js` gains 4 checks.
+
+### Session 26 (cont., 25 October 2026): Quick look drops down again; cost per gram back (core v1.47)
+
+Her requests of the day were discussed first (see backlog: On order, the
+compare tool, receipts). Decided and built here:
+
+- **Quick look is a drop-down row again** (`tr.ql-row` under the clicked row,
+  two columns: properties left, the two notes and actions right; one open at
+  a time; click the row again to close). Her pick after trying both in a
+  preview: one click less. The slide-in panel for the quick look is gone (the
+  panel itself stays for Suppliers, Stock, Notes). `refreshQuickLook` just
+  re-renders the list. Rows inside a table need the `td` overrides in
+  `tr.ql-row > td` (the list's one-line cell rule).
+- **Manage lots and Reorder in the quick look.** `openLotsFromList` loads the
+  form behind the drawer and saves on close, back to the list with the row
+  still open. `reorderLink(i)`: lot in use, else newest bought lot with a
+  link, else a watchlist lot; http(s) only; hidden when none.
+- The quick look's lot line read `lot.purchaseDate` (no such field); now
+  `received`.
+- **Formulations shows cost per gram** in the search dropdown (`.dd-cpg`) and
+  in the ingredient popup beside Stock on hand (`cpgText`, same `bestCpg` as
+  the line cost; "in-house" for a $0 made-in-house one, "no price" otherwise).
+  Session 25 had taken it out of the popup; she wants it back.
+
+Tests: `test-shell.js` section 4 rewritten for the drop-down (11 checks);
+`test-sweep.js` section 7 (4); `test-ingpage.js` popup check updated.

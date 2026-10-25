@@ -328,8 +328,8 @@
   .detail-purpose { font-size: 13px; color: var(--ink); margin-top: 8px; padding-left: 10px;
     border-left: 2px solid var(--bark-light); max-width: 520px; }
   .fcat-grid { display: flex; flex-wrap: wrap; gap: 6px; }
-  /* Quick look: opens in the slide-in panel (Plume.peek) since the
-     2026-10-18 redesign; before that it opened in place under the row. */
+  /* Quick look: opens under the row (2026-10-25; the slide-in panel
+     from the 2026-10-18 redesign was tried and set aside). */
   .ql-title { margin: 0; font-size: 24px; font-weight: 600; line-height: 1.2; color: var(--ink); text-wrap: balance; font-family: 'DM Sans', sans-serif; }
   .ql-inci { font-size: 13px; color: var(--ink-lighter); margin-top: 4px; }
   .ql-fn { font-size: 13.5px; color: var(--ink-light); margin-top: 10px; line-height: 1.5; }
@@ -342,6 +342,20 @@
   .ql-block + .ql-block { margin-top: 10px; }
   .ql-actions { display: flex; gap: 8px; margin-top: 20px; flex-wrap: wrap; }
   .ql-actions a { text-decoration: none; cursor: pointer; }
+  .ql-stock-links { display: flex; gap: 14px; margin: -6px 0 6px; font-size: 13px; }
+  .ql-stock-links a { cursor: pointer; text-decoration: none; }
+  /* The quick look: a row under the ingredient, two columns, open until
+     clicked again. Undoes the list's one-line cells. */
+  tr.ql-row, tr.ql-row:hover { background: transparent !important; cursor: default; }
+  tr.ql-row > td, tr.ql-row:hover > td { white-space: normal; overflow: visible; text-overflow: clip; padding: 2px 0 14px !important; border: 0 !important; background: transparent !important; box-shadow: none !important; }
+  tr.ql-row .ql { display: grid; grid-template-columns: minmax(240px, 1fr) minmax(260px, 1.15fr); gap: 22px;
+    background: var(--white); border: 1px solid var(--cream-border); border-left: 3px solid var(--bark);
+    border-radius: 10px; padding: 14px 18px; }
+  tr.ql-row .ql-title, tr.ql-row .ql-inci { display: none; }
+  tr.ql-row .ql-fn { margin-top: 0; }
+  tr.ql-row .ql-props { margin: 10px 0 12px; }
+  tr.ql-row .ql-actions { margin-top: 12px; }
+  @media (max-width: 760px) { tr.ql-row .ql { grid-template-columns: 1fr; } }
   /* Click-to-type notes: used in the quick look, the details page and the cheat sheet. */
   .note-edit { cursor: text; font-size: 13px; color: var(--ink); min-height: 20px; padding: 2px 4px; margin: 0 -4px;
     border-radius: 4px; border: 1px dashed transparent; white-space: pre-wrap; }
@@ -2682,7 +2696,8 @@ function renderTable() {
       '<td class="ps-muted" style="white-space:nowrap">' + (i.min || i.max ? esc((i.min || '0') + '\u2013' + (i.max || '100')) + '%' : '\u2014') + '</td>' +
       '<td class="ps-num">' + (cost === 0 && i.noCost ? '<span class="ps-muted" title="Made in-house or free: counts as $0">in-house</span>' : cost !== null ? '$' + cost.toFixed(4) : '<span class="ps-muted">\u2014</span>') + '</td>' +
       '<td>' + stockCell + '</td>' +
-      '</tr>';
+      '</tr>' +
+      (sel ? '<tr class="ql-row" data-ql="' + i.id + '"><td colspan="6">' + quickLookHtml(i) + '</td></tr>' : '');
   }).join('');
 }
 
@@ -2697,36 +2712,51 @@ function renderTable() {
 var qlOpenId = null;
 var editFromList = false;
 
-// The quick look now opens in the slide-in panel (2026-10-18 redesign)
-// instead of under the row, so the list stays put. Same content, same
-// click-to-type notes; clicking the same row again closes it.
+// The quick look is a row that drops down under the ingredient and stays
+// open until the row is clicked again (her pick, 2026-10-25, over the
+// slide-in panel the 2026-10-18 redesign had: one click less, and the list
+// stays in view). One open at a time.
 function toggleQuickLook(id) {
-  if (qlOpenId === id) { Plume.peek.close(); return; }
-  var i = ingredients.find(function (x) { return x.id === id; });
-  if (!i) return;
-  qlOpenId = id;
-  Plume.peek.open(quickLookHtml(i), {
-    label: 'Ingredients',
-    actions: '<button type="button" class="ps-link-btn" onclick="openDetailsFromList(event,\'' + id + '\')">Open full page</button>',
-    onClose: function () { qlOpenId = null; renderTable(); }
-  });
+  qlOpenId = (qlOpenId === id) ? null : id;
   renderTable();
+  var row = qlOpenId && document.querySelector('tr.ql-row');
+  if (row && row.getBoundingClientRect().bottom > window.innerHeight) {
+    try { row.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e) { row.scrollIntoView(false); }
+  }
 }
-// After a save or a delete, keep the panel showing the current record.
-function refreshQuickLook() {
-  if (!qlOpenId || !Plume.peek.isOpen()) return;
-  var i = ingredients.find(function (x) { return x.id === qlOpenId; });
-  if (!i) { Plume.peek.close(); return; }
-  var body = document.getElementById('ps-peek-body');
-  if (body) body.innerHTML = quickLookHtml(i);
-}
-function openDetailsFromList(e, id) { e.stopPropagation(); if (Plume.peek.isOpen()) Plume.peek.close(); viewIngredient(id); }
+// After a save or a delete, redraw so the open quick look shows the record.
+function refreshQuickLook() { if (qlOpenId) renderTable(); }
+function openDetailsFromList(e, id) { e.stopPropagation(); viewIngredient(id); }
 
 function unarchiveFromList(e, id) {
   e.stopPropagation();
   var idx = ingredients.findIndex(function(i) { return i.id === id; });
   if (idx > -1) delete ingredients[idx].archived;
   saveData(); renderTable(); renderStats(); refreshQuickLook();
+}
+// Manage lots straight from the quick look (2026-10-25). Same route as the
+// details page's Manage lots: the form loads behind the drawer and saves when
+// it closes; then back to the list, with the quick look showing again.
+function openLotsFromList(e, id) {
+  if (e) e.stopPropagation();
+  viewingId = id; editFromList = true;
+  editCurrent();
+  closeModal('modal-add');
+  lotsFromDetails = true;
+  openLotsDrawer();
+}
+// The purchase link to reorder from: the lot in use first, then the newest
+// other bought lot that has one, then a watchlist lot. Only http(s) links.
+function reorderLink(i) {
+  var lots = (i && i.lots) || [];
+  var ok = function (l) { return l && /^https?:\/\//i.test(String(l.buyLink || '').trim()); };
+  var act = getActiveLot(i);
+  if (ok(act)) return String(act.buyLink).trim();
+  var bought = lots.filter(function (l) { return !l.referenceOnly && ok(l); })
+    .sort(function (a, b) { return String(b.received || '').localeCompare(String(a.received || '')); });
+  if (bought.length) return String(bought[0].buyLink).trim();
+  var ref = lots.filter(ok)[0];
+  return ref ? String(ref.buyLink).trim() : '';
 }
 function openEditFromList(e, id) {
   e.stopPropagation();
@@ -2741,7 +2771,8 @@ function quickLookHtml(i) {
   var PH = { water: 'Water', oil: 'Oil', 'cool-down': 'Cool-down', 'add-in': 'Add-in' };
   var cost = activeCost(i);
   var lot = getActiveLot(i);
-  return '<div class="ql" onclick="event.stopPropagation()">' +
+  var buy = reorderLink(i);
+  return '<div class="ql" onclick="event.stopPropagation()"><div class="ql-main">' +
     '<h2 class="ql-title">' + esc(i.name) + (i.archived ? ' <span class="arch-tag">archived</span>' : '') + '</h2>' +
     (i.inci ? '<div class="ql-inci">' + esc(i.inci) + '</div>' : '') +
     (i.function ? '<div class="ql-fn">' + esc(i.function) + '</div>' : '') +
@@ -2751,9 +2782,13 @@ function quickLookHtml(i) {
       '<dt>Use rate</dt><dd>' + (i.min || i.max ? esc((i.min || '0') + '\u2013' + (i.max || '100')) + '%' : '\u2014') + '</dd>' +
       '<dt>Price / g</dt><dd>' + (cost === 0 && i.noCost ? 'Made in-house or free ($0)' : cost !== null ? '$' + cost.toFixed(4) : '\u2014') + '</dd>' +
       '<dt>On hand</dt><dd>' + (hasStock(i) ? stock + (isLowStock(i) ? ' <span style="color:var(--warning)">\u00b7 running low</span>' : '') : '<span class="ps-muted">None</span>') + '</dd>' +
-      (lot ? '<dt>Active lot</dt><dd>' + esc([lot.supplier, lot.purchaseDate ? 'bought ' + formatDateShort(lot.purchaseDate) : ''].filter(Boolean).join(' \u00b7 ') || 'Set') + '</dd>' : '') +
+      (lot ? '<dt>Active lot</dt><dd>' + esc([lot.supplier, lot.received ? 'received ' + formatDateShort(lot.received) : ''].filter(Boolean).join(' \u00b7 ') || 'Set') + '</dd>' : '') +
       '<dt>Used in</dt><dd>' + (typeof PlumeCheat !== 'undefined' ? PlumeCheat.usedInHtml(used, 4) : '\u2014') + '</dd>' +
     '</dl>' +
+    '<div class="ql-stock-links">' +
+      '<a class="ps-link-btn" onclick="openLotsFromList(event,\'' + i.id + '\')">Manage lots</a>' +
+      (buy ? '<a class="ps-link-btn" href="' + esc(buy) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()">Reorder \u2197</a>' : '') +
+    '</div></div><div class="ql-side">' +
     (i.flag === 'yes' ? '<div class="ql-warn">Restricted' + (i.restrictions ? ' \u2014 ' + esc(i.restrictions) : '') + '</div>' : '') +
     '<div class="ql-block"><div class="ql-k">The lowdown</div>' + noteEditHtml(i, 'chooseWhen') + '</div>' +
     (i.substitution ? '<div class="ql-block"><div class="ql-k">Substitutes</div><div style="font-size:13.5px">' + esc(i.substitution) + '</div></div>' : '') +
@@ -2766,7 +2801,7 @@ function quickLookHtml(i) {
       // asking for them is nearly always a prelude to bringing one back.
       (i.archived ? '<a class="ps-link-btn" onclick="unarchiveFromList(event,\'' + i.id + '\')">Unarchive</a>' : '') +
     '</div>' +
-  '</div>';
+  '</div></div>';
 }
 
 // ── Click-to-type notes ───────────────────────────────
@@ -3710,7 +3745,10 @@ function saveIngredient(keepOpen) {
     return;
   }
   closeModal('modal-add');
-  if (editFromList) { editFromList = false; viewingId = null; renderTable(); return; }
+  if (editFromList) {
+    editFromList = false; viewingId = null; renderTable();
+    return;
+  }
   if (editingId && viewingId === editingId) viewIngredient(editingId);
 }
 

@@ -248,6 +248,20 @@ const getIngs = "JSON.parse(localStorage.getItem('aerie-ingredients-v2'))";
   CASES.forEach((c, i) => ok('"' + c[0] + '" starts at ' + (c[1] ? c[1] + '%' : 'blank'), got[i] === c[1], got[i]));
   ok('Formulations uses it for a new line', await page.evaluate("recStartPct({ useRate: '.5%' }) === '0.5'"));
 
+  // ── 7. Cost per gram while formulating ─────────────────────────────
+  console.log('\n7. Formulations shows cost per gram (v1.47)');
+  await page.evaluate(SEED); await page.reload(); await page.waitForTimeout(400);
+  await page.evaluate("openFormula('fl')"); await page.waitForTimeout(200);
+  await page.evaluate("var s = document.getElementById('ing-search'); s.value = 'lav'; s.dispatchEvent(new Event('input', { bubbles: true }))");
+  await page.waitForTimeout(200);
+  const dd = await page.evaluate("Array.from(document.querySelectorAll('#ing-dd .dd-item')).map(function (r) { return r.innerText.replace(/\\s+/g, ' '); })");
+  ok('the search dropdown shows each ingredient\'s cost per gram', dd.some(t => /Lavender/.test(t) && /\$0\.200\/g/.test(t)), dd);
+  await page.evaluate("showIngDetail('ig')"); await page.waitForTimeout(150);
+  const pop = await page.evaluate("document.getElementById('id-body').innerText.replace(/\\s+/g, ' ')");
+  ok('the ingredient popup shows it beside stock on hand', /STOCK ON HAND [^ ]+ COST PER GRAM \$0\.050\/g/i.test(pop), pop);
+  ok('and agrees with the cost used for the line', await page.evaluate("cpgText(ings.find(function (i) { return i.id === 'ig'; })) === '$' + bestCpg(ings.find(function (i) { return i.id === 'ig'; })).toFixed(3) + '/g'"));
+  ok('an unpriced ingredient says so', await page.evaluate("cpgText({ lots: [] }) === ''") && /No price yet/.test(await page.evaluate("(function(){ ings.push({ id: 'zz', name: 'Unpriced', inci: 'X', phase: 'water', lots: [] }); showIngDetail('zz'); return document.getElementById('id-body').innerText; })()")));
+
   ok('no page errors', errors.length === 0, errors);
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');

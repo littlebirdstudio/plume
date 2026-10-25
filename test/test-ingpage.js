@@ -127,7 +127,9 @@ const getIngs = "JSON.parse(localStorage.getItem('aerie-ingredients-v2'))";
   ok('a water-soluble ingredient in the oil phase gets a gentle note', /Water-soluble, but in the oil phase/.test(await page.evaluate("document.getElementById('phase-groups').innerText")));
   await page.evaluate("fLines[0].phase = 'cool-down'; renderLines()");
   ok('the cool-down phase takes either', !/Water-soluble, but/.test(await page.evaluate("document.getElementById('phase-groups').innerText")));
-  ok('the ingredient popup shows solubility with its note and the effective pH, not cost, suppliers or recommended', await page.evaluate("(function () { showIngDetail('ig'); var t = document.getElementById('id-body').innerText; return /Solubility\\s*Water-soluble\\s*Warm to dissolve/i.test(t) && /Effective pH\\s*--/i.test(t) && !/cost/i.test(t) && !/Suppliers/i.test(t) && !/Recommended/i.test(t); })()"), await page.evaluate("document.getElementById('id-body').innerText"));
+  // Cost per gram came back to the popup 2026-10-25 (her call); suppliers and
+  // the recommended % stay out.
+  ok('the ingredient popup shows solubility with its note, the effective pH and cost per gram, not suppliers or recommended', await page.evaluate("(function () { showIngDetail('ig'); var t = document.getElementById('id-body').innerText; return /Solubility\\s*Water-soluble\\s*Warm to dissolve/i.test(t) && /Effective pH\\s*--/i.test(t) && /Cost per gram/i.test(t) && !/Suppliers/i.test(t) && !/Recommended/i.test(t); })()"), await page.evaluate("document.getElementById('id-body').innerText"));
   ok('the ingredient popup shows the formatted lowdown', await page.evaluate("showIngDetail('ij'); !!document.querySelector('strong') && /Very stable/.test(document.body.innerText)"));
 
   console.log('\n6. Label marks');
