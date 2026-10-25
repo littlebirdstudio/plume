@@ -134,31 +134,49 @@ ok('an unknown icon name gives nothing rather than breaking', P.icon('nope') ===
     await page.close();
   }
 
-  console.log('\n4. The quick-look panel');
+  console.log('\n4. The quick look drops down under the row (2026-10-25)');
   {
     const page = await open('ingredients');
-    const isOpen = () => page.evaluate("Plume.peek.isOpen()");
+    const qlFor = () => page.evaluate("(function(){ var r = document.querySelector('#tbody tr.ql-row'); return r ? r.getAttribute('data-ql') : null; })()");
     await page.click('#tbody tr[data-ing="a2"]');
     await page.waitForTimeout(250);
-    ok('clicking a row opens the panel', await isOpen());
-    ok('showing that ingredient', /Bakuchiol/.test(await page.evaluate("document.getElementById('ps-peek-body').innerText")));
+    ok('clicking a row opens the quick look under it', await qlFor() === 'a2' &&
+       await page.evaluate("document.querySelector('#tbody tr[data-ing=\"a2\"]').nextElementSibling.classList.contains('ql-row')"));
+    ok('no slide-in panel', !(await page.evaluate("Plume.peek.isOpen()")));
     ok('the row is marked', await page.evaluate("document.querySelector('#tbody tr[data-ing=\"a2\"]').classList.contains('sel')"));
-    await page.evaluate("toggleQuickLook('a1')");
+    ok('it has Manage lots, Edit and Full details', await page.evaluate("(function(){ var t = document.querySelector('tr.ql-row').innerText; return /Manage lots/.test(t) && /Edit/.test(t) && /Full details/.test(t); })()"));
+    await page.click('#tbody tr[data-ing="a1"]');
     await page.waitForTimeout(150);
-    ok('asking for another ingredient switches the panel to it', /Aloe vera/.test(await page.evaluate("document.getElementById('ps-peek-body').innerText")));
-    await page.keyboard.press('Escape');
-    await page.waitForTimeout(250);
-    ok('Escape closes it', !(await isOpen()));
-    ok('and the mark comes off', await page.evaluate("!document.querySelector('#tbody tr.sel')"));
+    ok('clicking another row moves it there, one open at a time', await qlFor() === 'a1' &&
+       await page.evaluate("document.querySelectorAll('#tbody tr.ql-row').length === 1"));
+    await page.click('#tbody tr[data-ing="a1"]');
+    await page.waitForTimeout(150);
+    ok('clicking the same row again closes it', await qlFor() === null && await page.evaluate("!document.querySelector('#tbody tr.sel')"));
     await page.evaluate("toggleQuickLook('a1')");
-    await page.click('#ps-scrim', { position: { x: 20, y: 400 } });
+    await page.evaluate("document.querySelector('tr.ql-row').click()");
+    await page.waitForTimeout(100);
+    ok('a click inside it does not close it', await qlFor() === 'a1');
+    await page.evaluate("openLotsFromList(null, 'a1')");
+    await page.waitForTimeout(200);
+    ok('Manage lots opens the lot drawer', await page.evaluate("document.getElementById('lots-drawer-overlay').classList.contains('open')"));
+    await page.evaluate("closeLotsDrawer()");
     await page.waitForTimeout(250);
-    ok('clicking outside closes it too', !(await isOpen()));
-    await page.evaluate("toggleQuickLook('a1')");
-    await page.evaluate("Array.from(document.querySelectorAll('#ps-peek-actions button')).find(function(b){return /full page/i.test(b.textContent);}).click()");
+    ok('closing it returns to the list with the quick look still open', await qlFor() === 'a1' &&
+       await page.evaluate("!document.querySelector('#modal-add.open') && getComputedStyle(document.getElementById('list-view')).display !== 'none'"));
+    const links = await page.evaluate(`[
+      reorderLink({ lots: [] }),
+      reorderLink({ activeLotId: 'L1', lots: [{ id: 'L1', costPerG: '0.1', buyLink: 'https://a.example/x' }, { id: 'L2', received: '2026-10-01', buyLink: 'https://b.example/y' }] }),
+      reorderLink({ activeLotId: 'L1', lots: [{ id: 'L1', costPerG: '0.1' }, { id: 'L2', received: '2026-01-01', buyLink: 'https://old.example' }, { id: 'L3', received: '2026-10-01', buyLink: 'https://new.example' }] }),
+      reorderLink({ lots: [{ id: 'L1', referenceOnly: true, buyLink: 'https://watch.example' }] }),
+      reorderLink({ activeLotId: 'L1', lots: [{ id: 'L1', costPerG: '0.1', buyLink: 'javascript:alert(1)' }] })
+    ]`);
+    ok('Reorder: none without a link; the lot in use first; else the newest bought; else a watchlist lot; only web links',
+       links[0] === '' && links[1] === 'https://a.example/x' && links[2] === 'https://new.example' && links[3] === 'https://watch.example' && links[4] === '', links);
+    await page.evaluate("toggleQuickLook('a1'); toggleQuickLook('a1')");
+    await page.evaluate("Array.from(document.querySelectorAll('tr.ql-row .ql-actions a')).find(function(a){return /Full details/.test(a.textContent);}).click()");
     await page.waitForTimeout(250);
-    ok('"Open full page" goes to the details and closes the panel',
-       !(await isOpen()) && await page.evaluate("document.getElementById('detail-mode') ? getComputedStyle(document.getElementById('detail-mode')).display !== 'none' : /Aloe/.test(document.getElementById('d-header').innerText)"));
+    ok('"Full details" goes to the details page',
+       await page.evaluate("getComputedStyle(document.getElementById('detail-view')).display !== 'none'"));
     await page.close();
   }
 

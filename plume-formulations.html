@@ -488,6 +488,8 @@ span.ing-name-btn{text-decoration:none}
 .dd-item.in-stock{background:var(--clay-light)}
 .dd-item.in-stock:hover{background:var(--clay-hover,#EFDFD5)}
 .dd-stock{font-size:10px;color:var(--ink-light);margin-right:8px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.dd-cpg{font-size:10px;color:var(--ink);margin-right:8px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.dd-cpg.none{color:var(--ink-lighter)}
 
 .soap-inp{font-family:'DM Sans',sans-serif;font-size:13px;padding:5px 6px;border:1px solid var(--cream-border);border-radius:3px;background:var(--cream);color:var(--ink);width:100%;text-align:right;outline:none}
 .soap-inp:focus{border-color:var(--bark-light);background:var(--white)}
@@ -2436,6 +2438,8 @@ function searchIngs(q) {
       (why ? '<div class="dd-why">' + why + '</div>' : '') + '</div>';
     html += '<div style="display:flex;align-items:center">';
     if (inStock) html += '<span class="dd-stock">' + stockTxt + '</span>';
+    var cpgT = cpgText(i);
+    html += '<span class="dd-cpg' + (cpgT ? '' : ' none') + '" title="Cost per gram (lot in use)">' + (cpgT || 'no price') + '</span>';
     html += '<span class="dd-phase">' + i.phase + '</span></div></div>';
   });
   dd.innerHTML = html; dd.style.display = 'block'; posDD();
@@ -4241,6 +4245,14 @@ function delUseEntry(eid) {
 }
 
 // ── Ingredient detail popup ───────────────────────────
+// Cost per gram as Formulations shows it (2026-10-25: back in the search
+// dropdown and the ingredient popup, her ask). Same figure as the line cost.
+function cpgText(ing) {
+  var c = bestCpg(ing);
+  if (c === null) return '';
+  if (c === 0) return ing && ing.noCost ? 'in-house' : '$0/g';
+  return '$' + (c < 0.01 ? c.toFixed(4) : c < 1 ? c.toFixed(3) : c.toFixed(2)) + '/g';
+}
 function showIngDetail(ingId) {
   var ing = ings.find(function(i) { return i.id === ingId; });
   if (!ing) return;
@@ -4264,8 +4276,9 @@ function showIngDetail(ingId) {
   html += '<div class="id-field"><label>Restricted</label><p>' + (ing.flag==='yes' ? 'Yes -- has limits' : 'No') + '</p></div>';
   html += '<div class="id-field"><label>Usage rate</label><p>' + (ing.min||ing.max ? (ing.min||'0') + '% -- ' + (ing.max||'100') + '%' : '--') + '</p></div>';
   // What helps write the instructions (2026-10-24, her call): solubility and
-  // its note, and the effective pH range. Cost and suppliers left the popup;
-  // the recommended % is on the line itself.
+  // its note, and the effective pH range. Suppliers left the popup; the
+  // recommended % is on the line itself. Cost per gram came back 2026-10-25.
+
   var SOL = { water: 'Water-soluble', oil: 'Oil-soluble', both: 'Water and oil', 'water-dispersible': 'Disperses in water', 'oil-dispersible': 'Disperses in oil' };
   html += '<div class="id-field"><label>Effective pH</label><p>' + (ing.optimalPh ? esc(ing.optimalPh) : '--') + '</p></div>';
   html += '</div>';
@@ -4277,7 +4290,9 @@ function showIngDetail(ingId) {
   var stockTxt, stockColor;
   if (sgD <= 0) { stockTxt = 'None on hand'; stockColor = 'var(--ink-lighter)'; }
   else          { stockTxt = (sgD >= 1000 ? (sgD/1000).toFixed(2) + 'kg' : Math.round(sgD) + 'g'); stockColor = 'var(--clay-dark)'; }
-  html += '<div class="id-field"><label>Stock on hand</label><p style="color:' + stockColor + ';font-weight:500">' + stockTxt + '</p></div>';
+  var cpgP = cpgText(ing);
+  html += '<div class="id-grid"><div class="id-field"><label>Stock on hand</label><p style="color:' + stockColor + ';font-weight:500">' + stockTxt + '</p></div>' +
+    '<div class="id-field"><label>Cost per gram</label><p>' + (cpgP ? esc(cpgP) : '<span style="color:var(--ink-lighter)">No price yet</span>') + '</p></div></div>';
   if (ing.function)     html += '<div class="id-field"><label>Function</label><p>' + esc(ing.function) + '</p></div>';
   if (ing.dermalLimits) html += '<div class="id-field"><label>Dermal limits</label><p style="white-space:pre-wrap;line-height:1.6">' + esc(ing.dermalLimits) + '</p></div>';
   if (ing.notes)        html += '<div class="id-field"><label>Notes</label><div style="line-height:1.6;font-size:13px">' + Plume.rt.toHtml(ing.notes) + '</div></div>';
