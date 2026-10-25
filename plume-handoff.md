@@ -3459,5 +3459,14 @@ places for each, and was confirmed to fail on the unfixed code.
    Packaging's purchase and adjustment defaults, and the backup file names.
    `todayISO()` now; the suite fails if one returns to an app file.
 
-**Where things stand (end of session 26):** this PR open; she continues with
-the smaller sweep items (backlog) when ready.
+**Recommended % ".5" (core v1.45, same session).** Formulations started a new
+line at 5% for a Recommended % of ".5": the pattern skipped the leading dot.
+Heide's point: a tenfold amount is not cosmetic. Parsing moved to core
+`Plume.recStart(text)`: the first number that is part of a percentage, else
+the first number; a leading dot and a decimal comma read correctly ("pH 5:
+2%" gives 2). `test-sweep.js` section 6 holds 16 shapes of the field.
+
+**Where things stand (end of session 26):** PR #48 merged; the .5 fix in its
+own PR. She wants the check of past batches and blanked lot suppliers next,
+and is undecided whether pinned lines and add-ins should scale with batch
+size (see backlog).

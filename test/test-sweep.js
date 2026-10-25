@@ -236,6 +236,18 @@ const getIngs = "JSON.parse(localStorage.getItem('aerie-ingredients-v2'))";
   const utcDays = app.filter(f => /toISOString\(\)\s*\.slice\(\s*0\s*,\s*10\s*\)/.test(fs.readFileSync(path.join(ROOT, f), 'utf8')));
   ok('no app file makes a date from toISOString() (UTC: tomorrow after 4 pm in Alaska)', utcDays.length === 0, utcDays);
 
+  // ── 6. Recommended % starts a line at the right amount ──────────
+  console.log('\n6. Recommended % (v1.45)');
+  await page.goto(previewUrl('formulations')); await page.waitForTimeout(400);
+  const CASES = [
+    ['.5%', '0.5'], ['.5', '0.5'], ['0.5%', '0.5'], ['0,5 %', '0.5'], ['0.1-0.5%', '0.1'],
+    ['2-5%', '2'], ['2–5%', '2'], ['1 to 3 %', '1'], ['up to 1%', '1'], ['pH 5: 2%', '2'],
+    ['10%', '10'], ['5', '5'], ['', ''], ['as needed', ''], ['150%', ''], ['0%', '']
+  ];
+  const got = await page.evaluate('(' + JSON.stringify(CASES) + ').map(function (c) { return Plume.recStart(c[0]); })');
+  CASES.forEach((c, i) => ok('"' + c[0] + '" starts at ' + (c[1] ? c[1] + '%' : 'blank'), got[i] === c[1], got[i]));
+  ok('Formulations uses it for a new line', await page.evaluate("recStartPct({ useRate: '.5%' }) === '0.5'"));
+
   ok('no page errors', errors.length === 0, errors);
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');

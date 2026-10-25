@@ -35,7 +35,7 @@ var Plume = (function () {
 // (v0.4 / v0.5 / v0.6 across five modules). BUMP IT IN EVERY PULL REQUEST,
 // core change or not: it is how "is this the update I just merged?" is
 // answered by looking, and browsers cache .js files stubbornly.
-var VERSION = '1.44';
+var VERSION = '1.45';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -3019,6 +3019,17 @@ function rtStyle() {
 
 // Recommended % as shown beside its label: the number or range alone, since
 // the label already says % (her call, 2026-10-24). "2–5%" reads "2–5".
+// The starting % a new formula line takes from an ingredient's Recommended %
+// (2026-10-24). The first number that is part of a percentage, else the
+// first number: "2–5%" and "2 to 5 %" give 2, "pH 5: 2%" gives 2, ".5%" and
+// "0,5" give 0.5. The old pattern skipped a leading dot, so ".5" started a
+// line at 5%, ten times the amount. Blank when nothing in 0-100 is found.
+function recStart(v) {
+  var s = String(v == null ? '' : v).replace(/(\d),(\d)/g, '$1.$2');
+  var m = s.match(/(\d*\.?\d+)\s*(?:(?:-|\u2013|\u2014|to)\s*\d*\.?\d+\s*)?%/i) || s.match(/(\d*\.?\d+)/);
+  var n = m ? parseFloat(m[1]) : NaN;
+  return isFinite(n) && n > 0 && n <= 100 ? String(n) : '';
+}
 function recText(v) { return String(v == null ? '' : v).replace(/\s*%\s*/g, '').trim(); }
 
 // ══ Certifications (2026-10-24) ═══════════════════════
@@ -4892,7 +4903,7 @@ function undoStock(p, id) {
 return {
   VERSION: VERSION,
   inciSplit: inciSplit, inciMerge: inciMerge, inciMerged: inciMerged,
-  CERTS: CERTS, lotCerts: lotCerts, activeLot: activeLot, recText: recText,
+  CERTS: CERTS, lotCerts: lotCerts, activeLot: activeLot, recText: recText, recStart: recStart,
   rt: { toHtml: rtToHtml, plain: rtPlain, fromEl: rtFromEl, editor: rtEditor, attach: rtAttach, refresh: rtRefresh, refreshAll: rtRefreshAll },
   STOCK_TYPE: STOCK_TYPE, isStockType: isStockType, stockIngFor: stockIngFor, stockFormFor: stockFormFor,
   stockParts: stockParts, stockExpand: stockExpand, stockLabelItems: stockLabelItems, stockWithParts: stockWithParts, stockInci: stockInci, stockNewIng: stockNewIng,
