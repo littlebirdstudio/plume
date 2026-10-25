@@ -579,7 +579,7 @@ function removeAllPhotos() {
 function exportData() {
   var blob = new Blob([JSON.stringify({packaging: items}, null, 2)], {type:'application/json'});
   var a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-  a.download = 'plume-packaging-' + new Date().toISOString().slice(0,10) + '.json'; a.click();
+  a.download = 'plume-packaging-' + todayISO() + '.json'; a.click();
 }
 
 function importData(e) {
@@ -732,7 +732,7 @@ function addPurchaseRow(purchase) {
     '<div class="purchase-row-grid">' +
       '<div><div class="pr-lbl">Date</div>' +
         '<input type="date" class="pr-inp" data-field="date" value="' +
-          (purchase && purchase.date ? purchase.date : new Date().toISOString().slice(0,10)) + '"></div>' +
+          (purchase && purchase.date ? purchase.date : todayISO()) + '"></div>' +
       '<div><div class="pr-lbl">Qty purchased</div>' +
         '<input type="number" class="pr-inp" data-field="qty" min="1" step="1" placeholder="e.g. 24" value="' +
           (purchase && purchase.qty ? purchase.qty : '') + '" oninput="recalcPurchaseRow(\'' + rowId + '\')"></div>' +
@@ -814,7 +814,7 @@ function saveAdjustment() {
   var qty  = parseInt(document.getElementById('adj-qty').value, 10);
   var note = document.getElementById('adj-note').value.trim();
   if (isNaN(qty) || qty === 0) { Plume.tell('Enter a non-zero quantity (use negative to subtract).'); return; }
-  pendingAdjustments.push({ qty: qty, note: note, date: new Date().toISOString().slice(0,10) });
+  pendingAdjustments.push({ qty: qty, note: note, date: todayISO() });
   renderAdjLog();
   updateModalSummary();
   toggleAdjForm();

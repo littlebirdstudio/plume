@@ -35,7 +35,7 @@ var Plume = (function () {
 // (v0.4 / v0.5 / v0.6 across five modules). BUMP IT IN EVERY PULL REQUEST,
 // core change or not: it is how "is this the update I just merged?" is
 // answered by looking, and browsers cache .js files stubbornly.
-var VERSION = '1.43';
+var VERSION = '1.44';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -173,6 +173,62 @@ var Store = (function () {
     driverName:   function () { return DRIVER.name; }
   };
 })();
+
+// ══ Saving a shared list without undoing another window (2026-10-24) ══
+// Pages hold a list (ingredients, say) in memory and used to save it whole.
+// A tab opened before a batch was made in another window would then write
+// its old list back: a stock solution's new ingredient vanished, and stock
+// a batch had taken came back. trackList remembers each record as this page
+// last read or wrote it; saveList re-reads storage and writes back only the
+// records this page changed, added or deleted, keeping everything another
+// window did in the meantime. Two windows changing the SAME record: this
+// page's copy wins, as before. A key never tracked saves whole, as before.
+var listBase = {};
+function recId(r) { return r && r.id != null ? String(r.id) : null; }
+function trackList(key, arr) {
+  var base = {};
+  (arr || []).forEach(function (r) { var id = recId(r); if (id !== null) base[id] = JSON.stringify(r); });
+  listBase[key] = base;
+}
+function mergeList(fresh, mem, base) {
+  var memById = {}, used = {}, out = [];
+  mem.forEach(function (r) { var id = recId(r); if (id !== null) memById[id] = r; });
+  fresh.forEach(function (f) {
+    var id = recId(f);
+    if (id === null) return;
+    var m = memById[id];
+    if (m) {
+      used[id] = true;
+      var mine = JSON.stringify(m), was = base[id];
+      // Unchanged here and changed elsewhere: take theirs. Otherwise ours
+      // (keeping our object, so references held by the page stay live).
+      out.push((was !== undefined && mine === was && JSON.stringify(f) !== was) ? f : m);
+    } else if (base[id] === undefined) {
+      out.push(f);                      // added in another window
+    }                                   // else: deleted on this page
+  });
+  mem.forEach(function (m) {
+    var id = recId(m);
+    if (id !== null && used[id]) return;
+    // Not in storage: new on this page, or deleted elsewhere. Keep it unless
+    // it was deleted elsewhere and this page never touched it.
+    if (id !== null && base[id] !== undefined && JSON.stringify(m) === base[id]) return;
+    out.push(m);
+  });
+  return out;
+}
+function saveList(key, arr) {
+  var base = listBase[key];
+  var out = arr;
+  if (base) {
+    Store.refresh(key);
+    var fresh = Store.getJSON(key, []);
+    out = mergeList(Array.isArray(fresh) ? fresh : [], arr || [], base);
+  }
+  if (!Store.setJSON(key, out)) return null;
+  trackList(key, out);
+  return out;
+}
 
 // ══ Storage keys ══════════════════════════════════════
 // The 'aerie-' prefix is historical — Plume's earlier name. Renaming the
@@ -4170,14 +4226,43 @@ function costData(d) {
   return { ings: d.ings || g('aerie-ingredients-v2'), forms: d.forms || g('aerie-formulations-v1'),
            pkgs: d.pkgs || g('aerie-packaging-v2'), products: d.products || g('plume-products-v1') };
 }
+// ── A formula line's share of the batch, in percent (2026-10-24) ──────
+// Formulations keeps BOTH grams and a percent on a line once grams are typed
+// (onGrams, onSoapGrams, togglePin), so a reader that takes gramsFixed when
+// it is set and pct otherwise adds grams to percents. That priced a lotion
+// with glycerin typed as 10 g at ~2.8 times its true cost per gram. This is
+// the editor's own rule, in one place:
+//   - pinned: its grams at the version's batch size (as the editor shows it)
+//   - a percent line: its percent; grams only when it has no percent (old
+//     all-gram soaps), converted at the batch size
+//   - an add-in or soap additive: grams at the batch size, or 0 unless
+//     opts.addins (cost leaves them out unless "add-ins in total" is on;
+//     labels list them)
+// The batch size is the active version's, else the type default (soap 1000,
+// otherwise 100), as the editor opens it.
+function formBatchSize(f) {
+  var v = f ? findVariant(f, f.activeVariantId) : null;
+  var bs = parseFloat((v && v.batchSize) || (f && f.batchSize));
+  if (isFinite(bs) && bs > 0) return bs;
+  return f && isSoapType(f.type) ? 1000 : 100;
+}
+function lineShare(line, f, opts) {
+  if (!line) return 0;
+  var bs = (opts && opts.bs) || formBatchSize(f);
+  var g = parseFloat(line.gramsFixed), p = parseFloat(line.pct);
+  g = isFinite(g) && g > 0 ? g : 0; p = isFinite(p) && p > 0 ? p : 0;
+  if (line.addin || line.soapAddin) return (opts && opts.addins) ? g / bs * 100 : 0;
+  if (line.pinned && g > 0) return g / bs * 100;
+  if (p > 0) return p;
+  return g / bs * 100;
+}
 function formCostPerG(f, d) {
   if (!f || !f.lines || !f.lines.length) return null;
   var cost = 0, mass = 0, any = false;
   f.lines.forEach(function (line) {
     if (line.soapAddin) return;
     var cpg = costPerG(fillFind(d.ings, line.ingId));
-    var grams = parseFloat(line.gramsFixed) || 0, pct = parseFloat(line.pct) || 0;
-    var m = grams > 0 ? grams : (pct > 0 ? pct : 0);
+    var m = lineShare(line, f, { addins: !!f.addinsInTotal });
     if (m <= 0) return;
     mass += m;
     if (cpg !== null) { cost += cpg * m; any = true; }
@@ -4863,7 +4948,7 @@ return {
   fillShortages: fillShortages, fillPull: fillPull, fillReturn: fillReturn,
   makeFill: makeFill, undoFill: undoFill, undoFillText: undoFillText, fmtG: fmtG,
   lotBase: lotBase, lotNorm: lotNorm, lotsInUse: lotsInUse, nextLotCode: nextLotCode, lotCheck: lotCheck,
-  batchLot: batchLot, lotChip: lotChip, lotStickerSvg: lotStickerSvg, printLotStickers: printLotStickers, lotStickerSize: lotStickerSize, lotStickerRemember: lotStickerRemember, drawLot: drawLot, varTitle: varTitle, findVariant: findVariant, batchVersion: batchVersion,
+  batchLot: batchLot, lotChip: lotChip, lotStickerSvg: lotStickerSvg, printLotStickers: printLotStickers, lotStickerSize: lotStickerSize, lotStickerRemember: lotStickerRemember, drawLot: drawLot, varTitle: varTitle, findVariant: findVariant, batchVersion: batchVersion, trackList: trackList, saveList: saveList, mergeList: mergeList, lineShare: lineShare, formBatchSize: formBatchSize,
   migrateBatches: migrateBatches, logEntryFor: logEntryFor,
   boot: boot
 };
