@@ -3470,3 +3470,13 @@ the first number; a leading dot and a decimal comma read correctly ("pH 5:
 own PR. She wants the check of past batches and blanked lot suppliers next,
 and is undecided whether pinned lines and add-ins should scale with batch
 size (see backlog).
+
+### Session 26 (cont., 25 October 2026): Digit commas in INCI names (core v1.46)
+
+Her report, with a screenshot: lotus extract (INCI "Nelumbo Nucifera Root
+Extract, 2,3-Butanediol") listed as "Nelumbo nucifera root extract", "2",
+"3-butanediol". `inciSplit` treated every comma as a blend break. A comma
+between two digits (optionally with a space after it) is now part of the
+name: 2,3-Butanediol, 1,2-Hexanediol, 1,3-Propanediol. Every INCI list goes
+through `inciSplit` (Formulations panel and Copy, bench sheet, product
+labels), so one fix covers them. `test-inci.js` gains 4 checks.
