@@ -3557,5 +3557,6 @@ Batches with shared sample data) and approved.
 Tests: new `test/test-onorder.js` (31). `test-search.js` reads the name past
 the compare tick. 33 suites.
 
-Open, asked of her: on-order marking in the palette's main colour (terracotta
-in Finch) or a quieter grey; the in-stock tint in compare's On hand row.
+Decided 2026-10-25: the on-order marking stays in the palette's main colour
+(terracotta in Finch), her call. Compare's On hand row stays plain text (she
+had no preference; no extra tint in an already busy table).
