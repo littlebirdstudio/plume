@@ -365,7 +365,7 @@
   .cmp-table .cmp-k { width: 150px; color: var(--ink-lighter); font-weight: 500; font-size: 12px; position: sticky; left: 0; background: var(--white); }
   .cmp-table td small { display: block; color: var(--ink-light); font-size: 12px; margin-top: 2px; }
   .cmp-table thead th, .cmp-table thead th * { text-transform: none; letter-spacing: 0; }
-  body:has(#modal-compare.open) .cmp-tray { display: none; }
+  body:has(#modal-compare.open) .cmp-tray, .cmp-tray[hidden] { display: none; }
   .cmp-name { font-size: 15px; font-weight: 600; color: var(--ink); }
   .cmp-inci { font-size: 11.5px; color: var(--ink-lighter); font-weight: 400; margin-top: 2px; }
   .cmp-acts { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-weight: 400; }
@@ -1956,6 +1956,23 @@ function loadData() {
   renderTable();
   renderStats();
   // Deep-link: if URL ends in #ing=<id>, auto-open that ingredient
+  // #ql=<id> (2026-10-25): the list, with that ingredient's quick look open
+  // and in view. Batches links here to "mark it arrived", which lives in the
+  // quick look, so it is one click from the batch that needs it.
+  if (location.hash && location.hash.indexOf('#ql=') === 0) {
+    var qlId;
+    try { qlId = decodeURIComponent(location.hash.slice(4)); } catch (e) { qlId = location.hash.slice(4); }
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+    if (ingredients.find(function(i) { return i.id === qlId; })) {
+      qlOpenId = null;
+      toggleQuickLook(qlId);
+      // After the page finishes loading (later steps reset the scroll).
+      setTimeout(function () {
+        var qr = document.querySelector('#tbody tr[data-ing="' + qlId.replace(/"/g, '') + '"]');
+        if (qr) { try { qr.scrollIntoView({ block: 'start' }); window.scrollBy(0, -80); } catch (e) { qr.scrollIntoView(); } }
+      }, 250);
+    }
+  }
   if (location.hash && location.hash.indexOf('#ing=') === 0) {
     var deepId;
     try { deepId = decodeURIComponent(location.hash.slice(5)); }

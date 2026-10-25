@@ -2832,7 +2832,7 @@ function buildCommitBlockedHTML(blocked) {
         s.shortG.toFixed(1) + 'g)' +
         // On order (2026-10-25): coming, but not here, so it cannot be used yet.
         (s.onOrderG > 0 ? '; ' + s.onOrderG.toFixed(0) + 'g is on order, not here yet &mdash; ' +
-          '<a href="' + link + '" target="_blank" rel="noopener" style="color:var(--sage)">mark it arrived</a> when it lands<br>'
+          '<a href="plume-ingredients.html#ql=' + encodeURIComponent(s.ingredientId) + '" target="plume-ingredients" style="color:var(--sage)">mark it arrived</a> when it lands<br>'
         : ' &mdash; <a href="' + link + '" target="_blank" rel="noopener" style="color:var(--sage)">update lot</a><br>');
     });
     html += '<br>';
