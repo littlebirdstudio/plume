@@ -35,7 +35,7 @@ var Plume = (function () {
 // (v0.4 / v0.5 / v0.6 across five modules). BUMP IT IN EVERY PULL REQUEST,
 // core change or not: it is how "is this the update I just merged?" is
 // answered by looking, and browsers cache .js files stubbornly.
-var VERSION = '1.47';
+var VERSION = '1.48';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -516,11 +516,28 @@ function qtyToGrams(qty, unit, density) {
 // returns the raw number as grams, so an 8 oz lot reads as 8 g and every
 // stock figure quietly goes wrong. Check the source module before
 // "improving" any field name here.
+// On order (2026-10-25, her ask): a lot paid for but not here yet. It is
+// never stock (no batch can draw on it, nothing counts it as on hand), but
+// it is priced like any purchase, and Formulations shows it as coming, so
+// she can build the library and plan formulations before the parcel lands.
+// Marking it arrived (received, with the date) makes it ordinary stock.
+function lotHere(l) { return !!l && !l.referenceOnly && !l.onOrder; }
+function onOrderG(ing) {
+  if (!ing || !ing.lots) return 0;
+  var total = 0;
+  ing.lots.forEach(function (l) {
+    if (!l || l.referenceOnly || !l.onOrder) return;
+    var qty  = l.qtyPurchased || l.stock || '';
+    var unit = l.qtyUnit      || l.stockUnit || 'g';
+    if (qty) total += qtyToGrams(qty, unit, densityFor(ing).value);
+  });
+  return total;
+}
 function stockG(ing) {
   if (!ing || !ing.lots || !ing.lots.length) return 0;
   var total = 0;
   ing.lots.forEach(function (l) {
-    if (l.referenceOnly) return;
+    if (!lotHere(l)) return;
     var qty  = l.qtyPurchased || l.stock || '';
     var unit = l.qtyUnit      || l.stockUnit || 'g';
     if (qty) total += qtyToGrams(qty, unit, densityFor(ing).value);
@@ -535,7 +552,7 @@ function stockGOrNull(ing) {
   if (!ing || !ing.lots) return null;
   var total = 0, any = false;
   ing.lots.forEach(function (l) {
-    if (l.referenceOnly) return;
+    if (!lotHere(l)) return;
     var qty  = l.qtyPurchased || l.stock || '';
     var unit = l.qtyUnit      || l.stockUnit || 'g';
     if (qty) { total += qtyToGrams(qty, unit, densityFor(ing).value); any = true; }
@@ -4966,7 +4983,7 @@ return {
   fillShortages: fillShortages, fillPull: fillPull, fillReturn: fillReturn,
   makeFill: makeFill, undoFill: undoFill, undoFillText: undoFillText, fmtG: fmtG,
   lotBase: lotBase, lotNorm: lotNorm, lotsInUse: lotsInUse, nextLotCode: nextLotCode, lotCheck: lotCheck,
-  batchLot: batchLot, lotChip: lotChip, lotStickerSvg: lotStickerSvg, printLotStickers: printLotStickers, lotStickerSize: lotStickerSize, lotStickerRemember: lotStickerRemember, drawLot: drawLot, varTitle: varTitle, findVariant: findVariant, batchVersion: batchVersion, trackList: trackList, saveList: saveList, mergeList: mergeList, lineShare: lineShare, formBatchSize: formBatchSize,
+  batchLot: batchLot, lotChip: lotChip, lotStickerSvg: lotStickerSvg, printLotStickers: printLotStickers, lotStickerSize: lotStickerSize, lotStickerRemember: lotStickerRemember, drawLot: drawLot, varTitle: varTitle, findVariant: findVariant, batchVersion: batchVersion, trackList: trackList, saveList: saveList, lotHere: lotHere, onOrderG: onOrderG, mergeList: mergeList, lineShare: lineShare, formBatchSize: formBatchSize,
   migrateBatches: migrateBatches, logEntryFor: logEntryFor,
   boot: boot
 };

@@ -97,7 +97,8 @@
   /* Inside the app shell (2026-10-18): the content sits on the white main
      surface beside the sidebar. */
   body.ps-shell .app-body { max-width: 1180px; padding: 28px clamp(16px, 4vw, 48px) 48px; }
-  #ing-search-row { margin: 2px 0 10px; }
+  #ing-search-row { margin: 2px 0 10px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  #ing-search-row .ps-search { flex: 1 1 260px; }
   #ing-search-row .ps-search { background: var(--cream); max-width: 440px; padding: 0 10px; }
   #ing-search-row .ps-search:hover, #ing-search-row .ps-search:focus-within { background: var(--cream-dark); }
   #ing-search-row .ps-search input { width: 100%; }
@@ -342,6 +343,41 @@
   .ql-block + .ql-block { margin-top: 10px; }
   .ql-actions { display: flex; gap: 8px; margin-top: 20px; flex-wrap: wrap; }
   .ql-actions a { text-decoration: none; cursor: pointer; }
+  /* Compare (2026-10-25) */
+  .cmp-pick { display: inline-flex; vertical-align: -2px; margin: 0 8px 0 0; cursor: pointer; }
+  .cmp-pick input { width: 15px; height: 15px; accent-color: var(--bark); cursor: pointer; margin: 0; }
+  .cmp-tray { position: fixed; z-index: 900; left: 50%; transform: translateX(-50%); bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px; max-width: calc(100vw - 32px);
+    background: var(--white); border: 1px solid var(--cream-border); border-radius: 12px; padding: 8px 12px;
+    box-shadow: 0 8px 28px rgba(0,0,0,.16); font-size: 13px; }
+  .cmp-tray-l { font-weight: 600; color: var(--bark-dark); }
+  .cmp-tray-hint { color: var(--ink-lighter); font-size: 12px; }
+  .cmp-chip { display: inline-flex; align-items: center; gap: 4px; background: var(--cream); border: 1px solid var(--cream-border); border-radius: 999px; padding: 2px 4px 2px 10px; }
+  .cmp-chip button, .cmp-x { border: 0; background: transparent; color: var(--ink-lighter); font-size: 16px; line-height: 1; cursor: pointer; padding: 0 4px; }
+  .cmp-tray .ps-btn-primary[disabled] { opacity: .45; cursor: default; }
+  .cmp-modal { max-width: 1120px !important; width: calc(100vw - 32px); }
+  .cmp-diff { margin-left: auto; margin-right: 12px; font-size: 13px; display: flex; gap: 6px; align-items: center; color: var(--ink-light); }
+  .cmp-body { padding: 0 1.25rem 1.25rem !important; }
+  .cmp-scroll { overflow-x: auto; }
+  .cmp-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 13px; min-width: calc(150px + var(--cmp-n) * 190px); }
+  .cmp-table th, .cmp-table td { white-space: normal !important; overflow: visible !important; text-overflow: clip !important; vertical-align: top; text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--cream-border); line-height: 1.45; }
+  .cmp-table thead th { position: sticky; top: 0; background: var(--white); border-bottom: 2px solid var(--cream-border); padding-top: 14px; }
+  .cmp-table .cmp-k { width: 150px; color: var(--ink-lighter); font-weight: 500; font-size: 12px; position: sticky; left: 0; background: var(--white); }
+  .cmp-table td small { display: block; color: var(--ink-light); font-size: 12px; margin-top: 2px; }
+  .cmp-table thead th, .cmp-table thead th * { text-transform: none; letter-spacing: 0; }
+  body:has(#modal-compare.open) .cmp-tray, .cmp-tray[hidden] { display: none; }
+  .cmp-name { font-size: 15px; font-weight: 600; color: var(--ink); }
+  .cmp-inci { font-size: 11.5px; color: var(--ink-lighter); font-weight: 400; margin-top: 2px; }
+  .cmp-acts { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-weight: 400; }
+  .cmp-acts a { cursor: pointer; font-size: 12px; }
+  .cmp-foot { font-size: 12px; color: var(--ink-lighter); margin: 10px 0 0; }
+  /* On order (2026-10-25): an outline in the accent, never the stock tint */
+  .ord-tag { display: inline-block; font-size: 11px; color: var(--bark); border: 1px dashed var(--bark-light); border-radius: 999px; padding: 1px 8px; white-space: nowrap; font-style: italic; }
+  .ord-txt { color: var(--bark); font-style: italic; }
+  .ps-swatch.ord-sw { background: transparent !important; border: 1px dashed var(--bark-light); }
+  .lt-tag.ord { color: var(--bark); }
+  .lot-order-toggle { margin-left: 18px; }
+  .qa-onorder { display: flex; align-items: center; gap: 6px; font-size: 12px; margin-top: 6px; text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--ink-light); }
   .ql-stock-links { display: flex; gap: 14px; margin: -6px 0 6px; font-size: 13px; }
   .ql-stock-links a { cursor: pointer; text-decoration: none; }
   /* The quick look: a row under the ingredient, two columns, open until
@@ -1314,6 +1350,7 @@
       <span class="ps-chip-sep"></span>
       <button type="button" class="ps-chip" id="in-stock-btn" onclick="toggleInStock()" title="Show only ingredients you have on hand"><span class="ps-swatch"></span>In stock</button>
       <button type="button" class="ps-chip" id="low-stock-btn" onclick="toggleLowStock()" title="Below the low-stock level you set"><span class="ps-dot" style="background:var(--warning)"></span>Running low</button>
+      <button type="button" class="ps-chip" id="on-order-btn" onclick="toggleOnOrder()" title="Bought, not here yet"><span class="ps-swatch ord-sw"></span>On order</button>
       <button type="button" class="ps-chip" id="restricted-chip" onclick="toggleRestrictedChip()" title="Ingredients marked restricted">Restricted</button>
       <select id="filter-phase" hidden onchange="renderTable()">
         <option value="">All phases</option><option value="water">Water</option><option value="oil">Oil</option><option value="cool-down">Cool-down</option><option value="add-in">Add-in</option>
@@ -1331,6 +1368,7 @@
          the toolbar (Heide, 2026-10-18). -->
     <div id="ing-search-row">
       <label class="ps-search" id="ing-search-wrap"><span id="ing-search-icon"></span><input type="search" id="search" placeholder="Search ingredients" aria-label="Search name, INCI, function, purpose or supplier" title="Searches name, INCI, function, purpose and supplier" oninput="renderTable()"></label>
+      <button type="button" class="ps-chip" id="cmp-mode-btn" onclick="toggleCmpMode()" aria-pressed="false" title="Show tick boxes to pick up to four ingredients and compare them side by side">Compare ingredients</button>
     </div>
 
     <div class="ps-table-wrap">
@@ -1677,7 +1715,8 @@
       <div class="qa-grid">
         <div class="field span2"><label for="qa-sup">Supplier</label><input type="text" id="qa-sup" list="qa-sup-list" placeholder="e.g. Mountain Rose Herbs" autocomplete="off"><datalist id="qa-sup-list"></datalist></div>
         <div class="field"><label for="qa-order">Order #</label><input type="text" id="qa-order" placeholder="optional"></div>
-        <div class="field"><label for="qa-received">Received</label><input type="date" id="qa-received"></div>
+        <div class="field"><label for="qa-received">Received</label><input type="date" id="qa-received">
+          <label class="qa-onorder"><input type="checkbox" id="qa-onorder" onchange="qaOnOrder()"> Not here yet (on order)</label></div>
         <div class="field"><label for="qa-size">Size</label><input type="number" id="qa-size" step="0.01" min="0" placeholder="e.g. 16" oninput="qaCost()"></div>
         <div class="field"><label for="qa-unit">Unit</label>
           <select id="qa-unit" onchange="qaCost()"><option value="g">g</option><option value="oz">oz (wt)</option><option value="lb">lb</option><option value="mL">mL</option><option value="fl oz">fl oz</option></select></div>
@@ -1808,6 +1847,19 @@
 </div>
 
 <!-- SAP reference review -->
+<!-- Compare (2026-10-25): up to four ingredients side by side -->
+<div class="modal-overlay" id="modal-compare">
+  <div class="modal cmp-modal">
+    <div class="modal-header">
+      <div class="modal-title">Compare ingredients</div>
+      <label class="cmp-diff"><input type="checkbox" id="cmp-diff" onchange="renderCompare()"> Only rows that differ</label>
+      <button class="modal-close" onclick="closeModal('modal-compare')" aria-label="Close">×</button>
+    </div>
+    <div class="modal-body cmp-body" id="cmp-body"></div>
+  </div>
+</div>
+<div id="cmp-tray" class="cmp-tray" hidden></div>
+
 <div class="modal-overlay" id="modal-sap">
   <div class="modal" style="max-width:780px">
     <div class="modal-header">
@@ -1904,6 +1956,23 @@ function loadData() {
   renderTable();
   renderStats();
   // Deep-link: if URL ends in #ing=<id>, auto-open that ingredient
+  // #ql=<id> (2026-10-25): the list, with that ingredient's quick look open
+  // and in view. Batches links here to "mark it arrived", which lives in the
+  // quick look, so it is one click from the batch that needs it.
+  if (location.hash && location.hash.indexOf('#ql=') === 0) {
+    var qlId;
+    try { qlId = decodeURIComponent(location.hash.slice(4)); } catch (e) { qlId = location.hash.slice(4); }
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+    if (ingredients.find(function(i) { return i.id === qlId; })) {
+      qlOpenId = null;
+      toggleQuickLook(qlId);
+      // After the page finishes loading (later steps reset the scroll).
+      setTimeout(function () {
+        var qr = document.querySelector('#tbody tr[data-ing="' + qlId.replace(/"/g, '') + '"]');
+        if (qr) { try { qr.scrollIntoView({ block: 'start' }); window.scrollBy(0, -80); } catch (e) { qr.scrollIntoView(); } }
+      }, 250);
+    }
+  }
   if (location.hash && location.hash.indexOf('#ing=') === 0) {
     var deepId;
     try { deepId = decodeURIComponent(location.hash.slice(5)); }
@@ -2606,6 +2675,7 @@ function archivedInResults() {
 
 // ── Table ─────────────────────────────────────────────
 function renderTable() {
+  setTimeout(renderCmpTray, 0);
   var q     = document.getElementById('search').value.toLowerCase();
   var phase = document.getElementById('filter-phase').value;
   var flag  = document.getElementById('filter-flag').value;
@@ -2634,6 +2704,7 @@ function renderTable() {
     if (func && Plume.funcCats(i).indexOf(func) === -1) return false;
     if (lowStockActive && !isLowStock(i)) return false;
     if (inStockActive && !hasStock(i)) return false;
+    if (onOrderActive && !hasOnOrder(i)) return false;
     return true;
   });
   // Browsing: sort by common name, case-insensitive. localeCompare handles
@@ -2681,12 +2752,14 @@ function renderTable() {
     var sel = qlOpenId === i.id;
     // In stock: a tinted row (kept from the old list at her request). Running
     // low: an amber dot by the amount. Nothing on hand: plain row, "None".
+    var ordG = Plume.onOrderG(i), ordAny = hasOnOrder(i);
+    var ordTag = ordAny ? '<span class="ord-tag" title="Bought, not here yet">' + (ordG > 0 ? gramsText(ordG) + ' ' : '') + 'on order</span>' : '';
     var stockCell = inStock
       ? '<span class="ps-stock">' + (low ? '<span class="ps-dot" style="background:var(--warning)" title="Running low"></span>' : '') +
-          formatStockDisplay(i) + (low ? ' <span class="ps-muted">\u00b7 low</span>' : '') + '</span>'
-      : '<span class="ps-muted">' + (calcTotalStockG(i) === null ? '\u2014' : 'None') + '</span>';
+          formatStockDisplay(i) + (low ? ' <span class="ps-muted">\u00b7 low</span>' : '') + '</span>' + (ordTag ? '<div>' + ordTag + '</div>' : '')
+      : (ordTag || '<span class="ps-muted">' + (calcTotalStockG(i) === null ? '\u2014' : 'None') + '</span>');
     return '<tr data-ing="' + i.id + '" class="' + (inStock ? 'has-stock' : '') + (sel ? ' sel' : '') + (i.archived ? ' row-archived' : '') + '" onclick="toggleQuickLook(\'' + i.id + '\')" title="Click for a quick look">' +
-      '<td class="td-name">' + esc(i.name) + (i.archived ? '<span class="arch-tag">archived</span>' : '') +
+      '<td class="td-name">' + cmpBox(i.id) + esc(i.name) + (i.archived ? '<span class="arch-tag">archived</span>' : '') +
         (warn ? '<span class="expiry-warn" title="A lot expires soon"> &#9888;</span>' : '') +
         // INCI under the name (the redesign). Her function notes moved to the
         // quick look panel, one click away.
@@ -2745,6 +2818,140 @@ function openLotsFromList(e, id) {
   lotsFromDetails = true;
   openLotsDrawer();
 }
+// Arrived (2026-10-25): every on-order lot of this ingredient becomes stock,
+// received today unless a date was already set.
+function hasOnOrder(i) { return ((i && i.lots) || []).some(function (l) { return l && l.onOrder && !l.referenceOnly; }); }
+function markArrived(e, id) {
+  if (e) e.stopPropagation();
+  var i = ingredients.find(function (x) { return x.id === id; });
+  if (!i) return;
+  var n = 0;
+  (i.lots || []).forEach(function (l) { if (l.onOrder) { delete l.onOrder; if (!l.received) l.received = todayISO(); n++; } });
+  if (!n) return;
+  if (!saveData()) return;
+  renderTable(); renderStats();
+  if (viewingId === id && document.getElementById('detail-view').style.display !== 'none') viewIngredient(id);
+}
+// ── Compare (2026-10-25, her ask) ─────────────────────
+// Like a shopping site: tick up to four ingredients, a tray gathers them at
+// the bottom, Compare shows them side by side, one column each, a row for
+// every field any of them has filled. "Only rows that differ" hides rows
+// where all agree. The picks are kept on this device.
+var CMP_MAX = 4, CMP_KEY = 'plume-compare';
+// The tick boxes and the tray show only in compare mode (her ask: a box on
+// every row is a lot for something used now and then). Turning it off keeps
+// the picks for next time; Clear empties them.
+var cmpMode = false;
+function toggleCmpMode(on) {
+  cmpMode = on === undefined ? !cmpMode : !!on;
+  var b = document.getElementById('cmp-mode-btn');
+  if (b) { b.classList.toggle('active', cmpMode); b.setAttribute('aria-pressed', cmpMode ? 'true' : 'false');
+    b.textContent = cmpMode ? 'Done comparing' : 'Compare ingredients'; }
+  renderTable(); renderCmpTray();
+}
+var cmpIds = (function () { try { var v = JSON.parse(localStorage.getItem(CMP_KEY) || '[]'); return Array.isArray(v) ? v.slice(0, CMP_MAX) : []; } catch (e) { return []; } })();
+function cmpSave() { try { localStorage.setItem(CMP_KEY, JSON.stringify(cmpIds)); } catch (e) {} }
+function cmpBox(id) {
+  if (!cmpMode) return '';
+  var on = cmpIds.indexOf(id) !== -1;
+  return '<label class="cmp-pick" onclick="event.stopPropagation()" title="Compare">' +
+    '<input type="checkbox"' + (on ? ' checked' : '') + ' aria-label="Compare" onchange="toggleCompare(\'' + id + '\', this.checked)"></label>';
+}
+function toggleCompare(id, on) {
+  var at = cmpIds.indexOf(id);
+  if (on === undefined) on = at === -1;
+  if (on && !cmpMode) toggleCmpMode(true);
+  if (on && at === -1) {
+    if (cmpIds.length >= CMP_MAX) {
+      Plume.tell('You can compare up to ' + CMP_MAX + ' at a time. Take one out of the tray first.', { title: 'Compare is full' });
+      renderTable(); return;
+    }
+    cmpIds.push(id);
+  } else if (!on && at !== -1) cmpIds.splice(at, 1);
+  cmpSave(); renderTable(); renderCmpTray();
+  if (document.getElementById('modal-compare').classList.contains('open')) {
+    if (cmpIds.length) renderCompare(); else closeModal('modal-compare');
+  }
+}
+function clearCompare() { cmpIds = []; cmpSave(); renderTable(); renderCmpTray(); }
+function renderCmpTray() {
+  var tray = document.getElementById('cmp-tray');
+  if (!tray) return;
+  cmpIds = cmpIds.filter(function (id) { return ingredients.some(function (i) { return i.id === id; }); });
+  if (!cmpMode) { tray.hidden = true; tray.innerHTML = ''; return; }
+  if (!cmpIds.length) { tray.hidden = false; tray.innerHTML = '<span class="cmp-tray-l">Compare</span><span class="cmp-tray-hint">Tick two to four ingredients in the list.</span><button type="button" class="ps-link-btn" onclick="toggleCmpMode(false)">Done</button>'; return; }
+  tray.hidden = false;
+  tray.innerHTML = '<span class="cmp-tray-l">Compare</span>' + cmpIds.map(function (id) {
+    var i = ingredients.find(function (x) { return x.id === id; });
+    return '<span class="cmp-chip">' + esc(i.name) + '<button type="button" aria-label="Remove ' + esc(i.name) + '" onclick="toggleCompare(\'' + id + '\', false)">\u00d7</button></span>';
+  }).join('') +
+  (cmpIds.length < 2 ? '<span class="cmp-tray-hint">tick one more</span>' : '') +
+  '<button type="button" class="ps-btn-primary" ' + (cmpIds.length < 2 ? 'disabled' : '') + ' onclick="openCompare()">Compare ' + cmpIds.length + '</button>' +
+  '<button type="button" class="ps-link-btn" onclick="clearCompare()">Clear</button>' +
+  '<button type="button" class="ps-link-btn" onclick="toggleCmpMode(false)">Done</button>';
+}
+function openCompare() { if (cmpIds.length < 2) return; renderCompare(); openModal('modal-compare'); }
+var CMP_PH = { water: 'Water', oil: 'Oil', 'cool-down': 'Cool-down', 'add-in': 'Add-in', active: 'Active', other: 'Other' };
+var CMP_SOL = { water: 'Water-soluble', oil: 'Oil-soluble', both: 'Water and oil', 'water-dispersible': 'Disperses in water', 'oil-dispersible': 'Disperses in oil' };
+function cmpRows() {
+  var used = (typeof PlumeCheat !== 'undefined' && PlumeCheat.usageMap) ? PlumeCheat.usageMap() : {};
+  var t = function (v) { return v == null ? '' : String(v).trim(); };
+  return [
+    ['Function', function (i) { return Plume.funcCats(i).map(function (c) { return '<span class="ps-tag">' + esc(c) + '</span>'; }).join(' '); }, function (i) { return Plume.funcCats(i).join(', '); }],
+    ['What it is', function (i) { return esc(t(i.function)); }],
+    ['The lowdown', function (i) { return i.chooseWhen ? Plume.rt.toHtml(i.chooseWhen) : ''; }, function (i) { return Plume.rt.plain(i.chooseWhen || ''); }],
+    ['What I had in mind', function (i) { return i.purpose ? Plume.rt.toHtml(i.purpose) : ''; }, function (i) { return Plume.rt.plain(i.purpose || ''); }],
+    ['Phase', function (i) { return i.phase ? esc(CMP_PH[i.phase] || i.phase) : ''; }],
+    ['Solubility', function (i) { return i.solubility ? esc(CMP_SOL[i.solubility] || i.solubility) + (i.solNote ? '<small>' + esc(i.solNote) + '</small>' : '') : ''; }],
+    ['Recommended %', function (i) { return esc(Plume.recText(i.useRate)); }],
+    ['Use range', function (i) { return (i.min || i.max) ? esc((i.min || '0') + '\u2013' + (i.max || '100') + '%') : ''; }],
+    ['Effective pH', function (i) { return esc(t(i.optimalPh)); }],
+    ['Cost per gram', function (i) { var c = activeCost(i); return c === null ? '' : (c === 0 && i.noCost ? 'in-house ($0)' : '$' + c.toFixed(4)); }],
+    ['On hand', function (i) { var h = hasStock(i) ? formatStockDisplay(i) : ''; var o = Plume.onOrderG(i);
+      return h + (o > 0 ? (h ? ' ' : '') + '<span class="ord-txt">' + gramsText(o) + ' on order</span>' : (!h && calcTotalStockG(i) !== null ? 'None' : '')); },
+      function (i) { return (hasStock(i) ? 'y' : 'n') + Math.round(calcTotalStockG(i) || 0) + '/' + Math.round(Plume.onOrderG(i)); }],
+    ['Supplier', function (i) { var l = getActiveLot(i); return l && l.supplier ? esc(l.supplier) : ''; }],
+    ['Certifications', function (i) { var l = Plume.activeLot(i); return l ? esc(Plume.lotCerts(l).join(', ')) : ''; }],
+    ['Substitutes', function (i) { return esc(t(i.substitution)); }],
+    ['Absorption', function (i) { return esc(t(i.absorptionRate)); }],
+    ['Heat stability', function (i) { return esc(t(i.heatStability)); }],
+    ['Oxidation stability', function (i) { return esc(t(i.oxidationStability)); }],
+    ['Melting point', function (i) { return esc(t(i.meltingPoint)); }],
+    ['Density', function (i) { return i.density ? esc(String(i.density)) + ' g/mL' : ''; }],
+    ['Scent', function (i) { return esc(t(i.scent)); }],
+    ['Color', function (i) { return esc(t(i.colour)); }],
+    ['Dermal limits', function (i) { return esc(t(i.dermalLimits)); }],
+    ['Restricted', function (i) { return i.flag === 'yes' ? 'Yes' + (i.restrictions ? '<small>' + esc(i.restrictions) + '</small>' : '') : ''; }],
+    ['Used in', function (i) { var u = used[i.id] || []; return u.length ? u.map(function (x) { return esc(x.name); }).join(', ') : ''; }]
+  ];
+}
+function renderCompare() {
+  var items = cmpIds.map(function (id) { return ingredients.find(function (x) { return x.id === id; }); }).filter(Boolean);
+  var onlyDiff = document.getElementById('cmp-diff').checked;
+  var key = function (h) { return String(h || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase(); };
+  var hiddenSame = 0, hiddenEmpty = 0;
+  var head = '<tr><th class="cmp-k"></th>' + items.map(function (i) {
+    return '<th><div class="cmp-name">' + esc(i.name) + '</div><div class="cmp-inci">' + esc(i.inci || '') + '</div>' +
+      '<div class="cmp-acts"><a class="ps-link-btn" onclick="closeModal(\'modal-compare\');viewIngredient(\'' + i.id + '\')">Full details</a>' +
+      '<button type="button" class="cmp-x" onclick="toggleCompare(\'' + i.id + '\', false)" aria-label="Take out of compare">\u00d7</button></div></th>';
+  }).join('') + '</tr>';
+  var body = cmpRows().map(function (r) {
+    var cells = items.map(function (i) { return r[1](i) || ''; });
+    var keys = items.map(function (i, n) { return r[2] ? key(r[2](i)) : key(cells[n]); });
+    if (cells.every(function (c) { return !key(c); })) { hiddenEmpty++; return ''; }
+    var same = keys.every(function (k) { return k === keys[0]; });
+    if (onlyDiff && same) { hiddenSame++; return ''; }
+    return '<tr><th class="cmp-k" scope="row">' + r[0] + '</th>' + cells.map(function (c) {
+      return '<td>' + (key(c) ? c : '<span class="ps-muted">\u2014</span>') + '</td>';
+    }).join('') + '</tr>';
+  }).join('');
+  var foot = [];
+  if (hiddenSame) foot.push(hiddenSame + ' row' + (hiddenSame === 1 ? '' : 's') + ' hidden where all agree');
+  if (hiddenEmpty) foot.push(hiddenEmpty + ' left out with nothing filled in');
+  document.getElementById('cmp-body').innerHTML =
+    '<div class="cmp-scroll"><table class="cmp-table" style="--cmp-n:' + items.length + '"><thead>' + head + '</thead><tbody>' + body + '</tbody></table></div>' +
+    (foot.length ? '<p class="cmp-foot">' + foot.join(' \u00b7 ') + '.</p>' : '');
+}
 // The purchase link to reorder from: the lot in use first, then the newest
 // other bought lot that has one, then a watchlist lot. Only http(s) links.
 function reorderLink(i) {
@@ -2781,12 +2988,14 @@ function quickLookHtml(i) {
       '<dt>Function</dt><dd>' + (cats.length ? cats.map(function (c) { return '<span class="ps-tag">' + esc(c) + '</span>'; }).join('') : '\u2014') + '</dd>' +
       '<dt>Use rate</dt><dd>' + (i.min || i.max ? esc((i.min || '0') + '\u2013' + (i.max || '100')) + '%' : '\u2014') + '</dd>' +
       '<dt>Price / g</dt><dd>' + (cost === 0 && i.noCost ? 'Made in-house or free ($0)' : cost !== null ? '$' + cost.toFixed(4) : '\u2014') + '</dd>' +
-      '<dt>On hand</dt><dd>' + (hasStock(i) ? stock + (isLowStock(i) ? ' <span style="color:var(--warning)">\u00b7 running low</span>' : '') : '<span class="ps-muted">None</span>') + '</dd>' +
+      '<dt>On hand</dt><dd>' + (hasStock(i) ? stock + (isLowStock(i) ? ' <span style="color:var(--warning)">\u00b7 running low</span>' : '') : '<span class="ps-muted">None</span>') +
+        (Plume.onOrderG(i) > 0 ? ' <span class="ord-txt">\u00b7 ' + gramsText(Plume.onOrderG(i)) + ' on order</span>' : (hasOnOrder(i) ? ' <span class="ord-txt">\u00b7 on order</span>' : '')) + '</dd>' +
       (lot ? '<dt>Active lot</dt><dd>' + esc([lot.supplier, lot.received ? 'received ' + formatDateShort(lot.received) : ''].filter(Boolean).join(' \u00b7 ') || 'Set') + '</dd>' : '') +
       '<dt>Used in</dt><dd>' + (typeof PlumeCheat !== 'undefined' ? PlumeCheat.usedInHtml(used, 4) : '\u2014') + '</dd>' +
     '</dl>' +
     '<div class="ql-stock-links">' +
       '<a class="ps-link-btn" onclick="openLotsFromList(event,\'' + i.id + '\')">Manage lots</a>' +
+      (hasOnOrder(i) ? '<a class="ps-link-btn ord-arrive" onclick="markArrived(event,\'' + i.id + '\')" title="It is here: count it as stock, received today">Mark arrived</a>' : '') +
       (buy ? '<a class="ps-link-btn" href="' + esc(buy) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()">Reorder \u2197</a>' : '') +
     '</div></div><div class="ql-side">' +
     (i.flag === 'yes' ? '<div class="ql-warn">Restricted' + (i.restrictions ? ' \u2014 ' + esc(i.restrictions) : '') + '</div>' : '') +
@@ -2796,6 +3005,7 @@ function quickLookHtml(i) {
     '<div class="ql-actions">' +
       '<a class="ps-btn-primary" onclick="openEditFromList(event,\'' + i.id + '\')">Edit</a>' +
       '<a class="ps-link-btn" onclick="openDetailsFromList(event,\'' + i.id + '\')">Full details \u2192</a>' +
+      '<a class="ps-link-btn" onclick="event.stopPropagation();toggleCompare(\'' + i.id + '\')">' + (cmpIds.indexOf(i.id) !== -1 ? 'In compare \u2713' : 'Add to compare') + '</a>' +
       // Restoring from the list, rather than opening the detail screen to do
       // it. Archived rows are only on screen because they were asked for, and
       // asking for them is nearly always a prelude to bringing one back.
@@ -3154,7 +3364,8 @@ function viewIngredient(id) {
         var isActive = (l.id === activeLotId) && !l.referenceOnly;
         var suppObj = suppliers.find(function (x) { return x.name === l.supplier; });
         var tags = (isActive ? ' <span class="lt-tag on">active' + (hasExplicitActive ? '' : ' (default)') + '</span>' : '') +
-          (l.referenceOnly ? ' <span class="lt-tag">reference only</span>' : '');
+          (l.referenceOnly ? ' <span class="lt-tag">reference only</span>' : '') +
+          (l.onOrder && !l.referenceOnly ? ' <span class="lt-tag ord">on order</span>' : '');
         var notes = '';
         if (l.madeBatchId) notes += '<small class="lt-note made">Made in-house in batch ' + Plume.lotChip(l.lotNum || 'no lot code', 'plume-batchlog.html#b=' + encodeURIComponent(l.madeBatchId)).replace('<a ', '<a target="plume-batchlog" ') + (l.madeMissing && l.madeMissing.length ? ' <span class="made-miss">not priced: ' + l.madeMissing.map(esc).join(', ') + ' had no price</span>' : '') + '</small>';
         else if (l.wasReversal) notes += '<small class="lt-note">↺ Auto-created from a batch decommit.' + (l.notes ? ' ' + esc(l.notes) : '') + '</small>';
@@ -3169,7 +3380,7 @@ function viewIngredient(id) {
             (l.brand ? '<small>' + esc(l.brand) + '</small>' : '') + (purchase ? '<small>' + esc(purchase) + (l.orderNum ? ' · order ' + esc(l.orderNum) : '') + '</small>' : (l.orderNum ? '<small>order ' + esc(l.orderNum) + '</small>' : '')) +
             (Plume.lotCerts(l).length ? '<small>' + certBadgesHtml(l) + '</small>' : '') + notes + '</span>' +
           '<span>' + (l.lotNum ? esc(l.lotNum) : dash) + '</span>' +
-          '<span>' + (l.received ? esc(fmtDate(l.received)) : dash) + (l.bestBy ? '<small class="' + (soon ? 'expiry-warn' : '') + '">best by ' + esc(fmtDate(l.bestBy)) + '</small>' : '') + '</span>' +
+          '<span>' + (l.received ? esc(fmtDate(l.received)) : (l.onOrder ? '<button class="btn btn-sm" onclick="markArrived(event,\'' + i.id + '\')">Mark arrived</button>' : dash)) + (l.bestBy ? '<small class="' + (soon ? 'expiry-warn' : '') + '">best by ' + esc(fmtDate(l.bestBy)) + '</small>' : '') + '</span>' +
           '<span class="r">' + ((l.qtyPurchased || l.stock) ? esc(String(l.qtyPurchased || l.stock)) + ' ' + esc(l.qtyUnit || l.stockUnit || 'g') : dash) + '</span>' +
           '<span class="r">' + (l.costPerG ? '$' + parseFloat(l.costPerG).toFixed(4) : dash) + '</span>' +
           '<span class="lt-act">' + links + (canSetActive ? '<button class="btn btn-sm" onclick="setActiveLot(\'' + i.id + '\',\'' + l.id + '\')">Set as active</button>' : '') + '</span>' +
@@ -3289,6 +3500,13 @@ function qaRenderCerts() {
     '<label>Other <input type="text" id="qa-c-other" placeholder="e.g. Fair for Life" aria-label="Other certification"></label>';
 }
 // Clears the form. keepOrder leaves the supplier, order # and date.
+// Not here yet: the lot is saved as on order, with no received date, and
+// is kept for the next item of the same order.
+function qaOnOrder() {
+  var on = document.getElementById('qa-onorder').checked, r = document.getElementById('qa-received');
+  r.disabled = on;
+  r.value = on ? '' : (r.value || todayISO());
+}
 function qaClear(keepOrder) {
   ['qa-name', 'qa-inci', 'qa-min', 'qa-max', 'qa-size', 'qa-price', 'qa-lot', 'qa-link'].forEach(function(id) { document.getElementById(id).value = ''; });
   document.getElementById('qa-phase').value = 'water';
@@ -3297,6 +3515,8 @@ function qaClear(keepOrder) {
     document.getElementById('qa-sup').value = '';
     document.getElementById('qa-order').value = '';
     document.getElementById('qa-received').value = todayISO();
+    document.getElementById('qa-onorder').checked = false;
+    document.getElementById('qa-received').disabled = false;
   }
   qaStarter = null;
   qaRenderFuncs([]);
@@ -3386,7 +3606,8 @@ function qaBuild() {
   ing.functionCategory = qaReadFuncs();
   if (!ing.flag) ing.flag = 'no';
   var p = qaPurchase(), sup = qaVal('qa-sup');
-  var bought = sup || qaVal('qa-order') || p.size || p.price > 0 || qaVal('qa-lot') || qaVal('qa-link');
+  var onOrd = document.getElementById('qa-onorder').checked;
+  var bought = sup || qaVal('qa-order') || p.size || p.price > 0 || qaVal('qa-lot') || qaVal('qa-link') || onOrd;
   var certs = {}, anyCert = false;
   Plume.CERTS.forEach(function(c) { certs[c.key] = document.getElementById('qa-c-' + c.key).checked; anyCert = anyCert || certs[c.key]; });
   if (bought || anyCert || qaVal('qa-c-other')) {
@@ -3395,10 +3616,11 @@ function qaBuild() {
       purchaseSize: p.size, purchaseUnit: p.unit, purchasePrice: p.price > 0 ? String(p.price) : '',
       costPerG: p.cpg !== null ? p.cpg.toFixed(4) : '',
       qtyPurchased: p.size, qtyUnit: p.unit,
-      lotNum: qaVal('qa-lot'), received: qaVal('qa-received'), bestBy: '', orderNum: qaVal('qa-order'),
+      lotNum: qaVal('qa-lot'), received: onOrd ? '' : qaVal('qa-received'), bestBy: '', orderNum: qaVal('qa-order'),
       buyLink: qaLink(qaVal('qa-link')), receiptLink: '', referenceOnly: false, certOther: qaVal('qa-c-other')
     };
     Plume.CERTS.forEach(function(c) { lot[c.key] = certs[c.key]; });
+    if (onOrd) lot.onOrder = true;
     ing.lots = [lot];
     ing.activeLotId = 'L1';
   }
@@ -3658,6 +3880,16 @@ function saveIngredient(keepOpen) {
       return old ? Object.assign({}, old, l) : l;
     });
   }
+
+  // A lot ticked off "On order" has arrived: date it today if no date was set.
+  if (editingId) {
+    var prevOrd = (ingredients.find(function(x) { return x.id === editingId; }) || {}).lots || [];
+    data.lots.forEach(function(l) {
+      var was = l.id ? prevOrd.filter(function(x) { return x.id === l.id; })[0] : null;
+      if (was && was.onOrder && !l.onOrder && !l.received) l.received = todayISO();
+    });
+  }
+  data.lots.forEach(function(l) { if (!l.onOrder) delete l.onOrder; });
 
   // ── Lot id assignment & active-lot resolution ──
   // 1. Assign stable ids to any new lots (rows without a persisted id).
@@ -3949,6 +4181,7 @@ function addLotRow(lot) {
   var brandName = lot && lot.brand      ? lot.brand       : '';
   var isOrganic = lot && lot.organic    ? true            : false;
   var isRefOnly = lot && lot.referenceOnly ? true         : false;
+  var isOnOrder = lot && lot.onOrder ? true : false;
   var pUnit    = lot && lot.purchaseUnit ? lot.purchaseUnit : 'g';
   var qtyVal   = lot ? (lot.qtyPurchased || lot.stock || '') : '';
   var qtyUnit  = lot ? (lot.qtyUnit || lot.stockUnit || 'g') : 'g';
@@ -4064,6 +4297,13 @@ function addLotRow(lot) {
         '<span>Reference only</span>' +
         '<span class="lot-ref-hint">(price comparison, not a purchase)</span>' +
       '</label>' +
+      // On order (2026-10-25): bought, not here yet. Not stock until it
+      // arrives; unticking it marks it arrived (today, if no date is set).
+      '<label class="lot-ref-toggle lot-order-toggle">' +
+        '<input type="checkbox" data-field="onOrder"' + (isOnOrder ? ' checked' : '') + '>' +
+        '<span>On order</span>' +
+        '<span class="lot-ref-hint">(not here yet: planned with, never drawn on)</span>' +
+      '</label>' +
     '</div>';
 
   // ── Line 4: certifications (2026-10-24), on the purchase ──
@@ -4137,7 +4377,7 @@ function calcTotalStockG(ing) {
   if (!lots.length) return null;
   var total = 0; var hasAny = false;
   lots.forEach(function(l) {
-    if (l.referenceOnly) return; // watchlist entries don't contribute to stock
+    if (!Plume.lotHere(l)) return; // watchlist and on-order lots are not stock
     var qty  = l.qtyPurchased || l.stock || '';
     var unit = l.qtyUnit      || l.stockUnit || 'g';
     if (qty) {
@@ -4153,7 +4393,7 @@ function calcTotalStockG(ing) {
 }
 
 function formatStockDisplay(ing) {
-  var lots = migrateLots(ing).filter(function(l) { return !l.referenceOnly; });
+  var lots = migrateLots(ing).filter(function(l) { return Plume.lotHere(l); });
   var totalG = calcTotalStockG(ing);
   if (totalG === null) return '\u2014';
   // Also show original units sum if not already in grams
@@ -4201,6 +4441,13 @@ function isLowStock(ing) {
 // "Has stock" means any lot with a positive quantity. Used both for the
 // optional filter toggle and for the row indicator (sage border + dot).
 var inStockActive = false;
+var onOrderActive = false;
+function toggleOnOrder() {
+  onOrderActive = !onOrderActive;
+  document.getElementById('on-order-btn').classList.toggle('active', onOrderActive);
+  renderTable();
+}
+function gramsText(g) { return g >= 1000 ? (g / 1000).toFixed(g >= 10000 ? 0 : 1) + ' kg' : Math.round(g) + ' g'; }
 function toggleInStock() {
   inStockActive = !inStockActive;
   document.getElementById('in-stock-btn').classList.toggle('active', inStockActive);
@@ -4545,7 +4792,7 @@ function getLots() {
     // default empty row could create a phantom lot on save.
     return l.supplier || l.brand || l.qtyPurchased || l.stock ||
            l.purchaseSize || l.purchasePrice || l.lotNum || l.orderNum ||
-           l.buyLink || l.receiptLink || l.received || l.bestBy || l.referenceOnly;
+           l.buyLink || l.receiptLink || l.received || l.bestBy || l.referenceOnly || l.onOrder;
   });
 }
 

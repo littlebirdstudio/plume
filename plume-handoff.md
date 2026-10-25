@@ -3506,3 +3506,56 @@ compare tool, receipts). Decided and built here:
 
 Tests: `test-shell.js` section 4 rewritten for the drop-down (11 checks);
 `test-sweep.js` section 7 (4); `test-ingpage.js` popup check updated.
+
+### Session 26 (cont., 25 October 2026): On order lots and Compare (core v1.48)
+
+Previewed with her ("Plume On Order Preview", Ingredients + Formulations +
+Batches with shared sample data) and approved.
+
+**On order** (her case: bought today, not shipped; build the library ahead).
+- Lot field `onOrder: true`. Core `Plume.lotHere(l)` (not reference-only, not
+  on order) is what counts as stock: `stockG`, `stockGOrNull`, Ingredients'
+  `calcTotalStockG` / `formatStockDisplay`, and Batches' `fifoOrderedLots`
+  all use it. `Plume.onOrderG(ing)` totals what is coming. **Priced like any
+  purchase** (cost cascade unchanged), so recipes cost before it arrives.
+- Ingredients: an "On order" tick in each lot row beside Reference only;
+  unticking and saving marks it arrived (received today when blank). Dashed
+  "on order" tag in the stock cell, an On order filter chip, "N g on order"
+  in the quick look with **Mark arrived** (`markArrived`), and a Mark arrived
+  button in the profile's lot table. Quick add: "Not here yet (on order)"
+  beside Received; kept by Save & add another (one order, many items). No
+  `onOrder` key is stored when false.
+- Formulations: on-order items in the search list (outline, "N on order");
+  a line short of stock with some on order gets a dashed edge and
+  `.order-note` ("20g on hand · 200g on order", "still short of" when even
+  that is not enough) via `orderBits`. The popup's stock line adds it.
+- Batches: an on-order lot is never drawn on, so a batch needing it is
+  stopped (her test question; tested both ways). The stock column shows "0g /
+  N g on order"; the blocked message says "on order, not here yet" with a
+  **mark it arrived** link to `plume-ingredients.html#ql=<id>`.
+- **`#ql=<id>`** (new): Ingredients opens the list with that ingredient's
+  quick look open and scrolled into view (her call: the list is the easiest
+  place to switch it). The scroll waits ~250 ms; later load steps reset it.
+
+**Compare** (ingredients only, her call; packaging later if she misses it).
+- **Compare ingredients** button beside the search (her ask: no box on every
+  row for an occasional task). It shows a tick box in each name cell and a
+  tray at the bottom (picks, Compare N, Clear, Done). Done hides boxes and
+  tray, keeps picks (localStorage `plume-compare`, per device); "Add to
+  compare" in the quick look turns the mode on. Max 4 (`CMP_MAX`).
+- `#modal-compare`: one column per ingredient, a row per field any has
+  (`cmpRows`: function, what it is, lowdown, what I had in mind, phase,
+  solubility, recommended %, use range, effective pH, cost per gram, on hand
+  incl. on order, supplier, certifications, substitutes, absorption, heat and
+  oxidation stability, melting point, density, scent, color, dermal limits,
+  restricted, used in). "Only rows that differ" hides rows where all agree;
+  a footnote counts what was hidden. No odd-one-out marking (she removed that
+  from the cheat sheet).
+- Gotcha: the app has no global `[hidden]{display:none}`, so an element with
+  its own `display` needs `.x[hidden]{display:none}` (the empty tray showed).
+
+Tests: new `test/test-onorder.js` (31). `test-search.js` reads the name past
+the compare tick. 33 suites.
+
+Open, asked of her: on-order marking in the palette's main colour (terracotta
+in Finch) or a quieter grey; the in-stock tint in compare's On hand row.

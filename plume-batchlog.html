@@ -1457,12 +1457,18 @@ function renderPreviewRows() {
         '</div>';
       return;
     }
-    var low = (p.available !== null && p.available < p.grams);
+    // On order (2026-10-25): not here yet, so it counts as none on hand, and
+    // the row says it is coming rather than "no stock data".
+    var pIng = p.ingredientId ? findIng(p.ingredientId) : null;
+    var ordG = pIng ? Plume.onOrderG(pIng) : 0;
+    var avail = (p.available === null && ordG > 0) ? 0 : p.available;
+    var low = (avail !== null && avail < p.grams);
     if (low) lowStockItems.push(p);
-    var availTxt = p.available === null
+    var availTxt = avail === null
       ? '<span style="color:var(--ink-lighter)">no stock data</span>'
-      : (low ? '<span class="ing-preview-stock warn">' + p.available.toFixed(0) + 'g</span>'
-             : p.available.toFixed(0) + 'g');
+      : (low ? '<span class="ing-preview-stock warn">' + avail.toFixed(0) + 'g</span>'
+             : avail.toFixed(0) + 'g');
+    if (ordG > 0) availTxt += '<div style="font-size:10.5px;font-style:italic;color:var(--bark)">' + ordG.toFixed(0) + 'g on order</div>';
     html += '<div class="ing-preview-row' + (low ? ' low' : '') + '">' +
       '<div class="ing-preview-name">' + esc(p.ingredientName) + '</div>' +
       '<input class="ing-preview-amt" type="number" step="0.01" value="' + p.grams.toFixed(2) + '" oninput="onPreviewAmt(' + idx + ', this.value)">' +
@@ -2603,7 +2609,8 @@ function markBatchReady() {
 // Reference-only lots are excluded entirely -- they aren't real stock.
 function fifoOrderedLots(ing) {
   if (!ing || !ing.lots) return [];
-  var purchased = ing.lots.filter(function(l) { return !l.referenceOnly; });
+  // On-order lots (not here yet) are never drawn on.
+  var purchased = ing.lots.filter(function(l) { return Plume.lotHere(l); });
   // Stable sort: dated lots first by date ascending, undated lots last in
   // their original insertion order.
   var dated   = purchased.filter(function(l) { return l.received; });
@@ -2740,7 +2747,8 @@ function applyCommitToBatch(b) {
         ingredientName: s.ingredientName || ing.name,
         neededG:        need,
         availableG:     availG,
-        shortG:         plan.shortG
+        shortG:         plan.shortG,
+        onOrderG:       Plume.onOrderG(ing)
       });
     } else {
       plan.draws.forEach(function(d) {
@@ -2821,8 +2829,11 @@ function buildCommitBlockedHTML(blocked) {
       var link = 'plume-ingredients.html#ing=' + encodeURIComponent(s.ingredientId);
       html += '&nbsp;&nbsp;\u2022 <strong>' + esc(s.ingredientName) + '</strong>: need ' +
         s.neededG.toFixed(1) + 'g, have ' + s.availableG.toFixed(1) + 'g (short ' +
-        s.shortG.toFixed(1) + 'g) &mdash; ' +
-        '<a href="' + link + '" target="_blank" rel="noopener" style="color:var(--sage)">update lot</a><br>';
+        s.shortG.toFixed(1) + 'g)' +
+        // On order (2026-10-25): coming, but not here, so it cannot be used yet.
+        (s.onOrderG > 0 ? '; ' + s.onOrderG.toFixed(0) + 'g is on order, not here yet &mdash; ' +
+          '<a href="plume-ingredients.html#ql=' + encodeURIComponent(s.ingredientId) + '" target="plume-ingredients" style="color:var(--sage)">mark it arrived</a> when it lands<br>'
+        : ' &mdash; <a href="' + link + '" target="_blank" rel="noopener" style="color:var(--sage)">update lot</a><br>');
     });
     html += '<br>';
   }
