@@ -97,7 +97,8 @@
   /* Inside the app shell (2026-10-18): the content sits on the white main
      surface beside the sidebar. */
   body.ps-shell .app-body { max-width: 1180px; padding: 28px clamp(16px, 4vw, 48px) 48px; }
-  #ing-search-row { margin: 2px 0 10px; }
+  #ing-search-row { margin: 2px 0 10px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  #ing-search-row .ps-search { flex: 1 1 260px; }
   #ing-search-row .ps-search { background: var(--cream); max-width: 440px; padding: 0 10px; }
   #ing-search-row .ps-search:hover, #ing-search-row .ps-search:focus-within { background: var(--cream-dark); }
   #ing-search-row .ps-search input { width: 100%; }
@@ -1367,6 +1368,7 @@
          the toolbar (Heide, 2026-10-18). -->
     <div id="ing-search-row">
       <label class="ps-search" id="ing-search-wrap"><span id="ing-search-icon"></span><input type="search" id="search" placeholder="Search ingredients" aria-label="Search name, INCI, function, purpose or supplier" title="Searches name, INCI, function, purpose and supplier" oninput="renderTable()"></label>
+      <button type="button" class="ps-chip" id="cmp-mode-btn" onclick="toggleCmpMode()" aria-pressed="false" title="Show tick boxes to pick up to four ingredients and compare them side by side">Compare ingredients</button>
     </div>
 
     <div class="ps-table-wrap">
@@ -2819,9 +2821,21 @@ function markArrived(e, id) {
 // every field any of them has filled. "Only rows that differ" hides rows
 // where all agree. The picks are kept on this device.
 var CMP_MAX = 4, CMP_KEY = 'plume-compare';
+// The tick boxes and the tray show only in compare mode (her ask: a box on
+// every row is a lot for something used now and then). Turning it off keeps
+// the picks for next time; Clear empties them.
+var cmpMode = false;
+function toggleCmpMode(on) {
+  cmpMode = on === undefined ? !cmpMode : !!on;
+  var b = document.getElementById('cmp-mode-btn');
+  if (b) { b.classList.toggle('active', cmpMode); b.setAttribute('aria-pressed', cmpMode ? 'true' : 'false');
+    b.textContent = cmpMode ? 'Done comparing' : 'Compare ingredients'; }
+  renderTable(); renderCmpTray();
+}
 var cmpIds = (function () { try { var v = JSON.parse(localStorage.getItem(CMP_KEY) || '[]'); return Array.isArray(v) ? v.slice(0, CMP_MAX) : []; } catch (e) { return []; } })();
 function cmpSave() { try { localStorage.setItem(CMP_KEY, JSON.stringify(cmpIds)); } catch (e) {} }
 function cmpBox(id) {
+  if (!cmpMode) return '';
   var on = cmpIds.indexOf(id) !== -1;
   return '<label class="cmp-pick" onclick="event.stopPropagation()" title="Compare">' +
     '<input type="checkbox"' + (on ? ' checked' : '') + ' aria-label="Compare" onchange="toggleCompare(\'' + id + '\', this.checked)"></label>';
@@ -2829,6 +2843,7 @@ function cmpBox(id) {
 function toggleCompare(id, on) {
   var at = cmpIds.indexOf(id);
   if (on === undefined) on = at === -1;
+  if (on && !cmpMode) toggleCmpMode(true);
   if (on && at === -1) {
     if (cmpIds.length >= CMP_MAX) {
       Plume.tell('You can compare up to ' + CMP_MAX + ' at a time. Take one out of the tray first.', { title: 'Compare is full' });
@@ -2846,7 +2861,8 @@ function renderCmpTray() {
   var tray = document.getElementById('cmp-tray');
   if (!tray) return;
   cmpIds = cmpIds.filter(function (id) { return ingredients.some(function (i) { return i.id === id; }); });
-  if (!cmpIds.length) { tray.hidden = true; tray.innerHTML = ''; return; }
+  if (!cmpMode) { tray.hidden = true; tray.innerHTML = ''; return; }
+  if (!cmpIds.length) { tray.hidden = false; tray.innerHTML = '<span class="cmp-tray-l">Compare</span><span class="cmp-tray-hint">Tick two to four ingredients in the list.</span><button type="button" class="ps-link-btn" onclick="toggleCmpMode(false)">Done</button>'; return; }
   tray.hidden = false;
   tray.innerHTML = '<span class="cmp-tray-l">Compare</span>' + cmpIds.map(function (id) {
     var i = ingredients.find(function (x) { return x.id === id; });
@@ -2854,7 +2870,8 @@ function renderCmpTray() {
   }).join('') +
   (cmpIds.length < 2 ? '<span class="cmp-tray-hint">tick one more</span>' : '') +
   '<button type="button" class="ps-btn-primary" ' + (cmpIds.length < 2 ? 'disabled' : '') + ' onclick="openCompare()">Compare ' + cmpIds.length + '</button>' +
-  '<button type="button" class="ps-link-btn" onclick="clearCompare()">Clear</button>';
+  '<button type="button" class="ps-link-btn" onclick="clearCompare()">Clear</button>' +
+  '<button type="button" class="ps-link-btn" onclick="toggleCmpMode(false)">Done</button>';
 }
 function openCompare() { if (cmpIds.length < 2) return; renderCompare(); openModal('modal-compare'); }
 var CMP_PH = { water: 'Water', oil: 'Oil', 'cool-down': 'Cool-down', 'add-in': 'Add-in', active: 'Active', other: 'Other' };
