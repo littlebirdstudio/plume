@@ -488,6 +488,11 @@ span.ing-name-btn{text-decoration:none}
 .dd-item.in-stock{background:var(--clay-light)}
 .dd-item.in-stock:hover{background:var(--clay-hover,#EFDFD5)}
 .dd-stock{font-size:10px;color:var(--ink-light);margin-right:8px;font-variant-numeric:tabular-nums;white-space:nowrap}
+/* On order: an outline, not the in-stock tint (2026-10-25) */
+.dd-item.on-order{box-shadow:inset 3px 0 0 var(--bark-light)}
+.dd-stock.ord{color:var(--bark);font-style:italic}
+.ing-row.on-order:not(.warn),.soap-row.on-order:not(.no-sap){border-left:3px dashed var(--bark-light);padding-left:8px}
+.order-note{font-size:10px;color:var(--bark);font-style:italic;margin-top:2px}
 .dd-cpg{font-size:10px;color:var(--ink);margin-right:8px;font-variant-numeric:tabular-nums;white-space:nowrap}
 .dd-cpg.none{color:var(--ink-lighter)}
 
@@ -1813,6 +1818,7 @@ function renderSoapLines() {
     var sst      = stockState(ing, gFromPct);
     var sg       = stockG(ing);
     var stockCls = sst === 'enough' ? ' has-stock' : (sst === 'partial' ? ' partial-stock' : '');
+    var ob = orderBits(ing, sst, sg, gFromPct); stockCls += ob.cls;
 
     oilHtml += '<div class="soap-row' + (ing.missing ? ' ing-missing' : '') + (!sap && pct > 0 ? ' no-sap' : '') + stockCls + '">';
     oilHtml += '<div>';
@@ -1829,7 +1835,8 @@ function renderSoapLines() {
       oilHtml += '<div style="font-size:10px;color:var(--ink-lighter);margin-top:1px">No ' + lyeLabel + ' SAP &mdash; add in Ingredients library</div>';
     }
     oilHtml += '<div class="ing-inci">' + esc(ing.inci) + '</div>';
-    if (sst === 'partial') oilHtml += '<div class="stock-note">' + Math.round(sg) + 'g on hand &middot; need ' + gFromPct.toFixed(1) + 'g</div>';
+    if (ob.note) oilHtml += ob.note;
+    else if (sst === 'partial') oilHtml += '<div class="stock-note">' + Math.round(sg) + 'g on hand &middot; need ' + gFromPct.toFixed(1) + 'g</div>';
     oilHtml += '</div>';
     oilHtml += '<input class="soap-inp" type="text" inputmode="decimal" value="' + dispPct + '" placeholder="0.00"' +
       ' onclick="this.select()" oninput="onSoapPct(' + idx + ',this.value)" onblur="onSoapPctB(' + idx + ',this.value)"' +
@@ -1861,13 +1868,15 @@ function renderSoapLines() {
       var sstA   = stockState(ing, g);
       var sgA    = stockG(ing);
       var stockClsA = sstA === 'enough' ? ' has-stock' : (sstA === 'partial' ? ' partial-stock' : '');
+      var obA = orderBits(ing, sstA, sgA, g); stockClsA += obA.cls;
       addinHtml += '<div class="soap-row addin' + (ing.missing ? ' ing-missing' : '') + stockClsA + '">';
       addinHtml += '<div>' + (ing.missing
         ? '<span class="ing-name-btn" style="cursor:default;color:var(--warning)">' + esc(ing.name) + '</span>'
         : '<button class="ing-name-btn" onclick="showIngDetail(\'' + ing.id + '\')">' + esc(ing.name) + '</button>') +
         '<span class="addin-badge" style="margin-left:6px">add-in</span>';
       addinHtml += '<div class="ing-inci">' + esc(ing.inci) + '</div>';
-      if (sstA === 'partial') addinHtml += '<div class="stock-note">' + Math.round(sgA) + 'g on hand &middot; need ' + g.toFixed(1) + 'g</div>';
+      if (obA.note) addinHtml += obA.note;
+      else if (sstA === 'partial') addinHtml += '<div class="stock-note">' + Math.round(sgA) + 'g on hand &middot; need ' + g.toFixed(1) + 'g</div>';
       addinHtml += '</div>';
       addinHtml += '<div style="font-size:12px;color:var(--ink-lighter);text-align:right;padding-right:4px">--</div>';
       addinHtml += '<input class="soap-inp" type="text" inputmode="decimal" value="' + (g || '') + '" placeholder="0"' +
@@ -2225,6 +2234,7 @@ function buildRow(l, idx, ing, bs, isAddin) {
   var sst    = stockState(ing, gNum);
   var sg     = stockG(ing);
   var stockCls = sst === 'enough' ? ' has-stock' : (sst === 'partial' ? ' partial-stock' : '');
+  var obR = orderBits(ing, sst, sg, gNum); stockCls += obR.cls;
   var ePh    = effPhase(l, ing);
   var defPh  = normPhase(ing && ing.phase);
   var phOvr  = !isAddin && !!l.phase && l.phase !== defPh;
@@ -2272,7 +2282,8 @@ function buildRow(l, idx, ing, bs, isAddin) {
   if (!isAddin && ing.useRate) row += '<div class="rec-note">Recommended %: ' + esc(Plume.recText(ing.useRate)) + '</div>';
   var solNote = isAddin ? '' : solubilityNote(ing, ePh);
   if (solNote) row += '<div class="sol-note">' + esc(solNote) + '</div>';
-  if (sst === 'partial') row += '<div class="stock-note">' + Math.round(sg) + 'g on hand &middot; need ' + gNum.toFixed(1) + 'g</div>';
+  if (obR.note) row += obR.note;
+  else if (sst === 'partial') row += '<div class="stock-note">' + Math.round(sg) + 'g on hand &middot; need ' + gNum.toFixed(1) + 'g</div>';
   if (warn) row += '<div class="warn-txt">' + (over ? 'Over max (' + ing.max + '%) ' : '') + (under ? 'Under min (' + ing.min + '%)' : '') + '</div>';
   if (isAddin) {
     row += '<div class="drops-row"><span style="color:var(--ink-lighter)">approx</span>';
@@ -2423,7 +2434,9 @@ function searchIngs(q) {
     var sg = stockG(i);
     var inStock = sg > 0;
     var stockTxt = inStock ? (sg >= 1000 ? (sg / 1000).toFixed(1) + 'kg' : Math.round(sg) + 'g') : '';
-    html += '<div class="dd-item' + (inStock ? ' in-stock' : '') + '" onclick="addIng(\'' + i.id + '\')">';
+    var og = Plume.onOrderG(i);
+    if (!inStock && og > 0) stockTxt = (og >= 1000 ? (og / 1000).toFixed(1) + 'kg' : Math.round(og) + 'g') + ' on order';
+    html += '<div class="dd-item' + (inStock ? ' in-stock' : (og > 0 ? ' on-order' : '')) + '" onclick="addIng(\'' + i.id + '\')">';
     // The reminder she needs at the moment of choosing: what it does and
     // what she bought it for, in the dropdown, without opening anything.
     var cats = Plume.funcCats(i);
@@ -2437,7 +2450,7 @@ function searchIngs(q) {
     html += '<div style="min-width:0"><div class="dd-name">' + esc(i.name) + '</div><div class="dd-inci">' + esc(i.inci) + '</div>' +
       (why ? '<div class="dd-why">' + why + '</div>' : '') + '</div>';
     html += '<div style="display:flex;align-items:center">';
-    if (inStock) html += '<span class="dd-stock">' + stockTxt + '</span>';
+    if (stockTxt) html += '<span class="dd-stock' + (inStock ? '' : ' ord') + '">' + stockTxt + '</span>';
     var cpgT = cpgText(i);
     html += '<span class="dd-cpg' + (cpgT ? '' : ' none') + '" title="Cost per gram (lot in use)">' + (cpgT || 'no price') + '</span>';
     html += '<span class="dd-phase">' + i.phase + '</span></div></div>';
@@ -4247,6 +4260,17 @@ function delUseEntry(eid) {
 // ── Ingredient detail popup ───────────────────────────
 // Cost per gram as Formulations shows it (2026-10-25: back in the search
 // dropdown and the ingredient popup, her ask). Same figure as the line cost.
+// On order (2026-10-25): a short-or-empty line whose shortfall is on its way
+// says so, with an outline instead of the in-stock tint.
+function orderBits(ing, sst, have, need) {
+  var o = Plume.onOrderG(ing);
+  if (!(o > 0) || sst === 'enough') return { cls: '', note: '' };
+  var g = function (x) { return x >= 1000 ? (x / 1000).toFixed(1) + 'kg' : Math.round(x) + 'g'; };
+  var short = need > 0 && have + o + 0.001 < need;
+  return { cls: ' on-order',
+    note: '<div class="order-note">' + (have > 0 ? g(have) + ' on hand \u00b7 ' : '') + g(o) + ' on order' +
+      (short ? ' \u00b7 still short of ' + g(need) : '') + '</div>' };
+}
 function cpgText(ing) {
   var c = bestCpg(ing);
   if (c === null) return '';
@@ -4290,6 +4314,8 @@ function showIngDetail(ingId) {
   var stockTxt, stockColor;
   if (sgD <= 0) { stockTxt = 'None on hand'; stockColor = 'var(--ink-lighter)'; }
   else          { stockTxt = (sgD >= 1000 ? (sgD/1000).toFixed(2) + 'kg' : Math.round(sgD) + 'g'); stockColor = 'var(--clay-dark)'; }
+  var ogD = Plume.onOrderG(ing);
+  if (ogD > 0) stockTxt += ' <span style="font-weight:400;font-style:italic;color:var(--bark)">\u00b7 ' + (ogD >= 1000 ? (ogD/1000).toFixed(2) + 'kg' : Math.round(ogD) + 'g') + ' on order</span>';
   var cpgP = cpgText(ing);
   html += '<div class="id-grid"><div class="id-field"><label>Stock on hand</label><p style="color:' + stockColor + ';font-weight:500">' + stockTxt + '</p></div>' +
     '<div class="id-field"><label>Cost per gram</label><p>' + (cpgP ? esc(cpgP) : '<span style="color:var(--ink-lighter)">No price yet</span>') + '</p></div></div>';

@@ -2603,7 +2603,8 @@ function markBatchReady() {
 // Reference-only lots are excluded entirely -- they aren't real stock.
 function fifoOrderedLots(ing) {
   if (!ing || !ing.lots) return [];
-  var purchased = ing.lots.filter(function(l) { return !l.referenceOnly; });
+  // On-order lots (not here yet) are never drawn on.
+  var purchased = ing.lots.filter(function(l) { return Plume.lotHere(l); });
   // Stable sort: dated lots first by date ascending, undated lots last in
   // their original insertion order.
   var dated   = purchased.filter(function(l) { return l.received; });
