@@ -2460,13 +2460,13 @@ function formulationCostDetail(f) {
     if (line.soapAddin) return;  // skip add-ins from %-of-finished calc
     var ing = findIng(line.ingId);
     var cpg = ingCostPerG(ing);
+    // Share of the batch in percent, by the editor's own rule (core
+    // lineShare): a line's percent, a pinned line's grams at the batch size,
+    // add-ins only when "add-ins in total" is on. Never grams added to %.
+    var contribMass = Plume.lineShare(line, f, { addins: !!f.addinsInTotal });
+    if (contribMass <= 0) return;
     var grams = parseFloat(line.gramsFixed) || 0;
     var pct   = parseFloat(line.pct) || 0;
-    // Two contribution shapes
-    var contribMass = 0;
-    if (grams > 0) contribMass = grams;
-    else if (pct > 0) contribMass = pct;  // treat 100% as 100 mass units
-    if (contribMass <= 0) return;
     totalMass += contribMass;
     var contribCost = (cpg !== null) ? cpg * contribMass : 0;
     if (cpg !== null) { totalCost += contribCost; anyCost = true; }
@@ -2475,6 +2475,7 @@ function formulationCostDetail(f) {
       name:    (ing && (ing.name || ing.inci)) || '(unknown)',
       pct:     pct,
       grams:   grams,
+      share:   contribMass,
       cpg:     cpg,
       hasCost: (cpg !== null)
     });
@@ -3503,9 +3504,7 @@ function onOverrideToggle() {
 function formulaLabelItems(f) {
   if (!f || !f.lines || !f.lines.length) return [];
   var lines = f.lines.slice().map(function(l) {
-    var pct = parseFloat(l.pct) || 0;
-    var gf  = parseFloat(l.gramsFixed) || 0;
-    return { line: l, weight: pct > 0 ? pct : gf };
+    return { line: l, weight: Plume.lineShare(l, f, { addins: true }) };
   }).filter(function(o) { return o.weight > 0; });
   lines.sort(function(a, b) { return b.weight - a.weight; });
   // A stock solution lists as its parts, each at its real share.
@@ -3601,13 +3600,10 @@ function markFootnotes() {
 
 function singleFormulaIngredients(f, mode, marks) {
   if (!f || !f.lines || !f.lines.length) return '(no formulation linked)';
-  // For sorting purposes we need a "weight" per line. Use the larger of
-  // (pct, gramsFixed) -- soap lines use gramsFixed; everything else uses pct.
+  // Each line's share of the batch (core lineShare), add-ins included, so
+  // an add-in typed in grams sorts by its real share, not its gram count.
   var lines = f.lines.slice().map(function(l) {
-    var pct = parseFloat(l.pct) || 0;
-    var gf  = parseFloat(l.gramsFixed) || 0;
-    var weight = pct > 0 ? pct : gf;
-    return { line:l, weight:weight };
+    return { line:l, weight: Plume.lineShare(l, f, { addins: true }) };
   }).filter(function(o) { return o.weight > 0; });
   if (!lines.length) return '(no ingredients with weight > 0)';
   lines.sort(function(a, b) { return b.weight - a.weight; });

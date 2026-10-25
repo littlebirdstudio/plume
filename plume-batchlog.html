@@ -805,6 +805,7 @@ var newFormula = null;
 // ── Load / save ──
 function loadData() {
   ings    = Store.getJSON(ING_KEY,   []) || [];
+  Plume.trackList(ING_KEY, ings);
   forms   = Store.getJSON(FORM_KEY,  []) || [];
   pkgs    = Store.getJSON(PKG_KEY,   []) || [];
   batches = Store.getJSON(BATCH_KEY, []) || [];
@@ -859,7 +860,7 @@ function exportData() {
   var blob = new Blob([JSON.stringify({ batches: batches }, null, 2)], { type: 'application/json' });
   var a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'plume-batches-' + new Date().toISOString().slice(0,10) + '.json';
+  a.download = 'plume-batches-' + todayISO() + '.json';
   a.click();
 }
 function importData(e) {
@@ -940,8 +941,12 @@ function gramsToLotQty(g, unit, density) {
 // unchanged by the move to Store -- this module reads once at load either
 // way, so a commit can still overwrite an Ingredients edit made in another
 // tab since this page loaded. Reloading before committing avoids it.
+// Writes only the ingredients this page changed (stock taken, a made lot),
+// on top of storage as it is now, so edits made in Ingredients since this
+// page read them are kept (Plume.saveList, 2026-10-24).
 function saveIngredients() {
-  if (Store.setJSON(ING_KEY, ings)) { Plume.noteSaveOk(); return true; }
+  var out = Plume.saveList(ING_KEY, ings);
+  if (out) { ings = out; Plume.noteSaveOk(); return true; }
   Plume.noteSaveFailed();
   return false;
 }
@@ -1201,6 +1206,7 @@ function populateFormulaPicker() {
 function refreshLibrary() {
   Store.refresh(ING_KEY); Store.refresh(FORM_KEY);
   ings  = Store.getJSON(ING_KEY,  []) || [];
+  Plume.trackList(ING_KEY, ings);
   forms = Store.getJSON(FORM_KEY, []) || [];
 }
 function openNewBatch() {
@@ -1240,6 +1246,13 @@ function checkNewLot() {
   var r = Plume.lotCheck(document.getElementById('f-lot').value, batches, null);
   document.getElementById('f-lot-err').textContent = r.error || '';
   return r;
+}
+
+// A pinned line, a skincare add-in or a soap additive is a fixed gram amount:
+// the same at every batch size, in the editor, on the bench sheet and here.
+function fixedGrams(l) {
+  var g = parseFloat(l && l.gramsFixed);
+  return (isFinite(g) && g > 0) ? g : 0;
 }
 
 // The version a new batch is made from: the one in use. Its name, for the
@@ -1309,16 +1322,18 @@ function recalcPreview() {
   // Compute each line's gram amount at the requested yield.
   // Mirrors the canonical model in plume-formulations.html:
   //   - Each line references its ingredient by l.ingId
-  //   - For non-soap: line is either pct-based (% of batch) or pinned-grams-based
-  //     (fixed gramsFixed, applied at the formula's recorded batchSize). Pct lines
-  //     scale with yield, pinned-grams lines also scale (treated as % of batchSize).
-  //   - Add-ins (l.addin): non-soap add-ins use gramsFixed at formula's batchSize
+  //   - Percent lines scale with the yield.
+  //   - Pinned lines, skincare add-ins (l.addin) and soap additives
+  //     (l.soapAddin) are FIXED gram amounts: the formula editor shows them
+  //     unchanged at every batch size and the bench sheet prints them
+  //     unchanged, so the stock deduction uses them unchanged too.
+  //     (Until 2026-10-24 these were scaled by yield / f.batchSize, a field
+  //     nothing writes, so it was always yield / 100: a 30 g fragrance in a
+  //     1000 g soap was taken out of stock as 300 g. fixedGrams is the one
+  //     place this is decided; test-batch-grams.js holds it to the sheet.)
   //   - For soap: oil lines use pct of total oils, scale with yield as "oil weight"
-  //   - Soap add-ins (l.soapAddin): traditionally PPO (per pound of oils);
-  //     they live OUTSIDE the oil 100% by convention
   var lines = newFormula.lines || [];
   var soap  = isSoapType(newFormula.type);
-  var formulaBs = parseFloat(newFormula.batchSize) || 100;
   var preview = [];
 
   if (soap) {
@@ -1340,19 +1355,17 @@ function recalcPreview() {
       });
     });
 
-    // Soap addins -- traditionally PPO (per pound of oils). We approximate
-    // by scaling the recorded gramsFixed by (yield / formula batchSize).
+    // Soap additives: the grams recorded on the line, as printed.
     var addinLines = lines.filter(function(l) { return l.soapAddin; });
-    var scale = (formulaBs > 0) ? (yieldG / formulaBs) : 1;
     addinLines.forEach(function(l) {
       var ing = findIng(l.ingId);
       if (!ing) return;
-      var g = parseFloat(l.gramsFixed) || 0;
+      var g = fixedGrams(l);
       if (g <= 0) return;
       preview.push({
         ingredientId:   ing.id,
         ingredientName: ing.name,
-        grams: g * scale,
+        grams: g,
         available: calcIngStockG(ing)
       });
     });
@@ -1401,16 +1414,9 @@ function recalcPreview() {
       var ing = findIng(l.ingId);
       if (!ing) return;
       var grams = 0;
-      if (l.addin) {
-        // Add-ins: scale gramsFixed by (yield / formula batchSize)
-        var ag    = parseFloat(l.gramsFixed) || 0;
-        var scale = (formulaBs > 0) ? (yieldG / formulaBs) : 1;
-        grams = ag * scale;
-      } else if (l.pinned) {
-        // Pinned grams: treat as fixed proportion of batchSize, scale to yield
-        var gf    = parseFloat(l.gramsFixed) || 0;
-        var scl   = (formulaBs > 0) ? (yieldG / formulaBs) : 1;
-        grams = gf * scl;
+      if (l.addin || l.pinned) {
+        // Add-ins and pinned lines: the grams recorded on the line, as printed
+        grams = fixedGrams(l);
       } else {
         // Standard pct line
         var pct = parseFloat(l.pct) || 0;
@@ -2511,6 +2517,9 @@ function saveBatchEdits() {
     document.getElementById('d-ph').classList.add('ph-bad');
     return;
   }
+  // Work on the library as it is now: a stock batch's save writes its made
+  // lot back, and must not carry an older copy of that ingredient with it.
+  refreshLibrary();
   var made = madeLotSync(b, yieldG, lot.code, date, true);
   if (made.error) { setBatchTab('details'); Plume.tell(made.error, { title: 'The yield cannot go that low' }); return; }
 
@@ -3316,7 +3325,7 @@ if (typeof Plume === 'undefined') {
     Plume.shell({ module: 'batchlog' });
     // A supplier renamed from the Suppliers panel changes the names on lots
     // and items; take the fresh copy so the next save does not undo it.
-    Plume.onLibraryChange(function () { ings = Store.getJSON(ING_KEY, []) || []; pkgs = Store.getJSON(PKG_KEY, []) || []; });
+    Plume.onLibraryChange(function () { ings = Store.getJSON(ING_KEY, []) || []; Plume.trackList(ING_KEY, ings); pkgs = Store.getJSON(PKG_KEY, []) || []; });
     var ic = document.querySelectorAll('[data-ps-icon]');
     for (var k = 0; k < ic.length; k++) ic[k].innerHTML = Plume.icon(ic[k].getAttribute('data-ps-icon'));
     loadData();

@@ -1862,6 +1862,7 @@ function lotSel(field, options, extraStyle) {
 // ── Persistence ───────────────────────────────────────
 function loadData() {
   ingredients = Store.getJSON(STORE_KEY,     []) || [];
+  Plume.trackList(STORE_KEY, ingredients);
   suppliers   = Store.getJSON(SUPPLIERS_KEY, []) || [];
   brands      = Store.getJSON(BRANDS_KEY,    []) || [];
   // Seed brands from existing ingredient data if brands list is empty
@@ -1902,10 +1903,30 @@ function loadData() {
 
 // A failed write means the change is NOT on disk. Plume.noteSaveFailed
 // makes that unmistakable rather than letting it look like it worked.
+// Saves only what this page changed, on top of what is in storage now, so a
+// batch made in another window since this page loaded is not undone
+// (Plume.saveList, 2026-10-24).
 function saveData() {
-  if (Store.setJSON(STORE_KEY, ingredients)) { Plume.noteSaveOk(); return true; }
+  var out = Plume.saveList(STORE_KEY, ingredients);
+  if (out) { ingredients = out; Plume.noteSaveOk(); return true; }
   Plume.noteSaveFailed();
   return false;
+}
+
+// Coming back to this tab: take what other windows saved meanwhile (a batch's
+// stock, a stock solution's new ingredient), unless a form is open here.
+function freshenFromStorage() {
+  if (document.hidden) return;
+  if (document.querySelector('#modal-add.open, #modal-quick.open, #modal-seeder.open, #modal-lowdown.open, #modal-sap.open')) return;
+  var before = Store.get(STORE_KEY);
+  Store.refresh(STORE_KEY);
+  if (Store.get(STORE_KEY) === before) return;
+  ingredients = Store.getJSON(STORE_KEY, []) || [];
+  Plume.trackList(STORE_KEY, ingredients);
+  renderTable(); renderStats();
+  var dv = document.getElementById('detail-view');
+  if (viewingId && dv && dv.style.display !== 'none' &&
+      ingredients.some(function(i) { return i.id === viewingId; })) viewIngredient(viewingId);
 }
 
 function saveSuppliers() { return Store.setJSON(SUPPLIERS_KEY, suppliers); }
@@ -1918,7 +1939,7 @@ function exportData() {
   var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
   var a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'plume-ingredients-' + new Date().toISOString().slice(0,10) + '.json';
+  a.download = 'plume-ingredients-' + todayISO() + '.json';
   a.click();
 }
 
@@ -3352,20 +3373,25 @@ function qaBuild() {
 function qaLink(u) { u = String(u || '').trim(); return u && !/^https?:\/\//i.test(u) ? 'https://' + u : u; }
 // A supplier typed here that the list does not have yet is added to it, so
 // the lot editor's supplier list shows it.
+// Returns the supplier's name as saved, so the lot carries the same spelling
+// as Suppliers ("mountain rose herbs" typed for a saved "Mountain Rose
+// Herbs" stores the saved name).
 function qaEnsureSupplier(name) {
   name = String(name || '').replace(/\s+/g, ' ').trim();
-  if (!name) return;
+  if (!name) return name;
   Store.refresh(SUPPLIERS_KEY);
   var list = Store.getJSON(SUPPLIERS_KEY, []) || [];
-  if (list.some(function(x) { return String(x.name || '').trim().toLowerCase() === name.toLowerCase(); })) { suppliers = list; return; }
+  var hit = list.filter(function(x) { return String(x.name || '').replace(/\s+/g, ' ').trim().toLowerCase() === name.toLowerCase(); })[0];
+  if (hit) { suppliers = list; return hit.name; }
   list.push({ id: String(Date.now()) + Math.random().toString(36).slice(2, 6), name: name, webLink: '', notes: '' });
   if (Store.setJSON(SUPPLIERS_KEY, list)) suppliers = list;
+  return name;
 }
 function qaSave(again) {
   var ing = qaBuild();
   if (!ing) return null;
   var lot = ing.lots && ing.lots[0];
-  if (lot && lot.supplier) qaEnsureSupplier(lot.supplier);
+  if (lot && lot.supplier) lot.supplier = qaEnsureSupplier(lot.supplier);
   ingredients.push(ing);
   if (!saveData()) { ingredients.pop(); return null; }
   renderTable(); renderStats();
@@ -3821,11 +3847,24 @@ function deleteCurrent() {
 }
 
 // ── Lot rows ──────────────────────────────────────────
+// A lot's supplier is plain text and need not be a saved supplier ("Made
+// in-house", a name typed in Quick add, an older import). It is offered as
+// its own option, so the select keeps it and saving the ingredient writes it
+// back unchanged. Until 2026-10-24 such a name had no option, the select read
+// blank, and saving the ingredient erased the lot's supplier.
+// Names are escaped: a saved supplier's name is free text.
 function supplierOptions(selected) {
+  selected = selected == null ? '' : String(selected);
+  var listed = false;
   var opts = suppliers.map(function(s) {
-    return '<option value="' + s.name + '"' + (s.name === selected ? ' selected' : '') + '>' + s.name + '</option>';
+    var on = s.name === selected;
+    if (on) listed = true;
+    return '<option value="' + esc(s.name) + '"' + (on ? ' selected' : '') + '>' + esc(s.name) + '</option>';
   }).join('');
-  return '<option value="">— select or type —</option>' + opts + '<option value="__new__">+ Add new supplier…</option>';
+  var own = (selected && selected !== '__new__' && !listed)
+    ? '<option value="' + esc(selected) + '" selected>' + esc(selected) + ' (not in Suppliers)</option>'
+    : '';
+  return '<option value="">— select or type —</option>' + own + opts + '<option value="__new__">+ Add new supplier…</option>';
 }
 
 // Toggle handler — called when the user clicks the "Reference only" checkbox
@@ -4893,6 +4932,7 @@ if (typeof Plume === 'undefined') {
     // and items; take the fresh copy so the next save does not undo it.
     Plume.onLibraryChange(function () {
       ingredients = Store.getJSON(STORE_KEY, []) || [];
+      Plume.trackList(STORE_KEY, ingredients);
       suppliers   = Store.getJSON(SUPPLIERS_KEY, []) || [];
       renderTable(); renderStats();
     });
@@ -4905,6 +4945,8 @@ if (typeof Plume === 'undefined') {
     renderPhaseChips();
     fillFunctionFilter();
     loadData();
+    document.addEventListener('visibilitychange', freshenFromStorage);
+    window.addEventListener('focus', freshenFromStorage);
     // Rich text in the text-heavy fields (2026-10-24).
     Plume.rt.attach('f-choose', { single: true, label: 'The lowdown' });
     Plume.rt.attach('f-purpose', { label: 'What I had in mind' });

@@ -313,7 +313,7 @@ Variant-level: `vid`, `num`, `label`, `status`, `lines[]`, `instructions`, `batc
 
 **THE TRAP:** a future module that *writes* to a formulation must write to the active variant, not the top level, or the mirror is clobbered on the next sync.
 
-**`batchSize` is deliberately NOT mirrored.** Batchlog reads `f.batchSize` with a fallback of 100 and Formulations never wrote it. Writing it now would silently change how pinned-gram lines scale in existing batches. It lives inside the variant only.
+**`batchSize` is deliberately NOT mirrored.** Batchlog reads `f.batchSize` with a fallback of 100 and Formulations never wrote it. Writing it now would silently change how pinned-gram lines scale in existing batches. It lives inside the variant only. **Superseded 2026-10-24 (session 26):** that fallback was a real bug. Batchlog scaled pinned lines, add-ins and soap additives by yield / 100, so a 30 g fragrance in a 1000 g soap left stock as 300 g. Batchlog now takes those lines as fixed grams (`fixedGrams`), matching the editor and the bench sheet, and no longer reads `f.batchSize`. Core's `formBatchSize(f)` reads the active version's batch size where one is needed (cost shares).
 
 **UI.** Tabs under the formula name, each with an optional short name (e.g. "Candelilla", "Beeswax sub"); a dot marks the variant in use. Action bar below: "Use this version" / Rename / Delete. `+ New version` branches from the variant being viewed. A separate **Notes** tab at the right end of the strip holds formulation-level notes; it is styled differently so it doesn't read as selectable-for-use.
 
@@ -1382,7 +1382,7 @@ to pick those up in a fresh chat. Ask her for the list.
 ### Known limitations
 - **Import is additive merge by id/name only** — no "replace existing" option
 - ~~Each module has its own `PALETTES` object~~ — **resolved session 12.** One copy in `plume-core.js`; a palette edit is one file.
-- **Modules do not see each other's writes until reloaded.** `Store` hydrates an in-memory cache at boot, and the nav opens each module in its own tab. Editing an ingredient in one tab and committing a batch in another can have the second overwrite the first. This is unchanged by the core conversion — every module only ever read once at load — but it is now written down. Reload before committing if another tab has been editing.
+- **Modules do not see each other's writes until reloaded.** `Store` hydrates an in-memory cache at boot, and the nav opens each module in its own tab. Editing an ingredient in one tab and committing a batch in another can have the second overwrite the first. This is unchanged by the core conversion — every module only ever read once at load — but it is now written down. Reload before committing if another tab has been editing. **Narrowed 2026-10-24 (session 26):** Ingredients and Batches now save their ingredient list through `Plume.saveList`, which writes back only the records the page changed, on top of storage as it is now; Ingredients also rereads when its tab comes back into view. What remains: two windows changing the SAME ingredient, where the later save wins.
 - **Soap vs. lotion formulations** use different line shapes in the same structure (`gramsFixed` vs `pct`) — any reader must handle both
 - **`localStorage` is browser-bound and origin-scoped.** GitHub Pages hosting gives a stable origin, but data doesn't sync across devices or browsers. Chrome-on-laptop and Safari-on-phone are two separate datasets. **This is also the main place where "modest effort" and "customers are happy" are in tension for the sellable version.**
 - **No lot tracking on batches** — Heide mixes lots in practice; false precision is worse than acknowledged imprecision
@@ -3414,3 +3414,50 @@ marks only.
 section: ingredient page, tabs, rich text, label marks, solubility,
 Recommended %) open; she continues in a new chat.
 
+### Session 26 (24 October 2026): Bug sweep fixes (core v1.44)
+
+Heide asked to check where things stand and look for bugs. PR #47 was merged
+and CI green; all 31 suites passed. Three review agents then read PRs #44 to
+#47 and the cross-module paths. Five problems were fixed here; the smaller
+ones are listed in the backlog. **The pattern behind all five: each passed a
+suite that checked one place against itself, never against the other screen
+the user compares it with.** New suite `test/test-sweep.js` (31) compares two
+places for each, and was confirmed to fail on the unfixed code.
+
+1. **Batches took the wrong grams for pinned lines, skincare add-ins and soap
+   additives.** It scaled them by yield / `f.batchSize`, a field nothing
+   writes, so always yield / 100: a 30 g fragrance at a 1000 g yield left stock
+   as 300 g, while the bench sheet printed 30 g. Now `fixedGrams(l)`: the
+   recorded grams, as the editor and sheet show them. Past batches are NOT
+   corrected (costed batches are history); a check for affected batches was
+   offered to her.
+2. **Products & Costing and core added grams to percents.** Typing grams on a
+   line stores grams AND a percent (`onGrams`, `onSoapGrams`, `togglePin`);
+   both cost functions took grams whenever set. A lotion with glycerin typed
+   in grams priced about 2.8 times too high, pinned lines about 8 times. Now
+   core `Plume.lineShare(line, f, {addins})` is the one rule (percent first;
+   pinned grams at the version's batch size; add-ins only when "add-ins in
+   total" is on, or for labels) and `formulationCostDetail`, `formCostPerG` and
+   both label orderings use it. Note: Formulations divides by batch size and
+   Costing by the formula total, so they agree when a recipe totals 100%.
+3. **Saving an ingredient erased a lot's supplier** when the name was not a
+   saved supplier (Made in-house, a Quick-add name, a case variant). The
+   select had no option for it. `supplierOptions` now offers the lot's own
+   name, marked "(not in Suppliers)", and escapes every name (a supplier named
+   with markup ran as script). Quick add stores the saved spelling when the
+   typed name matches a supplier but for case or spacing.
+4. **A stale tab undid other windows' saves.** Core `trackList(key, arr)` /
+   `saveList(key, arr)` / `mergeList`: a page remembers each record as last read
+   or written; saving re-reads storage and writes back only what it changed,
+   added or deleted. Ingredients and Batches use it for the ingredient list;
+   Ingredients also rereads on `visibilitychange` / `focus` when no form is open
+   (`freshenFromStorage`); a stock batch's Save changes refreshes the library
+   first. Same record changed in two windows: the later save still wins.
+   Test gotcha: two pages share localStorage, but a write reaches the other
+   page a moment later, so cross-window tests wait ~400 ms.
+5. **Dates from `toISOString()`** (UTC, tomorrow after 4 pm in Alaska):
+   Packaging's purchase and adjustment defaults, and the backup file names.
+   `todayISO()` now; the suite fails if one returns to an app file.
+
+**Where things stand (end of session 26):** this PR open; she continues with
+the smaller sweep items (backlog) when ready.
