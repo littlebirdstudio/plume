@@ -36,6 +36,17 @@ ok('does NOT split a bare "and"',
    P.inciSplit('Witch Hazel and Rose Water'));
 ok('keeps a slash inside a name',
    JSON.stringify(P.inciSplit('Caprylic/Capric Triglyceride')) === '["Caprylic/Capric Triglyceride"]');
+ok('keeps a comma between digits inside a name (2,3-Butanediol)',
+   JSON.stringify(P.inciSplit('Nelumbo Nucifera Root Extract, 2,3-Butanediol')) === '["Nelumbo Nucifera Root Extract","2,3-Butanediol"]',
+   P.inciSplit('Nelumbo Nucifera Root Extract, 2,3-Butanediol'));
+ok('and 1,2-Hexanediol and 1,3-Propanediol, as a blend or on their own',
+   JSON.stringify(P.inciSplit('Aqua, 1,2-Hexanediol, Caprylyl Glycol')) === '["Aqua","1,2-Hexanediol","Caprylyl Glycol"]'
+   && JSON.stringify(P.inciSplit('1,3-Propanediol')) === '["1,3-Propanediol"]',
+   [P.inciSplit('Aqua, 1,2-Hexanediol, Caprylyl Glycol'), P.inciSplit('1,3-Propanediol')]);
+ok('a stray space after the digit comma still keeps the name whole',
+   JSON.stringify(P.inciSplit('2, 3-Butanediol')) === '["2,3-Butanediol"]', P.inciSplit('2, 3-Butanediol'));
+ok('a comma between a digit and a letter still splits',
+   P.inciSplit('Vitamin B5, Glycerin').length === 2, P.inciSplit('Vitamin B5, Glycerin'));
 ok('empty input gives nothing', P.inciSplit('').length === 0 && P.inciSplit(null).length === 0);
 ok('collapses stray whitespace',
    JSON.stringify(P.inciSplit('Aqua  ,   Glycerin')) === '["Aqua","Glycerin"]');

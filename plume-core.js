@@ -35,7 +35,7 @@ var Plume = (function () {
 // (v0.4 / v0.5 / v0.6 across five modules). BUMP IT IN EVERY PULL REQUEST,
 // core change or not: it is how "is this the update I just merged?" is
 // answered by looking, and browsers cache .js files stubbornly.
-var VERSION = '1.45';
+var VERSION = '1.46';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -2817,12 +2817,19 @@ function openSheet(o) {
 //
 // Parentheses are otherwise left alone, because they usually carry a
 // synonym that belongs with its name: "Butyrospermum Parkii (Shea) Butter".
+//
+// A comma BETWEEN TWO DIGITS is part of a chemical name, not a break:
+// "2,3-Butanediol", "1,2-Hexanediol", "1,3-Propanediol". Splitting there
+// printed "2" and "3-butanediol" as two ingredients (found 2026-10-25 on
+// her lotus extract, Nelumbo Nucifera Root Extract, 2,3-Butanediol).
+var INCI_LOCANT = '\u0001';
 function inciSplit(s) {
   if (!s) return [];
   return String(s)
+    .replace(/(\d)\s*,\s*(?=\d)/g, '$1' + INCI_LOCANT)
     .replace(/\(\s*and\s*\)/gi, ',')
     .split(/[,;]|\s&\s/)
-    .map(function (x) { return x.replace(/\s+/g, ' ').trim(); })
+    .map(function (x) { return x.split(INCI_LOCANT).join(',').replace(/\s+/g, ' ').trim(); })
     .filter(function (x) { return x.length > 0; });
 }
 
