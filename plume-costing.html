@@ -134,6 +134,15 @@ main { max-width:1240px; margin:0 auto; padding:24px 22px 60px; }
 .label-box-hdr-l { font-size:10px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-lighter); }
 .label-content { white-space:pre-wrap; word-wrap:break-word; font-family:Georgia,serif; font-size:11px; line-height:1.45; }
 .label-section { margin-bottom:10px; }
+.label-foot { margin-top:6px; font-size:12px; color:var(--ink-light); line-height:1.5; }
+.lbl-marks { margin: 2px 0 10px; }
+.mk-line { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+.mk-l { font-size:12px; color:var(--ink-light); margin-right:4px; }
+.mk-rows { margin-top:8px; display:flex; flex-direction:column; gap:6px; }
+.mk-row { display:grid; grid-template-columns: 130px 48px minmax(0,1fr); gap:8px; align-items:center; font-size:13px; }
+.mk-row input { font:inherit; font-size:13px; padding:6px 8px; border:1px solid var(--cream-border); border-radius:6px; background:var(--white); color:var(--ink); min-width:0; }
+.mk-sym { text-align:center; }
+.mk-hint { font-size:11.5px; color:var(--ink-lighter); line-height:1.45; }
 .label-section:last-child { margin-bottom:0; }
 .label-section-name { font-size:9px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:var(--ink-lighter); margin-bottom:3px; }
 .toggle-row { display:flex; gap:14px; align-items:center; margin-bottom:10px; flex-wrap:wrap; font-size:12px; }
@@ -753,6 +762,10 @@ details.bc-tips .bc-note { border: 0; padding: 6px 0 0; margin: 0; font-size: 12
               <span class="ps-grow"></span>
               <button type="button" class="ps-link-btn" onclick="copyLabel()"><span data-ps-icon="copy"></span>Copy</button>
             </div>
+            <!-- Certification marks (2026-10-24): which certifications to
+                 mark in the generated list, each with its symbol and a
+                 footnote under the list. -->
+            <div class="lbl-marks" id="lbl-marks"></div>
             <div id="lbl-override-wrap" style="display:none; margin-bottom:10px">
               <div class="field">
                 <label for="p-label-override">Ingredient list, in my own words</label>
@@ -2832,6 +2845,7 @@ function createProduct() {
     labelMode:         'inci',
     labelOverrideOn:   false,
     labelOverrideText: '',
+    labelMarks:        [],
     productionRuns:    [],
     createdAt:         new Date().toISOString(),
     updatedAt:         new Date().toISOString()
@@ -2886,6 +2900,8 @@ function openProduct(id) {
   document.getElementById('lbl-override-on').checked = !!p.labelOverrideOn;
   document.getElementById('lbl-override-wrap').style.display = p.labelOverrideOn ? '' : 'none';
   document.getElementById('p-label-override').value = p.labelOverrideText || '';
+  curMarks = (p.labelMarks || []).map(function(m) { return { key: m.key, sym: m.sym, note: m.note }; });
+  renderLabelMarks();
 
   applyKindVisibility(kind);
   renderComponents(p);
@@ -2962,6 +2978,7 @@ function saveProduct() {
   p.labelMode         = document.getElementById('lbl-common').checked ? 'common' : 'inci';
   p.labelOverrideOn   = document.getElementById('lbl-override-on').checked;
   p.labelOverrideText = document.getElementById('p-label-override').value;
+  p.labelMarks        = curMarks.map(function(m) { return { key: m.key, sym: m.sym, note: m.note }; });
   p.updatedAt = new Date().toISOString();
   saveProducts();
   dirty = false;
@@ -3038,6 +3055,7 @@ function makeDuplicate(srcId) {
     labelMode:         src.labelMode || 'inci',
     labelOverrideOn:   !!src.labelOverrideOn,
     labelOverrideText: src.labelOverrideText || '',
+    labelMarks:        (src.labelMarks || []).map(function(m) { return { key: m.key, sym: m.sym, note: m.note }; }),
     productionRuns:    [],
     createdAt:         new Date().toISOString(),
     updatedAt:         new Date().toISOString()
@@ -3512,7 +3530,76 @@ function productInciMerges(p) {
   return merged;
 }
 
-function singleFormulaIngredients(f, mode) {
+// ── Certification marks (2026-10-24) ──
+// Per product, the certifications to mark in the generated ingredient list,
+// each with a symbol and a footnote. An ingredient is marked when the lot in
+// use carries the certification (ticked in Ingredients); a component that
+// comes from several ingredients only when every one of them does. Footnotes
+// list only the marks that appear.
+var MARK_DEFAULTS = {
+  organic:        ['*', 'Certified organic ingredient'],
+  cosmosCert:     ['\u2020', 'COSMOS Certified ingredient'],
+  cosmosApproved: ['\u2021', 'COSMOS Approved ingredient'],
+  ecocert:        ['\u00a7', 'Ecocert certified ingredient'],
+  natrue:         ['\u00b6', 'NATRUE certified ingredient'],
+  natural:        ['\u00b0', 'Naturally derived ingredient']
+};
+var curMarks = [];   // the open product's marks, as edited
+var markUsed = {};   // key -> mark, filled while a list is built
+function renderLabelMarks() {
+  var box = document.getElementById('lbl-marks');
+  if (!box) return;
+  var on = {};
+  curMarks.forEach(function(m) { on[m.key] = m; });
+  var html = '<div class="mk-line"><span class="mk-l">Mark certified ingredients</span>' +
+    Plume.CERTS.map(function(c) {
+      return '<label class="ps-chip chk"><input type="checkbox" data-mk="' + c.key + '"' + (on[c.key] ? ' checked' : '') +
+        ' onchange="toggleMark(\'' + c.key + '\', this.checked)">' + esc(c.label) + '</label>';
+    }).join('') + '</div>';
+  if (curMarks.length) {
+    html += '<div class="mk-rows">' + curMarks.map(function(m) {
+      var c = Plume.CERTS.filter(function(x) { return x.key === m.key; })[0];
+      return '<div class="mk-row"><span class="mk-name">' + esc(c ? c.label : m.key) + '</span>' +
+        '<input type="text" class="mk-sym" maxlength="3" value="' + esc(m.sym) + '" aria-label="Symbol for ' + esc(c ? c.label : m.key) + '" oninput="setMark(\'' + m.key + '\', \'sym\', this.value)">' +
+        '<input type="text" class="mk-note" value="' + esc(m.note) + '" aria-label="Footnote for ' + esc(c ? c.label : m.key) + '" oninput="setMark(\'' + m.key + '\', \'note\', this.value)"></div>';
+    }).join('') +
+    '<div class="mk-hint">An ingredient is marked when its lot in use is ticked for that certification in Ingredients. Certified ingredients do not make the product itself certified.</div></div>';
+  }
+  box.innerHTML = html;
+}
+function toggleMark(key, on) {
+  curMarks = curMarks.filter(function(m) { return m.key !== key; });
+  if (on) {
+    var d = MARK_DEFAULTS[key] || ['*', ''];
+    curMarks.push({ key: key, sym: d[0], note: d[1] });
+    var order = Plume.CERTS.map(function(c) { return c.key; });
+    curMarks.sort(function(a, b) { return order.indexOf(a.key) - order.indexOf(b.key); });
+  }
+  markDirty();
+  renderLabelMarks();
+  renderLabel();
+}
+function setMark(key, field, v) {
+  curMarks.forEach(function(m) { if (m.key === key) m[field] = v; });
+  markDirty();
+  renderLabel();
+}
+function ingHasCert(ing, key) {
+  var lot = ing ? Plume.activeLot(ing) : null;
+  return !!lot && (lot[key] === true || lot[key] === 'true');
+}
+// The symbols for one component: marks every source ingredient carries.
+function marksFor(ingsList, marks) {
+  return (marks || []).filter(function(m) {
+    return m.sym && ingsList.length && ingsList.every(function(ing) { return ingHasCert(ing, m.key); });
+  }).map(function(m) { markUsed[m.key] = m; return m.sym; }).join('');
+}
+function markFootnotes() {
+  return Plume.CERTS.map(function(c) { return markUsed[c.key]; }).filter(Boolean)
+    .map(function(m) { return m.sym + (m.note || ''); });
+}
+
+function singleFormulaIngredients(f, mode, marks) {
   if (!f || !f.lines || !f.lines.length) return '(no formulation linked)';
   // For sorting purposes we need a "weight" per line. Use the larger of
   // (pct, gramsFixed) -- soap lines use gramsFixed; everything else uses pct.
@@ -3530,20 +3617,22 @@ function singleFormulaIngredients(f, mode) {
   // substances, so there is nothing to split.
   if (mode === 'inci') {
     return Plume.inciMerge(formulaLabelItems(f))
-      .map(function(e) { return e.name; }).join(', ');
+      .map(function(e) {
+        return e.name + marksFor(e.sources.map(function(s) { return findIng(s.ingId); }).filter(Boolean), marks);
+      }).join(', ');
   }
   // A stock solution names its parts here too: the label says what is in
   // the bottle. Parts of the same ingredient list once.
-  var names = [];
+  var names = [], syms = [];
   Plume.stockLabelItems(lines.map(function(o) { return { ingId: o.line.ingId, w: o.weight }; }), ings, forms).forEach(function(it) {
     var ing = findIng(it.ingId);
     var n = ing ? (ing.name || ing.inci || '(unnamed)') : '(unknown)';
-    if (names.indexOf(n) === -1) names.push(n);
+    if (names.indexOf(n) === -1) { names.push(n); syms.push(ing ? marksFor([ing], marks) : ''); }
   });
-  return names.join(', ');
+  return names.map(function(n, k) { return n + syms[k]; }).join(', ');
 }
 
-function buildIngredientList(p, mode) {
+function buildIngredientList(p, mode, marks) {
   if (p.productKind === 'kit') {
     var parts = Plume.kitParts(p, products);
     if (!parts.length) return '(no products in the kit)';
@@ -3553,7 +3642,7 @@ function buildIngredientList(p, mode) {
       var pr = k.product;
       if (!pr) return '(a deleted product)';
       var own = pr.labelOverrideOn && (pr.labelOverrideText || '').trim();
-      return (pr.name || 'Product') + ': ' + (own ? pr.labelOverrideText.trim() : singleFormulaIngredients(findForm(pr.formulaId), mode));
+      return (pr.name || 'Product') + ': ' + (own ? pr.labelOverrideText.trim() : singleFormulaIngredients(findForm(pr.formulaId), mode, pr.labelMarks || []));
     }).join('\n');
   }
   if (p.productKind === 'multi') {
@@ -3563,10 +3652,10 @@ function buildIngredientList(p, mode) {
     return comps.map(function(c) {
       var cf = findForm(c.formulaId);
       var label = c.label || (cf && cf.name) || 'Component';
-      return label + ': ' + singleFormulaIngredients(cf, mode);
+      return label + ': ' + singleFormulaIngredients(cf, mode, marks);
     }).join('\n');
   }
-  return singleFormulaIngredients(findForm(p.formulaId), mode);
+  return singleFormulaIngredients(findForm(p.formulaId), mode, marks);
 }
 
 function renderLabel() {
@@ -3576,9 +3665,11 @@ function renderLabel() {
   var mode = document.getElementById('lbl-common').checked ? 'common' : 'inci';
   var useOverride = document.getElementById('lbl-override-on').checked;
   var overrideText = document.getElementById('p-label-override').value.trim();
+  markUsed = {};
   var ingredientLine = useOverride && overrideText
     ? overrideText
-    : buildIngredientList(p, mode);
+    : buildIngredientList(p, mode, curMarks);
+  var foot = useOverride && overrideText ? [] : markFootnotes();
 
   var name = document.getElementById('p-name').value.trim() || '(unnamed product)';
   var netWt = document.getElementById('p-netwt-display').value.trim()
@@ -3593,7 +3684,8 @@ function renderLabel() {
   html += '<div class="label-content">';
   html += '<div class="label-section"><div class="label-section-name">Product</div>' + esc(name) + '</div>';
   if (netWt) html += '<div class="label-section"><div class="label-section-name">Net weight</div>' + esc(netWt) + '</div>';
-  html += '<div class="label-section"><div class="label-section-name">Ingredients</div>' + esc(ingredientLine).replace(/\n/g, '<br>') + '</div>';
+  html += '<div class="label-section"><div class="label-section-name">Ingredients</div>' + esc(ingredientLine).replace(/\n/g, '<br>') +
+    (foot.length ? '<div class="label-foot">' + foot.map(esc).join('<br>') + '</div>' : '') + '</div>';
   // Say which components were merged, and why their position may be low.
   // Only when the list being shown is the generated INCI one -- an override
   // is the user's own text and a note about merging would be wrong.
@@ -3627,9 +3719,11 @@ function copyLabel() {
   var mode = document.getElementById('lbl-common').checked ? 'common' : 'inci';
   var useOverride = document.getElementById('lbl-override-on').checked;
   var overrideText = document.getElementById('p-label-override').value.trim();
+  markUsed = {};
   var ingredientLine = useOverride && overrideText
     ? overrideText
-    : buildIngredientList(p, mode);
+    : buildIngredientList(p, mode, curMarks);
+  var foot = useOverride && overrideText ? [] : markFootnotes();
   var name = document.getElementById('p-name').value.trim();
   var netWt = document.getElementById('p-netwt-display').value.trim()
     || (document.getElementById('p-netwt-g').value ? document.getElementById('p-netwt-g').value + ' g' : '');
@@ -3639,6 +3733,7 @@ function copyLabel() {
   if (name) lines.push(name);
   if (netWt) lines.push('Net wt: ' + netWt);
   lines.push('Ingredients: ' + ingredientLine);
+  foot.forEach(function(f) { lines.push(f); });
   if (sku) lines.push('SKU: ' + sku);
   if (barcode) lines.push('Barcode: ' + barcode);
   var text = lines.join('\n');

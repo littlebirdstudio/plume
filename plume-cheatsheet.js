@@ -206,10 +206,10 @@ function tableHtml(g, used, forPrint) {
     // opens the ingredient. On paper they are plain text.
     var editable = !forPrint && typeof noteEditHtml === 'function';
     h += '<td class="cs-choose">' + (editable ? noteEditHtml(i, 'chooseWhen', true) :
-      (i.chooseWhen ? esc(i.chooseWhen) + (i.chooseWhenDraft ? ' <span class="cs-blank">(draft)</span>' : '') : '<span class="cs-blank">\u2014</span>')) + '</td>';
+      (i.chooseWhen ? Plume.rt.toHtml(i.chooseWhen) + (i.chooseWhenDraft ? ' <span class="cs-blank">(draft)</span>' : '') : '<span class="cs-blank">\u2014</span>')) + '</td>';
     if (hasSubs) h += '<td class="cs-subs">' + (i.substitution ? esc(i.substitution) : '<span class="cs-blank">\u2014</span>') + '</td>';
     h += '<td class="cs-purpose">' + (editable ? noteEditHtml(i, 'purpose', true) :
-      (i.purpose ? esc(i.purpose) : '<span class="cs-blank">\u2014</span>')) + '</td>';
+      (i.purpose ? Plume.rt.toHtml(i.purpose) : '<span class="cs-blank">\u2014</span>')) + '</td>';
     var st = fmtStock(i);
     h += '<td class="cs-num">' + (st || '<span class="cs-blank">\u2014</span>') + '</td>';
     h += '<td class="cs-used">' + usedInHtml(names, 2, forPrint) + '</td>';

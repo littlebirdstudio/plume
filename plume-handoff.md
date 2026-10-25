@@ -92,7 +92,7 @@ Core defines globals with the names modules already use, so **converting a modul
 **A module may override an alias by defining its own function** — this is the intended escape hatch. `plume-ingredients.html` keeps a local `openModal` because it snapshots form state to detect unsaved edits. Share the common case; keep the exception local.
 
 ### Versioning
-`Plume.VERSION` is displayed at the bottom of every converted module's Settings → Storage panel, alongside the active driver name. **Bump it on every core change.** Browsers cache `.js` far more stubbornly than they re-fetch a replaced HTML file, so "is core loaded, and is it the one I just uploaded?" must be answerable by looking. Current: **v1.42** (see the newest session notes at the end; v1.8 added INCI blend splitting; v1.9 added density resolution; v1.10 ranked search results, best match first; v1.11 added pH records; v1.12 made it the one app version, shown in every footer; v1.13 rebuilt Quick add; v1.14 drafted lowdowns; v1.15 replaced the browser pop-ups with in-page dialogs).
+`Plume.VERSION` is displayed at the bottom of every converted module's Settings → Storage panel, alongside the active driver name. **Bump it on every core change.** Browsers cache `.js` far more stubbornly than they re-fetch a replaced HTML file, so "is core loaded, and is it the one I just uploaded?" must be answerable by looking. Current: **v1.43** (see the newest session notes at the end; v1.8 added INCI blend splitting; v1.9 added density resolution; v1.10 ranked search results, best match first; v1.11 added pH records; v1.12 made it the one app version, shown in every footer; v1.13 rebuilt Quick add; v1.14 drafted lowdowns; v1.15 replaced the browser pop-ups with in-page dialogs).
 
 ### Upload order matters
 `plume-core.js` **first**, then the HTML. A module that arrives before core shows the missing-core banner until core lands. Core alone breaks nothing.
@@ -3323,4 +3323,94 @@ Her ask: she adds ingredients from the supplier's website. Quick add's
 the lot's `buyLink` (the lot card's Reorder ↗), `https://` added when pasted
 without it (`qaLink`). Not kept by "Save & add another": each product has its
 own page. `test-quickadd.js` 29.
+
+### Session 25 (cont.): Ingredient page, tabbed editor, rich text, label marks (core v1.43)
+
+Her picks from the "Ingredient entry options" canvas, plus asks made on the way.
+
+**The ingredient page (Option 1).** `viewIngredient` builds sections with a
+`section({tab, title, count, body, empties})` helper: At a glance (the lowdown
+and What I had in mind stay click-to-type; usage rate, recommended usage,
+solubility, substitutes, secondary functions when filled; used in, stock,
+price per gram), Properties & characteristics ("N of 10 filled"; density and
+restricted use always shown), My formulating notes, Expanded ingredient
+details (word count, three-line preview, Read more: `toggleGeneralInfo`),
+Resource links, Soap data, Supplier lots. Empty fields fold into one "Not
+filled in: …" line where each field name is its own link to the tab that
+holds it, with the cursor in that field (`editCurrent(tab, focusId)`,
+`focusIngField`; her catch: usage rate lives in Basics, not At a glance).
+Every section's Edit (reads "Add" when the section is empty; same action)
+calls `editCurrent(tab)`. Lots
+are a compact table (`.lt-row`): supplier with active / reference-only tags,
+brand, purchase and order #, certification badges, made-in-house / decommit
+notes; lot #, received and best by, qty, cost/g, Reorder / Receipt, Set as
+active. "Colour" reads "Color" (the field stays `colour`).
+
+**The editor (Option 2).** `#modal-add` is tabs (`setIngTab`, `#ed-tabs`,
+`.ed-pane[data-pane]`): Basics (name, INCI, functions, phase, solubility,
+recommended usage, min, max), At a glance (lowdown, substitutes, What I had in
+mind, function notes, secondary functions), Properties (incl. density,
+restricted, claims), Notes & reference (formulating notes, expanded details,
+links), Stock & cost (lots summary, made-from, $0 switch, low stock), Soap. A
+dot marks a tab with content (`renderIngTabDots`, on input/change and lots
+changes). Every field kept its id; the old props/soap folding code is gone
+(`togglePropsSection`/`toggleSoapSection` now open the tab). Tests that touch
+a field in another tab open that tab (`editCurrent('stock')`).
+
+**New fields (her asks):** `solubility` ('' | water | oil | both |
+water-dispersible | oil-dispersible), separate from phase, with `solNote`
+(how to get it in: "heat to dissolve", "disperse in glycerin first"), shown
+under it on the page and in the popup; `useRate` (free text), separate from
+min/max, labelled **Recommended %** everywhere (her call), its value shown
+without the % sign (`Plume.recText`: "2–5%" reads "2–5"). The editor's (and
+Quick add's) phase list gains **Active** and **Other**: Formulations already
+had both, and six starter items are Active, but the editor's select lacked
+them, so editing such an ingredient silently dropped its phase. **Chelator** joins
+`FUNCTION_CATEGORIES` after Preservative. **Formulations:** a new skincare
+line starts at the recommended usage, the low end of a range
+(`recStartPct`); a line shows "Recommended …"; `solubilityNote` warns
+(gently) when an oil-soluble or oil-dispersible ingredient sits in the water
+phase, or a water one in the oil phase; cool-down takes either. The
+ingredient popup (`showIngDetail`) is for writing instructions (her call):
+it shows the effective pH range and solubility with its note; best cost/g,
+the supplier list and recommended % left it (the % is on the line).
+
+**Rich text (core `Plume.rt`).** Bold, italic, bulleted lists in the lowdown,
+What I had in mind, formulating notes, expanded details and claims. Stored as
+plain text with marks (`**bold**`, `*italic*`, "- " list lines): `rt.toHtml`
+escapes first, then adds its own tags (never stored HTML); `rt.plain` for
+one-line summaries; `rt.fromEl` reads an edited box back; `rt.editor` makes a
+box with B / I / List (single-line mode for the lowdown: Enter saves; paste
+arrives as plain text; Ctrl/Cmd+B/I). `rt.attach(id)` hides the original
+field, which always holds the marked text, so save, load and the
+unsaved-changes check are unchanged; `rt.refreshAll()` after loading. The
+inline notes on the page and cheat sheet use `rt.editor`. Rendered in the
+profile, quick look, cheat sheet (screen and print), Formulations' ingredient
+popup and dropdown (plain). CSS is injected on first use (`rtStyle`).
+
+**Certifications:** `natural` ("Naturally derived", ISO 16128 natural origin;
+her ask) joins `Plume.CERTS`. Core `Plume.activeLot(ing)` is the lot in use,
+by the cost cascade.
+
+**Label marks (P&C).** Per product `labelMarks: [{ key, sym, note }]`; in the
+Label tab, "Mark certified ingredients" chips (all six), each ticked one with
+an editable symbol and footnote (defaults * † ‡ § ¶ °; `MARK_DEFAULTS`). The
+generated list (INCI and common names) gets each ingredient's symbols when
+its lot in use carries the certification (`marksFor`); a component from
+several ingredients only when every one does. Footnotes for the marks used
+appear under the list and in Copy. Not applied to "Use my own text". Kits
+use each part's own marks. Saved, duplicated, exported with the product.
+
+**Tests:** new `test/test-ingpage.js` (44); `test-costs.js` opens the Stock
+tab. 31 suites.
+
+**Offered and not chosen (session 25):** certifications as an Ingredients list
+filter, a formulation certification summary, and on the batch Trace. Her
+call: "I just want to be able to mark the ingredients in the labels." Label
+marks only.
+
+**Where things stand (end of session 25):** PRs #44 (stock solutions), #45
+(Quick add, certifications), #46 (purchase link) merged. PR #47 (this
+section: ingredient page, tabs, rich text, label marks, solubility,
+Recommended %) open; she continues in a new chat.
 
