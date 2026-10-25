@@ -2451,11 +2451,7 @@ document.addEventListener('click', function(e) {
 
 // The amount a new line starts at: the ingredient's recommended usage, the
 // low end of a range ("2–5%" starts at 2). Her call, 2026-10-24.
-function recStartPct(ing) {
-  var m = String((ing && ing.useRate) || '').replace(',', '.').match(/\d+(\.\d+)?/);
-  var n = m ? parseFloat(m[0]) : NaN;
-  return !isNaN(n) && n > 0 && n <= 100 ? String(n) : '';
-}
+function recStartPct(ing) { return Plume.recStart(ing && ing.useRate); }
 // A gentle note when a line sits in a phase its solubility does not suit.
 // Cool-down takes either, and "water and oil" fits anywhere.
 function solubilityNote(ing, phase) {
