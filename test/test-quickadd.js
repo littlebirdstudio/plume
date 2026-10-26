@@ -45,7 +45,7 @@ const getIngs = "JSON.parse(localStorage.getItem('aerie-ingredients-v2'))";
   const hint = await page.evaluate("document.getElementById('qa-hint').innerText");
   ok('the starter list offers its entry', /From the starter list: Jojoba oil/.test(hint), hint);
   await page.evaluate("document.querySelector('#qa-hint .qa-hint.sug button').click()"); await page.waitForTimeout(100);
-  const filled = await page.evaluate("[qaVal('qa-name'), qaVal('qa-inci'), document.getElementById('qa-phase').value, qaVal('qa-max'), qaReadFuncs().join(',')]");
+  const filled = await page.evaluate("[qaVal('qa-name'), qaVal('qa-inci'), document.getElementById('qa-phase').value, qaVal('qa-recmax'), qaReadFuncs().join(',')]");
   ok('Use this fills name, INCI, phase, usage and function', filled[0] === 'Jojoba oil' && /Simmondsia/.test(filled[1]) && filled[2] === 'oil' && filled[3] !== '' && filled[4] === 'Emollient', filled);
   ok('and says the starter\'s notes come along', /Filled from the starter list: Jojoba oil/.test(await page.evaluate("document.getElementById('qa-hint').innerText")));
 

@@ -33,14 +33,14 @@ function range(a, b) {
 var PHASE_NAMES = { water: 'Water', oil: 'Oil', 'cool-down': 'Cool-down', 'add-in': 'Add-in', active: 'Active', other: 'Other' };
 
 var COLS = {
-  use:    { label: 'Use %',          get: function (i) { return range(i.min, i.max); } },
+  use:    { label: 'Usage',          get: function (i) { return Plume.usageText(i, { short: true }); } },
   phase:  { label: 'Phase',          get: function (i) { return PHASE_NAMES[i.phase] || i.phase || ''; } },
   ph:     { label: 'Effective pH',   get: function (i) { return i.optimalPh || ''; } },
   heat:   { label: 'Heat stability', get: function (i) { return i.heatStability || ''; } },
-  restr:  { label: 'Restrictions',   get: function (i) { return i.restrictions || ''; } },
+  restr:  { label: 'Caution',        get: function (i) { return Plume.usage(i).caution; } },
   absorb: { label: 'Absorption',     get: function (i) { return i.absorptionRate || ''; } },
   shelf:  { label: 'Shelf life',     get: function (i) { return i.oxidationStability || ''; } },
-  dermal: { label: 'Dermal limit',   get: function (i) { return i.dermalLimits || ''; } },
+  dermal: { label: 'Usage note',     get: function (i) { return Plume.usage(i).usageNote || i.dermalLimits || ''; } },
   scent:  { label: 'Scent',          get: function (i) { return i.scent || ''; } }
 };
 
