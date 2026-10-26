@@ -221,7 +221,11 @@ console.log('\n0. The starter list');
   ok('in range: no note, no warning', !row('Rose hydrosol').warn && !/recommended/i.test(row('Rose hydrosol').t.replace('Recommended 10–100%', '')), row('Rose hydrosol'));
   ok('limit not established: quiet only', !row('Snow mushroom').warn && /Above recommended/.test(row('Snow mushroom').t), row('Snow mushroom'));
   ok('an add-in is checked by its share of the batch', row('Lavender').warn && /2% is over the safe limit \(1%\)/.test(row('Lavender').t), row('Lavender'));
-  ok('a caution keeps the orange dot and its line', row('Lavender').dot && /Caution: Must be diluted/.test(row('Lavender').t), row('Lavender'));
+  ok('a caution is the orange dot only, its text on hover', row('Lavender').dot && !/Must be diluted/.test(row('Lavender').t) &&
+     await page.evaluate("/Must be diluted/.test(Array.from(document.querySelectorAll('#phase-groups .caution-dot')).map(function (d) { return d.title; }).join(' '))"), row('Lavender'));
+  dialogs.length = 0;
+  await page.evaluate("Array.from(document.querySelectorAll('#phase-groups .ing-row')).filter(function (r) { return /Lavender/.test(r.innerText); })[0].querySelector('.caution-dot').click()"); await page.waitForTimeout(100);
+  ok('tapping the dot shows the caution', dialogs.length === 1 && /Caution: Lavender essential oil/.test(dialogs[0]) && /Must be diluted/.test(dialogs[0]), dialogs);
   await page.evaluate("fLines.filter(function (l) { return l.ingId === 'nia'; })[0].pct = 3; renderLines()"); await page.waitForTimeout(100);
   const nia = await page.evaluate("(function () { var r = Array.from(document.querySelectorAll('#phase-groups .ing-row')).filter(function (r) { return /Niacinamide/.test(r.innerText); })[0]; return { t: r.innerText, tip: (r.querySelector('.rec-note.has-note') || {}).title || '' }; })()");
   ok('in range, the usage note waits under the numbers', !/flush sensitive skin/.test(nia.t) && /flush sensitive skin/.test(nia.tip), nia);

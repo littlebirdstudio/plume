@@ -441,8 +441,8 @@ body.fc-moving,body.fc-moving *{cursor:grabbing!important;user-select:none}
 .use-quiet{font-size:11px;color:var(--ink-light);font-style:italic;margin-top:1px}
 .use-quiet.use-note-only{font-style:normal;color:var(--ink-lighter)}
 .rec-note.has-note{text-decoration:underline dotted;text-underline-offset:2px;cursor:help}
-.caution-line{font-size:11px;color:var(--warning);margin-top:1px}
 .caution-dot{font-size:10px;color:var(--warning);margin-left:4px;cursor:help}
+button.caution-dot{background:none;border:none;padding:0 2px;line-height:1;font-family:inherit}
 .dd-use{font-size:10.5px;color:var(--ink-lighter);font-variant-numeric:tabular-nums}
 .dd-use .dd-caut{color:var(--warning)}
 .sol-note{font-size:11px;color:var(--warning);margin-top:2px;line-height:1.4}
@@ -2433,6 +2433,11 @@ function resolveIng(id) {
            phase: 'other', functionCategory: [], lots: [] };
 }
 
+function showCaution(id) {
+  var ing = resolveIng(id), c = Plume.usage(ing).caution;
+  if (c) Plume.tell(c, { title: 'Caution: ' + ing.name });
+}
+
 function buildRow(l, idx, ing, bs, isAddin) {
   if (!ing) ing = resolveIng(l && l.ingId);
   // Only an add-in can be pinned now; a pin stored on a percent line is
@@ -2480,7 +2485,9 @@ function buildRow(l, idx, ing, bs, isAddin) {
   } else {
     row += '<button class="ing-name-btn" onclick="showIngDetail(\'' + ing.id + '\')">' + esc(ing.name) + '</button>';
   }
-  if (useU.caution) row += '<span class="caution-dot" title="Caution: ' + esc(useU.caution) + '">&#9679;</span>';
+  // Caution: the orange dot only (her call, 2026-10-26); hover for the text,
+  // or tap it on a tablet.
+  if (useU.caution) row += '<button type="button" class="caution-dot" title="Caution: ' + esc(useU.caution) + '" aria-label="Caution" onclick="event.stopPropagation();showCaution(\'' + ing.id + '\')">&#9679;</button>';
   if (isAddin) row += '<span class="addin-badge">add-in</span>';
   if (!isAddin) {
     row += '<button class="phase-pill' + (phOvr ? ' overridden' : '') +
@@ -2517,7 +2524,6 @@ function buildRow(l, idx, ing, bs, isAddin) {
   if (warn) row += '<div class="warn-txt">' + esc(firm.map(function (c) { return c.text; }).join(' ')) + '</div>';
   if (quiet.length && !warn) row += '<div class="use-quiet">' + esc(quiet.map(function (c) { return c.text; }).join(' ')) + (useU.usageNote ? ' ' + esc(useU.usageNote) : '') + '</div>';
   else if (warn && useU.usageNote && !ing.missing) row += '<div class="use-quiet use-note-only">' + esc(useU.usageNote) + '</div>';
-  if (useU.caution && !ing.missing) row += '<div class="caution-line">Caution: ' + esc(useU.caution) + '</div>';
   var solNote = isAddin ? '' : solubilityNote(ing, ePh);
   if (solNote) row += '<div class="sol-note">' + esc(solNote) + '</div>';
   if (obR.note) row += obR.note;

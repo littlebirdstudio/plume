@@ -3804,7 +3804,8 @@ page with researched proposals.
   limit, outside the effective range) comes first; outside Recommended a
   quiet note; the usage note shows in full only when the amount is outside a
   range, otherwise as a tooltip on the dotted numbers line. Add-ins are
-  checked by their share of the batch. New lines start blank (`recStartPct`
+  checked by their share of the batch. A caution is the orange dot only
+  (hover for the text, tap it on a tablet; her call). New lines start blank (`recStartPct`
   is gone; `Plume.recStart` stays, unused). The ingredient popup shows the
   safe limit, effective range and usage note, and the caution if any; not
   Recommended (her earlier call).
