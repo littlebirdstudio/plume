@@ -129,6 +129,53 @@ const getIngs = "JSON.parse(localStorage.getItem('aerie-ingredients-v2'))";
   await page.evaluate("Array.from(document.querySelectorAll('tr.ql-row .ql-actions a')).find(function(a){return /Add to compare/.test(a.textContent);}).click()");
   ok('"Add to compare" in the quick look turns compare on with that pick', await page.evaluate("cmpMode && cmpIds.join() === 'ix'"));
 
+  console.log('\n7. Fixes from the 2026-10-25 scan (v1.49)');
+  // Make it! reads the library as it is now.
+  await page.evaluate(SEED);
+  await page.goto(previewUrl('batchlog')); await page.waitForTimeout(500);
+  await page.evaluate("openNewBatch(); document.getElementById('f-formula').value = 'f1'; onFormulaChange(); document.getElementById('f-yield').value = '200'; recalcPreview();");
+  // Meanwhile, in Ingredients: both on-order lots arrive, and water gets a new lot.
+  await page.evaluate(`(function () {
+    var list = JSON.parse(localStorage.getItem('aerie-ingredients-v2'));
+    list.forEach(function (i) { (i.lots || []).forEach(function (l) { if (l.onOrder) { delete l.onOrder; l.received = '2026-10-25'; } }); });
+    list.find(function (i) { return i.id === 'iw'; }).lots.push({ id: 'L2', supplier: 'Lotioncrafter', qtyPurchased: '1000', qtyUnit: 'g', costPerG: '0.001', received: '2026-10-25' });
+    localStorage.setItem('aerie-ingredients-v2', JSON.stringify(list));
+  })()`);
+  await page.waitForTimeout(300);
+  await page.evaluate("saveBatch()"); await page.waitForTimeout(400);
+  ok('Make it! goes through once they have arrived, without reopening the form', await page.evaluate("batches.length") === 1, await page.evaluate("document.getElementById('new-commit-msg').innerText"));
+  const w = (await page.evaluate(getIngs)).find(i => i.id === 'iw');
+  ok('and a lot added in Ingredients meanwhile is kept, not written over', w.lots.length === 2 && w.lots[1].id === 'L2', w.lots.map(l => l.id + ':' + l.qtyPurchased));
+  // Mark arrived on one lot of two on order.
+  await page.evaluate(SEED);
+  await page.evaluate(`(function () {
+    var list = JSON.parse(localStorage.getItem('aerie-ingredients-v2'));
+    list.find(function (i) { return i.id === 'is'; }).lots.push({ id: 'L3', supplier: 'Making Cosmetics', qtyPurchased: '100', qtyUnit: 'g', costPerG: '0.09', onOrder: true, received: '' });
+    localStorage.setItem('aerie-ingredients-v2', JSON.stringify(list));
+  })()`);
+  await page.goto(previewUrl('ingredients')); await page.waitForTimeout(500);
+  await page.evaluate("viewIngredient('is')"); await page.waitForTimeout(150);
+  await page.evaluate("Array.from(document.querySelectorAll('#d-body .lt-row')).find(function (r) { return /Making Cosmetics/.test(r.innerText); }).querySelector('button').click()");
+  await page.waitForTimeout(150);
+  const sl = (await page.evaluate(getIngs)).find(i => i.id === 'is').lots;
+  ok('Mark arrived on one lot of two on order marks only that one', !sl.find(l => l.id === 'L3').onOrder && sl.find(l => l.id === 'L2').onOrder === true, sl);
+  // Import an old backup holding a renamed ingredient.
+  await page.evaluate(`(function () {
+    var i = ingredients.find(function (x) { return x.id === 'ij'; }); i.name = 'Jojoba oil (golden)'; saveData();
+  })()`);
+  await page.evaluate(`(function () {
+    var old = [{ id: 'ij', name: 'Jojoba oil', inci: 'X', phase: 'oil', lots: [] }, { id: 'inew', name: 'Brand new', inci: 'Y', phase: 'water', lots: [] }];
+    var f = new File([JSON.stringify({ ingredients: old, suppliers: [] })], 'backup.json', { type: 'application/json' });
+    var input = document.getElementById('import-file-input');
+    var dt = new DataTransfer(); dt.items.add(f); input.files = dt.files;
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  })()`);
+  await page.waitForTimeout(500);
+  const after = await page.evaluate(getIngs);
+  ok('importing an old backup skips an ingredient renamed since (same id), and adds new ones',
+    after.filter(i => i.id === 'ij').length === 1 && after.find(i => i.id === 'ij').name === 'Jojoba oil (golden)' && after.some(i => i.id === 'inew'),
+    after.filter(i => i.id === 'ij' || i.id === 'inew').map(i => i.id + ':' + i.name));
+
   ok('no page errors', errors.length === 0, errors);
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');

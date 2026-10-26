@@ -2040,8 +2040,13 @@ function importData(e) {
       Plume.ask('Duplicates will be skipped.', function () {
         try {
           var existingIng = new Set(ingredients.map(function(i) { return i.name.toLowerCase(); }));
+          // Skipped by id as well as by name (2026-10-25 scan): an ingredient
+          // renamed since the backup has the same id under a new name, and
+          // importing the old copy replaced the current one when saved.
+          var existingIds = new Set(ingredients.map(function(i) { return String(i.id); }));
           var addedIng = 0;
           ingData.forEach(function(item) {
+            if (item && item.id != null && existingIds.has(String(item.id))) return;
             if (!existingIng.has((item.name||'').toLowerCase())) {
               item.id = item.id || (Date.now().toString() + Math.random().toString(36).slice(2,6));
               ingredients.push(item); addedIng++;
@@ -2821,12 +2826,17 @@ function openLotsFromList(e, id) {
 // Arrived (2026-10-25): every on-order lot of this ingredient becomes stock,
 // received today unless a date was already set.
 function hasOnOrder(i) { return ((i && i.lots) || []).some(function (l) { return l && l.onOrder && !l.referenceOnly; }); }
-function markArrived(e, id) {
+// With a lot id (the lot table's button), only that lot; without (the quick
+// look), every on-order lot of the ingredient.
+function markArrived(e, id, lotId) {
   if (e) e.stopPropagation();
   var i = ingredients.find(function (x) { return x.id === id; });
   if (!i) return;
   var n = 0;
-  (i.lots || []).forEach(function (l) { if (l.onOrder) { delete l.onOrder; if (!l.received) l.received = todayISO(); n++; } });
+  (i.lots || []).forEach(function (l) {
+    if (lotId && l.id !== lotId) return;
+    if (l.onOrder) { delete l.onOrder; if (!l.received) l.received = todayISO(); n++; }
+  });
   if (!n) return;
   if (!saveData()) return;
   renderTable(); renderStats();
@@ -3380,7 +3390,7 @@ function viewIngredient(id) {
             (l.brand ? '<small>' + esc(l.brand) + '</small>' : '') + (purchase ? '<small>' + esc(purchase) + (l.orderNum ? ' · order ' + esc(l.orderNum) : '') + '</small>' : (l.orderNum ? '<small>order ' + esc(l.orderNum) + '</small>' : '')) +
             (Plume.lotCerts(l).length ? '<small>' + certBadgesHtml(l) + '</small>' : '') + notes + '</span>' +
           '<span>' + (l.lotNum ? esc(l.lotNum) : dash) + '</span>' +
-          '<span>' + (l.received ? esc(fmtDate(l.received)) : (l.onOrder ? '<button class="btn btn-sm" onclick="markArrived(event,\'' + i.id + '\')">Mark arrived</button>' : dash)) + (l.bestBy ? '<small class="' + (soon ? 'expiry-warn' : '') + '">best by ' + esc(fmtDate(l.bestBy)) + '</small>' : '') + '</span>' +
+          '<span>' + (l.received ? esc(fmtDate(l.received)) : (l.onOrder ? '<button class="btn btn-sm" onclick="markArrived(event,\'' + i.id + '\',\'' + l.id + '\')">Mark arrived</button>' : dash)) + (l.bestBy ? '<small class="' + (soon ? 'expiry-warn' : '') + '">best by ' + esc(fmtDate(l.bestBy)) + '</small>' : '') + '</span>' +
           '<span class="r">' + ((l.qtyPurchased || l.stock) ? esc(String(l.qtyPurchased || l.stock)) + ' ' + esc(l.qtyUnit || l.stockUnit || 'g') : dash) + '</span>' +
           '<span class="r">' + (l.costPerG ? '$' + parseFloat(l.costPerG).toFixed(4) : dash) + '</span>' +
           '<span class="lt-act">' + links + (canSetActive ? '<button class="btn btn-sm" onclick="setActiveLot(\'' + i.id + '\',\'' + l.id + '\')">Set as active</button>' : '') + '</span>' +

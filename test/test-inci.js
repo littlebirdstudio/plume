@@ -45,6 +45,10 @@ ok('and 1,2-Hexanediol and 1,3-Propanediol, as a blend or on their own',
    [P.inciSplit('Aqua, 1,2-Hexanediol, Caprylyl Glycol'), P.inciSplit('1,3-Propanediol')]);
 ok('a stray space after the digit comma still keeps the name whole',
    JSON.stringify(P.inciSplit('2, 3-Butanediol')) === '["2,3-Butanediol"]', P.inciSplit('2, 3-Butanediol'));
+ok('a name ending in a number, then a locant name, stays two (Polysorbate 20, 1,2-Hexanediol)',
+   JSON.stringify(P.inciSplit('Aqua, Polysorbate 20, 1,2-Hexanediol')) === '["Aqua","Polysorbate 20","1,2-Hexanediol"]'
+   && JSON.stringify(P.inciSplit('CI 77491, 77492')) === '["CI 77491","77492"]',
+   [P.inciSplit('Aqua, Polysorbate 20, 1,2-Hexanediol'), P.inciSplit('CI 77491, 77492')]);
 ok('a comma between a digit and a letter still splits',
    P.inciSplit('Vitamin B5, Glycerin').length === 2, P.inciSplit('Vitamin B5, Glycerin'));
 ok('empty input gives nothing', P.inciSplit('').length === 0 && P.inciSplit(null).length === 0);
