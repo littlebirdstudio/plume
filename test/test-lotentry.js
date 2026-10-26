@@ -75,10 +75,15 @@ const getIng = (id) => `JSON.parse(localStorage.getItem('aerie-ingredients-v2'))
   await setF(0, 'purchaseSize', '8');
   await page.evaluate("closeModal('modal-add'); viewIngredient('ig'); editCurrent();"); await page.waitForTimeout(200);
   id = await rid(0);
-  ok('a lot a batch has used from does not follow', await page.evaluate(`${row(0)}.dataset.follows !== '1'`) && /use Adjust/.test(await text(id + '-qty-note')), await text(id + '-qty-note'));
+  ok('a lot a batch has used from is not reset to what was bought', await page.evaluate(`${row(0)}.dataset.follows !== '1'`) && await field(0, 'qtyPurchased') === '380' && /Moves with Bought/.test(await text(id + '-qty-note')), await text(id + '-qty-note'));
   await setF(0, 'purchaseSize', '1000');
-  ok('so changing Bought leaves on hand alone (380 g)', await field(0, 'qtyPurchased') === '380');
+  ok('raising Bought by 500 g raises on hand by 500 g (880 g), and says so', await field(0, 'qtyPurchased') === '880' && /Was 380: moved with Bought/.test(await text(id + '-qty-note')), [await field(0, 'qtyPurchased'), await text(id + '-qty-note')]);
+  await setF(0, 'purchaseUnit', 'lb'); await setF(0, 'purchaseSize', '2');
+  ok('Bought in another unit converts (2 lb is 907.18 g: 787.18 g)', await field(0, 'qtyPurchased') === '787.18', await field(0, 'qtyPurchased'));
+  await setF(0, 'purchaseUnit', 'g'); await setF(0, 'purchaseSize', '100');
+  ok('it will not go below zero', await field(0, 'qtyPurchased') === '0' && /below zero/.test(await text(id + '-qty-note')), [await field(0, 'qtyPurchased'), await text(id + '-qty-note')]);
   await setF(0, 'purchaseSize', '500');
+  ok('back to 500 g, back to 380 g, nothing to note', await field(0, 'qtyPurchased') === '380' && !/Was/.test(await text(id + '-qty-note')));
   ok('it has an Adjust button', await page.evaluate(`!!${row(0)}.querySelector('.lot-adj-btn')`));
   await page.evaluate(`openLotAdjust('${id}')`); await page.waitForTimeout(100);
   ok('Adjust opens with the current amount', await page.evaluate(`document.getElementById('${id}-adj-new').value`) === '380');
@@ -112,6 +117,20 @@ const getIng = (id) => `JSON.parse(localStorage.getItem('aerie-ingredients-v2'))
   await page.evaluate("closeModal('modal-add'); viewIngredient('ia');"); await page.waitForTimeout(200);
   const det = await page.evaluate("document.body.innerText.replace(/\\s+/g, ' ')");
   ok('the details page shows 8 oz for $20.00', /8 oz for \$20\.00/.test(det), det.slice(0, 600));
+
+  // ── 4. A change through Bought is kept on the lot ────────────────
+  console.log('\n4. Bought changed on a used lot is recorded');
+  await page.evaluate(SEED); await page.reload(); await page.waitForTimeout(400);
+  await page.evaluate("viewIngredient('ig'); openLotsFromDetails();"); await page.waitForTimeout(300);
+  await setF(0, 'purchaseSize', '1500');
+  await page.evaluate("closeLotsDrawer()"); await page.waitForTimeout(300);
+  g = await page.evaluate(getIng('ig'));
+  ok('closing the drawer saves 1380 g and a "Bought changed" note', g.lots[0].qtyPurchased === '1380' && g.lots[0].purchaseSize === '1500' &&
+     (g.lots[0].adjustments || []).length === 1 && g.lots[0].adjustments[0].reason === 'Bought changed' && g.lots[0].adjustments[0].from === 380 && g.lots[0].adjustments[0].to === 1380, g.lots[0]);
+  ok('the details page shows the new total stock', /1380 ?g/.test(await page.evaluate("document.body.innerText")));
+  await page.evaluate("editCurrent(); saveIngredient(true); saveIngredient(true);"); await page.waitForTimeout(300);
+  g = await page.evaluate(getIng('ig'));
+  ok('saving again (twice) adds nothing more', (g.lots[0].adjustments || []).length === 1, g.lots[0].adjustments);
 
   ok('no page errors', errors.length === 0, errors);
   await browser.close();

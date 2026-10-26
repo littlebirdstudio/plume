@@ -4451,6 +4451,22 @@ function lotBoughtMatches(lot) {
   return (lot.qtyUnit || lot.stockUnit || 'g') === (lot.purchaseUnit || 'g') && Math.abs(q - bought) < 0.005;
 }
 // The row's on hand display, and while it follows Bought, its value.
+// Grams in one of a unit, for moving on hand by a change in Bought.
+function rowDensity() {
+  var d = parseFloat((document.getElementById('f-density') || {}).value);
+  return d > 0 ? d : 1.0;
+}
+function rowBoughtG(rowId) {
+  var size = (document.getElementById(rowId + '-psize') || {}).value;
+  var unit = (document.getElementById(rowId + '-punit') || {}).value || 'g';
+  return lotSizeToGrams(size, unit, rowDensity()) || 0;
+}
+// On hand follows Bought (2026-10-25, after she tried it): a lot nothing has
+// been used from shows exactly what was bought; a used lot moves by the
+// change in Bought (bought 1 lb, 0.6 lb left, Bought raised to 2 lb: 1.6 lb
+// left). The base (qty0, boughtG0) is what was on hand and bought when the
+// drawer opened or the last Adjust; a change from Bought is recorded in the
+// lot's history when it is saved (getLots).
 function syncOnHand(rowId) {
   var row = document.getElementById(rowId); if (!row) return;
   var qty = document.getElementById(rowId + '-qty'), qu = document.getElementById(rowId + '-qunit');
@@ -4459,16 +4475,28 @@ function syncOnHand(rowId) {
   var size = parseFloat((document.getElementById(rowId + '-psize') || {}).value);
   var unit = (document.getElementById(rowId + '-punit') || {}).value || 'g';
   var follows = row.dataset.follows === '1';
+  var boughtG = rowBoughtG(rowId);
+  if (row.dataset.qty0 === undefined) { row.dataset.qty0 = qty.value; row.dataset.boughtG0 = String(boughtG); }
+  var floor = false;
   if (follows) {
     qty.value = size > 0 ? fmtQty(size) : '';
     qu.value = unit;
+  } else {
+    var per = lotSizeToGrams(1, qu.value || 'g', rowDensity()) || 1;
+    var q0 = parseFloat(row.dataset.qty0) || 0;
+    var g0 = parseFloat(row.dataset.boughtG0) || 0;
+    var nq = boughtG > 0 && g0 > 0 ? q0 + (boughtG - g0) / per : q0;
+    if (nq < 0) { nq = 0; floor = true; }
+    qty.value = fmtQty(nq);
   }
   var q = parseFloat(qty.value);
   show.textContent = q >= 0 && qty.value !== '' ? fmtQty(q) + ' ' + (qu.value === 'oz' ? 'oz (wt)' : qu.value) : '\u2014';
   if (note) {
+    var moved = !follows && row.dataset.qty0 !== undefined && Math.abs(q - (parseFloat(row.dataset.qty0) || 0)) >= 0.005;
     note.textContent = follows
       ? (size > 0 ? 'Starts at what you bought.' : 'Fill in Bought and this starts there.')
-      : (row.dataset.lotId ? 'Batches take from this. To correct it, use Adjust.' : '');
+      : moved ? (floor ? 'Cannot go below zero. ' : '') + 'Was ' + fmtQty(parseFloat(row.dataset.qty0) || 0) + ': moved with Bought. Noted in this lot\u2019s history when you save.'
+      : (row.dataset.lotId ? 'Moves with Bought. Batches take from it; to correct it, use Adjust.' : '');
   }
 }
 var LOT_ADJ_REASONS = ['Recount', 'Entry error', 'Spilled or spoiled', 'Used outside a batch', 'Other'];
@@ -4512,6 +4540,7 @@ function saveLotAdjust(rowId) {
   document.getElementById(rowId + '-adj').value = JSON.stringify(list);
   qty.value = fmtQty(nv);
   delete row.dataset.follows;
+  row.dataset.qty0 = qty.value; row.dataset.boughtG0 = String(rowBoughtG(rowId));
   closeLotAdjust(rowId);
   syncOnHand(rowId);
   renderLotAdjHist(rowId);
@@ -4997,6 +5026,14 @@ function getLots() {
     if (row.dataset.lotId) f.id = row.dataset.lotId;
     if (row.dataset.setActiveOnSave) f._setActiveOnSave = true;
     if (f.adjustments) { try { f.adjustments = JSON.parse(f.adjustments); } catch (e) { f.adjustments = []; } }
+    // On hand moved because Bought changed on a lot already used from:
+    // keep the record, like an Adjust.
+    if (row.dataset.follows !== '1' && row.dataset.qty0 !== undefined && row.dataset.qty0 !== '') {
+      var q0 = parseFloat(row.dataset.qty0) || 0, q1 = parseFloat(f.qtyPurchased) || 0;
+      if (Math.abs(q1 - q0) >= 0.005) {
+        f.adjustments = (f.adjustments || []).concat([{ date: todayISO(), from: q0, to: Math.round(q1 * 100) / 100, unit: f.qtyUnit || 'g', reason: 'Bought changed', note: '' }]);
+      }
+    }
     if (!f.adjustments || !f.adjustments.length) delete f.adjustments;
     return f;
   }).filter(function(l) {
