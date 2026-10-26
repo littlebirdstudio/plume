@@ -1474,7 +1474,10 @@ function calcBatchCost(lines, bs) {
     var ing = ings.find(function(i) { return i.id === l.ingId; });
     if (!ing) return;
     var cpg = bestCpg(ing); if (cpg === null) return;
-    var g = l.pinned ? (parseFloat(l.gramsFixed)||0) : (parseFloat(l.pct)||0)/100*bs;
+    // An add-in is measured in grams (it has no %); a pinned line keeps its
+    // grams; everything else is its % of the batch. (2026-10-25 scan: add-ins
+    // were priced at 0 g even when counted toward the total.)
+    var g = (l.addin || l.pinned) ? (parseFloat(l.gramsFixed)||0) : (parseFloat(l.pct)||0)/100*bs;
     total += cpg * g; hasAny = true;
   });
   return hasAny ? total : null;
@@ -1632,7 +1635,13 @@ function renderCards() {
 
   var html = '<div class="cards-grid">';
   list.forEach(function(f) {
-    var cost = calcBatchCost(f.lines||[], 100);
+    // Per 100 g of the formula as the editor prices it: at the version's own
+    // batch size (pinned grams belong to that size), add-ins only when they
+    // count toward the total.
+    var cbs  = Plume.formBatchSize(f);
+    var cl   = (f.lines || []).filter(function (l) { return f.addinsInTotal || !l.addin; });
+    var cb   = Plume.isSoapType(f.type) ? null : calcBatchCost(cl, cbs);
+    var cost = cb !== null ? cb / cbs * 100 : (Plume.isSoapType(f.type) ? calcBatchCost(cl, 100) : null);
     var costStr = cost !== null ? ('$' + cost.toFixed(2) + ' <span class="ps-muted">/ 100 g</span>') : '<span class="ps-muted">No cost data</span>';
     var d = f.updatedAt ? new Date(f.updatedAt) : null;
     var dateStr = d && !isNaN(d.getTime()) ? d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '';
@@ -2607,7 +2616,9 @@ function recalc() {
       return { ingId: l.ingId, w: (l.addin || l.pinned) ? gw : (parseFloat(l.pct) || 0),
                inci: ing.inci, flag: ing.flag, addin: l.addin, label: ing.name };
     }), ings, forms, addinsCount);
-    curInciNames = Plume.inciMerge(items.filter(function(it) { return !it.addin; })).map(function(e) { return e.name; });
+    // Copy gives the same list as the panel, add-ins included (2026-10-25
+    // scan: they were left out, and a label needs every ingredient).
+    curInciNames = Plume.inciMerge(items).map(function(e) { return e.name; });
     iEl.innerHTML = inciPanelHtml(items, 'add-ins after formula ingredients');
   }
 }
@@ -4322,7 +4333,13 @@ function showIngDetail(ingId) {
   if (ing.function)     html += '<div class="id-field"><label>Function</label><p>' + esc(ing.function) + '</p></div>';
   if (ing.dermalLimits) html += '<div class="id-field"><label>Dermal limits</label><p style="white-space:pre-wrap;line-height:1.6">' + esc(ing.dermalLimits) + '</p></div>';
   if (ing.notes)        html += '<div class="id-field"><label>Notes</label><div style="line-height:1.6;font-size:13px">' + Plume.rt.toHtml(ing.notes) + '</div></div>';
-  if (ing.link) html += '<div class="id-field"><label>Resource</label><p><a href="' + ing.link + '" target="_blank" rel="noopener" style="color:var(--sage)">Open link</a></p></div>';
+  // Resource links (the list Ingredients saves now, or the older single link),
+  // escaped, web links only (2026-10-25 scan).
+  var rl = (ing.links && ing.links.length) ? ing.links : (ing.link ? [{ label: 'Open link', url: ing.link }] : []);
+  rl = rl.filter(function (l) { return /^https?:\/\//i.test(String(l && l.url || '').trim()); });
+  if (rl.length) html += '<div class="id-field"><label>Resource' + (rl.length > 1 ? 's' : '') + '</label><p>' + rl.map(function (l) {
+    return '<a href="' + esc(String(l.url).trim()) + '" target="_blank" rel="noopener" style="color:var(--sage);margin-right:12px">' + esc(l.label || 'Open link') + '</a>';
+  }).join('') + '</p></div>';
   html += '<div style="margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--cream-border);text-align:right"><a href="plume-ingredients.html#ing=' + encodeURIComponent(ing.id) + '" target="_blank" rel="noopener" style="font-size:12px;color:var(--sage);text-decoration:none">View in library &rarr;</a></div>';
   document.getElementById('id-body').innerHTML = html;
   openModal('m-ing');

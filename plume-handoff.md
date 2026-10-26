@@ -3560,3 +3560,42 @@ the compare tick. 33 suites.
 Decided 2026-10-25: the on-order marking stays in the palette's main colour
 (terracotta in Finch), her call. Compare's On hand row stays plain text (she
 had no preference; no extra tint in an already busy table).
+
+### Session 26 (cont., 25 October 2026): Scan fixes (core v1.49 to v1.50)
+
+A full scan after PR #52: static checks clean, 33 suites green, then two
+independent agents: a code review of PRs #48 to #52 and a browser
+click-through of every page (about 3,300 actions; light, dark, 400 px; no page
+errors). Fixed, each with a test that fails on the old code:
+
+- **Make it! read a stale library.** `saveBatch`, `commitBatch` and
+  `reverseBatchCommit` (decommit, delete) now call `refreshLibrary()` first.
+  Before: a lot added in Ingredients while New batch was open was erased on
+  save (saveList merges whole records, and taking stock counts as "changed
+  here"), and a batch stayed blocked after "mark it arrived" until reopened.
+  Rule: **any code that changes ingredients re-reads them right before.**
+- **Import skips by id as well as name.** An ingredient renamed since a backup
+  came back as a second record with the same id, and the merge kept the old
+  copy. `mergeList` now keeps a second record with a duplicate id rather than
+  collapsing it.
+- **INCI digit commas**: no-space only ("2,3-"), plus a lone digit then a
+  locant ("2, 3-Butanediol"). The v1.46 rule joined "Polysorbate 20,
+  1,2-Hexanediol" and "CI 77491, 77492".
+- **Mark arrived per lot** in the profile's lot table (`markArrived(e, id,
+  lotId)`); the quick look's button still marks all.
+- **Links escaped**: Ingredients' resource links and Formulations' popup
+  (which now reads `links`, the list Ingredients saves, not only the old
+  `link`); web links only.
+- **Formulations cost**: `calcBatchCost` prices add-ins by their grams (they
+  were 0 g even when counted toward the total); the card prices at the
+  version's batch size (`Plume.formBatchSize`), add-ins only when counted, so
+  card and editor agree.
+- **Add-ins in the printed INCI list and in Copy** (after the formula
+  ingredients), as the on-screen panel and labels already had them.
+- Consignment stock note no longer repeats "Consigned to <shop>".
+
+**Found and left for her (backlog):** Products & Costing prices soap from its
+oils only (no additive, no lye; a bar about 20% low); add-ins and soap
+additives stay fixed grams when the batch size changes, with no warning (her
+open question); deleting a batch returns all its ingredients to stock even
+when part was already filled; packaging can go below zero without a warning.

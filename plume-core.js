@@ -35,7 +35,7 @@ var Plume = (function () {
 // (v0.4 / v0.5 / v0.6 across five modules). BUMP IT IN EVERY PULL REQUEST,
 // core change or not: it is how "is this the update I just merged?" is
 // answered by looking, and browsers cache .js files stubbornly.
-var VERSION = '1.49';
+var VERSION = '1.50';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -2764,10 +2764,15 @@ function buildSkincareSheet(o) {
       '<th class="pc" style="padding-bottom:6px;border-bottom:2px solid #333">%</th>' +
       '</tr></thead><tbody>' + rows + '</tbody></table></div>',
     // With the formulations at hand, a stock solution lists as its parts.
+    // Add-ins follow the formula ingredients, as in the editor's INCI panel
+    // (2026-10-25 scan: the printed list left them out).
     inci: o.forms
-      ? inciMerge(stockLabelItems(fl.map(function (l) { return { ingId: l.ingId, w: parseFloat(l.pct) || 0 }; }), ings, o.forms))
+      ? inciMerge(stockLabelItems(fl.map(function (l) { return { ingId: l.ingId, w: parseFloat(l.pct) || 0 }; }), ings, o.forms)
+          .concat(stockLabelItems(addins.filter(function (l) { return findIngIn(ings, l.ingId); })
+            .map(function (l) { return { ingId: l.ingId, w: (parseFloat(l.gramsFixed) || 0) / (bs || 100) * 100 }; }), ings, o.forms)))
           .map(function (e) { return e.name; }).join(', ')
-      : fl.map(function (l) { return findIngIn(ings, l.ingId).inci; }).join(', '),
+      : fl.concat(addins.filter(function (l) { return findIngIn(ings, l.ingId); }))
+          .map(function (l) { return findIngIn(ings, l.ingId).inci; }).join(', '),
     scaleLabel: 'Batch: ' + bs + 'g'
   };
 }
@@ -4571,7 +4576,7 @@ function consignPass(products, entries, shopId, opts) {
     if (!pr || isNaN(v) || v <= 0) return;
     if (!pr.stockLog) pr.stockLog = [];
     pr.stockLog.push({ id: 'cs-' + stamp + '-' + i, date: opts.date || todayISO(), kind: 'move', qty: -v, shopId: shopId, shopQty: v,
-      note: opts.note || ('Consigned to ' + shopName(shopId)) });
+      note: opts.note || '' });   // the list already says "Consigned to <shop>"
     pr.updatedAt = new Date().toISOString();
     n++;
   });

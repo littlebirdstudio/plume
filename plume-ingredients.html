@@ -3336,7 +3336,12 @@ function viewIngredient(id) {
   var allLinks = migrateLinks(i);
   var linksHtml = section({ tab: 'notes', key: 'links', title: 'Resource links', count: allLinks.length ? String(allLinks.length) : 'none yet', editLabel: allLinks.length ? 'Edit' : 'Add',
     body: allLinks.length ? '<p style="display:flex;flex-wrap:wrap;gap:12px;font-size:14px">' + allLinks.map(function (l) {
-      return '<a class="detail-link" href="' + l.url + '" target="_blank" rel="noopener">' + esc(l.label) + ' &#8599;</a>'; }).join('') + '</p>' : '' });
+      // Escaped (2026-10-25 scan): a pasted link with a quote in it could
+      // otherwise add its own attributes to the tag. Only web links are live.
+      var u = String(l.url || '').trim();
+      return /^https?:\/\//i.test(u)
+        ? '<a class="detail-link" href="' + esc(u) + '" target="_blank" rel="noopener">' + esc(l.label || u) + ' &#8599;</a>'
+        : '<span class="detail-link">' + esc(l.label || u) + ': ' + esc(u) + '</span>'; }).join('') + '</p>' : '' });
 
   // Soap data section
   var soapHtml = '';
