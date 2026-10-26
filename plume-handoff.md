@@ -3862,7 +3862,7 @@ clunk"), and the Safe limit box ran past the edge of the page.
 - **Function chips shouted** in both forms: `.field label` (uppercase,
   letter-spaced) outranked `.fcat-chip`'s own sentence case. Fixed with
   `.field .fcat-chip`.
-- Tests: `test-quickadd.js` reads the cost per gram and its note. 37 suites.
+- Tests: `test-quickadd.js` reads the cost per gram and its note. 38 suites, all passing.
 
 Also decided this session (see the backlog): cost over time goes with option
 A, a cost stamped on each batch from the lots it drew (her May 15 decision,
