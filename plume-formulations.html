@@ -1468,16 +1468,15 @@ function resetLinePhase(idx) {
   recalc();
 }
 
-function calcBatchCost(lines, bs) {
+function calcBatchCost(lines, bs, refBs) {
   var total = 0, hasAny = false;
   lines.forEach(function(l) {
     var ing = ings.find(function(i) { return i.id === l.ingId; });
     if (!ing) return;
     var cpg = bestCpg(ing); if (cpg === null) return;
-    // An add-in is measured in grams (it has no %); a pinned line keeps its
-    // grams; everything else is its % of the batch. (2026-10-25 scan: add-ins
-    // were priced at 0 g even when counted toward the total.)
-    var g = (l.addin || l.pinned) ? (parseFloat(l.gramsFixed)||0) : (parseFloat(l.pct)||0)/100*bs;
+    // An add-in is measured in grams (it has no %), scaled from the batch size
+    // it was typed at unless pinned; everything else is its % of the batch.
+    var g = l.addin ? Plume.addinGrams(l, bs, refBs || bs) : (parseFloat(l.pct)||0)/100*bs;
     total += cpg * g; hasAny = true;
   });
   return hasAny ? total : null;
@@ -1636,12 +1635,13 @@ function renderCards() {
   var html = '<div class="cards-grid">';
   list.forEach(function(f) {
     // Per 100 g of the formula as the editor prices it: at the version's own
-    // batch size (pinned grams belong to that size), add-ins only when they
+    // batch size (add-in grams are scaled from it), add-ins only when they
     // count toward the total.
     var cbs  = Plume.formBatchSize(f);
     var cl   = (f.lines || []).filter(function (l) { return f.addinsInTotal || !l.addin; });
-    var cb   = Plume.isSoapType(f.type) ? null : calcBatchCost(cl, cbs);
-    var cost = cb !== null ? cb / cbs * 100 : (Plume.isSoapType(f.type) ? calcBatchCost(cl, 100) : null);
+    var cb   = Plume.isSoapType(f.type) ? null : calcBatchCost(cl, cbs, cbs);
+    var sp   = Plume.isSoapType(f.type) ? Plume.soapCost(f, ings).perG : null;
+    var cost = cb !== null ? cb / cbs * 100 : (sp !== null ? sp * 100 : null);
     var costStr = cost !== null ? ('$' + cost.toFixed(2) + ' <span class="ps-muted">/ 100 g</span>') : '<span class="ps-muted">No cost data</span>';
     var d = f.updatedAt ? new Date(f.updatedAt) : null;
     var dateStr = d && !isNaN(d.getTime()) ? d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '';
@@ -1870,7 +1870,7 @@ function renderSoapLines() {
     fLines.forEach(function(l, idx) {
       if (!l.soapAddin) return;
       var ing = resolveIng(l.ingId);
-      var g      = parseFloat(l.gramsFixed) || 0;
+      var g      = aG(l, bs);
       var pctPPO = totalOilG > 0 && g > 0 ? (g / totalOilG * 100).toFixed(2) + '% PPO' : '--';
       var cpg    = bestCpg(ing);
       var lCost  = cpg !== null && g > 0 ? '$' + (cpg * g).toFixed(2) : '--';
@@ -1887,8 +1887,8 @@ function renderSoapLines() {
       if (obA.note) addinHtml += obA.note;
       else if (sstA === 'partial') addinHtml += '<div class="stock-note">' + Math.round(sgA) + 'g on hand &middot; need ' + g.toFixed(1) + 'g</div>';
       addinHtml += '</div>';
-      addinHtml += '<div style="font-size:12px;color:var(--ink-lighter);text-align:right;padding-right:4px">--</div>';
-      addinHtml += '<input class="soap-inp" type="text" inputmode="decimal" value="' + (g || '') + '" placeholder="0"' +
+      addinHtml += '<div style="text-align:right">' + pinBtn(idx, !!l.pinned) + '</div>';
+      addinHtml += '<input class="soap-inp" type="text" inputmode="decimal" value="' + gramsText(l, g) + '" placeholder="0"' +
         ' onclick="this.select()" oninput="onSoapG(' + idx + ',this.value)" onblur="onSoapGB(' + idx + ',this.value)">';
       addinHtml += '<div style="font-size:12px;color:var(--ink-lighter);text-align:right;padding-right:4px">' + pctPPO + '</div>';
       addinHtml += '<div style="font-size:12px;color:var(--ink-lighter);text-align:right">' + lCost + '</div>';
@@ -1967,8 +1967,8 @@ function onSoapGramsB(idx, v) {
 }
 
 // Additive (soap add-in) gram handlers
-function onSoapG(idx, v)  { fLines[idx].gramsFixed = v.replace(',', '.'); markDirty(); recalcSoap(); }
-function onSoapGB(idx, v) { fLines[idx].gramsFixed = v.replace(',', '.'); markDirty(); renderLines(); recalcSoap(); }
+function onSoapG(idx, v)  { fLines[idx].gramsFixed = v.replace(',', '.'); fLines[idx].gramsAt = String(curBs()); markDirty(); recalcSoap(); }
+function onSoapGB(idx, v) { fLines[idx].gramsFixed = v.replace(',', '.'); fLines[idx].gramsAt = String(curBs()); markDirty(); renderLines(); recalcSoap(); }
 
 // ── Soap calculations ─────────────────────────────────
 function recalcSoap() {
@@ -2086,20 +2086,19 @@ function recalcSoap() {
 
   // Cost panel
   var cEl = document.getElementById('cost-panel');
-  var tc = 0; var hasCost = false;
-  fLines.forEach(function(l) {
-    var ing = ings.find(function(i) { return i.id === l.ingId; });
-    if (!ing) return;
-    var cpg = bestCpg(ing); if (cpg === null) return;
-    var g = l.soapAddin ? (parseFloat(l.gramsFixed) || 0) : ((parseFloat(l.pct) || 0) / 100 * bs);
-    tc += cpg * g; hasCost = true;
-  });
-  if (hasCost && totalBatch > 0) {
+  // Oils, additives and lye, the same figure Products & Costing uses
+  // (core soapCost, 2026-10-25). Per 100 g of cured soap: the water cures
+  // off, so it is left out of the weight.
+  var sc = Plume.soapCost({ lines: fLines, bs: bs, superfat: superfat, lyeType: lyeType, kohPurity: kohPurity, ings: ings });
+  var tc = sc.cost, hasCost = sc.perG !== null;
+  if (hasCost && sc.mass > 0) {
     var smiss = costMissingNote(fLines);
-    var sal = '';
+    var lyeMiss = sc.lyeG > 0 && !sc.lyeIng
+      ? '<div style="font-size:11px;color:var(--ink-lighter);margin-top:4px">' + (lyeType === 'koh' ? 'Potassium' : 'Sodium') + ' hydroxide is not in Ingredients, so the lye is not counted.</div>' : '';
     cEl.innerHTML =
-      '<div class="cost-row"><span>Total batch cost</span><span>' + sal + '$' + tc.toFixed(2) + '</span></div>' +
-      '<div class="cost-row"><span>Per 100g</span><span>' + sal + '$' + (tc / totalBatch * 100).toFixed(2) + '</span></div>' + smiss;
+      '<div class="cost-row"><span>Total batch cost</span><span>$' + tc.toFixed(2) + '</span></div>' +
+      '<div class="cost-row"><span>Per 100g of soap</span><span>$' + (sc.perG * 100).toFixed(2) + '</span></div>' +
+      '<div style="font-size:11px;color:var(--ink-lighter);margin-top:4px">Oils, additives and lye. Water is left out of the weight, as it cures off.</div>' + lyeMiss + smiss;
   } else {
     cEl.innerHTML = '<div style="font-size:12px;color:var(--ink-lighter)">Add ingredient costs in the library to see estimates.</div>';
   }
@@ -2224,22 +2223,22 @@ function resolveIng(id) {
 
 function buildRow(l, idx, ing, bs, isAddin) {
   if (!ing) ing = resolveIng(l && l.ingId);
-  var pinned = !!l.pinned;
+  // Only an add-in can be pinned now; a pin stored on a percent line is
+  // ignored and the line scales by its % (2026-10-25).
+  var pinned = !!l.pinned && isAddin;
   var pct    = parseFloat(l.pct) || 0;
-  var gf     = parseFloat(l.gramsFixed) || 0;
   var dispPct, dispGrams;
-  if (isAddin)     { dispPct = ''; dispGrams = l.gramsFixed || ''; }
-  else if (pinned) { dispPct = bs > 0 ? (gf/bs*100).toFixed(2) : ''; dispGrams = gf.toFixed(2); }
-  else             { dispPct = l.pct !== undefined && l.pct !== '' ? pct.toFixed(2) : ''; dispGrams = pct > 0 ? (pct/100*bs).toFixed(2) : ''; }
+  if (isAddin) { dispPct = ''; dispGrams = gramsText(l, aG(l, bs)); }
+  else         { dispPct = l.pct !== undefined && l.pct !== '' ? pct.toFixed(2) : ''; dispGrams = pct > 0 ? (pct/100*bs).toFixed(2) : ''; }
   var gNum   = parseFloat(dispGrams) || 0;
   var cpg    = bestCpg(ing);
   var lCost  = cpg !== null ? ('$' + (cpg*gNum).toFixed(3)) : '--';
-  var effPct = pinned && bs > 0 ? gf/bs*100 : pct;
+  var effPct = pct;
   var over   = !isAddin && ing.max && effPct > parseFloat(ing.max);
   var under  = !isAddin && ing.min && effPct > 0 && effPct < parseFloat(ing.min);
   var warn   = over || under;
   var dpg    = l.dropsPerG || 20;
-  var dropsDisp = l.drops || (gNum > 0 ? Math.round(gNum*dpg) : '') || '';
+  var dropsDisp = gNum > 0 ? Math.round(gNum*dpg) : (l.drops || '');
   var sst    = stockState(ing, gNum);
   var sg     = stockG(ing);
   var stockCls = sst === 'enough' ? ' has-stock' : (sst === 'partial' ? ' partial-stock' : '');
@@ -2264,7 +2263,6 @@ function buildRow(l, idx, ing, bs, isAddin) {
     row += '<button class="ing-name-btn" onclick="showIngDetail(\'' + ing.id + '\')">' + esc(ing.name) + '</button>';
   }
   if (ing.flag === 'yes') row += '<span style="font-size:10px;color:var(--warning);margin-left:4px">&#9679;</span>';
-  if (pinned && !isAddin) row += '<span class="pinned-badge">pinned</span>';
   if (isAddin) row += '<span class="addin-badge">add-in</span>';
   if (!isAddin) {
     row += '<button class="phase-pill' + (phOvr ? ' overridden' : '') +
@@ -2304,18 +2302,15 @@ function buildRow(l, idx, ing, bs, isAddin) {
   if (isAddin) {
     // Add-ins carry grams, not a percentage, so when they are counted the
     // contribution has to be derived from the batch size to be shown at all.
-    var addinPct = getAddinsInTotal() && bs > 0
-      ? ((parseFloat(l.gramsFixed) || 0) / bs * 100)
-      : null;
-    row += '<div style="font-size:11px;color:var(--ink-lighter);text-align:right;grid-column:2/4">' +
+    var addinPct = getAddinsInTotal() && bs > 0 ? (gNum / bs * 100) : null;
+    row += '<div style="font-size:11px;color:var(--ink-lighter);text-align:right">' +
       (addinPct !== null ? addinPct.toFixed(2) + '%' : 'not in %') + '</div>';
+    row += pinBtn(idx, pinned);
   } else {
     row += '<input class="ing-inp" type="text" inputmode="decimal" value="' + dispPct + '" placeholder="0.00" onclick="this.select()" oninput="onPct(' + idx + ',this.value)" onblur="onPctB(' + idx + ',this.value)">';
-    row += '<button class="pin-btn' + (pinned?' pinned':'') + '" onclick="togglePin(' + idx + ')" title="' +
-      (pinned ? 'Pinned: gram amount stays fixed when batch changes' : 'Click to pin this gram amount') + '">' +
-      (pinned ? 'Pinned' : 'Pin g') + '</button>';
+    row += '<span></span>';
   }
-  row += '<input class="ing-inp' + (pinned&&!isAddin?' pinned':'') + '" type="text" inputmode="decimal" value="' + dispGrams + '" placeholder="0.00" onclick="this.select()"';
+  row += '<input class="ing-inp' + (pinned ? ' pinned' : '') + '" type="text" inputmode="decimal" value="' + dispGrams + '" placeholder="0.00" onclick="this.select()"';
   if (isAddin) row += ' oninput="onAG(' + idx + ',this.value)" onblur="onAGB(' + idx + ',this.value)">';
   else         row += ' oninput="onGrams(' + idx + ',this.value)" onblur="onGramsB(' + idx + ',this.value)">';
   row += '<div class="ing-cost">' + lCost + '</div>';
@@ -2356,12 +2351,23 @@ function onGramsB(idx, v) {
   fLines[idx].pct = bs > 0 && g > 0 ? (g/bs*100).toFixed(4) : '';
   fLines[idx].pinned = false; markDirty(); renderLines(); recalc();
 }
-function onAG(idx, v)  { fLines[idx].gramsFixed=v.replace(',','.'); fLines[idx].drops=''; markDirty(); recalc(); }
-function onAGB(idx, v) { fLines[idx].gramsFixed=v.replace(',','.'); markDirty(); renderLines(); recalc(); }
+// Typing an add-in's grams records the batch size they are for (gramsAt),
+// so a bigger or smaller batch scales them (unless pinned).
+function onAG(idx, v)  { fLines[idx].gramsFixed=v.replace(',','.'); fLines[idx].gramsAt=String(curBs()); fLines[idx].drops=''; markDirty(); recalc(); }
+function onAGB(idx, v) { fLines[idx].gramsFixed=v.replace(',','.'); fLines[idx].gramsAt=String(curBs()); markDirty(); renderLines(); recalc(); }
+// The Pin toggle, on add-ins and soap additives only: pinned keeps a fixed
+// amount at any batch size (a decorative charcoal line); unpinned scales.
+function pinBtn(idx, pinned) {
+  return '<button class="pin-btn' + (pinned ? ' pinned' : '') + '" onclick="togglePin(' + idx + ')" title="' +
+    (pinned ? 'A fixed amount: the same at any batch size. Click to scale it with the batch instead.'
+            : 'Scales with the batch. Click to keep this amount fixed at any batch size.') + '">' +
+    (pinned ? 'Fixed' : 'Scales') + '</button>';
+}
 function onDrops(idx, v, dpg) {
   var d = parseFloat(v) || 0;
   fLines[idx].drops = v;
   fLines[idx].gramsFixed = d > 0 ? (d/dpg).toFixed(4) : '';
+  fLines[idx].gramsAt = String(curBs());
   markDirty(); recalc();
 }
 function editDpg(idx) {
@@ -2388,16 +2394,15 @@ function updatePctDisplay(idx, val) {
 }
 
 function togglePin(idx) {
-  var bs = parseFloat(document.getElementById('batch-sz').value) || 100;
-  var l  = fLines[idx];
-  if (l.pinned) {
-    var g = parseFloat(l.gramsFixed) || 0;
-    fLines[idx].pct = bs > 0 ? (g/bs*100).toFixed(4) : '0'; fLines[idx].pinned = false;
-  } else {
-    var p = parseFloat(l.pct) || 0;
-    fLines[idx].gramsFixed = (p/100*bs).toFixed(4); fLines[idx].pinned = true;
-  }
-  markDirty(); renderLines(); recalc();
+  var l = fLines[idx];
+  if (!l || !(l.addin || l.soapAddin)) return;
+  var bs = curBs(), g = aG(l, bs);
+  if (g > 0) l.gramsFixed = String(Math.round(g * 10000) / 10000);
+  l.gramsAt = String(bs);
+  l.pinned = !l.pinned;
+  if (!l.pinned) delete l.pinned;
+  markDirty(); renderLines();
+  if (isSoap()) recalcSoap(); else recalc();
 }
 
 function rmLine(idx) { fLines.splice(idx, 1); markDirty(); renderLines(); recalc(); }
@@ -2551,11 +2556,11 @@ function recalc() {
     // batch size. Otherwise, addins are skipped exactly as before.
     if (l.addin) {
       if (!addinsCount) return;
-      var addinG = parseFloat(l.gramsFixed) || 0;
+      var addinG = aG(l, bs);
       total += bs > 0 ? (addinG / bs * 100) : 0;
       return;
     }
-    total += l.pinned ? (bs > 0 ? (parseFloat(l.gramsFixed)||0)/bs*100 : 0) : (parseFloat(l.pct)||0);
+    total += parseFloat(l.pct) || 0;
   });
   var pEl = document.getElementById('total-pct');
   var bEl = document.getElementById('pct-bar');
@@ -2595,12 +2600,8 @@ function recalc() {
     al  = fLines.filter(function(l) { return l.addin  && ings.find(function(i) { return i.id === l.ingId; }); });
   }
   fl2.sort(function(a, b) {
-    var pa = a.addin
-      ? (bs > 0 ? (parseFloat(a.gramsFixed)||0)/bs*100 : 0)
-      : (a.pinned ? (bs > 0 ? (parseFloat(a.gramsFixed)||0)/bs*100 : 0) : (parseFloat(a.pct)||0));
-    var pb = b.addin
-      ? (bs > 0 ? (parseFloat(b.gramsFixed)||0)/bs*100 : 0)
-      : (b.pinned ? (bs > 0 ? (parseFloat(b.gramsFixed)||0)/bs*100 : 0) : (parseFloat(b.pct)||0));
+    var pa = a.addin ? (bs > 0 ? aG(a, bs)/bs*100 : 0) : (parseFloat(a.pct)||0);
+    var pb = b.addin ? (bs > 0 ? aG(b, bs)/bs*100 : 0) : (parseFloat(b.pct)||0);
     return pb - pa;
   });
   var all = fl2.concat(al);
@@ -2612,8 +2613,8 @@ function recalc() {
     // share (Plume.stockLabelItems); nothing moves when there is none.
     var items = Plume.stockLabelItems(all.map(function(l) {
       var ing = ings.find(function(x) { return x.id === l.ingId; });
-      var gw  = bs > 0 ? (parseFloat(l.gramsFixed) || 0) / bs * 100 : 0;
-      return { ingId: l.ingId, w: (l.addin || l.pinned) ? gw : (parseFloat(l.pct) || 0),
+      var gw  = bs > 0 ? aG(l, bs) / bs * 100 : 0;
+      return { ingId: l.ingId, w: l.addin ? gw : (parseFloat(l.pct) || 0),
                inci: ing.inci, flag: ing.flag, addin: l.addin, label: ing.name };
     }), ings, forms, addinsCount);
     // Copy gives the same list as the panel, add-ins included (2026-10-25
@@ -2879,8 +2880,7 @@ function ingName(id) {
 }
 
 function lineAmountStr(l) {
-  if (l.pinned && l.gramsFixed) return String(l.gramsFixed) + 'g';
-  if (l.addin || l.soapAddin)   return l.gramsFixed ? (String(l.gramsFixed) + 'g') : '';
+  if (l.addin || l.soapAddin)   return l.gramsFixed ? (String(l.gramsFixed) + 'g' + (l.pinned ? ' (fixed)' : '')) : '';
   var p = parseFloat(l.pct);
   return isNaN(p) ? '' : (String(l.pct) + '%');
 }
@@ -3385,6 +3385,20 @@ function loadVariantIntoEditor() {
 
   histExpanded = false;   // each version's panel starts short
   fLines = (v.lines || []).map(function(l) { return Object.assign({}, l); });
+  // Add-ins and soap additives scale from the batch size their grams were
+  // typed at (gramsAt). Older lines: the version's saved batch size, which is
+  // what the grams were entered against. (2026-10-25)
+  var refAt = parseFloat(v.batchSize) || (Plume.isSoapType(f.type) ? 1000 : 100);
+  fLines.forEach(function(l) {
+    if (l.addin || l.soapAddin) { if (!(parseFloat(l.gramsAt) > 0)) l.gramsAt = String(refAt); return; }
+    // A % line pinned before pins went add-in only: its grams were the truth
+    // at this batch size, so turn them back into the % they made, unpinned.
+    if (l.pinned) {
+      var pg = parseFloat(l.gramsFixed);
+      if (pg > 0 && refAt > 0) l.pct = String(Math.round(pg / refAt * 100 * 10000) / 10000);
+      delete l.pinned;
+    }
+  });
   document.getElementById('f-status').value   = v.status || 'draft';
   document.getElementById('f-instruct').value = v.instructions || '';
   document.getElementById('f-ph-min').value = v.phMin || '';
@@ -4269,6 +4283,17 @@ function delUseEntry(eid) {
 }
 
 // ── Ingredient detail popup ───────────────────────────
+// An add-in's or soap additive's grams at batch size bs (core addinGrams):
+// typed at gramsAt, scaled to bs unless pinned. Every line in the editor has
+// a gramsAt (set on load from the version's batch size, and on every edit).
+function aG(l, bs) { return Plume.addinGrams(l, bs, bs); }
+function curBs() { return parseFloat(document.getElementById('batch-sz').value) || (isSoap() ? 1000 : 100); }
+// A grams figure for an input: the typed text when unscaled, else 2 decimals.
+function gramsText(l, g) {
+  var raw = parseFloat(l.gramsFixed);
+  if (raw > 0 && Math.abs(raw - g) < 1e-9) return String(l.gramsFixed);
+  return g > 0 ? String(Math.round(g * 100) / 100) : '';
+}
 // Cost per gram as Formulations shows it (2026-10-25: back in the search
 // dropdown and the ingredient popup, her ask). Same figure as the line cost.
 // On order (2026-10-25): a short-or-empty line whose shortfall is on its way

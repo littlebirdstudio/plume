@@ -747,6 +747,80 @@
     text-transform: uppercase;
     color: var(--ink-lighter);
   }
+  /* ── Lots drawer, refreshed 2026-10-25 to match the app ── */
+  .drawer { width: 720px; font-family: 'DM Sans', sans-serif; }
+  .drawer-hdr { background: var(--white); padding: 18px 22px 14px; }
+  .drawer-title { font-family: 'DM Sans', sans-serif; font-size: 19px; font-weight: 600; color: var(--ink); }
+  .drawer-sub { font-size: 12.5px; }
+  .drawer-body { padding: 18px 22px 26px; background: var(--cream); }
+  .drawer .lot-row { background: var(--white); border: 1px solid var(--cream-border); border-radius: 10px; padding: 14px 16px 6px; margin-bottom: 14px; }
+  .drawer .lot-row.lot-row-order { border: 1px dashed var(--bark-light); }
+  .drawer .lot-row.lot-row-reference { border-style: dashed; background: var(--cream); }
+  .lot-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+  .lot-pills { display: inline-flex; border: 1px solid var(--cream-border); border-radius: 999px; padding: 2px; background: var(--cream); }
+  .lot-pill { font: inherit; font-size: 12.5px; border: 0; background: transparent; color: var(--ink-light); padding: 4px 12px; border-radius: 999px; cursor: pointer; white-space: nowrap; }
+  .lot-pill:hover { color: var(--ink); }
+  .lot-pill.on { background: var(--ink); color: var(--white); font-weight: 500; }
+  .lot-pill.on[data-state="order"] { background: var(--bark); color: #fff; }
+  .lot-pill:focus-visible, .lot-act:focus-visible { outline: 2px solid var(--bark); outline-offset: 1px; }
+  .lot-top-acts { margin-left: auto; display: flex; gap: 6px; }
+  .lot-act { font: inherit; font-size: 12px; border: 1px solid var(--cream-border); background: transparent; color: var(--ink-light); border-radius: 7px; padding: 4px 10px; cursor: pointer; }
+  .lot-act:hover { background: var(--cream-dark); color: var(--ink); }
+  .lot-act-rm:hover { background: var(--danger-bg); border-color: var(--danger-border); color: var(--danger); }
+  .lot-state-note { font-size: 12px; color: var(--bark); font-style: italic; min-height: 0; margin: 2px 0 2px; }
+  .lot-state-note:empty { display: none; }
+  .lot-row-reference .lot-state-note { color: var(--ink-lighter); }
+  .lot-sec { padding: 10px 0 8px; border-top: 1px solid var(--cream-dark); }
+  .lot-sec:first-of-type { border-top: 0; }
+  .lot-sec-h { font-size: 11.5px; font-weight: 600; color: var(--ink-light); margin-bottom: 7px; }
+  .drawer .lot-line { gap: 10px 12px; margin-bottom: 0; }
+  .drawer .lot-line-1 { grid-template-columns: 1.3fr 1fr 1.4fr 1fr 1fr; }
+  .drawer .lot-line-2 { grid-template-columns: 1.3fr 1fr 1fr 1fr; }
+  .drawer .lot-line-3 { grid-template-columns: 0.8fr 1.4fr 1.4fr; }
+  .drawer .lot-row .lf { gap: 4px; min-width: 0; }
+  .drawer .lot-row label { font-size: 11.5px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--ink-lighter); }
+  .lot-inp, .lot-row .lot-inp, .lot-row select.lot-inp { font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 6px 8px; border: 1px solid var(--cream-border); border-radius: 7px; background: var(--white); color: var(--ink); outline: none; width: 100%; min-width: 0; box-sizing: border-box; }
+  .lot-inp:focus, .lot-row .lot-inp:focus { border-color: var(--bark-light); box-shadow: 0 0 0 3px color-mix(in srgb, var(--bark) 14%, transparent); }
+  .lot-inp:disabled, .lot-row .lot-inp:disabled { background: var(--cream-dark); color: var(--ink-lighter); }
+  .lot-pair { display: flex; gap: 4px; }
+  .lot-buy-sum { font-size: 12px; color: var(--ink-light); margin-top: 6px; min-height: 0; }
+  .lot-buy-sum:empty { display: none; }
+  .lot-onhand { display: flex; align-items: center; gap: 8px; min-height: 32px; }
+  .lot-onhand-v { font-size: 14px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .lot-onhand-note { font-size: 11px; color: var(--ink-lighter); line-height: 1.35; }
+  .lot-onhand-note:empty { display: none; }
+  .lot-adj-btn { padding: 2px 9px; }
+  .lot-adj-form { margin-top: 10px; padding: 10px 12px; border: 1px solid var(--cream-border); border-radius: 8px; background: var(--cream); }
+  .lot-adj-form[hidden], .lot-adj-hist:empty { display: none; }
+  .lot-adj-h { font-size: 12px; font-weight: 600; color: var(--ink); margin-bottom: 8px; }
+  .lot-adj-grid { display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 10px; }
+  .lot-adj-err { font-size: 12px; color: var(--danger); margin-top: 6px; }
+  .lot-adj-err:empty { display: none; }
+  .lot-adj-acts { display: flex; gap: 8px; margin-top: 10px; }
+  .lot-act-go { background: var(--bark); border-color: var(--bark); color: var(--white); }
+  .lot-act-go:hover { background: var(--bark-dark, var(--bark)); color: var(--white); }
+  .lot-adj-hist { margin-top: 10px; font-size: 12px; color: var(--ink-light); }
+  .lot-adj-hh { font-size: 11.5px; font-weight: 600; color: var(--ink-light); margin-bottom: 4px; }
+  .lot-adj-line { display: grid; grid-template-columns: 110px 150px 1fr; gap: 8px; padding: 3px 0; border-top: 1px dashed var(--cream-dark); }
+  @media (max-width: 640px) { .lot-adj-grid { grid-template-columns: 1fr 1fr; } .lot-adj-grid .lf-wide { grid-column: 1 / -1; } .lot-adj-line { grid-template-columns: 1fr 1fr; } }
+  .lot-pair .lot-inp:first-child { flex: 1 1 60px; }
+  .lot-pair .lot-unit { flex: 0 0 74px; padding-right: 4px; }
+  .lot-row-order .lf-recv .lot-inp { border-style: dashed; }
+  .drawer .lot-certs { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 0; }
+  .lot-tog { position: relative; display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px !important; color: var(--ink-light) !important;
+    border: 1px solid var(--cream-border); border-radius: 999px; padding: 3px 11px; cursor: pointer; user-select: none; background: var(--white); }
+  .lot-tog input { position: absolute; opacity: 0; pointer-events: none; }
+  .lot-tog:has(input:checked) { background: var(--ink); color: var(--white) !important; border-color: var(--ink); }
+  .lot-tog:has(input:checked)::before { content: '\2713'; }
+  .lot-tog:has(input:focus-visible) { outline: 2px solid var(--bark); outline-offset: 1px; }
+  .drawer .lot-cert-other { width: 200px; flex: 0 1 200px; }
+  .add-lot-btn { border-radius: 9px; font-size: 13px; padding: 9px 14px; background: var(--white); }
+  .add-sup-btn { flex: 0 0 auto; width: auto; white-space: nowrap; }
+  @media (max-width: 720px) {
+    .drawer .lot-line-1, .drawer .lot-line-2, .drawer .lot-line-3 { grid-template-columns: 1fr 1fr; }
+    .drawer .lf-sup { grid-column: 1 / -1; }
+    .lot-top-acts { margin-left: 0; }
+  }
   .cpg-note-inline {
     font-size: 10px;
     color: var(--sage-dark);
@@ -1895,24 +1969,21 @@ var FA_FIELDS = ['lauric','myristic','palmitic','stearic','ricinoleic','oleic','
 
 // ── Helpers ───────────────────────────────────────────
 function lotInp(attrs) {
-  // Build a styled lot-row input element string.
-  // attrs: object with type, field, id, placeholder, value, step, min, extra
-  var base = "font-family:'DM Sans',sans-serif;font-size:12px;padding:5px 7px;" +
-             "border:1px solid var(--cream-border);border-radius:3px;" +
-             "background:var(--white);color:var(--ink);outline:none;";
-  var width = (attrs.width || '100%');
-  var style = base + 'width:' + width + ';' + (attrs.extra || '');
-  var html  = '<input type="' + (attrs.type || 'text') + '"';
+  // A lot-row input. Styled by the .lot-inp class (2026-10-25 drawer
+  // refresh). The value is ESCAPED: a lot # or link with a quote in it used
+  // to break the field when the editor redrew.
+  var html  = '<input class="lot-inp" type="' + (attrs.type || 'text') + '"';
   if (attrs.id)          html += ' id="' + attrs.id + '"';
   if (attrs.field)       html += ' data-field="' + attrs.field + '"';
   if (attrs.step)        html += ' step="' + attrs.step + '"';
   if (attrs.min !== undefined) html += ' min="' + attrs.min + '"';
-  if (attrs.placeholder) html += ' placeholder="' + attrs.placeholder + '"';
-  if (attrs.value)       html += ' value="' + attrs.value + '"';
+  if (attrs.placeholder) html += ' placeholder="' + esc(attrs.placeholder) + '"';
+  if (attrs.value !== undefined && attrs.value !== null && attrs.value !== '') html += ' value="' + esc(attrs.value) + '"';
   if (attrs.oninput)     html += ' oninput="' + attrs.oninput + '"';
   if (attrs.onblur)      html += ' onblur="' + attrs.onblur + '"';
   if (attrs.list)        html += ' list="' + attrs.list + '" autocomplete="off"';
-  html += ' style="' + style + '">';
+  if (attrs.width)       html += ' style="width:' + attrs.width + '"';
+  html += '>';
   return html;
 }
 
@@ -4154,6 +4225,29 @@ function supplierOptions(selected) {
 
 // Toggle handler — called when the user clicks the "Reference only" checkbox
 // on a lot row. Applies the visual state and disables/enables purchase fields.
+// The status pills (2026-10-25): one choice per lot. They set the two
+// stored flags; reference only dims and locks the stock and order fields as
+// before; on order notes that Received is filled in when it arrives.
+function lotStateNote(state) {
+  return state === 'order' ? 'Paid for, not here yet. Priced in recipes, never taken by a batch. Choose Here when it arrives (received today if no date is set).'
+    : state === 'ref' ? 'A price to compare, not a purchase. Not stock, not used for cost.'
+    : '';
+}
+function setLotState(rowId, state) {
+  var row = document.getElementById(rowId);
+  if (!row) return;
+  var ref = row.querySelector('[data-field="referenceOnly"]'), ord = row.querySelector('[data-field="onOrder"]');
+  if (ref) ref.checked = state === 'ref';
+  if (ord) ord.checked = state === 'order';
+  Array.prototype.forEach.call(row.querySelectorAll('.lot-pill'), function (b) {
+    var on = b.getAttribute('data-state') === state;
+    b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+  row.classList.toggle('lot-row-order', state === 'order');
+  applyReferenceOnlyState(row, state === 'ref');
+  var note = row.querySelector('[data-note]');
+  if (note) note.textContent = lotStateNote(state);
+}
 function onReferenceOnlyToggle(checkbox, rowId) {
   var row = document.getElementById(rowId);
   if (!row) return;
@@ -4172,7 +4266,7 @@ function applyReferenceOnlyState(row, isRef) {
   var line3 = row.querySelector('.lot-line-3');
   [line2, line3].forEach(function(line) {
     if (!line) return;
-    line.querySelectorAll('input, select').forEach(function(el) {
+    line.querySelectorAll('input, select, button').forEach(function(el) {
       el.disabled = isRef;
     });
   });
@@ -4200,6 +4294,12 @@ function addLotRow(lot) {
   var pUnit    = lot && lot.purchaseUnit ? lot.purchaseUnit : 'g';
   var qtyVal   = lot ? (lot.qtyPurchased || lot.stock || '') : '';
   var qtyUnit  = lot ? (lot.qtyUnit || lot.stockUnit || 'g') : 'g';
+  var adjList  = (lot && Array.isArray(lot.adjustments)) ? lot.adjustments : [];
+  var adjVal   = adjList.length ? JSON.stringify(adjList) : '';
+  // Follows Bought: a row not yet saved, or a saved one nothing has been
+  // used from or adjusted (its on hand still equals what was bought).
+  if (!lot || !lot.id) div.dataset.follows = '1';
+  else if (!adjList.length && lotBoughtMatches(lot)) div.dataset.follows = '1';
 
   // ── Unit option builders ──
   function purchaseUnitOpts(sel) {
@@ -4215,122 +4315,120 @@ function addLotRow(lot) {
     }).join('');
   }
 
-  // ── Line 1: Supplier | Brand+Organic | Purchase size+unit | Purchase price | Cost/g ──
+  // ── The 2026-10-25 refresh: status pills, then three labelled groups ──
+  // Every input keeps its data-field, so getLots, duplicateLotRow and
+  // saveIngredient read the row exactly as before. The status pills drive
+  // the two hidden checkboxes (referenceOnly, onOrder).
+  var state = isRefOnly ? 'ref' : (isOnOrder ? 'order' : 'here');
+  var sel = function (field, opts, extra) {
+    return '<select class="lot-inp" data-field="' + field + '"' + (extra || '') + '>' + opts + '</select>';
+  };
+  var pill = function (val, label, hint) {
+    return '<button type="button" class="lot-pill' + (state === val ? ' on' : '') + '" data-state="' + val + '"' +
+      ' aria-pressed="' + (state === val ? 'true' : 'false') + '" title="' + hint + '"' +
+      ' onclick="setLotState(\'' + id + '\',\'' + val + '\')">' + label + '</button>';
+  };
+  var header =
+    '<div class="lot-top">' +
+      '<div class="lot-pills" role="group" aria-label="This lot is">' +
+        pill('here', 'Here', 'Bought and on the shelf: counts as stock') +
+        pill('order', 'On order', 'Bought, not here yet: priced, never drawn on') +
+        pill('ref', 'Reference only', 'A price to compare, not a purchase') +
+      '</div>' +
+      '<input type="checkbox" data-field="referenceOnly" hidden' + (isRefOnly ? ' checked' : '') + '>' +
+      '<input type="checkbox" data-field="onOrder" hidden' + (isOnOrder ? ' checked' : '') + '>' +
+      '<div class="lot-top-acts">' +
+        '<button type="button" class="lot-act" onclick="duplicateLotRow(\'' + id + '\')" title="Copy this lot for a reorder">Copy lot</button>' +
+        '<button type="button" class="lot-act lot-act-rm" onclick="document.getElementById(\'' + id + '\').remove()">Remove</button>' +
+      '</div>' +
+    '</div>' +
+    '<div class="lot-state-note" data-note>' + lotStateNote(state) + '</div>';
+
   var line1 =
+    '<div class="lot-sec"><div class="lot-sec-h">Purchase</div>' +
     '<div class="lot-line lot-line-1">' +
-      '<div class="lf"><label>Supplier</label>' +
-        '<select class="lot-supplier-select" data-field="supplier" onchange="onSupplierSelect(this,\'' + id + '\')">' +
-          supplierOptions(suppName) +
-        '</select>' +
+      '<div class="lf lf-sup"><label>Supplier</label>' +
+        sel('supplier', supplierOptions(suppName), ' onchange="onSupplierSelect(this,\'' + id + '\')"') +
       '</div>' +
       '<div class="lf"><label>Brand</label>' +
-        lotInp({ field:'brand', placeholder:'e.g. NOW, Timeless',
-                 value: brandName, list:'brand-datalist',
-                 onblur:'saveNewBrand(this.value)' }) +
+        lotInp({ field:'brand', placeholder:'e.g. NOW, Timeless', value: brandName, list:'brand-datalist', onblur:'saveNewBrand(this.value)' }) +
       '</div>' +
-      '<div class="lf"><label>Purchase size</label>' +
-        '<div style="display:flex;gap:4px;align-items:center">' +
-          lotInp({ type:'number', field:'purchaseSize', id:id+'-psize', step:'0.01', min:'0',
-                   placeholder:'e.g. 500', value: lot && lot.purchaseSize ? lot.purchaseSize : '',
-                   oninput:"calcLotCostPerG('" + id + "')", width:'70px' }) +
-          '<select data-field="purchaseUnit" id="' + id + '-punit"' +
-            ' onchange="calcLotCostPerG(\'' + id + '\')"' +
-            ' style="font-family:&quot;DM Sans&quot;,sans-serif;font-size:13px;padding:7px 8px;border:1px solid var(--cream-border);border-radius:3px;background:var(--white);color:var(--ink);outline:none">' +
-            purchaseUnitOpts(pUnit) +
-          '</select>' +
+      // Bought and Price paid are the whole purchase (2026-10-25, her call:
+      // enter the total amount and the total paid, not the containers).
+      '<div class="lf lf-bought"><label>Bought (total)</label>' +
+        '<div class="lot-pair">' +
+          lotInp({ type:'number', field:'purchaseSize', id:id+'-psize', step:'0.01', min:'0', placeholder:'500',
+                   value: lot && lot.purchaseSize ? lot.purchaseSize : '', oninput:"calcLotCostPerG('" + id + "')" }) +
+          '<select class="lot-inp lot-unit" data-field="purchaseUnit" id="' + id + '-punit" onchange="calcLotCostPerG(\'' + id + '\')">' + purchaseUnitOpts(pUnit) + '</select>' +
         '</div>' +
       '</div>' +
-      '<div class="lf"><label>Purchase price ($)</label>' +
-        lotInp({ type:'number', field:'purchasePrice', id:id+'-pprice', step:'0.01', min:'0',
-                 placeholder:'0.00', value: lot && lot.purchasePrice ? lot.purchasePrice : '',
-                 oninput:"calcLotCostPerG('" + id + "')" }) +
+      '<div class="lf"><label>Price paid, total ($)</label>' +
+        lotInp({ type:'number', field:'purchasePrice', id:id+'-pprice', step:'0.01', min:'0', placeholder:'0.00',
+                 value: lot && lot.purchasePrice ? lot.purchasePrice : '', oninput:"calcLotCostPerG('" + id + "')" }) +
       '</div>' +
-      '<div class="lf">' +
-        '<label>Cost / g ($)</label>' +
-        lotInp({ type:'number', field:'costPerG', id:id+'-cpg', step:'0.0001', min:'0',
-                 placeholder:'auto', value: lot && lot.costPerG ? lot.costPerG : '' }) +
+      '<div class="lf"><label>Cost per gram ($)</label>' +
+        lotInp({ type:'number', field:'costPerG', id:id+'-cpg', step:'0.0001', min:'0', placeholder:'auto',
+                 value: lot && lot.costPerG ? lot.costPerG : '' }) +
         '<div class="cpg-note-inline" id="' + id + '-cpg-note"></div>' +
       '</div>' +
-    '</div>';
+    '</div><div class="lot-buy-sum" id="' + id + '-buy-sum"></div></div>';
 
-  // ── Line 2: Qty purchased+unit | Lot # | Received | Best by ──
   var line2 =
+    '<div class="lot-sec"><div class="lot-sec-h">Stock and dates</div>' +
     '<div class="lot-line lot-line-2">' +
-      '<div class="lf"><label>Qty purchased</label>' +
-        '<div style="display:flex;gap:4px;align-items:center">' +
-          lotInp({ type:'number', field:'qtyPurchased', step:'0.01', min:'0',
-                   placeholder:'0', value: qtyVal, width:'70px' }) +
-          '<select data-field="qtyUnit"' +
-            ' style="font-family:&quot;DM Sans&quot;,sans-serif;font-size:13px;padding:7px 8px;border:1px solid var(--cream-border);border-radius:3px;background:var(--white);color:var(--ink);outline:none">' +
-            qtyUnitOpts(qtyUnit) +
-          '</select>' +
+      // On hand is not typed (2026-10-25). A new lot starts at what was
+      // bought and follows Bought until some is used or adjusted; after
+      // that it changes only through a batch or Adjust, which keeps a note.
+      '<div class="lf lf-onhand"><label>On hand from this lot</label>' +
+        '<input type="hidden" data-field="qtyPurchased" id="' + id + '-qty" value="' + esc(qtyVal) + '">' +
+        '<input type="hidden" data-field="qtyUnit" id="' + id + '-qunit" value="' + esc(qtyUnit) + '">' +
+        '<input type="hidden" data-field="adjustments" id="' + id + '-adj" value="' + esc(adjVal) + '">' +
+        '<div class="lot-onhand"><span class="lot-onhand-v" id="' + id + '-qty-show"></span>' +
+          (lot && lot.id ? '<button type="button" class="lot-act lot-adj-btn" onclick="openLotAdjust(\'' + id + '\')">Adjust</button>' : '') +
         '</div>' +
+        '<div class="lot-onhand-note" id="' + id + '-qty-note"></div>' +
       '</div>' +
       '<div class="lf"><label>Lot #</label>' +
         lotInp({ field:'lotNum', placeholder:'e.g. LC-2024-08', value: lot && lot.lotNum ? lot.lotNum : '' }) +
       '</div>' +
-      '<div class="lf"><label>Received</label>' +
+      '<div class="lf lf-recv"><label>Received</label>' +
         lotInp({ type:'date', field:'received', value: lot && lot.received ? lot.received : '' }) +
       '</div>' +
       '<div class="lf"><label>Best by</label>' +
         lotInp({ type:'date', field:'bestBy', value: lot && lot.bestBy ? lot.bestBy : '' }) +
       '</div>' +
+    '</div>' +
+    '<div class="lot-adj-form" id="' + id + '-adj-form" hidden></div>' +
+    '<div class="lot-adj-hist" id="' + id + '-adj-hist"></div>' +
     '</div>';
 
-  // ── Line 3: Order # | Purchase link | Receipt link ──
   var line3 =
+    '<div class="lot-sec"><div class="lot-sec-h">Order</div>' +
     '<div class="lot-line lot-line-3">' +
       '<div class="lf"><label>Order #</label>' +
         lotInp({ field:'orderNum', placeholder:'Order ref', value: lot && lot.orderNum ? lot.orderNum : '' }) +
       '</div>' +
       '<div class="lf"><label>Purchase link</label>' +
-        lotInp({ type:'url', field:'buyLink', placeholder:'https://\u2026', value: lot && lot.buyLink ? lot.buyLink : '' }) +
+        lotInp({ type:'url', field:'buyLink', placeholder:'https://…', value: lot && lot.buyLink ? lot.buyLink : '' }) +
       '</div>' +
-      '<div class="lf"><label>Receipt / invoice link</label>' +
-        lotInp({ type:'url', field:'receiptLink', placeholder:'https://drive.google.com/\u2026', value: lot && lot.receiptLink ? lot.receiptLink : '' }) +
+      '<div class="lf"><label>Receipt or invoice link</label>' +
+        lotInp({ type:'url', field:'receiptLink', placeholder:'https://…', value: lot && lot.receiptLink ? lot.receiptLink : '' }) +
       '</div>' +
-    '</div>';
+    '</div></div>';
 
-  // ── Actions ──
-  var actions =
-    '<div class="lot-line-actions">' +
-      '<button class="lot-action-btn lot-dup-btn" onclick="duplicateLotRow(\'' + id + '\')" title="Copy lot for reorder">Copy lot</button>' +
-      '<button class="lot-action-btn lot-rm-btn" onclick="document.getElementById(\'' + id + '\').remove()">Remove</button>' +
-    '</div>';
+  var actions = '';
 
-  // ── Header bar: reference-only toggle ──
-  // When checked, this lot represents a watchlist/price-comparison entry
-  // rather than an actual purchase. Purchase-only fields (qty, lot#, dates,
-  // order#, receipt link) are visually de-emphasized and disabled while
-  // checked, and the lot is excluded from best-price / primary-supplier /
-  // stock calculations on the library page.
-  var header =
-    '<div class="lot-header">' +
-      '<label class="lot-ref-toggle">' +
-        '<input type="checkbox" data-field="referenceOnly"' + (isRefOnly ? ' checked' : '') +
-          ' onchange="onReferenceOnlyToggle(this, \'' + id + '\')">' +
-        '<span>Reference only</span>' +
-        '<span class="lot-ref-hint">(price comparison, not a purchase)</span>' +
-      '</label>' +
-      // On order (2026-10-25): bought, not here yet. Not stock until it
-      // arrives; unticking it marks it arrived (today, if no date is set).
-      '<label class="lot-ref-toggle lot-order-toggle">' +
-        '<input type="checkbox" data-field="onOrder"' + (isOnOrder ? ' checked' : '') + '>' +
-        '<span>On order</span>' +
-        '<span class="lot-ref-hint">(not here yet: planned with, never drawn on)</span>' +
-      '</label>' +
-    '</div>';
-
-  // ── Line 4: certifications (2026-10-24), on the purchase ──
-  var certLine = '<div class="lot-certs"><span class="lc-l">Certifications</span>' +
+  // Certifications as toggle pills (the checkbox sits inside each).
+  var certLine = '<div class="lot-sec"><div class="lot-sec-h">Certifications</div><div class="lot-certs">' +
     Plume.CERTS.map(function(c) {
       var on = lot && (lot[c.key] === true || lot[c.key] === 'true');
-      return '<label><input type="checkbox" data-field="' + c.key + '"' + (on ? ' checked' : '') + '> ' + esc(c.label) + '</label>';
+      return '<label class="lot-tog"><input type="checkbox" data-field="' + c.key + '"' + (on ? ' checked' : '') + '>' + esc(c.label) + '</label>';
     }).join('') +
-    '<label>Other <input type="text" data-field="certOther" placeholder="e.g. Fair for Life" value="' + esc((lot && lot.certOther) || '') + '"></label></div>';
+    '<input type="text" class="lot-inp lot-cert-other" data-field="certOther" placeholder="Other, e.g. Fair for Life" aria-label="Other certification" value="' + esc((lot && lot.certOther) || '') + '"></div></div>';
 
   div.innerHTML = header + line1 + line2 + line3 + certLine + actions;
   c.appendChild(div);
+  div.classList.toggle('lot-row-order', isOnOrder && !isRefOnly);
 
   // Apply reference-only state if loading a lot that was saved as such
   if (isRefOnly) applyReferenceOnlyState(div, true);
@@ -4339,6 +4437,123 @@ function addLotRow(lot) {
   if (lot && (lot.purchaseSize || lot.purchasePrice)) {
     calcLotCostPerG(id);
   }
+  syncOnHand(id);
+  renderLotAdjHist(id);
+}
+
+// ── Bought and on hand (2026-10-25) ───────────────────
+function fmtQty(n) { var r = Math.round(n * 100) / 100; return String(r); }
+// True when a saved lot's on hand is still what was bought.
+function lotBoughtMatches(lot) {
+  var size = parseFloat(lot.purchaseSize), q = parseFloat(lot.qtyPurchased || lot.stock);
+  if (!(size > 0)) return !(q > 0);
+  var bought = size;
+  return (lot.qtyUnit || lot.stockUnit || 'g') === (lot.purchaseUnit || 'g') && Math.abs(q - bought) < 0.005;
+}
+// The row's on hand display, and while it follows Bought, its value.
+// Grams in one of a unit, for moving on hand by a change in Bought.
+function rowDensity() {
+  var d = parseFloat((document.getElementById('f-density') || {}).value);
+  return d > 0 ? d : 1.0;
+}
+function rowBoughtG(rowId) {
+  var size = (document.getElementById(rowId + '-psize') || {}).value;
+  var unit = (document.getElementById(rowId + '-punit') || {}).value || 'g';
+  return lotSizeToGrams(size, unit, rowDensity()) || 0;
+}
+// On hand follows Bought (2026-10-25, after she tried it): a lot nothing has
+// been used from shows exactly what was bought; a used lot moves by the
+// change in Bought (bought 1 lb, 0.6 lb left, Bought raised to 2 lb: 1.6 lb
+// left). The base (qty0, boughtG0) is what was on hand and bought when the
+// drawer opened or the last Adjust; a change from Bought is recorded in the
+// lot's history when it is saved (getLots).
+function syncOnHand(rowId) {
+  var row = document.getElementById(rowId); if (!row) return;
+  var qty = document.getElementById(rowId + '-qty'), qu = document.getElementById(rowId + '-qunit');
+  var show = document.getElementById(rowId + '-qty-show'), note = document.getElementById(rowId + '-qty-note');
+  if (!qty || !qu || !show) return;
+  var size = parseFloat((document.getElementById(rowId + '-psize') || {}).value);
+  var unit = (document.getElementById(rowId + '-punit') || {}).value || 'g';
+  var follows = row.dataset.follows === '1';
+  var boughtG = rowBoughtG(rowId);
+  if (row.dataset.qty0 === undefined) { row.dataset.qty0 = qty.value; row.dataset.boughtG0 = String(boughtG); }
+  var floor = false;
+  if (follows) {
+    qty.value = size > 0 ? fmtQty(size) : '';
+    qu.value = unit;
+  } else {
+    var per = lotSizeToGrams(1, qu.value || 'g', rowDensity()) || 1;
+    var q0 = parseFloat(row.dataset.qty0) || 0;
+    var g0 = parseFloat(row.dataset.boughtG0) || 0;
+    var nq = boughtG > 0 && g0 > 0 ? q0 + (boughtG - g0) / per : q0;
+    if (nq < 0) { nq = 0; floor = true; }
+    qty.value = fmtQty(nq);
+  }
+  var q = parseFloat(qty.value);
+  show.textContent = q >= 0 && qty.value !== '' ? fmtQty(q) + ' ' + (qu.value === 'oz' ? 'oz (wt)' : qu.value) : '\u2014';
+  if (note) {
+    var moved = !follows && row.dataset.qty0 !== undefined && Math.abs(q - (parseFloat(row.dataset.qty0) || 0)) >= 0.005;
+    note.textContent = follows
+      ? (size > 0 ? 'Starts at what you bought.' : 'Fill in Bought and this starts there.')
+      : moved ? (floor ? 'Cannot go below zero. ' : '') + 'Was ' + fmtQty(parseFloat(row.dataset.qty0) || 0) + ': moved with Bought. Noted in this lot\u2019s history when you save.'
+      : (row.dataset.lotId ? 'Moves with Bought. Batches take from it; to correct it, use Adjust.' : '');
+  }
+}
+var LOT_ADJ_REASONS = ['Recount', 'Entry error', 'Spilled or spoiled', 'Used outside a batch', 'Other'];
+function lotAdjList(rowId) {
+  var el = document.getElementById(rowId + '-adj');
+  try { var a = el && el.value ? JSON.parse(el.value) : []; return Array.isArray(a) ? a : []; } catch (e) { return []; }
+}
+function openLotAdjust(rowId) {
+  var f = document.getElementById(rowId + '-adj-form'); if (!f) return;
+  var qty = document.getElementById(rowId + '-qty'), qu = document.getElementById(rowId + '-qunit');
+  var u = qu.value === 'oz' ? 'oz (wt)' : qu.value;
+  f.innerHTML =
+    '<div class="lot-adj-h">Adjust what is on hand</div>' +
+    '<div class="lot-adj-grid">' +
+      '<div class="lf"><label for="' + rowId + '-adj-new">On hand now (' + esc(u) + ')</label>' +
+        '<input class="lot-inp" type="number" step="0.01" min="0" id="' + rowId + '-adj-new" value="' + esc(qty.value) + '"></div>' +
+      '<div class="lf"><label for="' + rowId + '-adj-why">Why</label>' +
+        '<select class="lot-inp" id="' + rowId + '-adj-why">' + LOT_ADJ_REASONS.map(function (r) { return '<option>' + r + '</option>'; }).join('') + '</select></div>' +
+      '<div class="lf lf-wide"><label for="' + rowId + '-adj-note">Note (optional)</label>' +
+        '<input class="lot-inp" type="text" id="' + rowId + '-adj-note" placeholder="e.g. weighed the bottle"></div>' +
+    '</div>' +
+    '<div class="lot-adj-err" id="' + rowId + '-adj-err"></div>' +
+    '<div class="lot-adj-acts"><button type="button" class="lot-act lot-act-go" onclick="saveLotAdjust(\'' + rowId + '\')">Save adjustment</button>' +
+      '<button type="button" class="lot-act" onclick="closeLotAdjust(\'' + rowId + '\')">Cancel</button></div>';
+  f.hidden = false;
+  var n = document.getElementById(rowId + '-adj-new'); if (n) { n.focus(); n.select(); }
+}
+function closeLotAdjust(rowId) { var f = document.getElementById(rowId + '-adj-form'); if (f) { f.hidden = true; f.innerHTML = ''; } }
+function saveLotAdjust(rowId) {
+  var row = document.getElementById(rowId); if (!row) return;
+  var qty = document.getElementById(rowId + '-qty'), qu = document.getElementById(rowId + '-qunit');
+  var nv = parseFloat(document.getElementById(rowId + '-adj-new').value);
+  var err = document.getElementById(rowId + '-adj-err');
+  if (isNaN(nv) || nv < 0) { err.textContent = 'Enter what is on hand now, 0 or more.'; return; }
+  var was = parseFloat(qty.value) || 0;
+  if (Math.abs(nv - was) < 0.005) { err.textContent = 'That is what it already says.'; return; }
+  var list = lotAdjList(rowId);
+  list.push({ date: todayISO(), from: was, to: Math.round(nv * 100) / 100, unit: qu.value,
+              reason: document.getElementById(rowId + '-adj-why').value,
+              note: document.getElementById(rowId + '-adj-note').value.trim() });
+  document.getElementById(rowId + '-adj').value = JSON.stringify(list);
+  qty.value = fmtQty(nv);
+  delete row.dataset.follows;
+  row.dataset.qty0 = qty.value; row.dataset.boughtG0 = String(rowBoughtG(rowId));
+  closeLotAdjust(rowId);
+  syncOnHand(rowId);
+  renderLotAdjHist(rowId);
+}
+function renderLotAdjHist(rowId) {
+  var el = document.getElementById(rowId + '-adj-hist'); if (!el) return;
+  var list = lotAdjList(rowId);
+  if (!list.length) { el.innerHTML = ''; return; }
+  el.innerHTML = '<div class="lot-adj-hh">Adjustments</div>' + list.slice().reverse().map(function (a) {
+    var u = a.unit === 'oz' ? 'oz (wt)' : (a.unit || 'g');
+    return '<div class="lot-adj-line"><span>' + esc(fmtDate(a.date)) + '</span><span>' + esc(fmtQty(a.from)) + ' \u2192 ' + esc(fmtQty(a.to)) + ' ' + esc(u) + '</span>' +
+      '<span>' + esc(a.reason || '') + (a.note ? ': ' + esc(a.note) : '') + '</span></div>';
+  }).join('');
 }
 
 function onSupplierSelect(sel, rowId) {
@@ -4360,6 +4575,8 @@ function duplicateLotRow(sourceId) {
   lot.orderNum  = '';
   lot.receiptLink = '';
   lot.referenceOnly = false;
+  lot.onOrder = false;
+  lot.adjustments = [];
   lot.id = null; // copies are new lots — never inherit the source id
 
   // Set-active-on-save: offer to make this new lot the active one for costing.
@@ -4651,8 +4868,12 @@ function calcLotCostPerG(lotId) {
   var size  = psize.value;
   var unit  = punit.value;
   var price = parseFloat(pprice.value);
+  syncOnHand(lotId);
+  var sum = document.getElementById(lotId + '-buy-sum');
+  if (sum) sum.textContent = '';
 
   if (!size || isNaN(price) || price <= 0) return; // not enough data yet
+
 
   // Get density from ingredient density field
   var densityEl = document.getElementById('f-density');
@@ -4671,6 +4892,11 @@ function calcLotCostPerG(lotId) {
 
   var result = price / grams;
   cpg.value = result.toFixed(4);
+  if (sum) {
+    var u = unit === 'oz' ? 'oz' : unit;
+    sum.textContent = fmtQty(parseFloat(size)) + ' ' + u + (unit !== 'g' ? ' (' + fmtQty(grams) + ' g)' : '') +
+      ' for $' + price.toFixed(2) + ', $' + result.toFixed(4) + '/g';
+  }
   if (cpgNote) {
     if (needsDensity && usingDefault) {
       cpgNote.textContent = '(est. \u2014 add density for accuracy)';
@@ -4799,6 +5025,16 @@ function getLots() {
     // intent flag, which saveIngredient will consume and clear.
     if (row.dataset.lotId) f.id = row.dataset.lotId;
     if (row.dataset.setActiveOnSave) f._setActiveOnSave = true;
+    if (f.adjustments) { try { f.adjustments = JSON.parse(f.adjustments); } catch (e) { f.adjustments = []; } }
+    // On hand moved because Bought changed on a lot already used from:
+    // keep the record, like an Adjust.
+    if (row.dataset.follows !== '1' && row.dataset.qty0 !== undefined && row.dataset.qty0 !== '') {
+      var q0 = parseFloat(row.dataset.qty0) || 0, q1 = parseFloat(f.qtyPurchased) || 0;
+      if (Math.abs(q1 - q0) >= 0.005) {
+        f.adjustments = (f.adjustments || []).concat([{ date: todayISO(), from: q0, to: Math.round(q1 * 100) / 100, unit: f.qtyUnit || 'g', reason: 'Bought changed', note: '' }]);
+      }
+    }
+    if (!f.adjustments || !f.adjustments.length) delete f.adjustments;
     return f;
   }).filter(function(l) {
     // A lot is only "real" if it has at least one substantive field set.
@@ -5273,15 +5509,15 @@ if (typeof Plume === 'undefined') {
     <div class="drawer-hdr">
       <div>
         <div class="drawer-title" id="lots-drawer-title">Supplier lots</div>
-        <div class="drawer-sub">One row per purchase or supplier. Stock is tallied automatically.</div>
+        <div class="drawer-sub">One card per purchase. Changes save when you close this panel.</div>
       </div>
       <button class="drawer-x" onclick="closeLotsDrawer()">&#x2715;</button>
     </div>
     <div class="drawer-body">
       <div id="lots-container"></div>
       <div style="display:flex;gap:8px;margin-top:8px">
-        <button class="add-lot-btn" onclick="addLotRow()" style="flex:1">+ Add supplier / lot</button>
-        <button class="add-lot-btn" onclick="toggleInlineSupplierForm()" style="flex:0;white-space:nowrap;padding:7px 14px" id="add-supplier-toggle-btn">+ New supplier</button>
+        <button class="add-lot-btn" onclick="addLotRow()" style="flex:1">+ Add a lot</button>
+        <button class="add-lot-btn add-sup-btn" onclick="toggleInlineSupplierForm()" id="add-supplier-toggle-btn">+ New supplier</button>
       </div>
       <!-- Inline supplier mini-form -->
       <div class="inline-supplier-form" id="inline-supplier-form">

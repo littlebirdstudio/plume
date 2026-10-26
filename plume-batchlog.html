@@ -1248,11 +1248,12 @@ function checkNewLot() {
   return r;
 }
 
-// A pinned line, a skincare add-in or a soap additive is a fixed gram amount:
-// the same at every batch size, in the editor, on the bench sheet and here.
-function fixedGrams(l) {
-  var g = parseFloat(l && l.gramsFixed);
-  return (isFinite(g) && g > 0) ? g : 0;
+// An add-in or soap additive: its grams at this yield (core addinGrams). It
+// scales from the batch size it was typed at, unless pinned (a fixed amount,
+// her charcoal line). Matches the editor and the bench sheet. Percent lines
+// scale by their %, a pin on one being ignored (2026-10-25).
+function fixedGrams(l, yieldG) {
+  return Plume.addinGrams(l, yieldG, Plume.formBatchSize(newFormula));
 }
 
 // The version a new batch is made from: the one in use. Its name, for the
@@ -1322,15 +1323,12 @@ function recalcPreview() {
   // Compute each line's gram amount at the requested yield.
   // Mirrors the canonical model in plume-formulations.html:
   //   - Each line references its ingredient by l.ingId
-  //   - Percent lines scale with the yield.
-  //   - Pinned lines, skincare add-ins (l.addin) and soap additives
-  //     (l.soapAddin) are FIXED gram amounts: the formula editor shows them
-  //     unchanged at every batch size and the bench sheet prints them
-  //     unchanged, so the stock deduction uses them unchanged too.
-  //     (Until 2026-10-24 these were scaled by yield / f.batchSize, a field
-  //     nothing writes, so it was always yield / 100: a 30 g fragrance in a
-  //     1000 g soap was taken out of stock as 300 g. fixedGrams is the one
-  //     place this is decided; test-batch-grams.js holds it to the sheet.)
+  //   - Percent lines scale with the yield (a stored pin on one is ignored).
+  //   - Skincare add-ins (l.addin) and soap additives (l.soapAddin) scale
+  //     from the batch size their grams were typed at, unless pinned
+  //     (fixedGrams, core addinGrams), exactly as the editor and the bench
+  //     sheet show them. (Before 2026-10-24 they scaled by yield / 100 from a
+  //     field nothing wrote; 2026-10-24 to -25 they did not scale at all.)
   //   - For soap: oil lines use pct of total oils, scale with yield as "oil weight"
   var lines = newFormula.lines || [];
   var soap  = isSoapType(newFormula.type);
@@ -1360,7 +1358,7 @@ function recalcPreview() {
     addinLines.forEach(function(l) {
       var ing = findIng(l.ingId);
       if (!ing) return;
-      var g = fixedGrams(l);
+      var g = fixedGrams(l, yieldG);
       if (g <= 0) return;
       preview.push({
         ingredientId:   ing.id,
@@ -1414,9 +1412,9 @@ function recalcPreview() {
       var ing = findIng(l.ingId);
       if (!ing) return;
       var grams = 0;
-      if (l.addin || l.pinned) {
-        // Add-ins and pinned lines: the grams recorded on the line, as printed
-        grams = fixedGrams(l);
+      if (l.addin) {
+        // Add-ins: their grams scaled to this yield (unless pinned), as printed
+        grams = fixedGrams(l, yieldG);
       } else {
         // Standard pct line
         var pct = parseFloat(l.pct) || 0;
@@ -1538,6 +1536,7 @@ function printNewBatchSheet() {
     ings:         ings,
     forms:        forms,
     batchSize:    yieldG,
+    refBs:        Plume.formBatchSize(newFormula),
     isSoap:       isSoapType(newFormula.type),
     soapSettings: newFormula.soapSettings,
     phMin:        newFormula.phMin || '',
@@ -3204,6 +3203,24 @@ function deleteBatch() {
   var b = findBatch(editingBatchId);
   if (!b) return;
   if (madeLotBlocked(b, 'delete')) return;
+  // Delete is for a batch that was never really made (started by mistake, or
+  // a test). Once product has been filled from it, deleting would put its
+  // ingredients back in stock while the jars are still on the shelf, so it
+  // waits until those fills are undone; a real batch that went wrong is
+  // marked Discarded instead, which keeps its record and trace. (2026-10-25)
+  // Read fresh: a fill made in another tab since this page loaded counts.
+  Store.refresh(PRODUCT_KEY); products = Store.getJSON(PRODUCT_KEY, []) || [];
+  var fills0 = Plume.batchFills(b.id, products);
+  if (fills0.length) {
+    var pn = [];
+    fills0.forEach(function(x) { var n = x.product.name || 'a product'; if (pn.indexOf(n) === -1) pn.push(n); });
+    Plume.tell(fills0.length + ' fill' + (fills0.length === 1 ? '' : 's') + ' came from this batch (' +
+      (pn.length === 1 ? pn[0] : pn.slice(0, -1).join(', ') + ' and ' + pn[pn.length - 1]) + '). ' +
+      'If it was a test, undo ' + (fills0.length === 1 ? 'that fill' : 'those fills') + ' in Products & Costing first, then delete it. ' +
+      'If you really made it and it went wrong, set its status to Discarded instead: that keeps the record and the trace.',
+      { title: 'This batch cannot be deleted yet' });
+    return;
+  }
 
   var runs = b.packagingRuns || [];
   var msg = '';
@@ -3237,12 +3254,6 @@ function deleteBatch() {
     msg += '\n';
   } else if (runs.length) {
     msg += 'This will also remove ' + runs.length + ' packaging run' + (runs.length === 1 ? '' : 's') + '.\n\n';
-  }
-  var fills = Plume.batchFills(b.id, products);
-  if (fills.length) {
-    msg += fills.length + ' fill' + (fills.length === 1 ? '' : 's') + ' came from this batch. ' + (fills.length === 1 ? 'It stays' : 'They stay') +
-      ' on ' + (fills.length === 1 ? 'its product' : 'their products') + ', and the packaging stays out of stock' +
-      (b.lotCode ? '. ' + (fills.length === 1 ? 'It keeps' : 'They keep') + ' lot code ' + b.lotCode : '') + '.\n\n';
   }
   if (Plume.logEntryFor(forms, b.id)) msg += 'Its formulation log entry stays, marked as from a deleted batch.\n\n';
   var ml = madeLot(b);

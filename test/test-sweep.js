@@ -108,12 +108,31 @@ const getIngs = "JSON.parse(localStorage.getItem('aerie-ingredients-v2'))";
   ok('the bench sheet prints the same 30 g', /30\.0g/.test(r.sheet));
   ok('soap oils still scale by percent', r.take.io === 700 && r.take.ic === 300, r.take);
   r = await batchGrams('fp', 500);
-  ok('a pinned 10 g line is taken as 10 g (was 50 g)', r.take.ig === 10, r.take);
+  ok('at the recipe size a 2% line is 10 g (was 50 g)', r.take.ig === 10, r.take);
   ok('a 5 g add-in is taken as 5 g (was 25 g)', r.take.ie === 5, r.take);
   ok('percent lines scale with the yield', r.take.iw === 490, r.take);
   ok('the sheet prints 10.00g and 5g for them, the same amounts', /10\.00g/.test(r.sheet) && />5g/.test(r.sheet));
+  // v1.52: only add-ins and soap additives can be pinned. An old pin on a %
+  // line is ignored (it scales by its %), and an unpinned add-in scales from
+  // the batch size its grams were typed at.
   r = await batchGrams('fp', 1000);
-  ok('at another yield pinned and add-in grams stay fixed, as on the sheet and in the editor', r.take.ig === 10 && r.take.ie === 5 && r.take.iw === 980 && /10\.00g/.test(r.sheet), r.take);
+  ok('at twice the size: the old pinned % line and the add-in both double', r.take.ig === 20 && r.take.ie === 10 && r.take.iw === 980, r.take);
+  ok('the sheet prints the doubled grams, not marked fixed', /20\.00g/.test(r.sheet) && />10g/.test(r.sheet) && !/fixed amount/.test(r.sheet));
+  r = await batchGrams('fs', 2000);
+  ok('a soap additive scales with the batch too (30 g at 1000 g makes 60 g at 2000 g)', r.take.ie === 60 && r.take.io === 1400, r.take);
+  await page.evaluate(`(function () {
+    var fs = JSON.parse(localStorage.getItem('aerie-formulations-v1'));
+    var pin = function (l) { if (l.addin || l.soapAddin) l.pinned = true; };
+    fs.forEach(function (f) { (f.lines || []).forEach(pin); (f.variants || []).forEach(function (v) { (v.lines || []).forEach(pin); }); });
+    localStorage.setItem('aerie-formulations-v1', JSON.stringify(fs));
+  })()`);
+  r = await batchGrams('fs', 2000);
+  ok('a pinned soap additive (a decorative line) stays 30 g at 2000 g', r.take.ie === 30 && r.take.io === 1400, r.take);
+  ok('the sheet marks it a fixed amount', /fixed amount/.test(r.sheet));
+  r = await batchGrams('fp', 1000);
+  ok('a pinned add-in stays 5 g at twice the size', r.take.ie === 5 && r.take.ig === 20, r.take);
+  ok('core: addinGrams scales from gramsAt, unless pinned', await page.evaluate(
+    "Plume.addinGrams({ gramsFixed: '5', gramsAt: '500' }, 1000) === 10 && Plume.addinGrams({ gramsFixed: '5', gramsAt: '500', pinned: true }, 1000) === 5 && Plume.addinGrams({ gramsFixed: '5' }, 1000, 250) === 20 && Plume.addinGrams({ gramsFixed: '' }, 1000) === 0"));
   const src = fs.readFileSync(path.join(ROOT, 'plume-batchlog.html'), 'utf8');
   ok('nothing in Batches reads the never-written f.batchSize', !/newFormula\.batchSize/.test(src));
 
@@ -138,7 +157,11 @@ const getIngs = "JSON.parse(localStorage.getItem('aerie-ingredients-v2'))";
   ok('typed grams: Formulations shows $0.0020/g', fLotion === 0.002, fLotion);
   ok('typed grams: Products & Costing agrees (was ~2.8x high)', near(cost[0].perG, 0.00198), cost[0]);
   ok('pinned: Products & Costing agrees with Formulations (was ~8x high)', fPinned !== null && near(cost[1].perG, fPinned, 0.00006), { form: fPinned, cost: cost[1] });
-  ok('soap typed half in grams: priced by its percents ($0.013/g, was $0.0104)', near(cost[2].perG, 0.013), cost[2]);
+  // Since v1.51 soap is oils + additive + lye per gram of cured soap: oils
+  // $13 (by their percents, not mixed with grams), 30 g additive $6, lye
+  // (700x0.134 + 300x0.183) x 0.95 = 141.265 g at $0.01 = $1.41; over
+  // 1000 + 30 + 141.265 g.
+  ok('soap: priced by its percents, with its additive and lye ($0.0174/g)', near(cost[2].perG, 20.41265 / 1171.265, 1e-6), cost[2]);
   ok('core\'s unit cost agrees with Products & Costing on all three', cost.every(c => near(c.core, c.unit, 1e-9)), cost);
   const label = await page.evaluate("buildIngredientList(findProduct('pp'), 'common', [])");
   ok('the label lists by real share: water, glycerin, then the 5 g add-in', /Distilled water.*Glycerin.*Lavender/.test(String(label)), label);
@@ -164,9 +187,9 @@ const getIngs = "JSON.parse(localStorage.getItem('aerie-ingredients-v2'))";
   let iq = (await page.evaluate(getIngs)).find(i => i.id === 'iq');
   ok('a name that differs from a saved supplier only by case survives too', iq.lots[0].supplier === 'mountain rose herbs', iq.lots[0]);
   await page.evaluate("viewIngredient('iq'); editCurrent();");
-  const optText = await page.evaluate("document.querySelector('.lot-supplier-select').selectedOptions[0].textContent");
+  const optText = await page.evaluate("document.querySelector('#lots-container [data-field=supplier]').selectedOptions[0].textContent");
   ok('the select shows it, marked as not in Suppliers', /mountain rose herbs \(not in Suppliers\)/.test(optText), optText);
-  ok('a supplier name with markup is shown as text, never run', await page.evaluate("window.PWN === undefined && Array.from(document.querySelectorAll('.lot-supplier-select option')).some(function (o) { return o.textContent.indexOf('<img') === 0; })"));
+  ok('a supplier name with markup is shown as text, never run', await page.evaluate("window.PWN === undefined && Array.from(document.querySelectorAll('#lots-container [data-field=supplier] option')).some(function (o) { return o.textContent.indexOf('<img') === 0; })"));
   await page.evaluate("closeModal('modal-add')");
 
   // ── 4. Two windows, one library ───────────────────────────────────
@@ -294,6 +317,102 @@ const getIngs = "JSON.parse(localStorage.getItem('aerie-ingredients-v2'))";
   })()`);
   ok('a link with a quote in it cannot add attributes to the page', await page.evaluate("!document.querySelector('#d-body [onmouseover]') && window.PWN === undefined && Array.from(document.querySelectorAll('#d-body a.detail-link')).some(function (a) { return a.getAttribute('href').indexOf('\"onmouseover') !== -1; })"));
   ok('and only web links become links', await page.evaluate("!document.querySelector('#d-body a[href^=javascript]')"));
+
+  // ── 9. Soap costs agree; packaging warns below zero (v1.51) ───────
+  console.log('\n9. Soap cost and packaging stock (v1.51)');
+  await page.evaluate(SEED);
+  await page.goto(previewUrl('formulations')); await page.waitForTimeout(500);
+  const soapF = await page.evaluate(`(function () {
+    openFormula('fs');
+    var t = document.getElementById('cost-panel').innerText.replace(/\\s+/g, ' ');
+    var ed = parseFloat((t.match(/Per 100g of soap \\$([0-9.]+)/) || [])[1]);
+    goList();
+    var card = Array.from(document.querySelectorAll('.fcard')).find(function (c) { return /Lavender bar/.test(c.innerText); });
+    return { editor: ed, card: parseFloat(((card ? card.innerText : '').match(/\\$([0-9.]+)/) || [])[1]), core: Plume.soapCost(forms.find(function (f) { return f.id === 'fs'; }), ings) };
+  })()`);
+  const want100 = Math.round(20.41265 / 1171.265 * 10000) / 100;
+  ok('the soap editor, its card and Products & Costing agree, lye and additive included', soapF.editor === want100 && soapF.card === want100, soapF);
+  ok('the lye is the sodium hydroxide in Ingredients, at the recipe\'s superfat', near(soapF.core.lyeG, 141.265, 0.001) && soapF.core.lyeIng && soapF.core.lyeIng.id === 'iy', soapF.core);
+  await page.goto(previewUrl('costing')); await page.waitForTimeout(400);
+  ok('a bar\'s unit cost includes them (120 g)', await page.evaluate("Math.abs(computeProductCost(findProduct('ps')).totalCost - 120 * 20.41265 / 1171.265) < 1e-6"));
+  ok('with no lye in Ingredients, the cost says the lye is missing', await page.evaluate(`(function () {
+    var keep = ings.slice(); ings = ings.filter(function (i) { return i.id !== 'iy'; });
+    var d = formulationCostDetail(findForm('fs')); ings = keep;
+    return !d.complete && d.missing.some(function (m) { return /Sodium hydroxide/.test(m); });
+  })()`));
+  await page.evaluate(`localStorage.setItem('aerie-packaging-v2', JSON.stringify([{ id: 'k1', kind: 'jar', capacity: '2 oz', color: 'White', purchases: [{ date: '2026-09-01', qty: 20, totalCost: 10, shipping: 0 }], adjustments: [] }]))`);
+  await page.goto(previewUrl('packaging')); await page.waitForTimeout(500);
+  dialogs.length = 0;
+  await page.evaluate("window.PLUME_TEST_ANSWER = false; openEdit('k1'); toggleAdjForm(); document.getElementById('adj-qty').value = '-30'; saveAdjustment();");
+  await page.waitForTimeout(150);
+  ok('an adjustment that would go below zero asks first, naming the likely cause', dialogs.some(d => /below zero/.test(d) && /20 in stock/.test(d) && /purchase has not been entered/.test(d)), dialogs);
+  ok('"Go back" leaves it unsaved', await page.evaluate("pendingAdjustments.length === 0"));
+  await page.evaluate("window.PLUME_TEST_ANSWER = true; saveAdjustment();"); await page.waitForTimeout(100);
+  ok('"Save anyway" records it', await page.evaluate("pendingAdjustments.length === 1 && pendingAdjustments[0].qty === -30"));
+  dialogs.length = 0;
+  await page.evaluate("pendingAdjustments = []; toggleAdjForm(); document.getElementById('adj-qty').value = '-5'; saveAdjustment();"); await page.waitForTimeout(100);
+  ok('an adjustment that stays at or above zero just saves', dialogs.length === 0 && await page.evaluate("pendingAdjustments.length === 1"), dialogs);
+
+  // ── 10. Scaling in the editor, and the delete guard (v1.52) ───────
+  console.log('\n10. Formulations scales add-ins; pins on add-ins only; delete guard (v1.52)');
+  await page.evaluate(SEED);
+  await page.goto(previewUrl('formulations')); await page.waitForTimeout(500);
+  const rowG = (name) => page.evaluate(`(function () {
+    var rows = Array.from(document.querySelectorAll('#editor-view .ing-row, #editor-view [class*=soap] > div'));
+    var row = rows.find(function (x) { return x.innerText.indexOf(${JSON.stringify(name)}) !== -1; });
+    if (!row) return null;
+    var ins = Array.from(row.querySelectorAll('input')).filter(function (i) { return /onAG|onG[(]|onSoapG/.test(i.getAttribute('oninput') || ''); });
+    return ins.length ? parseFloat(ins[0].value) : null;
+  })()`);
+  await page.evaluate("openFormula('fp')"); await page.waitForTimeout(200);
+  ok('an old pinned % line loads as its percent at the saved size, no pin', await page.evaluate("fLines[1].pct === '2' && !fLines[1].pinned"), await page.evaluate("fLines[1]"));
+  ok('an add-in without gramsAt is read as typed at the version\'s size', await page.evaluate("fLines[2].gramsAt === '500'"));
+  ok('% lines have no pin button; the add-in has one', await page.evaluate(`(function () {
+    var rows = document.querySelectorAll('#phase-groups .ing-row');
+    var btns = Array.from(document.querySelectorAll('#phase-groups .pin-btn'));
+    return btns.length === 1 && /Scales/.test(btns[0].innerText) && /togglePin[(]2[)]/.test(btns[0].getAttribute('onclick'));
+  })()`), await page.evaluate("document.getElementById('phase-groups').innerText"));
+  await page.evaluate("setBatch(1000)"); await page.waitForTimeout(100);
+  ok('at 1000 g the add-in shows 10 g', await rowG('Lavender') === 10, await rowG('Lavender'));
+  await page.evaluate("togglePin(2)"); await page.waitForTimeout(100);
+  ok('pinning keeps the grams it shows and records the size', await page.evaluate("fLines[2].pinned === true && parseFloat(fLines[2].gramsFixed) === 10 && fLines[2].gramsAt === '1000'"), await page.evaluate("fLines[2]"));
+  ok('its button says Fixed', /Fixed/.test(await page.evaluate("document.querySelector('#phase-groups .pin-btn').innerText")));
+  await page.evaluate("setBatch(250)"); await page.waitForTimeout(100);
+  ok('and stays 10 g at 250 g', await rowG('Lavender') === 10, await rowG('Lavender'));
+  await page.evaluate("togglePin(2)"); await page.waitForTimeout(100);
+  await page.evaluate("setBatch(500)"); await page.waitForTimeout(100);
+  ok('unpinned again it scales from where it was (10 g at 250 g is 20 g at 500 g)', await rowG('Lavender') === 20, await rowG('Lavender'));
+  await page.evaluate("onAGB(2, '4')"); await page.waitForTimeout(50);
+  ok('typing grams records the size they are for', await page.evaluate("fLines[2].gramsFixed === '4' && fLines[2].gramsAt === '500'"));
+  ok('the change log says when an add-in is fixed', await page.evaluate("lineAmountStr({ addin: true, gramsFixed: '5', pinned: true }) === '5g (fixed)' && lineAmountStr({ pct: '2', gramsFixed: '10', pinned: true }) === '2%'"));
+  await page.evaluate("openFormula('fs')"); await page.waitForTimeout(200);
+  await page.evaluate("setBatch(2000)"); await page.waitForTimeout(100);
+  const soapPin = await page.evaluate(`(function () {
+    var html = document.getElementById('editor-view').innerHTML;
+    var g = Plume.addinGrams(fLines[2], 2000, 2000);
+    togglePin(2); setBatch(500);
+    return { g: g, hasBtn: /togglePin[(]2[)]/.test(html), after: Plume.addinGrams(fLines[2], 500, 500), pinned: fLines[2].pinned };
+  })()`);
+  ok('a soap additive has a pin button and scales (60 g at 2000 g)', soapPin.hasBtn && soapPin.g === 60, soapPin);
+  ok('pinned, it stays 60 g at 500 g (the charcoal line)', soapPin.pinned === true && soapPin.after === 60, soapPin);
+
+  // Delete only while nothing has been filled from the batch.
+  await page.evaluate(`localStorage.setItem('aerie-batches-v1', JSON.stringify([
+    { id: 'bx', formulaId: 'fl', formulaName: 'Lotion', batchName: 'Test lotion', date: '2026-10-20', targetYield: 500, actualYield: 500, status: 'ready', committed: false, lotDraws: [] },
+    { id: 'by', formulaId: 'fl', formulaName: 'Lotion', batchName: 'Never filled', date: '2026-10-21', targetYield: 500, actualYield: 500, status: 'ready', committed: false, lotDraws: [] }
+  ]));
+  var p = JSON.parse(localStorage.getItem('plume-products-v1'));
+  p[0].productionRuns = [{ id: 'r1', date: '2026-10-22', qty: 2, batchId: 'bx', draws: [{ batchId: 'bx', grams: 200 }] }];
+  localStorage.setItem('plume-products-v1', JSON.stringify(p));`);
+  await page.goto(previewUrl('batchlog')); await page.waitForTimeout(500);
+  dialogs.length = 0;
+  await page.evaluate("window.PLUME_TEST_ANSWER = true; openBatchDetail('bx'); deleteBatch(); window.PLUME_TEST_ANSWER = undefined;"); await page.waitForTimeout(200);
+  ok('a batch with a fill cannot be deleted; it says to undo the fill or mark it Discarded', dialogs.length === 1 && /cannot be deleted yet/.test(dialogs[0]) && /Lotion 100 g/.test(dialogs[0]) && /Discarded/.test(dialogs[0]), dialogs);
+  ok('and it is still saved', JSON.parse(await page.evaluate("localStorage.getItem('aerie-batches-v1')")).some(b => b.id === 'bx'));
+  await page.evaluate("closeDetail()"); await page.waitForTimeout(250);
+  dialogs.length = 0;
+  await page.evaluate("window.PLUME_TEST_ANSWER = true; openBatchDetail('by'); deleteBatch(); window.PLUME_TEST_ANSWER = undefined;"); await page.waitForTimeout(300);
+  ok('a batch nothing was filled from still deletes after asking', dialogs.length === 1 && /Delete this batch/.test(dialogs[0]) && !JSON.parse(await page.evaluate("localStorage.getItem('aerie-batches-v1')")).some(b => b.id === 'by'), dialogs);
 
   ok('no page errors', errors.length === 0, errors);
   await browser.close();
