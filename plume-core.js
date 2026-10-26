@@ -35,7 +35,7 @@ var Plume = (function () {
 // (v0.4 / v0.5 / v0.6 across five modules). BUMP IT IN EVERY PULL REQUEST,
 // core change or not: it is how "is this the update I just merged?" is
 // answered by looking, and browsers cache .js files stubbornly.
-var VERSION = '1.51';
+var VERSION = '1.52';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -2652,10 +2652,11 @@ function buildSoapSheet(o) {
       '</tr></thead><tbody>';
     addins.forEach(function (l) {
       var ing = findIngIn(ings, l.ingId); if (!ing) return;
-      var g   = parseFloat(l.gramsFixed) || 0;
+      var g   = addinGrams(l, bs, o.refBs || bs);
       var ppo = totalOilG > 0 && g > 0 ? (g / totalOilG * 100).toFixed(2) + '%' : '\u2014';
       addinBlock += '<tr><td class="gr">' + g.toFixed(1) + 'g</td>' + tickTd() +
-        '<td style="padding:5px 8px 5px 10px;font-weight:500">' + esc(ing.name) + '</td>' +
+        '<td style="padding:5px 8px 5px 10px;font-weight:500">' + esc(ing.name) +
+          (l.pinned ? ' <span style="font-size:10px;color:#888">(fixed amount)</span>' : '') + '</td>' +
         '<td style="padding:5px 8px;color:#666;font-size:11px;font-style:italic">' + esc(ing.inci) + '</td>' +
         '<td class="pc">' + ppo + '</td></tr>';
     });
@@ -2729,12 +2730,8 @@ function buildSkincareSheet(o) {
       'letter-spacing:0.1em;text-transform:uppercase;color:#666;border-bottom:1px solid #ccc">' +
       phNames[p] + '</td></tr>';
     grouped[p].forEach(function (r) {
-      var pct = r.l.pinned
-        ? (bs > 0 ? (parseFloat(r.l.gramsFixed) || 0) / bs * 100 : 0).toFixed(2)
-        : (parseFloat(r.l.pct) || 0).toFixed(2);
-      var g = r.l.pinned
-        ? (parseFloat(r.l.gramsFixed) || 0).toFixed(2)
-        : ((parseFloat(r.l.pct) || 0) / 100 * bs).toFixed(2);
+      var pct = (parseFloat(r.l.pct) || 0).toFixed(2);
+      var g = ((parseFloat(r.l.pct) || 0) / 100 * bs).toFixed(2);
       rows += '<tr><td class="gr">' + g + 'g</td>' + tickTd() +
         '<td style="padding:5px 8px 5px 10px;font-weight:500">' + esc(r.ing.name) + '</td>' +
         '<td style="padding:5px 8px;color:#666;font-size:11px;font-style:italic">' + esc(r.ing.inci) + '</td>' +
@@ -2743,11 +2740,11 @@ function buildSkincareSheet(o) {
   });
   addins.forEach(function (l) {
     var ing = findIngIn(ings, l.ingId); if (!ing) return;
-    var g  = parseFloat(l.gramsFixed) || 0;
+    var g  = addinGrams(l, bs, o.refBs || bs);
     var dr = g > 0 ? Math.round(g * (l.dropsPerG || 20)) : 0;
-    rows += '<tr><td class="gr">' + g + 'g' + (dr ? '<div style="font-size:11px;font-weight:400;color:#666">~' + dr + ' drops</div>' : '') + '</td>' + tickTd() +
+    rows += '<tr><td class="gr">' + (Math.round(g * 100) / 100) + 'g' + (dr ? '<div style="font-size:11px;font-weight:400;color:#666">~' + dr + ' drops</div>' : '') + '</td>' + tickTd() +
       '<td style="padding:5px 8px 5px 10px;font-weight:500">' + esc(ing.name) +
-      ' <span style="font-size:10px;color:#888">(add-in)</span></td>' +
+      ' <span style="font-size:10px;color:#888">(add-in' + (l.pinned ? ', fixed amount' : '') + ')</span></td>' +
       '<td style="padding:5px 8px;color:#666;font-size:11px;font-style:italic">' + esc(ing.inci) + '</td>' +
       '<td class="pc">\u2014</td></tr>';
   });
@@ -2769,7 +2766,7 @@ function buildSkincareSheet(o) {
     inci: o.forms
       ? inciMerge(stockLabelItems(fl.map(function (l) { return { ingId: l.ingId, w: parseFloat(l.pct) || 0 }; }), ings, o.forms)
           .concat(stockLabelItems(addins.filter(function (l) { return findIngIn(ings, l.ingId); })
-            .map(function (l) { return { ingId: l.ingId, w: (parseFloat(l.gramsFixed) || 0) / (bs || 100) * 100 }; }), ings, o.forms)))
+            .map(function (l) { return { ingId: l.ingId, w: addinGrams(l, bs || 100, o.refBs || bs || 100) / (bs || 100) * 100 }; }), ings, o.forms)))
           .map(function (e) { return e.name; }).join(', ')
       : fl.concat(addins.filter(function (l) { return findIngIn(ings, l.ingId); }))
           .map(function (l) { return findIngIn(ings, l.ingId).inci; }).join(', '),
@@ -4287,6 +4284,26 @@ function costData(d) {
 //     labels list them)
 // The batch size is the active version's, else the type default (soap 1000,
 // otherwise 100), as the editor opens it.
+// ── What scales with the batch (2026-10-25, her decision) ─────────────
+// Percent lines always scale; the old Pin on a percent line is no longer
+// offered and is ignored if stored. (It was added for a hypothetical, and a
+// fixed-gram preservative or essential oil is wrong at any other batch size:
+// its percentage moves, while safe and effective limits are percentages.)
+// An add-in (`addin`) or soap additive (`soapAddin`) is typed in grams at a
+// batch size (`gramsAt`; older lines: the version's batch size) and scales
+// with the batch from there, unless pinned (`pinned`), which keeps a fixed
+// amount at any size (her decorative charcoal line in soap).
+function addinRef(line, fallback) {
+  var r = parseFloat(line && line.gramsAt);
+  return r > 0 ? r : (parseFloat(fallback) || 0);
+}
+function addinGrams(line, bs, refBs) {
+  var g = parseFloat(line && line.gramsFixed);
+  if (!(g > 0)) return 0;
+  if (line.pinned) return g;
+  var ref = addinRef(line, refBs) || parseFloat(bs) || 0;
+  return ref > 0 && parseFloat(bs) > 0 ? g * parseFloat(bs) / ref : g;
+}
 function formBatchSize(f) {
   var v = f ? findVariant(f, f.activeVariantId) : null;
   var bs = parseFloat((v && v.batchSize) || (f && f.batchSize));
@@ -4298,8 +4315,7 @@ function lineShare(line, f, opts) {
   var bs = (opts && opts.bs) || formBatchSize(f);
   var g = parseFloat(line.gramsFixed), p = parseFloat(line.pct);
   g = isFinite(g) && g > 0 ? g : 0; p = isFinite(p) && p > 0 ? p : 0;
-  if (line.addin || line.soapAddin) return (opts && opts.addins) ? g / bs * 100 : 0;
-  if (line.pinned && g > 0) return g / bs * 100;
+  if (line.addin || line.soapAddin) return (opts && opts.addins) ? addinGrams(line, bs, bs) / bs * 100 : 0;
   if (p > 0) return p;
   return g / bs * 100;
 }
@@ -4341,7 +4357,7 @@ function soapCost(o, ings2) {
   (o.lines || []).forEach(function (l) {
     var ing = findIngIn(ings, l.ingId);
     var name = (ing && (ing.name || ing.inci)) || '(a deleted ingredient)';
-    if (l.soapAddin) { var ag = parseFloat(l.gramsFixed) || 0; addG += ag; price(ing, ag, name); return; }
+    if (l.soapAddin) { var ag = addinGrams(l, bs, o.refBs || bs); addG += ag; price(ing, ag, name); return; }
     var g = (parseFloat(l.pct) || 0) / 100 * bs;
     if (!(g > 0)) return;
     oilG += g; price(ing, g, name);
@@ -5050,7 +5066,7 @@ return {
   fillShortages: fillShortages, fillPull: fillPull, fillReturn: fillReturn,
   makeFill: makeFill, undoFill: undoFill, undoFillText: undoFillText, fmtG: fmtG,
   lotBase: lotBase, lotNorm: lotNorm, lotsInUse: lotsInUse, nextLotCode: nextLotCode, lotCheck: lotCheck,
-  batchLot: batchLot, lotChip: lotChip, lotStickerSvg: lotStickerSvg, printLotStickers: printLotStickers, lotStickerSize: lotStickerSize, lotStickerRemember: lotStickerRemember, drawLot: drawLot, varTitle: varTitle, findVariant: findVariant, batchVersion: batchVersion, soapCost: soapCost, lyeIngredient: lyeIngredient, trackList: trackList, saveList: saveList, lotHere: lotHere, onOrderG: onOrderG, mergeList: mergeList, lineShare: lineShare, formBatchSize: formBatchSize,
+  batchLot: batchLot, lotChip: lotChip, lotStickerSvg: lotStickerSvg, printLotStickers: printLotStickers, lotStickerSize: lotStickerSize, lotStickerRemember: lotStickerRemember, drawLot: drawLot, varTitle: varTitle, findVariant: findVariant, batchVersion: batchVersion, soapCost: soapCost, lyeIngredient: lyeIngredient, addinGrams: addinGrams, addinRef: addinRef, trackList: trackList, saveList: saveList, lotHere: lotHere, onOrderG: onOrderG, mergeList: mergeList, lineShare: lineShare, formBatchSize: formBatchSize,
   migrateBatches: migrateBatches, logEntryFor: logEntryFor,
   boot: boot
 };
