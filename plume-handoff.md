@@ -3647,10 +3647,10 @@ charcoal line in soap: a fixed amount whatever the batch size.
 The lots drawer refresh (status pills Here / On order / Reference only,
 grouped sections) plus, on her "yes to preview":
 
-- **Bought** is a count x a size + unit; the price is "total" or "each".
-  Cost per gram uses the whole purchase; a line spells it out
-  ("2 x 4 oz = 8 oz (226.8 g) for $20.00, $0.0882/g"). New lot fields
-  `purchaseCount`, `priceIs` (only stored when set).
+- **Bought (total)** and **Price paid, total**: the whole purchase, her
+  call after trying a count x size version (the boxes collapsed at the
+  preview's width, and totals are what she wants to type). A line spells it
+  out ("8 oz (226.8 g) for $20.00, $0.0882/g").
 - **On hand is not typed.** A new lot starts at what was bought and follows
   Bought until something is used or adjusted (`row.dataset.follows`). After
   that it changes only through a batch or **Adjust** (new amount, why, an
