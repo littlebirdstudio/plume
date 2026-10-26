@@ -164,9 +164,9 @@ const getIngs = "JSON.parse(localStorage.getItem('aerie-ingredients-v2'))";
   let iq = (await page.evaluate(getIngs)).find(i => i.id === 'iq');
   ok('a name that differs from a saved supplier only by case survives too', iq.lots[0].supplier === 'mountain rose herbs', iq.lots[0]);
   await page.evaluate("viewIngredient('iq'); editCurrent();");
-  const optText = await page.evaluate("document.querySelector('.lot-supplier-select').selectedOptions[0].textContent");
+  const optText = await page.evaluate("document.querySelector('#lots-container [data-field=supplier]').selectedOptions[0].textContent");
   ok('the select shows it, marked as not in Suppliers', /mountain rose herbs \(not in Suppliers\)/.test(optText), optText);
-  ok('a supplier name with markup is shown as text, never run', await page.evaluate("window.PWN === undefined && Array.from(document.querySelectorAll('.lot-supplier-select option')).some(function (o) { return o.textContent.indexOf('<img') === 0; })"));
+  ok('a supplier name with markup is shown as text, never run', await page.evaluate("window.PWN === undefined && Array.from(document.querySelectorAll('#lots-container [data-field=supplier] option')).some(function (o) { return o.textContent.indexOf('<img') === 0; })"));
   await page.evaluate("closeModal('modal-add')");
 
   // ── 4. Two windows, one library ───────────────────────────────────

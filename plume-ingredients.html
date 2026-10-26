@@ -774,7 +774,7 @@
   .lot-sec:first-of-type { border-top: 0; }
   .lot-sec-h { font-size: 11.5px; font-weight: 600; color: var(--ink-light); margin-bottom: 7px; }
   .drawer .lot-line { gap: 10px 12px; margin-bottom: 0; }
-  .drawer .lot-line-1 { grid-template-columns: 1.5fr 1.2fr 1.3fr 0.9fr 1fr; }
+  .drawer .lot-line-1 { grid-template-columns: 1.3fr 1fr 1.8fr 1.3fr 0.9fr; }
   .drawer .lot-line-2 { grid-template-columns: 1.3fr 1fr 1fr 1fr; }
   .drawer .lot-line-3 { grid-template-columns: 0.8fr 1.4fr 1.4fr; }
   .drawer .lot-row .lf { gap: 4px; min-width: 0; }
@@ -783,6 +783,30 @@
   .lot-inp:focus, .lot-row .lot-inp:focus { border-color: var(--bark-light); box-shadow: 0 0 0 3px color-mix(in srgb, var(--bark) 14%, transparent); }
   .lot-inp:disabled, .lot-row .lot-inp:disabled { background: var(--cream-dark); color: var(--ink-lighter); }
   .lot-pair { display: flex; gap: 4px; }
+  .lot-bought { align-items: center; }
+  .lot-bought .lot-inp[data-field="purchaseCount"] { flex: 0 0 46px; min-width: 0; text-align: center; padding-left: 4px; padding-right: 4px; }
+  .lot-bought .lot-inp[data-field="purchaseSize"] { flex: 1 1 56px; min-width: 0; }
+  .lot-x { color: var(--ink-lighter); font-size: 13px; }
+  .lot-buy-sum { font-size: 12px; color: var(--ink-light); margin-top: 6px; min-height: 0; }
+  .lot-buy-sum:empty { display: none; }
+  .lot-onhand { display: flex; align-items: center; gap: 8px; min-height: 32px; }
+  .lot-onhand-v { font-size: 14px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .lot-onhand-note { font-size: 11px; color: var(--ink-lighter); line-height: 1.35; }
+  .lot-onhand-note:empty { display: none; }
+  .lot-adj-btn { padding: 2px 9px; }
+  .lot-adj-form { margin-top: 10px; padding: 10px 12px; border: 1px solid var(--cream-border); border-radius: 8px; background: var(--cream); }
+  .lot-adj-form[hidden], .lot-adj-hist:empty { display: none; }
+  .lot-adj-h { font-size: 12px; font-weight: 600; color: var(--ink); margin-bottom: 8px; }
+  .lot-adj-grid { display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 10px; }
+  .lot-adj-err { font-size: 12px; color: var(--danger); margin-top: 6px; }
+  .lot-adj-err:empty { display: none; }
+  .lot-adj-acts { display: flex; gap: 8px; margin-top: 10px; }
+  .lot-act-go { background: var(--bark); border-color: var(--bark); color: var(--white); }
+  .lot-act-go:hover { background: var(--bark-dark, var(--bark)); color: var(--white); }
+  .lot-adj-hist { margin-top: 10px; font-size: 12px; color: var(--ink-light); }
+  .lot-adj-hh { font-size: 11.5px; font-weight: 600; color: var(--ink-light); margin-bottom: 4px; }
+  .lot-adj-line { display: grid; grid-template-columns: 110px 150px 1fr; gap: 8px; padding: 3px 0; border-top: 1px dashed var(--cream-dark); }
+  @media (max-width: 640px) { .lot-adj-grid { grid-template-columns: 1fr 1fr; } .lot-adj-grid .lf-wide { grid-column: 1 / -1; } .lot-adj-line { grid-template-columns: 1fr 1fr; } }
   .lot-pair .lot-inp:first-child { flex: 1 1 60px; }
   .lot-pair .lot-unit { flex: 0 0 74px; padding-right: 4px; }
   .lot-row-order .lf-recv .lot-inp { border-style: dashed; }
@@ -3436,7 +3460,9 @@ function viewIngredient(id) {
         if (l.madeBatchId) notes += '<small class="lt-note made">Made in-house in batch ' + Plume.lotChip(l.lotNum || 'no lot code', 'plume-batchlog.html#b=' + encodeURIComponent(l.madeBatchId)).replace('<a ', '<a target="plume-batchlog" ') + (l.madeMissing && l.madeMissing.length ? ' <span class="made-miss">not priced: ' + l.madeMissing.map(esc).join(', ') + ' had no price</span>' : '') + '</small>';
         else if (l.wasReversal) notes += '<small class="lt-note">↺ Auto-created from a batch decommit.' + (l.notes ? ' ' + esc(l.notes) : '') + '</small>';
         else if (l.wasResurrected) notes += '<small class="lt-note">↺ Stock returned by a batch decommit' + (l.resurrectedAt ? ' on ' + new Date(l.resurrectedAt).toLocaleDateString() : '') + '.</small>';
-        var purchase = l.purchaseSize && l.purchaseUnit ? l.purchaseSize + ' ' + l.purchaseUnit + (l.purchasePrice ? ' for $' + parseFloat(l.purchasePrice).toFixed(2) : '') : '';
+        var pc = parseFloat(l.purchaseCount) > 1 ? parseFloat(l.purchaseCount) : 1;
+        var paid = l.purchasePrice ? parseFloat(l.purchasePrice) * (l.priceIs === 'each' ? pc : 1) : 0;
+        var purchase = l.purchaseSize && l.purchaseUnit ? (pc > 1 ? pc + ' \u00d7 ' : '') + l.purchaseSize + ' ' + l.purchaseUnit + (paid ? ' for $' + paid.toFixed(2) : '') : '';
         var soon = l.bestBy && new Date(l.bestBy) < new Date(new Date().setMonth(new Date().getMonth() + 3));
         var links = (l.buyLink ? '<a class="detail-link" href="' + esc(l.buyLink) + '" target="_blank" rel="noopener">Reorder &#8599;</a>' : '') +
           (l.receiptLink ? '<a class="detail-link" href="' + esc(l.receiptLink) + '" target="_blank" rel="noopener">Receipt &#8599;</a>' : '');
@@ -4246,7 +4272,7 @@ function applyReferenceOnlyState(row, isRef) {
   var line3 = row.querySelector('.lot-line-3');
   [line2, line3].forEach(function(line) {
     if (!line) return;
-    line.querySelectorAll('input, select').forEach(function(el) {
+    line.querySelectorAll('input, select, button').forEach(function(el) {
       el.disabled = isRef;
     });
   });
@@ -4274,6 +4300,12 @@ function addLotRow(lot) {
   var pUnit    = lot && lot.purchaseUnit ? lot.purchaseUnit : 'g';
   var qtyVal   = lot ? (lot.qtyPurchased || lot.stock || '') : '';
   var qtyUnit  = lot ? (lot.qtyUnit || lot.stockUnit || 'g') : 'g';
+  var adjList  = (lot && Array.isArray(lot.adjustments)) ? lot.adjustments : [];
+  var adjVal   = adjList.length ? JSON.stringify(adjList) : '';
+  // Follows Bought: a row not yet saved, or a saved one nothing has been
+  // used from or adjusted (its on hand still equals what was bought).
+  if (!lot || !lot.id) div.dataset.follows = '1';
+  else if (!adjList.length && lotBoughtMatches(lot)) div.dataset.follows = '1';
 
   // ── Unit option builders ──
   function purchaseUnitOpts(sel) {
@@ -4327,32 +4359,49 @@ function addLotRow(lot) {
       '<div class="lf"><label>Brand</label>' +
         lotInp({ field:'brand', placeholder:'e.g. NOW, Timeless', value: brandName, list:'brand-datalist', onblur:'saveNewBrand(this.value)' }) +
       '</div>' +
-      '<div class="lf"><label>Size bought</label>' +
-        '<div class="lot-pair">' +
-          lotInp({ type:'number', field:'purchaseSize', id:id+'-psize', step:'0.01', min:'0', placeholder:'500',
+      // Bought: how many containers x the size of each (2026-10-25). Two
+      // 4 oz bottles are 2 x 4 oz; the price can be for all of them or each.
+      '<div class="lf lf-bought"><label>Bought</label>' +
+        '<div class="lot-pair lot-bought">' +
+          lotInp({ type:'number', field:'purchaseCount', id:id+'-pcount', step:'1', min:'1', placeholder:'1',
+                   value: lot && lot.purchaseCount ? lot.purchaseCount : '', oninput:"calcLotCostPerG('" + id + "')" }) +
+          '<span class="lot-x" aria-hidden="true">&times;</span>' +
+          lotInp({ type:'number', field:'purchaseSize', id:id+'-psize', step:'0.01', min:'0', placeholder:'size',
                    value: lot && lot.purchaseSize ? lot.purchaseSize : '', oninput:"calcLotCostPerG('" + id + "')" }) +
           '<select class="lot-inp lot-unit" data-field="purchaseUnit" id="' + id + '-punit" onchange="calcLotCostPerG(\'' + id + '\')">' + purchaseUnitOpts(pUnit) + '</select>' +
         '</div>' +
       '</div>' +
       '<div class="lf"><label>Price paid ($)</label>' +
-        lotInp({ type:'number', field:'purchasePrice', id:id+'-pprice', step:'0.01', min:'0', placeholder:'0.00',
-                 value: lot && lot.purchasePrice ? lot.purchasePrice : '', oninput:"calcLotCostPerG('" + id + "')" }) +
+        '<div class="lot-pair">' +
+          lotInp({ type:'number', field:'purchasePrice', id:id+'-pprice', step:'0.01', min:'0', placeholder:'0.00',
+                   value: lot && lot.purchasePrice ? lot.purchasePrice : '', oninput:"calcLotCostPerG('" + id + "')" }) +
+          '<select class="lot-inp lot-unit" data-field="priceIs" id="' + id + '-pis" aria-label="Price is for" onchange="calcLotCostPerG(\'' + id + '\')">' +
+            '<option value="total"' + (lot && lot.priceIs === 'each' ? '' : ' selected') + '>total</option>' +
+            '<option value="each"' + (lot && lot.priceIs === 'each' ? ' selected' : '') + '>each</option>' +
+          '</select>' +
+        '</div>' +
       '</div>' +
       '<div class="lf"><label>Cost per gram ($)</label>' +
         lotInp({ type:'number', field:'costPerG', id:id+'-cpg', step:'0.0001', min:'0', placeholder:'auto',
                  value: lot && lot.costPerG ? lot.costPerG : '' }) +
         '<div class="cpg-note-inline" id="' + id + '-cpg-note"></div>' +
       '</div>' +
-    '</div></div>';
+    '</div><div class="lot-buy-sum" id="' + id + '-buy-sum"></div></div>';
 
   var line2 =
     '<div class="lot-sec"><div class="lot-sec-h">Stock and dates</div>' +
     '<div class="lot-line lot-line-2">' +
-      '<div class="lf"><label>On hand from this lot</label>' +
-        '<div class="lot-pair">' +
-          lotInp({ type:'number', field:'qtyPurchased', step:'0.01', min:'0', placeholder:'0', value: qtyVal }) +
-          '<select class="lot-inp lot-unit" data-field="qtyUnit">' + qtyUnitOpts(qtyUnit) + '</select>' +
+      // On hand is not typed (2026-10-25). A new lot starts at what was
+      // bought and follows Bought until some is used or adjusted; after
+      // that it changes only through a batch or Adjust, which keeps a note.
+      '<div class="lf lf-onhand"><label>On hand from this lot</label>' +
+        '<input type="hidden" data-field="qtyPurchased" id="' + id + '-qty" value="' + esc(qtyVal) + '">' +
+        '<input type="hidden" data-field="qtyUnit" id="' + id + '-qunit" value="' + esc(qtyUnit) + '">' +
+        '<input type="hidden" data-field="adjustments" id="' + id + '-adj" value="' + esc(adjVal) + '">' +
+        '<div class="lot-onhand"><span class="lot-onhand-v" id="' + id + '-qty-show"></span>' +
+          (lot && lot.id ? '<button type="button" class="lot-act lot-adj-btn" onclick="openLotAdjust(\'' + id + '\')">Adjust</button>' : '') +
         '</div>' +
+        '<div class="lot-onhand-note" id="' + id + '-qty-note"></div>' +
       '</div>' +
       '<div class="lf"><label>Lot #</label>' +
         lotInp({ field:'lotNum', placeholder:'e.g. LC-2024-08', value: lot && lot.lotNum ? lot.lotNum : '' }) +
@@ -4363,7 +4412,10 @@ function addLotRow(lot) {
       '<div class="lf"><label>Best by</label>' +
         lotInp({ type:'date', field:'bestBy', value: lot && lot.bestBy ? lot.bestBy : '' }) +
       '</div>' +
-    '</div></div>';
+    '</div>' +
+    '<div class="lot-adj-form" id="' + id + '-adj-form" hidden></div>' +
+    '<div class="lot-adj-hist" id="' + id + '-adj-hist"></div>' +
+    '</div>';
 
   var line3 =
     '<div class="lot-sec"><div class="lot-sec-h">Order</div>' +
@@ -4400,6 +4452,96 @@ function addLotRow(lot) {
   if (lot && (lot.purchaseSize || lot.purchasePrice)) {
     calcLotCostPerG(id);
   }
+  syncOnHand(id);
+  renderLotAdjHist(id);
+}
+
+// ── Bought and on hand (2026-10-25) ───────────────────
+function boughtCount(v) { var n = parseFloat(v); return n > 0 ? n : 1; }
+function fmtQty(n) { var r = Math.round(n * 100) / 100; return String(r); }
+// True when a saved lot's on hand is still what was bought.
+function lotBoughtMatches(lot) {
+  var size = parseFloat(lot.purchaseSize), q = parseFloat(lot.qtyPurchased || lot.stock);
+  if (!(size > 0)) return !(q > 0);
+  var bought = boughtCount(lot.purchaseCount) * size;
+  return (lot.qtyUnit || lot.stockUnit || 'g') === (lot.purchaseUnit || 'g') && Math.abs(q - bought) < 0.005;
+}
+// The row's on hand display, and while it follows Bought, its value.
+function syncOnHand(rowId) {
+  var row = document.getElementById(rowId); if (!row) return;
+  var qty = document.getElementById(rowId + '-qty'), qu = document.getElementById(rowId + '-qunit');
+  var show = document.getElementById(rowId + '-qty-show'), note = document.getElementById(rowId + '-qty-note');
+  if (!qty || !qu || !show) return;
+  var size = parseFloat((document.getElementById(rowId + '-psize') || {}).value);
+  var unit = (document.getElementById(rowId + '-punit') || {}).value || 'g';
+  var count = boughtCount((document.getElementById(rowId + '-pcount') || {}).value);
+  var follows = row.dataset.follows === '1';
+  if (follows) {
+    qty.value = size > 0 ? fmtQty(count * size) : '';
+    qu.value = unit;
+  }
+  var q = parseFloat(qty.value);
+  show.textContent = q >= 0 && qty.value !== '' ? fmtQty(q) + ' ' + (qu.value === 'oz' ? 'oz (wt)' : qu.value) : '\u2014';
+  if (note) {
+    note.textContent = follows
+      ? (size > 0 ? 'Starts at what you bought.' : 'Fill in Bought and this starts there.')
+      : (row.dataset.lotId ? 'Batches take from this. To correct it, use Adjust.' : '');
+  }
+}
+var LOT_ADJ_REASONS = ['Recount', 'Entry error', 'Spilled or spoiled', 'Used outside a batch', 'Other'];
+function lotAdjList(rowId) {
+  var el = document.getElementById(rowId + '-adj');
+  try { var a = el && el.value ? JSON.parse(el.value) : []; return Array.isArray(a) ? a : []; } catch (e) { return []; }
+}
+function openLotAdjust(rowId) {
+  var f = document.getElementById(rowId + '-adj-form'); if (!f) return;
+  var qty = document.getElementById(rowId + '-qty'), qu = document.getElementById(rowId + '-qunit');
+  var u = qu.value === 'oz' ? 'oz (wt)' : qu.value;
+  f.innerHTML =
+    '<div class="lot-adj-h">Adjust what is on hand</div>' +
+    '<div class="lot-adj-grid">' +
+      '<div class="lf"><label for="' + rowId + '-adj-new">On hand now (' + esc(u) + ')</label>' +
+        '<input class="lot-inp" type="number" step="0.01" min="0" id="' + rowId + '-adj-new" value="' + esc(qty.value) + '"></div>' +
+      '<div class="lf"><label for="' + rowId + '-adj-why">Why</label>' +
+        '<select class="lot-inp" id="' + rowId + '-adj-why">' + LOT_ADJ_REASONS.map(function (r) { return '<option>' + r + '</option>'; }).join('') + '</select></div>' +
+      '<div class="lf lf-wide"><label for="' + rowId + '-adj-note">Note (optional)</label>' +
+        '<input class="lot-inp" type="text" id="' + rowId + '-adj-note" placeholder="e.g. weighed the bottle"></div>' +
+    '</div>' +
+    '<div class="lot-adj-err" id="' + rowId + '-adj-err"></div>' +
+    '<div class="lot-adj-acts"><button type="button" class="lot-act lot-act-go" onclick="saveLotAdjust(\'' + rowId + '\')">Save adjustment</button>' +
+      '<button type="button" class="lot-act" onclick="closeLotAdjust(\'' + rowId + '\')">Cancel</button></div>';
+  f.hidden = false;
+  var n = document.getElementById(rowId + '-adj-new'); if (n) { n.focus(); n.select(); }
+}
+function closeLotAdjust(rowId) { var f = document.getElementById(rowId + '-adj-form'); if (f) { f.hidden = true; f.innerHTML = ''; } }
+function saveLotAdjust(rowId) {
+  var row = document.getElementById(rowId); if (!row) return;
+  var qty = document.getElementById(rowId + '-qty'), qu = document.getElementById(rowId + '-qunit');
+  var nv = parseFloat(document.getElementById(rowId + '-adj-new').value);
+  var err = document.getElementById(rowId + '-adj-err');
+  if (isNaN(nv) || nv < 0) { err.textContent = 'Enter what is on hand now, 0 or more.'; return; }
+  var was = parseFloat(qty.value) || 0;
+  if (Math.abs(nv - was) < 0.005) { err.textContent = 'That is what it already says.'; return; }
+  var list = lotAdjList(rowId);
+  list.push({ date: todayISO(), from: was, to: Math.round(nv * 100) / 100, unit: qu.value,
+              reason: document.getElementById(rowId + '-adj-why').value,
+              note: document.getElementById(rowId + '-adj-note').value.trim() });
+  document.getElementById(rowId + '-adj').value = JSON.stringify(list);
+  qty.value = fmtQty(nv);
+  delete row.dataset.follows;
+  closeLotAdjust(rowId);
+  syncOnHand(rowId);
+  renderLotAdjHist(rowId);
+}
+function renderLotAdjHist(rowId) {
+  var el = document.getElementById(rowId + '-adj-hist'); if (!el) return;
+  var list = lotAdjList(rowId);
+  if (!list.length) { el.innerHTML = ''; return; }
+  el.innerHTML = '<div class="lot-adj-hh">Adjustments</div>' + list.slice().reverse().map(function (a) {
+    var u = a.unit === 'oz' ? 'oz (wt)' : (a.unit || 'g');
+    return '<div class="lot-adj-line"><span>' + esc(fmtDate(a.date)) + '</span><span>' + esc(fmtQty(a.from)) + ' \u2192 ' + esc(fmtQty(a.to)) + ' ' + esc(u) + '</span>' +
+      '<span>' + esc(a.reason || '') + (a.note ? ': ' + esc(a.note) : '') + '</span></div>';
+  }).join('');
 }
 
 function onSupplierSelect(sel, rowId) {
@@ -4422,6 +4564,7 @@ function duplicateLotRow(sourceId) {
   lot.receiptLink = '';
   lot.referenceOnly = false;
   lot.onOrder = false;
+  lot.adjustments = [];
   lot.id = null; // copies are new lots — never inherit the source id
 
   // Set-active-on-save: offer to make this new lot the active one for costing.
@@ -4713,8 +4856,14 @@ function calcLotCostPerG(lotId) {
   var size  = psize.value;
   var unit  = punit.value;
   var price = parseFloat(pprice.value);
+  var count = boughtCount((document.getElementById(lotId + '-pcount') || {}).value);
+  var each  = (document.getElementById(lotId + '-pis') || {}).value === 'each';
+  syncOnHand(lotId);
+  var sum = document.getElementById(lotId + '-buy-sum');
+  if (sum) sum.textContent = '';
 
   if (!size || isNaN(price) || price <= 0) return; // not enough data yet
+  var total = each ? price * count : price;
 
   // Get density from ingredient density field
   var densityEl = document.getElementById('f-density');
@@ -4730,9 +4879,17 @@ function calcLotCostPerG(lotId) {
 
   var grams = lotSizeToGrams(size, unit, densityVal);
   if (!grams) return;
+  grams = grams * count;
 
-  var result = price / grams;
+  var result = total / grams;
   cpg.value = result.toFixed(4);
+  if (sum) {
+    var u = unit === 'oz' ? 'oz' : unit;
+    sum.textContent = (count !== 1 ? fmtQty(count) + ' \u00d7 ' + fmtQty(parseFloat(size)) + ' ' + u + ' = ' : '') +
+      fmtQty(count * parseFloat(size)) + ' ' + u + (unit !== 'g' ? ' (' + fmtQty(grams) + ' g)' : '') +
+      ' for $' + total.toFixed(2) + (each && count !== 1 ? ' ($' + price.toFixed(2) + ' each)' : '') +
+      ', $' + result.toFixed(4) + '/g';
+  }
   if (cpgNote) {
     if (needsDensity && usingDefault) {
       cpgNote.textContent = '(est. \u2014 add density for accuracy)';
@@ -4861,6 +5018,10 @@ function getLots() {
     // intent flag, which saveIngredient will consume and clear.
     if (row.dataset.lotId) f.id = row.dataset.lotId;
     if (row.dataset.setActiveOnSave) f._setActiveOnSave = true;
+    if (f.adjustments) { try { f.adjustments = JSON.parse(f.adjustments); } catch (e) { f.adjustments = []; } }
+    if (!f.adjustments || !f.adjustments.length) delete f.adjustments;
+    if (!f.purchaseCount) delete f.purchaseCount;
+    if (f.priceIs !== 'each') delete f.priceIs;
     return f;
   }).filter(function(l) {
     // A lot is only "real" if it has at least one substantive field set.
