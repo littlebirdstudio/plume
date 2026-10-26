@@ -3651,11 +3651,15 @@ grouped sections) plus, on her "yes to preview":
   call after trying a count x size version (the boxes collapsed at the
   preview's width, and totals are what she wants to type). A line spells it
   out ("8 oz (226.8 g) for $20.00, $0.0882/g").
-- **On hand is not typed.** A new lot starts at what was bought and follows
-  Bought until something is used or adjusted (`row.dataset.follows`). After
-  that it changes only through a batch or **Adjust** (new amount, why, an
-  optional note), kept on the lot as `adjustments: [{date, from, to, unit,
-  reason, note}]` and listed under it.
+- **On hand is not typed.** A lot nothing has been used from shows exactly
+  what was bought (`row.dataset.follows`). A lot already used from moves by
+  the change in Bought (1 lb bought, 0.6 lb left, Bought raised to 2 lb:
+  1.6 lb left; units converted; never below zero), recorded on save as a
+  "Bought changed" entry (base: `row.dataset.qty0` / `boughtG0`, rebased on
+  Adjust). Otherwise it changes through a batch or **Adjust** (new amount,
+  why, an optional note). All kept on the lot as `adjustments: [{date, from,
+  to, unit, reason, note}]` and listed under it. Her catch: raising Bought on
+  a used Here lot first did nothing to On hand.
 - Preview: the one reused "Plume Preview" artifact
   (https://claude.ai/artifact/1RPFnrVthk3pbdRFpuRDyQ). Tests:
   test/test-lotentry.js.
