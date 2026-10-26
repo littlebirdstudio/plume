@@ -262,6 +262,39 @@ const getIngs = "JSON.parse(localStorage.getItem('aerie-ingredients-v2'))";
   ok('and agrees with the cost used for the line', await page.evaluate("cpgText(ings.find(function (i) { return i.id === 'ig'; })) === '$' + bestCpg(ings.find(function (i) { return i.id === 'ig'; })).toFixed(3) + '/g'"));
   ok('an unpriced ingredient says so', await page.evaluate("cpgText({ lots: [] }) === ''") && /No price yet/.test(await page.evaluate("(function(){ ings.push({ id: 'zz', name: 'Unpriced', inci: 'X', phase: 'water', lots: [] }); showIngDetail('zz'); return document.getElementById('id-body').innerText; })()")));
 
+  // ── 8. From the 2026-10-25 click-through (v1.50) ─────────────────
+  console.log('\n8. Click-through fixes (v1.50)');
+  await page.evaluate(SEED); await page.goto(previewUrl('formulations')); await page.waitForTimeout(500);
+  const fcost = () => page.evaluate(`(function () {
+    openFormula('fp');
+    var t = document.getElementById('cost-panel').innerText.replace(/\\s+/g, ' ');
+    var ed = parseFloat((t.match(/Per 100g \\$([0-9.]+)/) || [])[1]);
+    goList();
+    var card = Array.from(document.querySelectorAll('.fcard')).find(function (c) { return /Toner/.test(c.innerText); });
+    var cd = parseFloat(((card ? card.innerText : '').match(/\\$([0-9.]+)/) || [])[1]);
+    return { editor: ed, card: cd };
+  })()`);
+  let fc = await fcost();
+  ok('the formulation card and the editor give the same cost per 100 g (pinned grams at the formula\'s own size)', fc.editor === 0.2 && fc.card === 0.2, fc);
+  await page.evaluate(`(function () {
+    var f = forms.find(function (x) { return x.id === 'fp'; }); f.addinsInTotal = true; f.variants[0].addinsInTotal = true; saveAll(); renderCards();
+  })()`);
+  fc = await fcost();
+  ok('with add-ins counted, the 5 g add-in is priced in both (was 0 g)', fc.editor === 0.4 && fc.card === 0.4, fc);
+  await page.evaluate("openFormula('fp')"); await page.waitForTimeout(150);
+  ok('Copy INCI includes the add-in', await page.evaluate("(curInciNames || []).join(', ').indexOf('Lavandula') !== -1"), await page.evaluate("curInciNames"));
+  const sheet = await page.evaluate("(function () { var o = null, r = Plume.openSheet; Plume.openSheet = function (x) { o = x; }; printFormula(); Plume.openSheet = r; return Plume.buildSheet(o); })()");
+  ok('the printed INCI list includes the add-in, after the formula ingredients',
+    /INCI list[\s\S]*Aqua[\s\S]*Glycerin[\s\S]*Lavandula/.test(sheet.replace(/<[^>]+>/g, ' ')));
+  await page.goto(previewUrl('ingredients')); await page.waitForTimeout(400);
+  await page.evaluate(`(function () {
+    var i = ingredients.find(function (x) { return x.id === 'ig'; });
+    i.links = [{ label: 'SDS', url: 'https://example.com/sds"onmouseover="window.PWN=1' }, { label: 'Not a web link', url: 'javascript:alert(1)' }];
+    saveData(); viewIngredient('ig');
+  })()`);
+  ok('a link with a quote in it cannot add attributes to the page', await page.evaluate("!document.querySelector('#d-body [onmouseover]') && window.PWN === undefined && Array.from(document.querySelectorAll('#d-body a.detail-link')).some(function (a) { return a.getAttribute('href').indexOf('\"onmouseover') !== -1; })"));
+  ok('and only web links become links', await page.evaluate("!document.querySelector('#d-body a[href^=javascript]')"));
+
   ok('no page errors', errors.length === 0, errors);
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');

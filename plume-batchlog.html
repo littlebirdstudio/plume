@@ -1547,6 +1547,11 @@ function printNewBatchSheet() {
 
 function saveBatch() {
   if (!newFormula) { Plume.tell('Please pick a formula.'); return; }
+  // Take stock from the library as it is now, not as it was when this form
+  // opened (2026-10-25 scan): a lot added or marked arrived in Ingredients
+  // meanwhile must count, and must not be written back over. The amounts
+  // typed in the form are kept; only the library is re-read.
+  refreshLibrary();
   var yieldG = parseFloat(document.getElementById('f-yield').value);
   if (!yieldG || yieldG <= 0) { Plume.tell('Please enter a yield in grams.'); return; }
   var date = document.getElementById('f-date').value || todayISO();
@@ -2854,6 +2859,7 @@ function commitBatch() {
   var b = findBatch(editingBatchId);
   if (!b) return;
   if (b.committed) { Plume.tell('This batch is already committed.'); return; }
+  refreshLibrary();
   var result = applyCommitToBatch(b);
   if (!result.ok) {
     var box = document.getElementById('d-commit-msg');
@@ -2927,6 +2933,9 @@ function decommitBatch(silent, done) {
 // after the question is answered: returns the batch's drawn ingredient and
 // packaging stock to its sources, clears the receipt, and saves all three.
 function reverseBatchCommit(b) {
+  // Return stock to the library as it is now (decommit and delete both come
+  // through here), so nothing saved in Ingredients since is written over.
+  refreshLibrary();
   // Reverse ingredient draws
   (b.lotDraws || []).forEach(function(d) {
     var ing = findIng(d.ingredientId);

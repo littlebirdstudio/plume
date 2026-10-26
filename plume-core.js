@@ -35,7 +35,7 @@ var Plume = (function () {
 // (v0.4 / v0.5 / v0.6 across five modules). BUMP IT IN EVERY PULL REQUEST,
 // core change or not: it is how "is this the update I just merged?" is
 // answered by looking, and browsers cache .js files stubbornly.
-var VERSION = '1.48';
+var VERSION = '1.50';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -192,7 +192,9 @@ function trackList(key, arr) {
 }
 function mergeList(fresh, mem, base) {
   var memById = {}, used = {}, out = [];
-  mem.forEach(function (r) { var id = recId(r); if (id !== null) memById[id] = r; });
+  // First record per id; a second record with the same id (an import that
+  // reused one) is kept as its own record below, never merged away.
+  mem.forEach(function (r) { var id = recId(r); if (id !== null && !memById[id]) memById[id] = r; });
   fresh.forEach(function (f) {
     var id = recId(f);
     if (id === null) return;
@@ -209,7 +211,8 @@ function mergeList(fresh, mem, base) {
   });
   mem.forEach(function (m) {
     var id = recId(m);
-    if (id !== null && used[id]) return;
+    if (id !== null && used[id] && memById[id] === m) return;
+    if (id !== null && memById[id] !== m) { out.push(m); return; }
     // Not in storage: new on this page, or deleted elsewhere. Keep it unless
     // it was deleted elsewhere and this page never touched it.
     if (id !== null && base[id] !== undefined && JSON.stringify(m) === base[id]) return;
@@ -2761,10 +2764,15 @@ function buildSkincareSheet(o) {
       '<th class="pc" style="padding-bottom:6px;border-bottom:2px solid #333">%</th>' +
       '</tr></thead><tbody>' + rows + '</tbody></table></div>',
     // With the formulations at hand, a stock solution lists as its parts.
+    // Add-ins follow the formula ingredients, as in the editor's INCI panel
+    // (2026-10-25 scan: the printed list left them out).
     inci: o.forms
-      ? inciMerge(stockLabelItems(fl.map(function (l) { return { ingId: l.ingId, w: parseFloat(l.pct) || 0 }; }), ings, o.forms))
+      ? inciMerge(stockLabelItems(fl.map(function (l) { return { ingId: l.ingId, w: parseFloat(l.pct) || 0 }; }), ings, o.forms)
+          .concat(stockLabelItems(addins.filter(function (l) { return findIngIn(ings, l.ingId); })
+            .map(function (l) { return { ingId: l.ingId, w: (parseFloat(l.gramsFixed) || 0) / (bs || 100) * 100 }; }), ings, o.forms)))
           .map(function (e) { return e.name; }).join(', ')
-      : fl.map(function (l) { return findIngIn(ings, l.ingId).inci; }).join(', '),
+      : fl.concat(addins.filter(function (l) { return findIngIn(ings, l.ingId); }))
+          .map(function (l) { return findIngIn(ings, l.ingId).inci; }).join(', '),
     scaleLabel: 'Batch: ' + bs + 'g'
   };
 }
@@ -2843,7 +2851,11 @@ var INCI_LOCANT = '\u0001';
 function inciSplit(s) {
   if (!s) return [];
   return String(s)
-    .replace(/(\d)\s*,\s*(?=\d)/g, '$1' + INCI_LOCANT)
+    // No space: "2,3-Butanediol", "1,2-Hexanediol". With a space, only a
+    // lone digit before a locant ("2, 3-Butanediol"), so "Polysorbate 20,
+    // 1,2-Hexanediol" and "CI 77491, 77492" still split (2026-10-25 scan).
+    .replace(/(\d),(?=\d)/g, '$1' + INCI_LOCANT)
+    .replace(/(^|[^\w-])(\d),\s+(?=\d+-)/g, '$1$2' + INCI_LOCANT)
     .replace(/\(\s*and\s*\)/gi, ',')
     .split(/[,;]|\s&\s/)
     .map(function (x) { return x.split(INCI_LOCANT).join(',').replace(/\s+/g, ' ').trim(); })
@@ -4564,7 +4576,7 @@ function consignPass(products, entries, shopId, opts) {
     if (!pr || isNaN(v) || v <= 0) return;
     if (!pr.stockLog) pr.stockLog = [];
     pr.stockLog.push({ id: 'cs-' + stamp + '-' + i, date: opts.date || todayISO(), kind: 'move', qty: -v, shopId: shopId, shopQty: v,
-      note: opts.note || ('Consigned to ' + shopName(shopId)) });
+      note: opts.note || '' });   // the list already says "Consigned to <shop>"
     pr.updatedAt = new Date().toISOString();
     n++;
   });
