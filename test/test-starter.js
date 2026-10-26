@@ -40,18 +40,24 @@ ok('real grades kept apart',
    !!byName('Coconut oil, virgin') && !!byName('Coconut oil (76°)') &&
    !!byName('Sunflower oil') && !!byName('Sunflower oil (high oleic)') &&
    !!byName('Hyaluronic acid (LMW)') && !!byName('Hyaluronic acid (HMW)'));
-ok('the two camellias stay apart (different species)',
-   /sinensis/i.test((byName('Camellia oil (tea seed)') || {}).inci) && /japonica|oleifera/i.test((byName('Camellia seed oil') || {}).inci));
+// Camellia oil (tea seed) was folded into Camellia seed oil at her call
+// (usage review, 2026-10-26): one entry, all three species in its INCI.
+ok('the camellias are one entry that answers to the tea-seed name',
+   !byName('Camellia oil (tea seed)') && /sinensis/i.test((byName('Camellia seed oil') || {}).inci) &&
+   (byName('Camellia seed oil').aka || []).indexOf('Camellia oil (tea seed)') !== -1);
 ok('no borrowed prose', items.every(i => !i.generalInfo), items.filter(i => i.generalInfo).map(i => i.name));
 ok('no stored SAP numbers', items.every(i => !(i.soap && (i.soap.naoh || i.soap.koh))));
 const known = n => items.some(i => i.name.toLowerCase() === n.toLowerCase() || (i.aka || []).some(a => a.toLowerCase() === n.toLowerCase()));
-const lost = FB.filter(r => !known(r.name) &&
+// Removed at her direction in the usage review (2026-10-26).
+const REMOVED = ['comfrey', 'orris root', 'black seed oil', 'berry wax'];
+const lost = FB.filter(r => REMOVED.indexOf(r.name.toLowerCase()) === -1 && !known(r.name) &&
   !String(r.inci).split(/\s+or\s+|,\s*or\s+/i).map(norm).some(k => items.some(i => norm(i.inci) === k)));
 ok('every directory ingredient is still offered, as itself or merged', lost.length === 0, lost.map(r => r.name));
 // Her library holds the directory's names from the old import; those must
 // still be recognised, except where one name covers two grades (which grade
 // her "Coconut oil" is cannot be known).
-const unrec = FB.filter(r => !known(r.name)).map(r => r.name).sort();
+const unrec = FB.filter(r => REMOVED.indexOf(r.name.toLowerCase()) === -1 && !known(r.name)).map(r => r.name).sort();
+ok('the four she removed are gone', REMOVED.every(n => !byName(n.replace(/^./, c => c.toUpperCase()))));
 ok('directory names are recognised, bar the three that cover two grades',
    JSON.stringify(unrec) === JSON.stringify(['Aloe vera', 'Coconut oil', 'Sodium hyaluronate']), unrec);
 ok('folded names are kept as former names', (byName('Rosehip seed oil').aka || []).indexOf('Rosehip oil') !== -1);
@@ -76,7 +82,7 @@ ok('directory brand names are properly cased',
 console.log('\n2. Oils reach SoapCalc by their starter names');
 const oils = items.filter(i => /Carrier oils|Butters and fats|Waxes/.test(i.type));
 const expected = ['Shea butter', 'Olive oil', 'Coconut oil (76°)', 'Coconut oil, virgin', 'Castor oil', 'Grapeseed oil',
-  'Apricot kernel oil', 'Baobab oil', 'Marula oil', 'Pomegranate seed oil', 'Camellia oil (tea seed)', 'Rosehip seed oil',
+  'Apricot kernel oil', 'Baobab oil', 'Marula oil', 'Pomegranate seed oil', 'Rosehip seed oil',
   'Meadowfoam seed oil', 'Tamanu oil', 'Borage seed oil', 'Flaxseed oil', 'Fractionated coconut oil', 'Beeswax', 'Canola oil (rapeseed)'];
 expected.forEach(n => ok(n + ' finds its SoapCalc row', !!Sap.lookup(n), n));
 ok('an oil SoapCalc lacks finds nothing', Sap.lookup('Neem oil') === null);
@@ -185,7 +191,7 @@ ok('most oils, butters and waxes are covered', oils.filter(i => Sap.lookup(i.nam
   {
     const { page, errors } = await open();
     await page.evaluate("openSeeder()");
-    for (const n of ['Coconut oil (76°)', 'Neem oil', 'Murumuru butter', 'Jojoba oil', 'Beeswax', 'Camellia oil (tea seed)']) {
+    for (const n of ['Coconut oil (76°)', 'Neem oil', 'Murumuru butter', 'Jojoba oil', 'Beeswax', 'Olive oil']) {
       ok('can tick ' + n, await tick(page, n));
     }
     await page.evaluate("seederAdd()");
@@ -195,7 +201,7 @@ ok('most oils, butters and waxes are covered', oils.filter(i => Sap.lookup(i.nam
     ok('six were added and saved', lib.length === LIB.length + 6, lib.map(i => i.name));
     ok('coconut takes the SoapCalc value, not the old 0.190',
        Math.abs(f('Coconut oil (76°)').soap.naoh - 0.183) < 0.0001 && Math.abs(f('Coconut oil (76°)').soap.koh - 0.257) < 0.0001, f('Coconut oil (76°)').soap);
-    ok('camellia (tea seed) takes its SoapCalc value', f('Camellia oil (tea seed)').soap && f('Camellia oil (tea seed)').soap.naoh === 0.138);
+    ok('olive takes its SoapCalc value', f('Olive oil').soap && f('Olive oil').soap.naoh > 0.13 && f('Olive oil').soap.naoh < 0.14, f('Olive oil').soap);
     ok('neem, which SoapCalc lacks, arrives with no SAP', !(f('Neem oil').soap && f('Neem oil').soap.naoh));
     ok('murumuru, unknown on purpose, arrives with no SAP', !(f('Murumuru butter').soap && f('Murumuru butter').soap.naoh));
     ok('the grouping type and former names are not stored on the ingredient', lib.every(i => i.type === undefined && i.aka === undefined));

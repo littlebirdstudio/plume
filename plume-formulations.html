@@ -437,7 +437,14 @@ body.fc-moving,body.fc-moving *{cursor:grabbing!important;user-select:none}
 .use-empty{color:var(--ink-lighter);font-style:italic}
 .cost-miss{font-size:11px;color:var(--ink-lighter);margin-top:6px;line-height:1.4}
 .cost-miss a{color:inherit}
-.rec-note{font-size:11px;color:var(--ink-lighter);margin-top:1px}
+.rec-note{font-size:11px;color:var(--ink-lighter);margin-top:1px;font-variant-numeric:tabular-nums}
+.use-quiet{font-size:11px;color:var(--ink-light);font-style:italic;margin-top:1px}
+.use-quiet.use-note-only{font-style:normal;color:var(--ink-lighter)}
+.rec-note.has-note{text-decoration:underline dotted;text-underline-offset:2px;cursor:help}
+.caution-dot{font-size:10px;color:var(--warning);margin-left:4px;cursor:help}
+button.caution-dot{background:none;border:none;padding:0 2px;line-height:1;font-family:inherit}
+.dd-use{font-size:10.5px;color:var(--ink-lighter);font-variant-numeric:tabular-nums}
+.dd-use .dd-caut{color:var(--warning)}
 .sol-note{font-size:11px;color:var(--warning);margin-top:2px;line-height:1.4}
 /* Stock solutions (2026-10-21) */
 .stock-parts{font-size:11px;color:var(--sage-dark);margin-top:2px;line-height:1.4}
@@ -2319,11 +2326,11 @@ function recalcSoap() {
     var items = [];
     sorted.forEach(function(l) {
       var ing = ings.find(function(x) { return x.id === l.ingId; }); if (!ing) return;
-      items.push({ inci: ing.inci, flag: ing.flag, addin: false, label: ing.name });
+      items.push({ inci: ing.inci, flag: Plume.usage(ing).caution ? 'yes' : '', addin: false, label: ing.name });
     });
     addinsForInci.forEach(function(l) {
       var ing = ings.find(function(x) { return x.id === l.ingId; }); if (!ing) return;
-      items.push({ inci: ing.inci, flag: ing.flag, addin: true, label: ing.name });
+      items.push({ inci: ing.inci, flag: Plume.usage(ing).caution ? 'yes' : '', addin: true, label: ing.name });
     });
     iEl.innerHTML = inciPanelHtml(items, 'add-ins after the oils');
   }
@@ -2426,6 +2433,11 @@ function resolveIng(id) {
            phase: 'other', functionCategory: [], lots: [] };
 }
 
+function showCaution(id) {
+  var ing = resolveIng(id), c = Plume.usage(ing).caution;
+  if (c) Plume.tell(c, { title: 'Caution: ' + ing.name });
+}
+
 function buildRow(l, idx, ing, bs, isAddin) {
   if (!ing) ing = resolveIng(l && l.ingId);
   // Only an add-in can be pinned now; a pin stored on a percent line is
@@ -2439,9 +2451,15 @@ function buildRow(l, idx, ing, bs, isAddin) {
   var cpg    = bestCpg(ing);
   var lCost  = cpg !== null ? ('$' + (cpg*gNum).toFixed(3)) : '--';
   var effPct = pct;
-  var over   = !isAddin && ing.max && effPct > parseFloat(ing.max);
-  var under  = !isAddin && ing.min && effPct > 0 && effPct < parseFloat(ing.min);
-  var warn   = over || under;
+  // Usage (2026-10-26): firm above the safe limit or outside a
+  // preservative's effective range, quiet outside recommended. An add-in is
+  // checked by its share of the batch (essential oils are usually add-ins).
+  var usePct = isAddin ? (bs > 0 ? aG(l, bs) / bs * 100 : 0) : effPct;
+  var useU   = Plume.usage(ing);
+  var checks = ing.missing ? [] : Plume.usageCheck(ing, usePct);
+  var firm   = checks.filter(function (c) { return c.level === 'firm'; });
+  var quiet  = checks.filter(function (c) { return c.level === 'quiet'; });
+  var warn   = firm.length > 0;
   var dpg    = l.dropsPerG || 20;
   var dropsDisp = gNum > 0 ? Math.round(gNum*dpg) : (l.drops || '');
   var sst    = stockState(ing, gNum);
@@ -2467,7 +2485,9 @@ function buildRow(l, idx, ing, bs, isAddin) {
   } else {
     row += '<button class="ing-name-btn" onclick="showIngDetail(\'' + ing.id + '\')">' + esc(ing.name) + '</button>';
   }
-  if (ing.flag === 'yes') row += '<span style="font-size:10px;color:var(--warning);margin-left:4px">&#9679;</span>';
+  // Caution: the orange dot only (her call, 2026-10-26); hover for the text,
+  // or tap it on a tablet.
+  if (useU.caution) row += '<button type="button" class="caution-dot" title="Caution: ' + esc(useU.caution) + '" aria-label="Caution" onclick="event.stopPropagation();showCaution(\'' + ing.id + '\')">&#9679;</button>';
   if (isAddin) row += '<span class="addin-badge">add-in</span>';
   if (!isAddin) {
     row += '<button class="phase-pill' + (phOvr ? ' overridden' : '') +
@@ -2491,12 +2511,23 @@ function buildRow(l, idx, ing, bs, isAddin) {
       'percentage still counts toward the total, so the formula is short until you ' +
       'replace it or remove the line.</div>';
   }
-  if (!isAddin && ing.useRate) row += '<div class="rec-note">Recommended %: ' + esc(Plume.recText(ing.useRate)) + '</div>';
+  // Both kinds of numbers stay visible: "Recommended 2–5% · safe up to 10%".
+  // The usage note shows in full once the amount is outside a range, so it
+  // asks "is this what you meant?" at the moment it matters; in range it
+  // waits under the numbers (hover or tap the dotted line).
+  var outOfRange = quiet.length > 0 || firm.length > 0;
+  var noteTip = (useU.usageNote && !outOfRange) ? ' has-note" title="' + esc(useU.usageNote) : '';
+  if (!ing.missing && (useU.recMin || useU.recMax || useU.effMin || useU.effMax || useU.safeMax)) row += '<div class="rec-note' + noteTip + '">' + esc(Plume.usageText(ing)) + '</div>';
+  else if (!ing.missing && noteTip) row += '<div class="rec-note' + noteTip + '">Usage note</div>';
+  // A firm warning comes first, right under the numbers it refers to; the
+  // quiet "above recommended" would only repeat it, so it is left out.
+  if (warn) row += '<div class="warn-txt">' + esc(firm.map(function (c) { return c.text; }).join(' ')) + '</div>';
+  if (quiet.length && !warn) row += '<div class="use-quiet">' + esc(quiet.map(function (c) { return c.text; }).join(' ')) + (useU.usageNote ? ' ' + esc(useU.usageNote) : '') + '</div>';
+  else if (warn && useU.usageNote && !ing.missing) row += '<div class="use-quiet use-note-only">' + esc(useU.usageNote) + '</div>';
   var solNote = isAddin ? '' : solubilityNote(ing, ePh);
   if (solNote) row += '<div class="sol-note">' + esc(solNote) + '</div>';
   if (obR.note) row += obR.note;
   else if (sst === 'partial') row += '<div class="stock-note">' + Math.round(sg) + 'g on hand &middot; need ' + gNum.toFixed(1) + 'g</div>';
-  if (warn) row += '<div class="warn-txt">' + (over ? 'Over max (' + ing.max + '%) ' : '') + (under ? 'Under min (' + ing.min + '%)' : '') + '</div>';
   if (isAddin) {
     row += '<div class="drops-row"><span style="color:var(--ink-lighter)">approx</span>';
     row += '<input class="drops-inp" value="' + dropsDisp + '" placeholder="drops" onclick="this.select()" oninput="onDrops(' + idx + ',this.value,' + dpg + ')">';
@@ -2666,7 +2697,9 @@ function searchIngs(q) {
     var line = Plume.rt.plain(i.purpose || i.chooseWhen || '').replace(/\s*\n+\s*/g, ' \u00b7 ');
     if (line && line.length > 90) line = line.slice(0, 87) + '\u2026';
     if (line)        why += (why ? ' \u2014 ' : '') + esc(line);
-    html += '<div style="min-width:0"><div class="dd-name">' + esc(i.name) + '</div><div class="dd-inci">' + esc(i.inci) + '</div>' +
+    var du = Plume.usage(i), duT = (du.recMin || du.recMax || du.effMin || du.effMax || du.safeMax) ? Plume.usageText(i) : '';
+    html += '<div style="min-width:0"><div class="dd-name">' + esc(i.name) + (du.caution ? '<span class="caution-dot" title="Caution: ' + esc(du.caution) + '">&#9679;</span>' : '') + '</div><div class="dd-inci">' + esc(i.inci) + '</div>' +
+      (duT ? '<div class="dd-use">' + esc(duT) + '</div>' : '') +
       (why ? '<div class="dd-why">' + why + '</div>' : '') + '</div>';
     html += '<div style="display:flex;align-items:center">';
     if (stockTxt) html += '<span class="dd-stock' + (inStock ? '' : ' ord') + '">' + stockTxt + '</span>';
@@ -2687,7 +2720,6 @@ document.addEventListener('click', function(e) {
 
 // The amount a new line starts at: the ingredient's recommended usage, the
 // low end of a range ("2–5%" starts at 2). Her call, 2026-10-24.
-function recStartPct(ing) { return Plume.recStart(ing && ing.useRate); }
 // A gentle note when a line sits in a phase its solubility does not suit.
 // Cool-down takes either, and "water and oil" fits anywhere.
 function solubilityNote(ing, phase) {
@@ -2703,7 +2735,8 @@ function addIng(id) {
     if (addinMode) { l.soapAddin = true; resetAddinMode(); }
   } else {
     if (addinMode) { l.addin = true; l.drops = ''; l.dropsPerG = 20; resetAddinMode(); }
-    else l.pct = recStartPct(ings.find(function(x) { return x.id === id; }));
+    // A new line starts blank (her call, 2026-10-26); the ingredient's
+    // recommended range and safe limit show on the line to choose from.
   }
   fLines.push(l);
   document.getElementById('ing-search').value = '';
@@ -2820,7 +2853,7 @@ function recalc() {
       var ing = ings.find(function(x) { return x.id === l.ingId; });
       var gw  = bs > 0 ? aG(l, bs) / bs * 100 : 0;
       return { ingId: l.ingId, w: l.addin ? gw : (parseFloat(l.pct) || 0),
-               inci: ing.inci, flag: ing.flag, addin: l.addin, label: ing.name };
+               inci: ing.inci, flag: Plume.usage(ing).caution ? 'yes' : '', addin: l.addin, label: ing.name };
     }), ings, forms, addinsCount);
     // Copy gives the same list as the panel, add-ins included (2026-10-25
     // scan: they were left out, and a label needs every ingredient).
@@ -2866,7 +2899,7 @@ function inciPanelHtml(items, footNote) {
       'cannot know from a blend, so check whether it belongs higher up.</div></div>';
   }
 
-  html += '<div style="font-size:10px;color:var(--ink-lighter);margin-top:8px">&#9679; = restricted' +
+  html += '<div style="font-size:10px;color:var(--ink-lighter);margin-top:8px">&#9679; = caution' +
     (footNote ? ' &middot; ' + footNote : '') + '</div>';
   return html;
 }
@@ -4538,8 +4571,14 @@ function showIngDetail(ingId) {
   }
   html += '<div class="id-grid">';
   html += '<div class="id-field"><label>Phase</label><p>' + ing.phase + '</p></div>';
-  html += '<div class="id-field"><label>Restricted</label><p>' + (ing.flag==='yes' ? 'Yes -- has limits' : 'No') + '</p></div>';
-  html += '<div class="id-field"><label>Usage rate</label><p>' + (ing.min||ing.max ? (ing.min||'0') + '% -- ' + (ing.max||'100') + '%' : '--') + '</p></div>';
+  var puse = Plume.usage(ing);
+  // The safe limit (and a preservative's effective range) stays here, where
+  // the usage rate was; Recommended stays on the line, not in the popup (her
+  // call, 2026-10-25). The usage note and any caution come along.
+  var peff = Plume.usageRange(puse.effMin, puse.effMax);
+  var pSafe = Plume.usageSafeText(puse);
+  html += '<div class="id-field"><label>Safe limit</label><p>' + esc(pSafe.charAt(0).toUpperCase() + pSafe.slice(1)) + (peff ? '<br>Effective ' + esc(peff) : '') + (puse.usageNote ? '<br><span style="color:var(--ink-light)">' + esc(puse.usageNote) + '</span>' : '') + '</p></div>';
+  if (puse.caution) html += '<div class="id-field"><label>Caution</label><p style="color:var(--warning)">' + esc(puse.caution) + '</p></div>';
   // What helps write the instructions (2026-10-24, her call): solubility and
   // its note, and the effective pH range. Suppliers left the popup; the
   // recommended % is on the line itself. Cost per gram came back 2026-10-25.
@@ -4561,7 +4600,6 @@ function showIngDetail(ingId) {
   html += '<div class="id-grid"><div class="id-field"><label>Stock on hand</label><p style="color:' + stockColor + ';font-weight:500">' + stockTxt + '</p></div>' +
     '<div class="id-field"><label>Cost per gram</label><p>' + (cpgP ? esc(cpgP) : '<span style="color:var(--ink-lighter)">No price yet</span>') + '</p></div></div>';
   if (ing.function)     html += '<div class="id-field"><label>Function</label><p>' + esc(ing.function) + '</p></div>';
-  if (ing.dermalLimits) html += '<div class="id-field"><label>Dermal limits</label><p style="white-space:pre-wrap;line-height:1.6">' + esc(ing.dermalLimits) + '</p></div>';
   if (ing.notes)        html += '<div class="id-field"><label>Notes</label><div style="line-height:1.6;font-size:13px">' + Plume.rt.toHtml(ing.notes) + '</div></div>';
   // Resource links (the list Ingredients saves now, or the older single link),
   // escaped, web links only (2026-10-25 scan).

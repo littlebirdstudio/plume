@@ -3774,3 +3774,63 @@ already saved. Her call: repair them automatically.
   from those lots really cost the corrected amount.
 - Tests: test/test-costrepair.js. test-theme and test-version now insert
   core with a function replacement (a `$'` in core broke the string one).
+
+### Session 27 (cont., 26 October 2026): Usage, her model (core v1.57)
+
+She untangled "usage rate" and "recommended" into her own model, then
+reviewed every ingredient (her library and the starter list) on a review
+page with researched proposals.
+
+- Fields (all strings, percent): `recMin`/`recMax` Recommended, "optimal
+  function within this range", quiet note outside it. `safeMax` safe limit,
+  one direction ("safe up to"; zero is always fine): a number, `'none'` =
+  no upper limit, `''` = not established. Her words: no limit and unknown
+  are not the same thing. `effMin`/`effMax` effective range, preservatives,
+  in place of Recommended; firm warning outside it either way. `usageNote`
+  for amounts that depend on use (GDL, Arginine). `caution` replaces the
+  Restricted flag and its text; it keeps the orange dot. `usageV2: true`
+  marks a record on the new fields.
+- `Plume.usage(ing)` reads either model. Old records (`min`, `max`,
+  `useRate`, `flag`, `restrictions`) read through the legacy branch until
+  saved: useRate is Recommended, max is the safe limit (100 or more meant no
+  limit), a preservative's min-max is its effective range, restrictions (or
+  a bare flag) is the caution. Saving converts, keeps the old values once in
+  `usageOld`, and sets the old keys to undefined (Ingredients saves with
+  Object.assign, so they must be cleared, not just not written).
+- `usageText` ("Recommended 2–5% · safe up to 10%", short form for the
+  list), `usageCheck(ing, pct)` (firm/quiet), `setUsage`, `usageRange`,
+  `usageSafeText`, `usageNum`, `isPreservativeIng`.
+- Formulations: each line shows the numbers; a firm warning (over the safe
+  limit, outside the effective range) comes first; outside Recommended a
+  quiet note; the usage note shows in full only when the amount is outside a
+  range, otherwise as a tooltip on the dotted numbers line. Add-ins are
+  checked by their share of the batch. A caution is the orange dot only
+  (hover for the text, tap it on a tablet; her call). New lines start blank (`recStartPct`
+  is gone; `Plume.recStart` stays, unused). The ingredient popup shows the
+  safe limit, effective range and usage note, and the caution if any; not
+  Recommended (her earlier call).
+- Ingredients: editor fields in Basics (Dermal limits and Restricted gone;
+  dermal limits text folds into the usage note on first edit). Validation:
+  plain numbers, ranges low to high, no range above the safe limit. A blank
+  caution is not listed as "not filled in".
+- Import also takes an update file, `{ kind: 'plume-ingredient-update',
+  title, updates: [{ id, name, usage }] }`: matched by id then name, only
+  real changes previewed, applied on yes with `usageOld` kept once.
+  Her file from the review: plume-usage-update-2026-10-26.json (204
+  ingredients; archived ones keep reading through the legacy branch).
+- Starter list v2.4: every item on the new fields, 257 items. Removed at her
+  direction: Comfrey, Orris root, Black seed oil, Berry wax, Camellia oil
+  (tea seed) (folded into Camellia seed oil as a former name, with the
+  Sinensis INCI). Red clay INCI "Illite / Montmorillonite / Kaolin".
+  Preservatives all carry the Preservative function.
+- Tests: test/test-usage.js; ingpage, quickadd, starter and sweep updated.
+- From the independent review, fixed before the PR: a bare Restricted tick
+  reads as the caution "Restricted (no note recorded)." so a save keeps the
+  dot; old free-text Recommended that is not a plain number or range ("pH 5:
+  2%", "2% leave-on, 1% rinse-off") is not guessed at but kept as the usage
+  note, and "up to 5%" is a top only; old dermal limits read into the usage
+  note and are cleared (into `usageOld`) by updates and Quick add; a range
+  above the safe limit asks "Save anyway?" instead of blocking (old records
+  can hold one); `usageNum` accepts a trailing %; Quick add checks its
+  numbers; matching an update by name prefers an active ingredient; an old
+  preservative max of 100 is no limit, not part of its effective range.

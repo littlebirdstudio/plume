@@ -63,12 +63,12 @@ const getIngs = "JSON.parse(localStorage.getItem('aerie-ingredients-v2'))";
   console.log('\n2. The page');
   await page.evaluate("viewIngredient('ij')"); await page.waitForTimeout(250);
   const body = await page.evaluate("document.getElementById('d-body').innerText.replace(/\\s+/g, ' ')");
-  ok('At a glance shows recommended usage and solubility, apart from the usage rate', /USAGE RATE 1% – 100%/i.test(body) && /RECOMMENDED % 5–30 /i.test(body) && /SOLUBILITY Oil-soluble/i.test(body), body.slice(0, 400));
+  ok('At a glance shows usage in one line and solubility', /USAGE Recommended 5–30% · no upper limit/i.test(body) && /SOLUBILITY Oil-soluble/i.test(body), body.slice(0, 400));
   ok('empty fields fold into one line', /Not filled in: substitutes, secondary functions\./.test(body), body);
-  ok('Properties says how full it is, and names what is missing', /PROPERTIES & CHARACTERISTICS 2 of 10 filled/i.test(body) && /Not filled in: heat stability, melting point, oxidation stability, scent, effective pH range, dermal limits, claims, density/.test(body), body);
+  ok('Properties says how full it is, and names what is missing (dermal limits now live in the usage note)', /PROPERTIES & CHARACTERISTICS 2 of 9 filled/i.test(body) && /Not filled in: heat stability, melting point, oxidation stability, scent, effective pH range, claims, density/.test(body), body);
   await page.evaluate("viewIngredient('ir')"); await page.waitForTimeout(150);
-  await page.evaluate("Array.from(document.querySelectorAll('#d-body .ds-empty button')).filter(function (b) { return b.textContent === 'usage rate'; })[0].click()"); await page.waitForTimeout(250);
-  ok('each missing field links to the tab that holds it, cursor in the field (usage rate is in Basics)', await page.evaluate("ingTab === 'basics' && document.activeElement && document.activeElement.id === 'f-min'"));
+  await page.evaluate("Array.from(document.querySelectorAll('#d-body .ds-empty button')).filter(function (b) { return b.textContent === 'usage'; })[0].click()"); await page.waitForTimeout(250);
+  ok('each missing field links to the tab that holds it, cursor in the field (usage is in Basics)', await page.evaluate("ingTab === 'basics' && document.activeElement && document.activeElement.id === 'f-recmin'"));
   await page.evaluate("closeModal('modal-add')");
   await page.evaluate("Array.from(document.querySelectorAll('#d-body .ds-empty button')).filter(function (b) { return b.textContent === 'claims'; })[0].click()"); await page.waitForTimeout(250);
   ok('a rich field gets the cursor in its box', await page.evaluate("ingTab === 'props' && document.activeElement && document.activeElement.classList.contains('rt-ed')"));
@@ -90,7 +90,7 @@ const getIngs = "JSON.parse(localStorage.getItem('aerie-ingredients-v2'))";
   await page.evaluate("setIngTab('soap'); document.getElementById('f-sap-naoh').value = '0.07'; document.getElementById('f-sap-naoh').dispatchEvent(new Event('input', { bubbles: true }))");
   ok('typing in a tab gives it a dot', await page.evaluate("!document.querySelector('#ed-tabs [data-tab=soap] .ed-dot').hidden"));
   ok('Chelator is a function', await page.evaluate("Array.from(document.querySelectorAll('#f-function-cats input')).some(function (b) { return b.value === 'Chelator'; })"));
-  ok('solubility and recommended usage load', await page.evaluate("document.getElementById('f-solubility').value === 'oil' && document.getElementById('f-userate').value === '5–30%'"));
+  ok('solubility and usage load (an older record reads its old fields)', await page.evaluate("document.getElementById('f-solubility').value === 'oil' && document.getElementById('f-recmin').value === '5' && document.getElementById('f-recmax').value === '30' && document.getElementById('f-safe-kind').value === 'none'"));
   ok('the phase list includes Active and Other', await page.evaluate("Array.from(document.getElementById('f-phase').options).map(function (o) { return o.value; }).join() === 'water,oil,cool-down,active,add-in,other'"));
   ok('the text-heavy fields are rich boxes, the hidden field keeping the marks', await page.evaluate("document.getElementById('f-choose').style.display === 'none' && document.querySelectorAll('#modal-add .rt-wrap').length === 5 && !!document.querySelector('#modal-add .rt-wrap .rt-ed strong')"));
   // Bold a word the way the toolbar does, then save.
@@ -101,11 +101,11 @@ const getIngs = "JSON.parse(localStorage.getItem('aerie-ingredients-v2'))";
     ed.dispatchEvent(new Event('input', { bubbles: true }));
     document.getElementById('f-solubility').value = 'both';
     document.getElementById('f-solnote').value = 'Melt with the oils';
-    document.getElementById('f-userate').value = '10%';
+    document.getElementById('f-recmin').value = '10';
     saveIngredient(false);
   })()`); await page.waitForTimeout(250);
   let ij = (await page.evaluate(getIngs)).find(i => i.id === 'ij');
-  ok('saving keeps the marks, solubility and recommended usage', ij.notes === 'Now **bolder**\n- a' && ij.solubility === 'both' && ij.solNote === 'Melt with the oils' && ij.useRate === '10%' && ij.soap && ij.soap.naoh === 0.07, ij);
+  ok('saving keeps the marks, solubility and recommended usage', ij.notes === 'Now **bolder**\n- a' && ij.solubility === 'both' && ij.solNote === 'Melt with the oils' && ij.usageV2 === true && ij.recMin === '10' && ij.recMax === '30' && ij.safeMax === 'none' && ij.useRate === undefined && ij.min === undefined && ij.usageOld && ij.usageOld.useRate === '5–30%' && ij.soap && ij.soap.naoh === 0.07, ij);
   ok('fields it did not touch keep their marks', ij.chooseWhen === '**Very stable** and *never* rancid', ij.chooseWhen);
 
   console.log('\n4. Typing straight onto the page');
@@ -119,8 +119,9 @@ const getIngs = "JSON.parse(localStorage.getItem('aerie-ingredients-v2'))";
   console.log('\n5. Formulations');
   await page.goto(previewUrl('formulations')); await page.waitForTimeout(400);
   await page.evaluate("openFormula('fm'); addIng('ig')"); await page.waitForTimeout(200);
-  ok('a new line starts at the recommended usage (the low end of a range)', await page.evaluate("fLines[fLines.length - 1].pct === '2'"));
-  ok('and the line shows it, as Recommended %', /Recommended %: 2–5/.test(await page.evaluate("document.getElementById('phase-groups').innerText")));
+  // A new line starts blank since the usage review (2026-10-26); the numbers show under the name.
+  ok('a new line starts blank', await page.evaluate("fLines[fLines.length - 1].pct === ''"));
+  ok('and the line shows the usage, Recommended and the safe limit', /Recommended 2–5% · safe limit not established/.test(await page.evaluate("document.getElementById('phase-groups').innerText")));
   await page.evaluate("addIng('ir')"); await page.waitForTimeout(100);
   ok('an ingredient with no recommendation starts empty', await page.evaluate("fLines[fLines.length - 1].pct === ''"));
   await page.evaluate("fLines[0].phase = 'oil'; renderLines()"); await page.waitForTimeout(100);
@@ -129,7 +130,7 @@ const getIngs = "JSON.parse(localStorage.getItem('aerie-ingredients-v2'))";
   ok('the cool-down phase takes either', !/Water-soluble, but/.test(await page.evaluate("document.getElementById('phase-groups').innerText")));
   // Cost per gram came back to the popup 2026-10-25 (her call); suppliers and
   // the recommended % stay out.
-  ok('the ingredient popup shows solubility with its note, the effective pH and cost per gram, not suppliers or recommended', await page.evaluate("(function () { showIngDetail('ig'); var t = document.getElementById('id-body').innerText; return /Solubility\\s*Water-soluble\\s*Warm to dissolve/i.test(t) && /Effective pH\\s*--/i.test(t) && /Cost per gram/i.test(t) && !/Suppliers/i.test(t) && !/Recommended/i.test(t); })()"), await page.evaluate("document.getElementById('id-body').innerText"));
+  ok('the ingredient popup shows solubility with its note, the effective pH and cost per gram, not suppliers or recommended', await page.evaluate("(function () { showIngDetail('ig'); var t = document.getElementById('id-body').innerText; return /Solubility\\s*Water-soluble\\s*Warm to dissolve/i.test(t) && /Effective pH\\s*--/i.test(t) && /Cost per gram/i.test(t) && !/Suppliers/i.test(t) && !/Recommended/i.test(t) && /Safe limit\\s*Safe limit not established/i.test(t) && !/Caution/.test(t); })()"), await page.evaluate("document.getElementById('id-body').innerText"));
   ok('the ingredient popup shows the formatted lowdown', await page.evaluate("showIngDetail('ij'); !!document.querySelector('strong') && /Very stable/.test(document.body.innerText)"));
 
   console.log('\n6. Label marks');

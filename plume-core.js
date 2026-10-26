@@ -35,7 +35,7 @@ var Plume = (function () {
 // (v0.4 / v0.5 / v0.6 across five modules). BUMP IT IN EVERY PULL REQUEST,
 // core change or not: it is how "is this the update I just merged?" is
 // answered by looking, and browsers cache .js files stubbornly.
-var VERSION = '1.56';
+var VERSION = '1.57';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -3180,6 +3180,126 @@ function recText(v) {
   return bare.test(s) ? s.replace(/\s*%/g, '').trim() : s;
 }
 
+// ══ Usage: recommended, safe limit, effective range, cautions (2026-10-26) ══
+// Her model, decided 2026-10-26 after a full review of every ingredient:
+//   Recommended  recMin-recMax: optimal function within it; outside it a
+//                QUIET note (with her usage note, so she can confirm intent).
+//   Safe limit   safeMax: one direction, "safe to use up to this amount";
+//                zero is always fine. A number, 'none' (no upper limit) or ''
+//                (not established; "no safe limit" would read as unsafe).
+//                Above it a FIRM warning. Leave-on basis.
+//   Effective    effMin-effMax: preservatives only, in place of Recommended:
+//                the amount needed to preserve; outside it either way a FIRM
+//                warning.
+//   Usage note   usageNote: free text, e.g. a dual-use ingredient's amounts
+//                ("As a pH adjuster 0.1-1%; as an exfoliant 4-10%").
+//   Caution      caution: anything that is not a number (sun, pregnancy,
+//                children under 3, patch test). Replaces Restricted; an
+//                ingredient with a caution gets the orange dot.
+// Ingredients saved before this (no usageV2) are read through the old
+// fields: useRate was her functional note (Recommended), min/max her
+// Usage rate box (safety; 100 meant no limit), flag + restrictions her
+// Restricted tick and note.
+function usageNum(v) {
+  // A trailing % is allowed ("10%" is 10); anything else not a number is ''.
+  var s = String(v == null ? '' : v).trim().replace(',', '.').replace(/\s*%$/, '');
+  return /^\d*\.?\d+$/.test(s) ? s.replace(/^\./, '0.') : '';
+}
+// An old free-text Recommended: a bare number or range becomes the range;
+// "up to X" becomes a top only; anything else ("pH 5: 2%", "2% leave-on, 1%
+// rinse-off", "10%+") is not guessed at: it reads as text, [ '', '', text ].
+function usageRangeOf(text) {
+  var s = String(text == null ? '' : text).trim().replace(/(\d),(\d)/g, '$1.$2');
+  if (!s) return ['', '', ''];
+  var m = s.match(/^(\d*\.?\d+)\s*%?\s*(?:-|\u2013|\u2014|to)\s*(\d*\.?\d+)\s*%?$/i);
+  if (m) return [usageNum(m[1]), usageNum(m[2]), ''];
+  m = s.match(/^(\d*\.?\d+)\s*%?$/);
+  if (m) return [usageNum(m[1]), usageNum(m[1]), ''];
+  m = s.match(/^up\s*to\s*(\d*\.?\d+)\s*%?$/i);
+  if (m) return ['', usageNum(m[1]), ''];
+  return ['', '', s];
+}
+var USAGE_FLAG_ONLY = 'Restricted (no note recorded).';
+function isPreservativeIng(ing) { return funcCats(ing).indexOf('Preservative') !== -1; }
+function usage(ing) {
+  ing = ing || {};
+  if (ing.usageV2) {
+    var sm = String(ing.safeMax == null ? '' : ing.safeMax).trim();
+    return {
+      recMin: usageNum(ing.recMin), recMax: usageNum(ing.recMax),
+      safeMax: sm === 'none' ? 'none' : usageNum(sm),
+      effMin: usageNum(ing.effMin), effMax: usageNum(ing.effMax),
+      usageNote: String(ing.usageNote || '').trim(),
+      caution: String(ing.caution || '').trim(),
+      legacy: false
+    };
+  }
+  var r = usageRangeOf(ing.useRate), mx = usageNum(ing.max), mn = usageNum(ing.min);
+  var pres = isPreservativeIng(ing) && (mn || mx);
+  var noLimit = mx !== '' && parseFloat(mx) >= 100;
+  // Words that were not a range, and an old dermal-limits line, become the
+  // usage note, so they show (and carry over when saved) instead of vanishing.
+  var dl = String(ing.dermalLimits || '').trim();
+  var note = [r[2] ? 'Recommended: ' + r[2] : '', dl ? 'Dermal limits: ' + dl : ''].filter(Boolean).join(' ');
+  return {
+    recMin: r[0], recMax: r[1],
+    safeMax: mx === '' ? '' : (noLimit ? 'none' : mx),
+    effMin: pres ? mn : '', effMax: pres && !noLimit ? mx : '',
+    usageNote: note,
+    caution: String(ing.restrictions || '').trim() || (ing.flag === 'yes' ? USAGE_FLAG_ONLY : ''),
+    legacy: true
+  };
+}
+function usageRange(a, b) {
+  if (a && b) return a === b ? a + '%' : a + '–' + b + '%';
+  if (b) return 'up to ' + b + '%';
+  if (a) return 'from ' + a + '%';
+  return '';
+}
+// The words for a safe limit, everywhere.
+function usageSafeText(u) {
+  return u.safeMax === 'none' ? 'no upper limit' : u.safeMax ? 'safe up to ' + u.safeMax + '%' : 'safe limit not established';
+}
+// "Recommended 2–5% · safe up to 10%"; a preservative: "Effective 0.5–1% ·
+// safe up to 1%". opts.short drops the words for a narrow column.
+function usageText(ing, opts) {
+  var u = usage(ing), parts = [], short = opts && opts.short;
+  var eff = usageRange(u.effMin, u.effMax), rec = usageRange(u.recMin, u.recMax);
+  if (eff) parts.push((short ? 'eff. ' : 'Effective ') + eff);
+  else if (rec) parts.push((short ? '' : 'Recommended ') + rec);
+  if (u.safeMax || !short) parts.push(short ? (u.safeMax === 'none' ? 'no upper limit' : 'up to ' + u.safeMax + '%') : usageSafeText(u));
+  return parts.join(' · ');
+}
+// What a formula amount means against the ingredient's numbers: a list of
+// { level: 'firm' | 'quiet', text }. Blank or zero says nothing.
+function usageCheck(ing, pct) {
+  var p = parseFloat(pct), out = [];
+  if (!(p > 0)) return out;
+  var u = usage(ing), f = function (x) { return parseFloat(x); };
+  var fmt = function (x) { return Math.round(x * 1000) / 1000 + '%'; };
+  if (u.safeMax && u.safeMax !== 'none' && p > f(u.safeMax) + 1e-9) out.push({ level: 'firm', text: fmt(p) + ' is over the safe limit (' + u.safeMax + '%).' });
+  var eff = usageRange(u.effMin, u.effMax);
+  if (eff) {
+    if (u.effMin && p < f(u.effMin) - 1e-9) out.push({ level: 'firm', text: fmt(p) + ' is below the effective range (' + eff + '): it may not preserve.' });
+    else if (u.effMax && p > f(u.effMax) + 1e-9 && !(u.safeMax && u.safeMax !== 'none' && p > f(u.safeMax))) out.push({ level: 'firm', text: fmt(p) + ' is above the effective range (' + eff + ').' });
+  } else if (u.recMin || u.recMax) {
+    var rec = usageRange(u.recMin, u.recMax);
+    if (u.recMin && p < f(u.recMin) - 1e-9) out.push({ level: 'quiet', text: 'Below recommended (' + rec + ').' });
+    else if (u.recMax && p > f(u.recMax) + 1e-9) out.push({ level: 'quiet', text: 'Above recommended (' + rec + ').' });
+  }
+  return out;
+}
+// Writes a usage set onto an ingredient as the new fields (and marks it).
+function setUsage(ing, v) {
+  ['recMin', 'recMax', 'effMin', 'effMax'].forEach(function (k) { ing[k] = usageNum(v[k]); });
+  var sm = String(v.safeMax == null ? '' : v.safeMax).trim();
+  ing.safeMax = sm === 'none' ? 'none' : usageNum(sm);
+  ing.usageNote = String(v.usageNote || '').trim();
+  ing.caution = String(v.caution || '').trim();
+  ing.usageV2 = true;
+  return ing;
+}
+
 // ══ Certifications (2026-10-24) ═══════════════════════
 // Ticked on a lot (a purchase), not the ingredient: the same oil from two
 // suppliers can differ. Each is a plain boolean on the lot, so the lot form's
@@ -3306,7 +3426,7 @@ function stockLabelItems(items, ings, forms, mixAddins) {
   return opened.map(function (e) {
     var ing = findIngIn(ings, e.ingId), c = {};
     for (var key in e) c[key] = e[key];
-    if (ing) { c.inci = ing.inci || ''; c.flag = ing.flag; c.label = ing.name || ''; }
+    if (ing) { c.inci = ing.inci || ''; c.flag = usage(ing).caution ? 'yes' : ''; c.label = ing.name || ''; }
     var vias = e.vias || (e.via ? [e.via] : []);
     if (vias.length) c.label = (c.label || 'an ingredient') + ' (in ' + vias.map(function (v) { return v.name || 'a stock solution'; }).join(' and ') + (e.direct ? ', and on its own' : '') + ')';
     return c;
@@ -5126,6 +5246,7 @@ return {
   VERSION: VERSION,
   inciSplit: inciSplit, inciMerge: inciMerge, inciMerged: inciMerged,
   CERTS: CERTS, lotCerts: lotCerts, activeLot: activeLot, recText: recText, recStart: recStart,
+  usage: usage, usageText: usageText, usageCheck: usageCheck, usageRange: usageRange, usageSafeText: usageSafeText, usageNum: usageNum, setUsage: setUsage, isPreservativeIng: isPreservativeIng,
   rt: { toHtml: rtToHtml, plain: rtPlain, fromEl: rtFromEl, editor: rtEditor, attach: rtAttach, refresh: rtRefresh, refreshAll: rtRefreshAll },
   STOCK_TYPE: STOCK_TYPE, isStockType: isStockType, stockIngFor: stockIngFor, stockFormFor: stockFormFor,
   stockParts: stockParts, stockExpand: stockExpand, stockLabelItems: stockLabelItems, stockWithParts: stockWithParts, stockInci: stockInci, stockNewIng: stockNewIng,

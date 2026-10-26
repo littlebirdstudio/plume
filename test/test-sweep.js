@@ -269,7 +269,9 @@ const getIngs = "JSON.parse(localStorage.getItem('aerie-ingredients-v2'))";
   ];
   const got = await page.evaluate('(' + JSON.stringify(CASES) + ').map(function (c) { return Plume.recStart(c[0]); })');
   CASES.forEach((c, i) => ok('"' + c[0] + '" starts at ' + (c[1] ? c[1] + '%' : 'blank'), got[i] === c[1], got[i]));
-  ok('Formulations uses it for a new line', await page.evaluate("recStartPct({ useRate: '.5%' }) === '0.5'"));
+  // Since the usage review (2026-10-26) a new line starts blank: she types
+  // the amount, with Recommended and the safe limit shown under the name.
+  ok('Formulations no longer pre-fills a new line', await page.evaluate("typeof recStartPct === 'undefined'"));
 
   // ── 7. Cost per gram while formulating ─────────────────────────────
   console.log('\n7. Formulations shows cost per gram (v1.47)');

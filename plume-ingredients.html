@@ -783,6 +783,13 @@
   .lot-inp:focus, .lot-row .lot-inp:focus { border-color: var(--bark-light); box-shadow: 0 0 0 3px color-mix(in srgb, var(--bark) 14%, transparent); }
   .lot-inp:disabled, .lot-row .lot-inp:disabled { background: var(--cream-dark); color: var(--ink-lighter); }
   .lot-pair { display: flex; gap: 4px; }
+  .use-pair { align-items: center; }
+  .use-pair input { flex: 1 1 50px; min-width: 0; }
+  .use-pair select { flex: 0 0 auto; max-width: 62%; }
+  .use-to { font-size: 12px; color: var(--ink-lighter); }
+  .use-line { font-size: 12.5px; color: var(--ink-light); font-variant-numeric: tabular-nums; }
+  .use-note { font-size: 12px; color: var(--ink-lighter); margin-top: 2px; }
+  .caution-dot { color: var(--warning); font-size: 10px; margin-left: 4px; }
   .lot-buy-sum { font-size: 12px; color: var(--ink-light); margin-top: 6px; min-height: 0; }
   .lot-buy-sum:empty { display: none; }
   .lot-onhand { display: flex; align-items: center; gap: 8px; min-height: 32px; }
@@ -1408,7 +1415,7 @@
             <button type="button" onclick="makeStockSolution()" data-icon="formulations">Make a stock solution</button>
             <hr>
             <button type="button" onclick="exportData()" data-icon="download">Export backup</button>
-            <button type="button" onclick="document.getElementById('import-file-input').click()" data-icon="upload">Import</button>
+            <button type="button" onclick="document.getElementById('import-file-input').click()" data-icon="upload">Import or update from a file</button>
           </div>
         </div>
       </div>
@@ -1433,11 +1440,11 @@
       <button type="button" class="ps-chip" id="in-stock-btn" onclick="toggleInStock()" title="Show only ingredients you have on hand"><span class="ps-swatch"></span>In stock</button>
       <button type="button" class="ps-chip" id="low-stock-btn" onclick="toggleLowStock()" title="Below the low-stock level you set"><span class="ps-dot" style="background:var(--warning)"></span>Running low</button>
       <button type="button" class="ps-chip" id="on-order-btn" onclick="toggleOnOrder()" title="Bought, not here yet"><span class="ps-swatch ord-sw"></span>On order</button>
-      <button type="button" class="ps-chip" id="restricted-chip" onclick="toggleRestrictedChip()" title="Ingredients marked restricted">Restricted</button>
+      <button type="button" class="ps-chip" id="restricted-chip" onclick="toggleRestrictedChip()" title="Ingredients with a caution">Cautions</button>
       <select id="filter-phase" hidden onchange="renderTable()">
         <option value="">All phases</option><option value="water">Water</option><option value="oil">Oil</option><option value="cool-down">Cool-down</option><option value="active">Active</option><option value="add-in">Add-in</option><option value="other">Other</option>
       </select>
-      <select id="filter-flag" hidden onchange="renderTable()"><option value="">All ingredients</option><option value="yes">Restricted only</option></select>
+      <select id="filter-flag" hidden onchange="renderTable()"><option value="">All ingredients</option><option value="yes">Cautions only</option></select>
     </div>
 
     <!-- Recently viewed -->
@@ -1563,21 +1570,31 @@
           <label for="f-solnote">Solubility note <span class="hint">— how to get it in, for writing instructions</span></label>
           <input type="text" id="f-solnote" placeholder="e.g. heat to 70 °C to dissolve; disperse in glycerin first">
         </div>
-        <div class="form-full form-row3">
+        <!-- Usage (2026-10-26, her model): Recommended range, Safe limit,
+             Effective range for preservatives, a usage note and cautions. -->
+        <div class="form-full form-row3 use-row">
           <div class="field">
-            <label for="f-userate">Recommended % <span class="hint">— typical</span></label>
-            <input type="text" id="f-userate" placeholder="e.g. 0.5 or 2–5">
+            <label for="f-recmin">Recommended % <span class="hint">— optimal function</span></label>
+            <div class="lot-pair use-pair"><input type="text" inputmode="decimal" id="f-recmin" placeholder="from" aria-label="Recommended from"><span class="use-to">to</span><input type="text" inputmode="decimal" id="f-recmax" placeholder="to" aria-label="Recommended to"></div>
           </div>
           <div class="field">
-            <label for="f-min">Min usage %</label>
-            <input type="number" id="f-min" placeholder="0" step="0.01" min="0">
+            <label for="f-safe-kind">Safe limit <span class="hint">— leave-on</span></label>
+            <div class="lot-pair use-pair"><select id="f-safe-kind" onchange="syncSafeKind('f')" aria-label="Safe limit kind"><option value="num">Up to</option><option value="none">No upper limit</option><option value="">Not established</option></select><input type="text" inputmode="decimal" id="f-safemax" placeholder="%" aria-label="Safe up to %"></div>
           </div>
           <div class="field">
-            <label for="f-max">Max usage %</label>
-            <input type="number" id="f-max" placeholder="100" step="0.01" min="0">
+            <label for="f-effmin">Effective % <span class="hint">— preservatives</span></label>
+            <div class="lot-pair use-pair"><input type="text" inputmode="decimal" id="f-effmin" placeholder="from" aria-label="Effective from"><span class="use-to">to</span><input type="text" inputmode="decimal" id="f-effmax" placeholder="to" aria-label="Effective to"></div>
           </div>
         </div>
-        <div class="form-full ed-hint">Recommended % is the usual amount, and where a new line in a formulation starts; min and max are the limits Formulations warns about.</div>
+        <div class="field form-full">
+          <label for="f-usagenote">Usage note <span class="hint">— comes up in Formulations when an amount is outside the ranges; e.g. amounts by use</span></label>
+          <input type="text" id="f-usagenote" placeholder="e.g. As a pH adjuster 0.1–1%; as an exfoliant 4–10%">
+        </div>
+        <div class="field form-full">
+          <label for="f-caution">Caution <span class="hint">— anything that is not a number; shows as the orange dot in Formulations</span></label>
+          <textarea id="f-caution" rows="2" style="min-height:0" placeholder="e.g. Phototoxic: avoid sun on treated skin; not for children under 3"></textarea>
+        </div>
+        <div class="form-full ed-hint">Recommended: optimal function within this range; outside it Formulations shows a quiet note. Safe limit: safe to use up to this amount; above it, a firm warning. Effective (preservatives, in place of Recommended): needed to preserve; outside it either way, a firm warning. New formula lines start blank.</div>
       </div>
     </div>
 
@@ -1636,19 +1653,13 @@
           <label for="f-optimal-ph" title="The pH range it works in. Outside it, it may not do its job; for a preservative, the product may not be protected. Formulations warns when a target or a batch falls outside it.">Effective pH range</label>
           <input type="text" id="f-optimal-ph" placeholder="e.g. 3 – 5.5, or up to 6">
         </div>
-        <div class="field">
-          <label for="f-dermal-limits">Dermal limits <span class="hint">— for essential oils</span></label>
-          <input type="text" id="f-dermal-limits" placeholder="e.g. 1% leave-on / 5% rinse-off">
-        </div>
+        
         <div class="field">
           <label for="f-density">Density (g/mL) <span class="hint">— for mL and fl oz purchases</span></label>
           <input type="number" id="f-density" placeholder="1.00 (water default)" step="0.001" min="0.1" max="3" oninput="onDensityChange()">
           <div class="density-flag" id="f-density-flag" style="display:none"></div>
         </div>
-        <div class="field form-full">
-          <label class="restrict-toggle"><input type="checkbox" id="f-restricted" onchange="syncRestrictField()"> Restricted use <span class="hint">— has usage or safety limits</span></label>
-          <input type="text" id="f-restrictions" style="display:none;margin-top:6px" placeholder="e.g. Max 1% in leave-on; avoid in pregnancy">
-        </div>
+        
         <div class="field form-full">
           <label for="f-claims">Claims <span class="hint">— what the supplier says it does; reference only, not label copy</span></label>
           <textarea id="f-claims" maxlength="500" rows="2" style="min-height:0" placeholder="e.g. supplier states: 24-hour hydration, barrier support"></textarea>
@@ -1788,8 +1799,8 @@
             <option value="other">Other</option>
           </select>
         </div>
-        <div class="field"><label for="qa-min">Min usage %</label><input type="number" id="qa-min" step="0.01" min="0" placeholder="0"></div>
-        <div class="field"><label for="qa-max">Max usage %</label><input type="number" id="qa-max" step="0.01" min="0" placeholder="100"></div>
+        <div class="field"><label for="qa-recmin">Recommended %</label><div class="lot-pair use-pair"><input type="text" inputmode="decimal" id="qa-recmin" placeholder="from" aria-label="Recommended from"><span class="use-to">to</span><input type="text" inputmode="decimal" id="qa-recmax" placeholder="to" aria-label="Recommended to"></div></div>
+        <div class="field"><label for="qa-safe-kind">Safe limit</label><div class="lot-pair use-pair"><select id="qa-safe-kind" onchange="syncSafeKind('qa')" aria-label="Safe limit kind"><option value="num">Up to</option><option value="none">No upper limit</option><option value="">Not established</option></select><input type="text" inputmode="decimal" id="qa-safemax" placeholder="%" aria-label="Safe up to %"></div></div>
       </div>
     </div>
     <div class="qa-buy">
@@ -2105,12 +2116,74 @@ function exportData() {
   a.click();
 }
 
+// ── Update from a file (2026-10-26) ─────────────────────
+// { kind: 'plume-ingredient-update', title, updates: [{ id, name, usage: {
+// recMin, recMax, safeMax, effMin, effMax, usageNote, caution } }] }.
+// Matched by id, then by name. Shows every change first; applies only on
+// yes. Each ingredient keeps its old usage once, in usageOld.
+var pendingUpdate = null;
+function updateMatches(data) {
+  var byId = {}, byName = {};
+  // By name, an active ingredient wins over an archived one of the same name.
+  ingredients.forEach(function (i) { byId[String(i.id)] = i; var k = String(i.name || '').toLowerCase(); if (!byName[k] || (byName[k].archived && !i.archived)) byName[k] = i; });
+  var found = [], missing = [];
+  (data.updates || []).forEach(function (u) {
+    var ing = (u.id != null && byId[String(u.id)]) || byName[String(u.name || '').toLowerCase()];
+    if (ing && u.usage) found.push({ ing: ing, u: u }); else missing.push(u.name || u.id || '(unnamed)');
+  });
+  return { found: found, missing: missing };
+}
+function usageSummary(x) {
+  var t = (x.recMin || x.recMax || x.effMin || x.effMax || x.safeMax) ? Plume.usageText(Object.assign({ usageV2: true }, x)) : 'nothing set';
+  return t + (x.usageNote ? ' \u00b7 note: ' + x.usageNote : '') + (x.caution ? ' \u00b7 caution: ' + x.caution : '');
+}
+function previewUpdateFile(data) {
+  var m = updateMatches(data);
+  pendingUpdate = m;
+  var same = function (a, b) { return ['recMin', 'recMax', 'safeMax', 'effMin', 'effMax', 'usageNote', 'caution'].every(function (k) { return String(a[k] || '') === String(b[k] || ''); }); };
+  var changes = m.found.filter(function (f) { var was = Plume.usage(f.ing); return !f.ing.usageV2 || !same(was, f.u.usage); });
+  if (!changes.length) {
+    Plume.tell('Every ingredient in this file already has these values.' + (m.missing.length ? '\n\nNot in your library: ' + m.missing.join(', ') + '.' : ''), { title: 'Nothing to update' });
+    return;
+  }
+  var rows = changes.map(function (f) {
+    return '<tr><td>' + esc(f.ing.name) + '</td><td>' + esc(usageSummary(Plume.usage(f.ing))) + '</td><td>' + esc(usageSummary(f.u.usage)) + '</td></tr>';
+  }).join('');
+  Plume.ask('<p style="margin:0 0 8px">' + esc(data.title || 'An update file') + ' changes these ingredients. Each keeps its old values in its history.' +
+      (m.missing.length ? ' Not in your library, so skipped: ' + esc(m.missing.join(', ')) + '.' : '') + '</p>' +
+      '<div style="max-height:340px;overflow:auto"><table class="upd-tab"><thead><tr><th>Ingredient</th><th>Now</th><th>After</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
+      '<style>.upd-tab{width:100%;border-collapse:collapse;font-size:12px}.upd-tab th,.upd-tab td{padding:4px 6px;border-bottom:1px solid var(--cream-dark);text-align:left;vertical-align:top}.upd-tab th{font-weight:600}</style>',
+    function () { applyUpdateFile(changes); },
+    { title: 'Update ' + changes.length + ' ingredient' + (changes.length === 1 ? '' : 's') + '?', yes: 'Update', html: true });
+}
+function applyUpdateFile(changes) {
+  var day = todayISO();
+  changes.forEach(function (f) {
+    var ing = f.ing;
+    if (!ing.usageOld) {
+      var w = Plume.usage(ing);
+      ing.usageOld = ing.usageV2
+        ? { recMin: w.recMin, recMax: w.recMax, safeMax: w.safeMax, effMin: w.effMin, effMax: w.effMax, usageNote: w.usageNote, caution: w.caution, at: day }
+        : { min: ing.min || '', max: ing.max || '', useRate: ing.useRate || '', flag: ing.flag || '', restrictions: ing.restrictions || '', dermalLimits: ing.dermalLimits || '', at: day };
+    }
+    Plume.setUsage(ing, f.u.usage);
+    ['min', 'max', 'useRate', 'flag', 'restrictions', 'dermalLimits'].forEach(function (k) { delete ing[k]; });
+  });
+  // A failed save leaves memory ahead of storage; reload from storage.
+  if (!saveData()) { ingredients = Store.getJSON(STORE_KEY, []) || ingredients; renderTable(); renderStats(); return; }
+  renderTable(); renderStats();
+  Plume.tell('Updated ' + changes.length + ' ingredient' + (changes.length === 1 ? '' : 's') + '.', { title: 'Update complete' });
+}
+
 function importData(e) {
   var file = e.target.files[0]; if (!file) return;
   var reader = new FileReader();
   reader.onload = function(ev) {
     try {
       var data = JSON.parse(ev.target.result);
+      // An update file (the usage review, 2026-10-26) changes fields on
+      // ingredients she already has, by id, after a preview.
+      if (data && data.kind === 'plume-ingredient-update') { previewUpdateFile(data); return; }
       var ingData  = Array.isArray(data) ? data : (data.ingredients || []);
       var suppData = Array.isArray(data) ? [] : (data.suppliers || []);
       if (!Array.isArray(ingData)) throw new Error('Invalid format');
@@ -2796,7 +2869,7 @@ function renderTable() {
     // line (Plume.ingMatchRank), plus supplier, which only this screen has.
     if (q && !Plume.ingMatchRank(i, q) && !suppText.includes(q)) return false;
     if (phase && i.phase !== phase) return false;
-    if (flag === 'yes' && i.flag !== 'yes') return false;
+    if (flag === 'yes' && !Plume.usage(i).caution) return false;
     if (func && Plume.funcCats(i).indexOf(func) === -1) return false;
     if (lowStockActive && !isLowStock(i)) return false;
     if (inStockActive && !hasStock(i)) return false;
@@ -2862,7 +2935,7 @@ function renderTable() {
         (i.inci ? '<div class="ps-sub" title="' + esc(i.inci) + '">' + esc(i.inci) + '</div>' : '') + '</td>' +
       '<td>' + (i.phase ? '<span class="ps-tag ' + phaseClass(i.phase) + '">' + esc(PH[i.phase] || i.phase) + '</span>' : '<span class="ps-muted">\u2014</span>') + '</td>' +
       '<td>' + (cats.length ? cats.map(function (c) { return '<span class="ps-tag">' + esc(c) + '</span>'; }).join('') : '<span class="ps-muted">\u2014</span>') + '</td>' +
-      '<td class="ps-muted" style="white-space:nowrap">' + (i.min || i.max ? esc((i.min || '0') + '\u2013' + (i.max || '100')) + '%' : '\u2014') + '</td>' +
+      '<td class="ps-muted" style="white-space:nowrap" title="' + esc(Plume.usageText(i)) + '">' + (esc(Plume.usageText(i, { short: true })) || '\u2014') + '</td>' +
       '<td class="ps-num">' + (cost === 0 && i.noCost ? '<span class="ps-muted" title="Made in-house or free: counts as $0">in-house</span>' : cost !== null ? '$' + cost.toFixed(4) : '<span class="ps-muted">\u2014</span>') + '</td>' +
       '<td>' + stockCell + '</td>' +
       '</tr>' +
@@ -3004,8 +3077,7 @@ function cmpRows() {
     ['What I had in mind', function (i) { return i.purpose ? Plume.rt.toHtml(i.purpose) : ''; }, function (i) { return Plume.rt.plain(i.purpose || ''); }],
     ['Phase', function (i) { return i.phase ? esc(CMP_PH[i.phase] || i.phase) : ''; }],
     ['Solubility', function (i) { return i.solubility ? esc(CMP_SOL[i.solubility] || i.solubility) + (i.solNote ? '<small>' + esc(i.solNote) + '</small>' : '') : ''; }],
-    ['Recommended %', function (i) { return esc(Plume.recText(i.useRate)); }],
-    ['Use range', function (i) { return (i.min || i.max) ? esc((i.min || '0') + '\u2013' + (i.max || '100') + '%') : ''; }],
+    ['Usage', function (i) { var u = Plume.usage(i); return (u.recMin || u.recMax || u.effMin || u.effMax || u.safeMax) ? esc(Plume.usageText(i)) + (u.usageNote ? '<small>' + esc(u.usageNote) + '</small>' : '') : ''; }],
     ['Effective pH', function (i) { return esc(t(i.optimalPh)); }],
     ['Cost per gram', function (i) { var c = activeCost(i); return c === null ? '' : (c === 0 && i.noCost ? 'in-house ($0)' : '$' + c.toFixed(4)); }],
     ['On hand', function (i) { var h = hasStock(i) ? formatStockDisplay(i) : ''; var o = Plume.onOrderG(i);
@@ -3021,8 +3093,7 @@ function cmpRows() {
     ['Density', function (i) { return i.density ? esc(String(i.density)) + ' g/mL' : ''; }],
     ['Scent', function (i) { return esc(t(i.scent)); }],
     ['Color', function (i) { return esc(t(i.colour)); }],
-    ['Dermal limits', function (i) { return esc(t(i.dermalLimits)); }],
-    ['Restricted', function (i) { return i.flag === 'yes' ? 'Yes' + (i.restrictions ? '<small>' + esc(i.restrictions) + '</small>' : '') : ''; }],
+    ['Caution', function (i) { return esc(Plume.usage(i).caution); }],
     ['Used in', function (i) { var u = used[i.id] || []; return u.length ? u.map(function (x) { return esc(x.name); }).join(', ') : ''; }]
   ];
 }
@@ -3087,7 +3158,7 @@ function quickLookHtml(i) {
     '<dl class="ql-props">' +
       '<dt>Phase</dt><dd>' + (i.phase ? '<span class="ps-tag ' + phaseClass(i.phase) + '">' + esc(PH[i.phase] || i.phase) + '</span>' : '\u2014') + '</dd>' +
       '<dt>Function</dt><dd>' + (cats.length ? cats.map(function (c) { return '<span class="ps-tag">' + esc(c) + '</span>'; }).join('') : '\u2014') + '</dd>' +
-      '<dt>Use rate</dt><dd>' + (i.min || i.max ? esc((i.min || '0') + '\u2013' + (i.max || '100')) + '%' : '\u2014') + '</dd>' +
+      '<dt>Usage</dt><dd>' + esc(Plume.usageText(i)) + (Plume.usage(i).usageNote ? '<div class="use-note">' + esc(Plume.usage(i).usageNote) + '</div>' : '') + '</dd>' +
       '<dt>Price / g</dt><dd>' + (cost === 0 && i.noCost ? 'Made in-house or free ($0)' : cost !== null ? '$' + cost.toFixed(4) : '\u2014') + '</dd>' +
       '<dt>On hand</dt><dd>' + (hasStock(i) ? stock + (isLowStock(i) ? ' <span style="color:var(--warning)">\u00b7 running low</span>' : '') : '<span class="ps-muted">None</span>') +
         (Plume.onOrderG(i) > 0 ? ' <span class="ord-txt">\u00b7 ' + gramsText(Plume.onOrderG(i)) + ' on order</span>' : (hasOnOrder(i) ? ' <span class="ord-txt">\u00b7 on order</span>' : '')) + '</dd>' +
@@ -3099,7 +3170,7 @@ function quickLookHtml(i) {
       (hasOnOrder(i) ? '<a class="ps-link-btn ord-arrive" onclick="markArrived(event,\'' + i.id + '\')" title="It is here: count it as stock, received today">Mark arrived</a>' : '') +
       (buy ? '<a class="ps-link-btn" href="' + esc(buy) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()">Reorder \u2197</a>' : '') +
     '</div></div><div class="ql-side">' +
-    (i.flag === 'yes' ? '<div class="ql-warn">Restricted' + (i.restrictions ? ' \u2014 ' + esc(i.restrictions) : '') + '</div>' : '') +
+    (Plume.usage(i).caution ? '<div class="ql-warn">Caution: ' + esc(Plume.usage(i).caution) + '</div>' : '') +
     '<div class="ql-block"><div class="ql-k">The lowdown</div>' + noteEditHtml(i, 'chooseWhen') + '</div>' +
     (i.substitution ? '<div class="ql-block"><div class="ql-k">Substitutes</div><div style="font-size:13.5px">' + esc(i.substitution) + '</div></div>' : '') +
     '<div class="ql-block"><div class="ql-k">What I had in mind</div>' + noteEditHtml(i, 'purpose') + '</div>' +
@@ -3309,7 +3380,7 @@ function viewIngredient(id) {
       Plume.funcCats(i).map(function (c) {
         return '<span class="phase-badge" style="background:var(--cream-dark);color:var(--bark-dark)">' + esc(c) + '</span>';
       }).join('') +
-      (i.flag === 'yes' ? '<span style="font-size:11px;background:var(--warning-bg);color:var(--warning);padding:3px 10px;border-radius:20px;font-weight:500">Restricted use</span>' : '') +
+      (Plume.usage(i).caution ? '<span style="font-size:11px;background:var(--warning-bg);color:var(--warning);padding:3px 10px;border-radius:20px;font-weight:500">Caution</span>' : '') +
       // Certifications of the lot in use (2026-10-24).
       certBadgesHtml(getActiveLot(i)) +
     '</div>';
@@ -3370,8 +3441,9 @@ function viewIngredient(id) {
   var stockTxt = (tg !== null ? tg.toFixed(0) + 'g' : '—') + (thresh ? ' <span style="font-size:11px;color:' + (low ? 'var(--warning)' : 'var(--success)') + '">' + (low ? '▼ low — threshold ' + thresh : '✓ above ' + thresh) + '</span>' : '');
   var cpg = bestCpg(i);
   var glanceOpt = [
-    { label: 'Usage rate', v: (i.min || i.max) ? (i.min || '0') + '% – ' + (i.max || '100') + '%' : '', name: 'usage rate', tab: 'basics', id: 'f-min' },
-    { label: 'Recommended %', v: Plume.recText(i.useRate), name: 'recommended %', tab: 'basics', id: 'f-userate' },
+    { label: 'Usage', v: (function () { var u = Plume.usage(i); return (u.recMin || u.recMax || u.effMin || u.effMax || u.safeMax) ? Plume.usageText(i) : u.usageNote; })(), name: 'usage', tab: 'basics', id: 'f-recmin',
+      note: (function () { var u = Plume.usage(i); return (u.recMin || u.recMax || u.effMin || u.effMax || u.safeMax) ? u.usageNote : ''; })() },
+    { label: 'Caution', v: Plume.usage(i).caution, name: 'caution', tab: 'basics', id: 'f-caution', quiet: true },
     { label: 'Solubility', v: SOL[i.solubility] || i.solubility, name: 'solubility', tab: 'basics', id: 'f-solubility', note: i.solNote },
     { label: 'Substitutes', v: i.substitution, name: 'substitutes', tab: 'glance', id: 'f-substitution' },
     { label: 'Secondary functions', v: i.function2, name: 'secondary functions', tab: 'glance', id: 'f-function2' }
@@ -3391,7 +3463,8 @@ function viewIngredient(id) {
       '<div class="detail-field"><label>What I had in mind</label>' + noteEditHtml(i, 'purpose') + '</div>' +
     '</div>';
   var glanceHtml = section({ tab: 'glance', title: 'At a glance', body: glanceBody,
-    empties: glanceOpt.filter(function (f) { return !has(f.v); }) });
+    // No caution is the usual case, so a blank one is not listed as missing.
+    empties: glanceOpt.filter(function (f) { return !has(f.v) && !f.quiet; }) });
 
   // Properties & characteristics
   var dField = densityField(i);
@@ -3403,7 +3476,6 @@ function viewIngredient(id) {
     { label: 'Color',               v: i.colour,             name: 'color',               id: 'f-colour' },
     { label: 'Scent',               v: i.scent,              name: 'scent',               id: 'f-scent' },
     { label: 'Effective pH range',  v: i.optimalPh,          name: 'effective pH range',  id: 'f-optimal-ph' },
-    { label: 'Dermal limits',       v: i.dermalLimits,       name: 'dermal limits',       id: 'f-dermal-limits' },
     { label: 'Claims',              v: i.claims,             name: 'claims',              id: 'f-claims' },
     { label: 'Density (g/mL)',      v: i.density,            name: 'density',             id: 'f-density' }
   ];
@@ -3412,7 +3484,6 @@ function viewIngredient(id) {
     pFilled.filter(function (f) { return f.name !== 'claims' && f.name !== 'density'; }).map(function (f) { return field(f.label, esc(String(f.v))); }).join('') +
     // Density is always shown: an assumed one is still what stock and cost use.
     field('Density (g/mL)', esc(String(dField.value || '1')) + (dField.note ? ' <span style="font-size:11px;color:var(--ink-lighter)">(' + esc(String(dField.note)) + ')</span>' : (!dField.value ? ' <span style="font-size:11px;color:var(--ink-lighter)">(assumed, water)</span>' : ''))) +
-    field('Restricted use', i.flag === 'yes' ? ('Yes' + (i.restrictions ? ' — ' + esc(i.restrictions) : '')) : (i.restrictions ? 'Not flagged — ' + esc(i.restrictions) : 'No')) +
     (has(i.claims) ? '<div class="detail-field" style="grid-column:1 / -1"><label>Claims — supplier-stated</label>' + rich(i.claims) + '</div>' : '') +
     '</div>';
   var propsHtml = section({ tab: 'props', title: 'Properties &amp; characteristics', count: pFilled.length + ' of ' + props.length + ' filled', full: pFilled.length === props.length,
@@ -3510,19 +3581,53 @@ function toggleGeneralInfo() {
   btn.textContent = open ? 'Show less' : 'Read more';
 }
 
-// ── Restricted use ────────────────────────────────────
-// One fact, formerly split across two fields: a yes/no flag (which drives
-// the orange dot in Formulations) and a free-text Restrictions line in
-// Properties. Now a checkbox that reveals the text box. The box also stays
-// visible whenever it already holds text, so imported notes (e.g. a nut
-// allergy caution) are never hidden from the editor -- and unchecking never
-// deletes what was written.
-function syncRestrictField() {
-  var cb = document.getElementById('f-restricted');
-  var tx = document.getElementById('f-restrictions');
-  if (!cb || !tx) return;
-  tx.style.display = (cb.checked || tx.value.trim()) ? '' : 'none';
+// ── Usage fields (2026-10-26) ─────────────────────────
+// prefix 'f' (the editor) or 'qa' (Quick add): Recommended, Safe limit kind
+// and number, Effective, Usage note, Caution.
+function syncSafeKind(pf) {
+  var k = document.getElementById(pf + '-safe-kind'), n = document.getElementById(pf + '-safemax');
+  if (!k || !n) return;
+  n.disabled = k.value !== 'num';
+  if (k.value !== 'num') n.value = '';
 }
+function fillUsageForm(pf, ing) {
+  var u = Plume.usage(ing || {});
+  var set = function (id, v) { var el = document.getElementById(pf + '-' + id); if (el) el.value = v || ''; };
+  set('recmin', u.recMin); set('recmax', u.recMax); set('effmin', u.effMin); set('effmax', u.effMax);
+  var k = document.getElementById(pf + '-safe-kind');
+  if (k) k.value = u.safeMax === 'none' ? 'none' : (u.safeMax ? 'num' : (ing ? '' : 'num'));
+  set('safemax', u.safeMax === 'none' ? '' : u.safeMax);
+  // An old record's dermal limits and wordy Recommended arrive in the usage
+  // note, and a bare Restricted tick as a caution sentence (Plume.usage), so a
+  // save keeps them and the orange dot.
+  set('usagenote', u.usageNote); set('caution', u.caution);
+  syncSafeKind(pf);
+}
+function readUsageForm(pf) {
+  var g = function (id) { var el = document.getElementById(pf + '-' + id); return el ? String(el.value || '').trim() : ''; };
+  var kind = (document.getElementById(pf + '-safe-kind') || {}).value;
+  return { recMin: g('recmin'), recMax: g('recmax'), effMin: g('effmin'), effMax: g('effmax'),
+    safeMax: kind === 'none' ? 'none' : (kind === 'num' ? g('safemax') : ''), usageNote: g('usagenote'), caution: g('caution') };
+}
+// What she typed that is not a number, before saving.
+function usageFormProblem(v) {
+  var bad = ['recMin', 'recMax', 'effMin', 'effMax'].filter(function (k) { return v[k] && !Plume.usageNum(v[k]); });
+  if (v.safeMax && v.safeMax !== 'none' && !Plume.usageNum(v.safeMax)) bad.push('safeMax');
+  if (bad.length) return 'Use plain numbers for the percentages, like 0.5 or 5.';
+  var f = parseFloat;
+  if (v.recMin && v.recMax && f(v.recMin) > f(v.recMax)) return 'The recommended range runs low to high.';
+  if (v.effMin && v.effMax && f(v.effMin) > f(v.effMax)) return 'The effective range runs low to high.';
+  return '';
+}
+function usageCapProblem(v) {
+  var f = parseFloat, cap = v.safeMax && v.safeMax !== 'none' ? f(v.safeMax) : null;
+  if (cap !== null && ((v.recMax && f(v.recMax) > cap) || (v.effMax && f(v.effMax) > cap))) return 'A range runs above the safe limit (' + v.safeMax + '%).';
+  return '';
+}
+
+// ── Restricted use (retired 2026-10-26) ──
+// The Restricted tick and its text became Caution (see the usage block).
+function syncRestrictField() {}   // kept for old callers; Caution replaced it
 
 // ── Function chips ────────────────────────────────────
 // functionCategory is an array now (see Plume.funcCats). Each chip is a
@@ -3582,7 +3687,7 @@ function closeQuickAdd() { closeModal('modal-quick'); }
 // certification or function could be lost without asking). The supplier,
 // order # and date are kept between items on purpose, so they do not count.
 function qaHasInput() {
-  if (['qa-name', 'qa-inci', 'qa-min', 'qa-max', 'qa-size', 'qa-price', 'qa-lot', 'qa-link', 'qa-c-other'].some(function(id) { return qaVal(id); })) return true;
+  if (['qa-name', 'qa-inci', 'qa-recmin', 'qa-recmax', 'qa-safemax', 'qa-size', 'qa-price', 'qa-lot', 'qa-link', 'qa-c-other'].some(function(id) { return qaVal(id); })) return true;
   if (qaReadFuncs().length) return true;
   return Plume.CERTS.some(function(c) { var el = document.getElementById('qa-c-' + c.key); return el && el.checked; });
 }
@@ -3624,7 +3729,8 @@ function qaOnOrder() {
   r.value = on ? '' : (r.value || todayISO());
 }
 function qaClear(keepOrder) {
-  ['qa-name', 'qa-inci', 'qa-min', 'qa-max', 'qa-size', 'qa-price', 'qa-lot', 'qa-link'].forEach(function(id) { document.getElementById(id).value = ''; });
+  ['qa-name', 'qa-inci', 'qa-size', 'qa-price', 'qa-lot', 'qa-link'].forEach(function(id) { document.getElementById(id).value = ''; });
+  fillUsageForm('qa', null);
   document.getElementById('qa-phase').value = 'water';
   document.getElementById('qa-unit').value = 'g';
   if (!keepOrder) {
@@ -3690,8 +3796,7 @@ function qaUseStarter(idx) {
     var o = document.createElement('option'); o.value = phase; o.textContent = phase.charAt(0).toUpperCase() + phase.slice(1); ph.appendChild(o);
   }
   ph.value = phase;
-  document.getElementById('qa-min').value = it.min || '';
-  document.getElementById('qa-max').value = it.max || '';
+  fillUsageForm('qa', it);
   qaRenderFuncs(Plume.funcCats(it));
   qaHint();
   qaCost();
@@ -3718,16 +3823,20 @@ function qaBuild() {
     document.getElementById(name ? 'qa-inci' : 'qa-name').focus();
     return null;
   }
+  var qv0 = readUsageForm('qa'), qProblem = usageFormProblem(qv0) || usageCapProblem(qv0);
+  if (qProblem) { document.getElementById('qa-err').textContent = qProblem; document.getElementById('qa-recmin').focus(); return null; }
   var ing = qaStarter ? starterToIngredient(qaStarter) : {
     id: Date.now().toString() + Math.random().toString(36).slice(2, 6), created: new Date().toISOString(), lots: []
   };
   ing.name = name;
   ing.inci = inci;
   ing.phase = document.getElementById('qa-phase').value;
-  ing.min = qaVal('qa-min');
-  ing.max = qaVal('qa-max');
+  // Quick add shows Recommended and Safe limit; the rest (effective range,
+  // usage note, caution) comes from the starter list when one was used.
+  var qu = Plume.usage(ing), qv = readUsageForm('qa');
+  Plume.setUsage(ing, { recMin: qv.recMin, recMax: qv.recMax, safeMax: qv.safeMax, effMin: qu.effMin, effMax: qu.effMax, usageNote: qu.usageNote, caution: qu.caution });
+  ['min', 'max', 'useRate', 'flag', 'restrictions', 'dermalLimits'].forEach(function(k) { delete ing[k]; });
   ing.functionCategory = qaReadFuncs();
-  if (!ing.flag) ing.flag = 'no';
   var p = qaPurchase(), sup = qaVal('qa-sup');
   var onOrd = document.getElementById('qa-onorder').checked;
   var bought = sup || qaVal('qa-order') || p.size || p.price > 0 || qaVal('qa-lot') || qaVal('qa-link') || onOrd;
@@ -3828,17 +3937,17 @@ function certBadgesHtml(lot) {
 function openAdd() {
   editingId = null;
   document.getElementById('modal-add-title').textContent = 'New ingredient';
-  ['f-name','f-inci','f-function-notes','f-function2','f-notes','f-min','f-max','f-density','f-lowstock',
+  ['f-name','f-inci','f-function-notes','f-function2','f-notes','f-density','f-lowstock',
    'f-absorption-rate','f-heat-stability','f-melting-point','f-oxidation-stability',
-   'f-colour','f-scent','f-optimal-ph','f-dermal-limits','f-substitution','f-restrictions','f-general-info',
+   'f-colour','f-scent','f-optimal-ph','f-substitution','f-general-info',
    'f-claims'
   ].forEach(function(id) { document.getElementById(id).value = ''; });
+  fillUsageForm('f', null);
   document.getElementById('f-purpose').value = '';
   document.getElementById('f-choose').value  = '';
   renderFuncChips([]);
   document.getElementById('f-solubility').value = '';
   document.getElementById('f-solnote').value = '';
-  document.getElementById('f-userate').value = '';
   loadLinks([]);
   document.getElementById('f-lowstock-unit').value = 'g';
   document.getElementById('f-density-flag').style.display = 'none';
@@ -3846,7 +3955,6 @@ function openAdd() {
   _isfSavedId = null;
   renderBrandDatalist();
   document.getElementById('f-phase').value = 'water';
-  document.getElementById('f-restricted').checked = false;
   document.getElementById('f-nocost').checked = false;
   renderMadeFrom(null);
   syncRestrictField();
@@ -3869,11 +3977,9 @@ function editCurrent(tab, focusId) {
   document.getElementById('f-name').value     = i.name;
   document.getElementById('f-inci').value     = i.inci;
   document.getElementById('f-phase').value    = i.phase;
-  document.getElementById('f-restricted').checked = i.flag === 'yes';
   document.getElementById('f-nocost').checked = !!i.noCost;
   renderMadeFrom(i);
-  document.getElementById('f-min').value      = i.min      || '';
-  document.getElementById('f-max').value      = i.max      || '';
+  fillUsageForm('f', i);
   document.getElementById('f-purpose').value = i.purpose || '';
   document.getElementById('f-choose').value  = i.chooseWhen || '';
   document.getElementById('f-choose-draft').style.display = isDraftNote(i, 'chooseWhen') ? '' : 'none';
@@ -3888,14 +3994,11 @@ function editCurrent(tab, focusId) {
   document.getElementById('f-colour').value             = i.colour            || '';
   document.getElementById('f-scent').value              = i.scent             || '';
   document.getElementById('f-optimal-ph').value         = i.optimalPh         || '';
-  document.getElementById('f-dermal-limits').value      = i.dermalLimits      || '';
   document.getElementById('f-substitution').value       = i.substitution      || '';
-  document.getElementById('f-restrictions').value       = i.restrictions      || '';
   document.getElementById('f-general-info').value       = i.generalInfo       || '';
   document.getElementById('f-claims').value             = i.claims            || '';
   document.getElementById('f-solubility').value = i.solubility || '';
   document.getElementById('f-solnote').value    = i.solNote    || '';
-  document.getElementById('f-userate').value    = i.useRate    || '';
   syncRestrictField();
   loadLinks(migrateLinks(i));
   document.getElementById('f-notes').value    = i.notes    || '';
@@ -3962,17 +4065,25 @@ function saveIngredient(keepOpen) {
   var name = document.getElementById('f-name').value.trim();
   var inci = document.getElementById('f-inci').value.trim();
   if (!name || !inci) { Plume.tell('Common name and INCI name are required.'); return; }
+  var useV = readUsageForm('f'), useBad = usageFormProblem(useV);
+  if (useBad) { setIngTab('basics'); Plume.tell(useBad, { title: 'Check the usage numbers' }); return; }
+  // A range above the safe limit asks rather than blocks: old records can
+  // hold one (the two numbers came from different places), and an unrelated
+  // edit must still save.
+  var useCap = usageCapProblem(useV);
+  if (useCap && !saveIngredient.capOk) {
+    setIngTab('basics');
+    Plume.ask(useCap + ' Save anyway?', function () { saveIngredient.capOk = true; try { saveIngredient(keepOpen); } finally { saveIngredient.capOk = false; } },
+      { title: 'Check the usage numbers', yes: 'Save anyway', no: 'Go back' });
+    return;
+  }
   var data = {
     name:     name,
     inci:     inci,
     phase:    document.getElementById('f-phase').value,
     solubility: document.getElementById('f-solubility').value,
     solNote:  document.getElementById('f-solnote').value.trim(),
-    useRate:  document.getElementById('f-userate').value.trim(),
-    flag:     document.getElementById('f-restricted').checked ? 'yes' : 'no',
     noCost:   document.getElementById('f-nocost').checked,
-    min:      document.getElementById('f-min').value,
-    max:      document.getElementById('f-max').value,
     functionCategory: readFuncChips(),
     purpose:   document.getElementById('f-purpose').value.trim(),
     chooseWhen: document.getElementById('f-choose').value.trim(),
@@ -3985,9 +4096,7 @@ function saveIngredient(keepOpen) {
     colour:             document.getElementById('f-colour').value.trim(),
     scent:              document.getElementById('f-scent').value.trim(),
     optimalPh:          document.getElementById('f-optimal-ph').value.trim(),
-    dermalLimits:       document.getElementById('f-dermal-limits').value.trim(),
     substitution:       document.getElementById('f-substitution').value.trim(),
-    restrictions:       document.getElementById('f-restrictions').value.trim(),
     generalInfo:        document.getElementById('f-general-info').value.trim(),
     claims:             document.getElementById('f-claims').value.trim(),
     links:     getLinks(),
@@ -3998,6 +4107,18 @@ function saveIngredient(keepOpen) {
     lots:     getLots(),
     soap:     getSoapData()
   };
+  // Usage in the new fields. An ingredient saved before them keeps its old
+  // values once, in usageOld, and the old fields are cleared.
+  Plume.setUsage(data, useV);
+  if (editingId) {
+    var prevU = ingredients.find(function(x) { return x.id === editingId; });
+    if (prevU && !prevU.usageV2 && !prevU.usageOld &&
+        (prevU.min || prevU.max || prevU.useRate || prevU.flag === 'yes' || prevU.restrictions || prevU.dermalLimits)) {
+      data.usageOld = { min: prevU.min || '', max: prevU.max || '', useRate: prevU.useRate || '', flag: prevU.flag || '',
+        restrictions: prevU.restrictions || '', dermalLimits: prevU.dermalLimits || '', at: todayISO() };
+    }
+  }
+  ['min', 'max', 'useRate', 'flag', 'restrictions', 'dermalLimits'].forEach(function(k) { data[k] = undefined; });
 
   // Fields the lot form does not show (a stock solution's batch link, the
   // decommit flags) are carried over from the saved lot, or saving the
@@ -5157,12 +5278,13 @@ document.querySelectorAll('.modal-overlay').forEach(function(el) {
 // are serialized to a stable string so order-equivalent rows compare
 // equal.
 var _editFormSnapshot = null;
-var EDIT_FIELD_IDS = ['f-name','f-inci','f-phase','f-solubility','f-solnote','f-userate','f-min','f-max',
+var EDIT_FIELD_IDS = ['f-name','f-inci','f-phase','f-solubility','f-solnote',
+  'f-recmin','f-recmax','f-safe-kind','f-safemax','f-effmin','f-effmax','f-usagenote','f-caution',
   'f-purpose','f-choose','f-function-notes','f-function2','f-notes',
   'f-density','f-lowstock','f-lowstock-unit',
   'f-absorption-rate','f-heat-stability','f-melting-point','f-oxidation-stability',
-  'f-colour','f-scent','f-optimal-ph','f-dermal-limits','f-substitution',
-  'f-restrictions','f-general-info','f-claims'];
+  'f-colour','f-scent','f-optimal-ph','f-substitution',
+  'f-general-info','f-claims'];
 
 function snapshotEditFormState() {
   _editFormSnapshot = serializeEditForm();
@@ -5181,8 +5303,6 @@ function serializeEditForm() {
   // separately -- otherwise toggling a function would not count as an edit
   // and a backdrop click would discard it without asking.
   parts.push(readFuncChips().join('|'));
-  var rc = document.getElementById('f-restricted');
-  parts.push(rc && rc.checked ? 'R' : '');
   var nc = document.getElementById('f-nocost');
   parts.push(nc && nc.checked ? 'N' : '');
   // Lots — read from the DOM rows; this picks up any in-flight edits.
