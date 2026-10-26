@@ -3711,30 +3711,39 @@ nothing is on hand.
 ### Session 27 (cont., 26 October 2026): Small fixes and annoyances (core v1.55)
 
 Her call: clear the small-bugs list before new features. Every fix has a
-check in test/test-smallfixes.js that fails on the old code.
+check in test/test-smallfixes.js that fails on the old code. A fresh review
+of the diff found four problems, fixed before the PR (bold on part of a
+word, a chosen made lot overridden on save, cost not following phase or
+function changes, Enter-Enter with bold on).
 
 - **Lot cost by volume:** `calcLotCostPerG` resolves density with
   `formDensity()` (`Plume.densityFor` on the form's INCI, phase and
   functions) when the field is blank. It used 1.0, so a Quick add argan oil
   bought in mL was repriced ~14% low on its next save. The note says
-  "typical density" when the figure is not hers.
+  "typical density" when the figure is not hers. INCI, phase and function
+  changes re-figure every lot (`onDensityChange`); On hand compares Bought
+  before and after at the same density (`size0`/`unit0`), so a density
+  change alone never moves it.
 - **Best-by dates** are local days (`bestByDay`, `expiresSoon`,
   `formatDateShort` via `Plume.parseLocalDate`); `new Date('YYYY-MM-DD')` is
   UTC midnight, the evening before in Alaska. The quick look's "bought" line
   already read `received`.
 - **Stock solutions:** `newestMadeLot` prices by the latest `received`, not
-  the last entered (`addMadeLot`, `removeMadeLot`, `madeLotSync` via
-  `repriceMade`). `addMadeLot` clears a stale `madeLotId` whose lot was
+  the last entered (`addMadeLot`, `removeMadeLot`). `madeLotSync` re-picks
+  only when a date change moves the newest and the newest was pricing it, so
+  a made lot she chose in Ingredients stays chosen. `addMadeLot` clears a stale `madeLotId` whose lot was
   deleted in Ingredients, so "Add N g to its stock" works again.
 - **Rich text:** `RT_BOLD` / `RT_ITAL` match only marks that hug their words
-  (no space inside, no letter or digit outside): "2*3*4" and "a * b" stay as
-  typed. Tradeoff: bold inside a word ("x**y**z") no longer renders.
+  (no space inside, no digit outside): "2*3*4" and "a * b" stay as
+  typed. A letter may touch a mark ("**Lavender**s", which the editor
+  writes when she bolds part of a word); a digit may not.
   `rtFromEl` wraps marks per line (bold across a <br>) and ignores a block's
-  closing <br> (Enter-Enter was two blank lines). Rich boxes take `max`
+  closing <br>, bare or inside <b>/<i> (Enter-Enter was two blank lines). Rich boxes take `max`
   (the field's maxlength, or 200/300 in the quick look) with a counter,
   blocking typing at the limit and trimming pastes.
 - **recText** drops % only from a bare number or range.
-- **Quick add:** `qaLink` leaves any scheme alone (not host:port);
+- **Quick add:** `qaLink` leaves any scheme alone (not host:port) and drops
+  javascript:/data: links;
   duplicate check uses the starter list's `aka` names; `qaHasInput` close
   guard covers every field except the kept supplier, order # and date.
 - **Phases:** Active and Other in the filter chips, the hidden select, the

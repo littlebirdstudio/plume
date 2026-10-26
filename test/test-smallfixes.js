@@ -15,6 +15,8 @@ const INGS = [
   { id: 'iw', name: 'Distilled water', inci: 'Aqua', phase: 'water', lots: [lot('L1')], activeLotId: 'L1' },
   { id: 'ir', name: 'Rosehip oil', inci: 'Rosa Canina Seed Oil', phase: 'oil', lots: [lot('L1', { bestBy: today })], activeLotId: 'L1' },
   { id: 'iv', name: 'Vitamin C', inci: 'Ascorbic Acid', phase: 'active', lots: [lot('L1', { bestBy: '2026-11-01' })], activeLotId: 'L1', useRate: '2% leave-on, 1% rinse-off' },
+  // Bought 100 mL, 60 mL left: a density change must not move what is left.
+  { id: 'im', name: 'Jojoba oil', inci: 'Unlisted', phase: 'water', lots: [lot('L1', { purchaseSize: '100', purchaseUnit: 'mL', qtyPurchased: '60', qtyUnit: 'mL', purchasePrice: '8' })], activeLotId: 'L1' },
   { id: 'io', name: 'Mystery', inci: 'Something', phase: 'other', lots: [], useRate: '2–5%' },
   // A stock solution made here: two batches' lots, the newer one prices it.
   { id: 'ih', name: 'HA solution', inci: 'Aqua, Sodium Hyaluronate', phase: 'water', madeBy: 'fh',
@@ -67,6 +69,27 @@ const SEED = `
   })()`);
   ok('a lot bought in mL with no density typed uses the typical density, like Quick add (was water: 14% low)', cpg.dens !== 1 && Math.abs(cpg.cpg - cpg.want) < 0.00006, cpg);
   ok('and says the density is a typical one', /typical density/.test(cpg.note), cpg.note);
+  // Review fix: the lot's cost follows the phase and functions as they change.
+  const follow = await page.evaluate(`(function () {
+    var row = document.querySelector('#lots-container .lot-row'), id = row.id;
+    var ph = document.getElementById('f-phase'); ph.value = 'water'; ph.dispatchEvent(new Event('change'));
+    Array.prototype.forEach.call(document.querySelectorAll('#f-function-cats input'), function (x) { x.checked = false; });
+    document.getElementById('f-inci').value = 'Something new'; document.getElementById('f-inci').dispatchEvent(new Event('input'));
+    var before = parseFloat(row.querySelector('[data-field="costPerG"]').value);
+    ph.value = 'oil'; ph.dispatchEvent(new Event('change'));
+    var em = document.querySelector('#f-function-cats input[value="Emollient"]'); em.checked = true; em.dispatchEvent(new Event('change'));
+    return { before: before, after: parseFloat(row.querySelector('[data-field="costPerG"]').value), want: 10 / (100 * formDensity().value), dens: formDensity().value };
+  })()`);
+  ok('changing phase and functions re-figures the lot\'s cost per gram', follow.before === 0.1 && follow.dens !== 1 && Math.abs(follow.after - follow.want) < 0.00006, follow);
+  await page.evaluate("closeModal('modal-add')");
+  const kept = await page.evaluate(`(function () {
+    viewIngredient('im'); editCurrent();
+    var row = document.querySelector('#lots-container .lot-row');
+    var ph = document.getElementById('f-phase'); ph.value = 'oil'; ph.dispatchEvent(new Event('change'));
+    var em = document.querySelector('#f-function-cats input[value="Emollient"]'); em.checked = true; em.dispatchEvent(new Event('change'));
+    return { qty: row.querySelector('[data-field="qtyPurchased"]').value, dens: formDensity().value };
+  })()`);
+  ok('a density change alone does not move what is left of a used lot', kept.qty === '60' && kept.dens !== 1, kept);
   await page.evaluate("closeModal('modal-add')");
   ok('a lot whose best-by is today still counts as expiring (UTC read it as yesterday)', await page.evaluate("isExpiring(ingredients.filter(function (i) { return i.id === 'ir'; })[0].lots)"));
   ok('a 1 November best-by shows as Nov 2026, not Oct', await page.evaluate("formatDateShort('2026-11-01')") === 'Nov 2026', await page.evaluate("formatDateShort('2026-11-01')"));
@@ -75,12 +98,14 @@ const SEED = `
   const html = (t) => page.evaluate(`Plume.rt.toHtml(${JSON.stringify(t)})`);
   ok('"2*3*4" stays as typed', await html('2*3*4') === '2*3*4', await html('2*3*4'));
   ok('"a * b * c" stays as typed', await html('a * b * c') === 'a * b * c');
+  ok('bold on part of a word still formats ("**Lavender**s", as the editor writes it)', await html('**Lavender**s and un**believ**able') === '<strong>Lavender</strong>s and un<strong>believ</strong>able', await html('**Lavender**s and un**believ**able'));
   ok('*this* and **that** still format', await html('*this* and **that**') === '<em>this</em> and <strong>that</strong>', await html('*this* and **that**'));
   ok('***both*** is bold and italic', /<strong>both<\/strong>/.test(await html('***both***')) && /<em>/.test(await html('***both***')));
   ok('plain text keeps spaced asterisks', await page.evaluate("Plume.rt.plain('2*3*4 and *x*')") === '2*3*4 and x');
   const from = (h) => page.evaluate(`(function () { var d = document.createElement('div'); d.innerHTML = ${JSON.stringify(h)}; return Plume.rt.fromEl(d); })()`);
   ok('bold across a line break stays on both lines', await from('<b>one<br>two</b> three') === '**one**\n**two** three', await from('<b>one<br>two</b> three'));
   ok('Enter twice is one blank line, not two', await from('<div>a</div><div><br></div><div>b</div>') === 'a\n\nb', await from('<div>a</div><div><br></div><div>b</div>'));
+  ok('Enter twice with bold on is one blank line too', await from('x<div><b><br></b></div><div>y</div>') === 'x\n\ny', await from('x<div><b><br></b></div><div>y</div>'));
   ok('and round-trips unchanged', await page.evaluate("(function () { var d = document.createElement('div'); d.innerHTML = Plume.rt.toHtml('a\\n\\nb'); return Plume.rt.fromEl(d); })()") === 'a\n\nb');
   await page.evaluate("viewIngredient('iw'); editCurrent(); setIngTab('glance');"); await page.waitForTimeout(150);
   const box = page.locator('#f-choose + .rt-wrap .rt-ed');
@@ -93,6 +118,7 @@ const SEED = `
 
   console.log('\n3. Quick add');
   ok('mailto: and http: links are left alone; a bare address gets https://', await page.evaluate("[qaLink('mailto:a@b.co'), qaLink('http://x.co'), qaLink('x.co/oil'), qaLink('localhost:3000')].join(' ')") === 'mailto:a@b.co http://x.co https://x.co/oil https://localhost:3000');
+  ok('a javascript: link is never kept', await page.evaluate("qaLink('javascript:alert(1)')") === '');
   await page.evaluate("openQuickAdd()"); await page.waitForTimeout(150);
   await page.fill('#qa-name', 'Rosehip seed oil'); await page.dispatchEvent('#qa-name', 'input');
   ok('the duplicate check knows the starter list\'s other names (Rosehip oil)', /Already in your library: Rosehip oil/.test(await page.evaluate("document.getElementById('qa-hint').innerText")), await page.evaluate("document.getElementById('qa-hint').innerText"));
@@ -137,8 +163,18 @@ const SEED = `
     // Its lot deleted in Ingredients: the batch still pointed at it.
     var gone = { id: 'b4', formulaId: 'fh', date: '2026-10-22', actualYield: 80, committed: true, lotDraws: [], status: 'ready', madeIngId: 'ih', madeLotId: 'L-deleted' };
     var re = addMadeLot(gone);
-    return { a1: a1, a2: a2, a3: a3, re: re ? re.id : null, link: gone.madeLotId };
+    // Review fix: a made lot she chose keeps the price through other edits;
+    // a date change re-picks only when the newest was pricing it.
+    var b2 = back; ing.activeLotId = 'L-made-b2';
+    madeLotSync(b2, 100, '', '2026-09-01', false);
+    var kept = ing.activeLotId;
+    ing.activeLotId = 'L-made-b4';
+    var b4 = gone; madeLotSync(b4, 80, '', '2026-08-01', false);
+    var moved = ing.activeLotId;
+    return { a1: a1, a2: a2, a3: a3, re: re ? re.id : null, link: gone.madeLotId, kept: kept, moved: moved };
   })()`);
+  ok('a made lot she chose to price it stays chosen when a batch is saved', made.kept === 'L-made-b2', made);
+  ok('back-dating the newest batch hands the price to the next newest', made.moved === 'L-made-b1', made);
   ok('a back-dated batch does not take over the price (newest by date does)', made.a1 === 'L-made-b1', made);
   ok('a newer batch does', made.a2 === 'L-made-b3', made);
   ok('removing it hands the price back to the newest left', made.a3 === 'L-made-b1', made);

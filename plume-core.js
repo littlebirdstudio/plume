@@ -2903,12 +2903,13 @@ function inciMerged(entries) {
 // so backups, search and exports stay readable and nothing stored is HTML.
 // toHtml escapes first and only then adds its own tags, so a stored value
 // can never inject markup.
-// A mark counts only when it hugs its words: no space just inside the
-// asterisks, and no letter or digit touching them outside (2026-10-26 fix).
-// "2*3*4", "a * b * c" and "5*2" stay as typed; "*this*" and "**that**" do
-// not. A bold+italic "***x***" still reads as both.
-var RT_BOLD = /(^|[^\w])\*\*(?=[^\s*])([^*\n]*?[^\s*])\*\*(?!\w)/g;
-var RT_ITAL = /(^|[^*\w])\*(?=[^\s*])([^*\n]*?[^\s*])\*(?![*\w])/g;
+// A mark counts only when it hugs its words (no space just inside the
+// asterisks) and no digit touches it outside (2026-10-26 fix): "2*3*4",
+// "a * b * c" and "5*2" stay as typed, while "*this*", "**that**" and bold
+// on part of a word ("**Lavender**s", which the editor writes) still format.
+// A bold+italic "***x***" reads as both.
+var RT_BOLD = /(^|[^\d])\*\*(?=[^\s*])([^*\n]*?[^\s*])\*\*(?!\d)/g;
+var RT_ITAL = /(^|[^*\d])\*(?=[^\s*])([^*\n]*?[^\s*])\*(?![*\d])/g;
 function rtInline(t) {
   return t.replace(RT_BOLD, '$1<strong>$2</strong>').replace(RT_ITAL, '$1<em>$2</em>');
 }
@@ -2960,7 +2961,14 @@ function rtFromEl(root) {
     // A <br> that ends a block is Chrome's way of holding an empty line
     // open, not a second line: "<div><br></div>" is one blank line (it was
     // two, so every Enter-Enter or pasted blank line doubled).
-    if (block && kids.length && kids[kids.length - 1].nodeName.toLowerCase() === 'br') kids.pop();
+    var lastBr = function (k) {
+      if (!k) return false;
+      var t = k.nodeName.toLowerCase();
+      if (t === 'br') return true;
+      // With bold or italic on, Chrome writes <div><b><br></b></div>.
+      return /^(b|i|strong|em|span)$/.test(t) && k.childNodes.length === 1 && lastBr(k.firstChild);
+    };
+    if (block && kids.length && lastBr(kids[kids.length - 1])) kids.pop();
     kids.forEach(function (c) { walk(c); });
     if (bold || ital) {
       // Marks go round each line's words separately: bold running over a

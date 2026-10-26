@@ -3065,15 +3065,6 @@ function newestMadeLot(ing) {
   });
   return best;
 }
-// Re-pick the price lot when the current one is a made lot (or none); a
-// purchased lot she chose stays.
-function repriceMade(ing) {
-  if (!ing) return;
-  var cur = (ing.lots || []).filter(function (l) { return l.id === ing.activeLotId; })[0];
-  if (cur && !cur.madeBatchId) return;
-  var n = newestMadeLot(ing);
-  ing.activeLotId = n ? n.id : (cur ? null : ing.activeLotId || null);
-}
 function addMadeLot(b) {
   // Its lot was deleted in Ingredients: the batch's link to it is stale, and
   // "Add N g to its stock" did nothing (2026-10-26 fix). Clear it so the
@@ -3118,12 +3109,17 @@ function madeLotSync(b, yieldG, code, date, dry) {
     return { error: Plume.fmtG(was - leftNow) + ' of this batch has already gone into other batches (see the Trace tab), so its yield cannot be less than that.' };
   }
   if (dry) return { lot: lot };
+  // Re-pick the price lot only when a date change makes another batch the
+  // newest and the newest was the one pricing it: a made lot she chose in
+  // Ingredients stays chosen through any other edit.
+  var newest0 = newestMadeLot(ml.ing), followNewest = newest0 && ml.ing.activeLotId === newest0.id;
+  var dateChanged = !!date && date !== lot.received;
   lot.qtyPurchased = String(Math.round(Math.max(left, 0) * 100000) / 100000);
   lot.madeG    = yieldG;
   lot.lotNum   = code || '';
   lot.received = date || lot.received;
   if (typeof lot.madeCost === 'number' && lot.madeCost > 0 && yieldG > 0) lot.costPerG = madeCpg(lot.madeCost, yieldG);
-  repriceMade(ml.ing);   // a changed date can change which batch is newest
+  if (dateChanged && followNewest) { var n1 = newestMadeLot(ml.ing); if (n1) ml.ing.activeLotId = n1.id; }
   return { lot: lot };
 }
 // The batches that drew on this batch's lot, and how much.

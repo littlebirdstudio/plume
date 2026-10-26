@@ -1531,7 +1531,7 @@
         </div>
         <div class="field">
           <label for="f-inci">INCI name *</label>
-          <input type="text" id="f-inci" placeholder="e.g. Rosa Canina Seed Oil" oninput="renderDensityHint()">
+          <input type="text" id="f-inci" placeholder="e.g. Rosa Canina Seed Oil" oninput="onDensityChange()">
         </div>
         <div class="field form-full">
           <label>Functions <span class="hint">— pick every one that applies</span></label>
@@ -1539,7 +1539,7 @@
         </div>
         <div class="field">
           <label for="f-phase">Phase <span class="hint">— where it goes in a formula</span></label>
-          <select id="f-phase" onchange="renderDensityHint()">
+          <select id="f-phase" onchange="onDensityChange()">
             <option value="water">Water</option>
             <option value="oil">Oil</option>
             <option value="cool-down">Cool-down</option>
@@ -3538,7 +3538,7 @@ function renderFuncChips(selected) {
     var on = (selected || []).indexOf(c) !== -1;
     return '<label class="fcat-chip' + (on ? ' on' : '') + '">' +
       '<input type="checkbox" value="' + esc(c) + '"' + (on ? ' checked' : '') +
-      ' onchange="this.parentNode.classList.toggle(\'on\', this.checked); renderDensityHint()">' + esc(c) + '</label>';
+      ' onchange="this.parentNode.classList.toggle(\'on\', this.checked); onDensityChange()">' + esc(c) + '</label>';
   }).join('');
 }
 function readFuncChips() {
@@ -3753,7 +3753,11 @@ function qaBuild() {
 // Adds https:// only to a bare address ("example.com/oil"); anything with a
 // scheme already (mailto:, http:) is left alone (2026-10-26 fix: mailto:
 // became https://mailto:...).
-function qaLink(u) { u = String(u || '').trim(); return u && !/^[a-z][a-z0-9+.-]*:(?!\d)/i.test(u) ? 'https://' + u : u; }
+function qaLink(u) {
+  u = String(u || '').trim();
+  if (/^\s*(javascript|data|vbscript):/i.test(u)) return '';   // never a link to keep
+  return u && !/^[a-z][a-z0-9+.-]*:(?!\d)/i.test(u) ? 'https://' + u : u;
+}
 // A supplier typed here that the list does not have yet is added to it, so
 // the lot editor's supplier list shows it.
 // Returns the supplier's name as saved, so the lot carries the same spelling
@@ -4506,10 +4510,19 @@ function rowBoughtG(rowId) {
   var unit = (document.getElementById(rowId + '-punit') || {}).value || 'g';
   return lotSizeToGrams(size, unit, rowDensity()) || 0;
 }
+// What was bought when the drawer opened (or at the last Adjust), in grams
+// at today's density, so a density change alone never moves on hand.
+function rowBoughtG0(row) {
+  return lotSizeToGrams(row.dataset.size0, row.dataset.unit0 || 'g', rowDensity()) || 0;
+}
+function rowRebase(row, rowId) {
+  row.dataset.size0 = (document.getElementById(rowId + '-psize') || {}).value || '';
+  row.dataset.unit0 = (document.getElementById(rowId + '-punit') || {}).value || 'g';
+}
 // On hand follows Bought (2026-10-25, after she tried it): a lot nothing has
 // been used from shows exactly what was bought; a used lot moves by the
 // change in Bought (bought 1 lb, 0.6 lb left, Bought raised to 2 lb: 1.6 lb
-// left). The base (qty0, boughtG0) is what was on hand and bought when the
+// left). The base (qty0, size0, unit0) is what was on hand and bought when the
 // drawer opened or the last Adjust; a change from Bought is recorded in the
 // lot's history when it is saved (getLots).
 function syncOnHand(rowId) {
@@ -4521,7 +4534,7 @@ function syncOnHand(rowId) {
   var unit = (document.getElementById(rowId + '-punit') || {}).value || 'g';
   var follows = row.dataset.follows === '1';
   var boughtG = rowBoughtG(rowId);
-  if (row.dataset.qty0 === undefined) { row.dataset.qty0 = qty.value; row.dataset.boughtG0 = String(boughtG); }
+  if (row.dataset.qty0 === undefined) { row.dataset.qty0 = qty.value; rowRebase(row, rowId); }
   var floor = false;
   if (follows) {
     qty.value = size > 0 ? fmtQty(size) : '';
@@ -4529,7 +4542,7 @@ function syncOnHand(rowId) {
   } else {
     var per = lotSizeToGrams(1, qu.value || 'g', rowDensity()) || 1;
     var q0 = parseFloat(row.dataset.qty0) || 0;
-    var g0 = parseFloat(row.dataset.boughtG0) || 0;
+    var g0 = rowBoughtG0(row);
     var nq = boughtG > 0 && g0 > 0 ? q0 + (boughtG - g0) / per : q0;
     if (nq < 0) { nq = 0; floor = true; }
     qty.value = fmtQty(nq);
@@ -4585,7 +4598,7 @@ function saveLotAdjust(rowId) {
   document.getElementById(rowId + '-adj').value = JSON.stringify(list);
   qty.value = fmtQty(nv);
   delete row.dataset.follows;
-  row.dataset.qty0 = qty.value; row.dataset.boughtG0 = String(rowBoughtG(rowId));
+  row.dataset.qty0 = qty.value; rowRebase(row, rowId);
   closeLotAdjust(rowId);
   syncOnHand(rowId);
   renderLotAdjHist(rowId);
