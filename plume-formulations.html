@@ -127,7 +127,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);m
 .cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
 .fcard{background:var(--white);border:1px solid var(--cream-border);border-radius:6px;padding:1.25rem;cursor:pointer;transition:border-color 0.15s}
 .fcard:hover{border-color:var(--bark-light)}
-.fcard-name{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:400;color:var(--bark-dark);margin-bottom:4px}
+.fcard-name{padding-right:26px;font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:400;color:var(--bark-dark);margin-bottom:4px}
 .fcard-meta{font-size:12px;color:var(--ink-lighter);margin-bottom:10px}
 .fcard-tags{display:flex;gap:6px;flex-wrap:wrap}
 .tag{font-size:10px;font-weight:500;letter-spacing:0.06em;padding:2px 8px;border-radius:20px;background:var(--cream-dark);color:var(--ink-light);text-transform:uppercase}
@@ -255,6 +255,24 @@ span.ing-name-btn{text-decoration:none}
   color:var(--ink-lighter);border:1px solid var(--cream-border);border-radius:3px;
   padding:1px 5px;margin-left:8px;vertical-align:middle}
 .fcard-archived{opacity:0.68;border-style:dashed}
+/* Card order (2026-10-25): drag the grip to move a card; the order is the
+   formulations' saved order, so it stays. */
+.fcard{position:relative}
+.fcard-grip{position:absolute;top:8px;right:8px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:6px;color:var(--ink-lighter);letter-spacing:-2px;font-size:14px;cursor:grab;user-select:none;touch-action:none;opacity:0.35;transition:opacity .12s,background .12s}
+.fcard:hover .fcard-grip,.fcard-grip:focus-visible{opacity:1}
+.fcard-grip:hover{background:var(--cream-dark);color:var(--ink)}
+.fcard-grip:focus-visible{outline:2px solid var(--bark);outline-offset:1px}
+@media (hover:none){.fcard-grip{opacity:0.8}}
+.fcard.fc-dragging{opacity:0.4}
+.fcard.fc-before::before,.fcard.fc-after::before{content:'';position:absolute;z-index:2;background:var(--clay);border-radius:3px;pointer-events:none}
+/* Inside the edge: shell cards clip anything outside them. */
+.fcard.fc-before,.fcard.fc-after,body.ps-shell .fcard.fc-before,body.ps-shell .fcard.fc-after{border-color:var(--clay)}
+.fcard.fc-before:not(.fc-col)::before{left:0;top:0;bottom:0;width:6px;border-radius:0}
+.fcard.fc-after:not(.fc-col)::before{right:0;top:0;bottom:0;width:6px;border-radius:0}
+.fcard.fc-col.fc-before::before{top:0;left:0;right:0;height:6px;border-radius:0}
+.fcard.fc-col.fc-after::before{bottom:0;left:0;right:0;height:6px;border-radius:0}
+.fc-ghost{position:fixed;z-index:3000;pointer-events:none;opacity:0.92;transform:rotate(1.5deg);box-shadow:0 10px 28px rgba(0,0,0,.22)}
+body.fc-moving,body.fc-moving *{cursor:grabbing!important;user-select:none}
 .fcard-archived:hover{opacity:1}
 /* ── Locked (approved) version ── */
 .lock-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
@@ -559,6 +577,8 @@ body.ps-shell .fcard-name { font-family: 'DM Sans', sans-serif; font-size: 15.5p
 body.ps-shell .fcard-meta, body.ps-shell .fcard-tags, body.ps-shell .fcard-foot { margin-left: 15px; margin-right: 15px; }
 body.ps-shell .fcard-meta { font-size: 12.5px; margin-top: 0; margin-bottom: 0; }
 body.ps-shell .fcard.fcard-archived { border-style: dashed; }
+body.ps-shell .fcard-name { padding-right: 40px; }
+body.ps-shell .fcard-grip { top: 6px; right: 6px; }
 body.ps-shell .fcard-tags { align-items: center; }
 body.ps-shell .fcard-foot { margin-top: 2px; padding-top: 7px; font-size: 12.5px; color: var(--ink-light); font-variant-numeric: tabular-nums; }
 body.ps-shell .fcard-foot .ps-muted { font-size: 12px; }
@@ -1645,7 +1665,9 @@ function renderCards() {
     var costStr = cost !== null ? ('$' + cost.toFixed(2) + ' <span class="ps-muted">/ 100 g</span>') : '<span class="ps-muted">No cost data</span>';
     var d = f.updatedAt ? new Date(f.updatedAt) : null;
     var dateStr = d && !isNaN(d.getTime()) ? d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '';
-    html += '<div class="fcard' + (f.archived ? ' fcard-archived' : '') + '" tabindex="0" role="button" onclick="openFormula(\'' + f.id + '\')" onkeydown="if(event.key===\'Enter\')openFormula(\'' + f.id + '\')">';
+    html += '<div class="fcard' + (f.archived ? ' fcard-archived' : '') + '" data-fid="' + esc(f.id) + '" tabindex="0" role="button" onclick="openFormula(\'' + f.id + '\')" onkeydown="if(event.key===\'Enter\')openFormula(\'' + f.id + '\')">';
+    html += '<span class="fcard-grip" tabindex="0" role="button" aria-label="Move ' + esc(f.name) + ' (drag, or use the arrow keys)" title="Drag to move" ' +
+      'onpointerdown="cardGripDown(event,\'' + f.id + '\')" onclick="event.stopPropagation()" onkeydown="cardGripKey(event,\'' + f.id + '\')">&#8942;&#8942;</span>';
     html += '<div class="fcard-name">' + esc(f.name) +
       (f.archived ? '<span class="arch-tag">archived</span>' : '') + '</div>';
     var nv    = (f.variants || []).length;
@@ -1660,6 +1682,110 @@ function renderCards() {
   });
   html += '</div>';
   el.innerHTML = html;
+}
+
+// ── Card order (2026-10-25) ────────────────────────────
+// Her ask: move the formulation cards and have them stay. The list shows
+// formulations in their saved order, so moving a card moves the formulation
+// in that array and saves. Works with a mouse or a finger (pointer events on
+// the grip) and the keyboard (arrow keys on the grip). With a filter on, a
+// card moves next to the card it is dropped on; hidden ones keep their place.
+var cardDrag = null;
+function moveFormBefore(srcId, tgtId, after) {
+  if (!srcId || srcId === tgtId) return false;
+  var src = forms.filter(function (f) { return f.id === srcId; })[0];
+  if (!src || !forms.some(function (f) { return f.id === tgtId; })) return false;
+  var from = forms.indexOf(src);
+  forms.splice(from, 1);
+  var t = -1;
+  forms.forEach(function (f, i) { if (f.id === tgtId) t = i; });
+  forms.splice(after ? t + 1 : t, 0, src);
+  if (forms.indexOf(src) === from) return false;
+  saveAll();
+  return true;
+}
+function cardGripDown(e, id) {
+  if (e.button !== undefined && e.button !== 0) return;
+  e.preventDefault(); e.stopPropagation();
+  var card = e.currentTarget.closest('.fcard'); if (!card) return;
+  var r = card.getBoundingClientRect();
+  cardDrag = { id: id, card: card, x0: e.clientX, y0: e.clientY, dx: e.clientX - r.left, dy: e.clientY - r.top, w: r.width, ghost: null, target: null, after: false, moved: false };
+  document.addEventListener('pointermove', cardGripMove);
+  document.addEventListener('pointerup', cardGripUp);
+  document.addEventListener('pointercancel', cardGripCancel);
+}
+function cardDragClear() {
+  Array.prototype.forEach.call(document.querySelectorAll('.fcard.fc-before, .fcard.fc-after'), function (c) { c.classList.remove('fc-before', 'fc-after', 'fc-col'); });
+}
+function cardGripMove(e) {
+  var d = cardDrag; if (!d) return;
+  if (!d.moved) {
+    if (Math.abs(e.clientX - d.x0) + Math.abs(e.clientY - d.y0) < 5) return;
+    d.moved = true;
+    d.ghost = d.card.cloneNode(true);
+    d.ghost.classList.add('fc-ghost'); d.ghost.style.width = d.w + 'px';
+    document.body.appendChild(d.ghost);
+    d.card.classList.add('fc-dragging');
+    document.body.classList.add('fc-moving');
+  }
+  e.preventDefault();
+  d.ghost.style.left = (e.clientX - d.dx) + 'px';
+  d.ghost.style.top = (e.clientY - d.dy) + 'px';
+  var under = document.elementFromPoint(e.clientX, e.clientY);
+  var tc = under && under.closest ? under.closest('.fcard:not(.fc-ghost)') : null;
+  cardDragClear();
+  d.target = null;
+  if (tc && tc !== d.card) {
+    var r = tc.getBoundingClientRect();
+    // One card per row (a phone): before and after are above and below.
+    var col = tc.parentNode && tc.offsetWidth > tc.parentNode.offsetWidth * 0.6;
+    d.after = col ? e.clientY > r.top + r.height / 2 : e.clientX > r.left + r.width / 2;
+    d.target = tc.getAttribute('data-fid');
+    tc.classList.add(d.after ? 'fc-after' : 'fc-before');
+    if (col) tc.classList.add('fc-col');
+  }
+  // Near the top or bottom of the window, scroll so a long list can be crossed.
+  if (e.clientY < 60) window.scrollBy(0, -12);
+  else if (e.clientY > window.innerHeight - 60) window.scrollBy(0, 12);
+}
+function cardGripEnd() {
+  var d = cardDrag; cardDrag = null;
+  document.removeEventListener('pointermove', cardGripMove);
+  document.removeEventListener('pointerup', cardGripUp);
+  document.removeEventListener('pointercancel', cardGripCancel);
+  cardDragClear();
+  document.body.classList.remove('fc-moving');
+  if (d && d.ghost) d.ghost.remove();
+  if (d && d.card) d.card.classList.remove('fc-dragging');
+  return d;
+}
+function cardGripUp() {
+  var d = cardGripEnd();
+  // Letting go over a card counts as a click on it; after a real drag that
+  // would open the formulation. Swallow that one click.
+  if (d && d.moved) {
+    var eat = function (ev) { ev.stopPropagation(); ev.preventDefault(); };
+    document.addEventListener('click', eat, true);
+    setTimeout(function () { document.removeEventListener('click', eat, true); }, 0);
+  }
+  if (d && d.moved && d.target && moveFormBefore(d.id, d.target, d.after)) renderCards();
+}
+function cardGripCancel() { cardGripEnd(); }
+// Arrow keys on a focused grip move the card one place among those shown.
+function cardGripKey(e, id) {
+  var k = e.key;
+  if (k === 'Enter' || k === ' ') { e.preventDefault(); e.stopPropagation(); return; }
+  var back = k === 'ArrowLeft' || k === 'ArrowUp', fwd = k === 'ArrowRight' || k === 'ArrowDown';
+  if (!back && !fwd) return;
+  e.preventDefault(); e.stopPropagation();
+  var shown = Array.prototype.map.call(document.querySelectorAll('#fcard-container .fcard'), function (c) { return c.getAttribute('data-fid'); });
+  var i = shown.indexOf(id), j = back ? i - 1 : i + 1;
+  if (i === -1 || j < 0 || j >= shown.length) return;
+  if (moveFormBefore(id, shown[j], fwd)) {
+    renderCards();
+    var g = document.querySelector('#fcard-container .fcard[data-fid="' + (window.CSS && CSS.escape ? CSS.escape(id) : id) + '"] .fcard-grip');
+    if (g) g.focus();
+  }
 }
 
 // ── Formula create / open ─────────────────────────────

@@ -3664,3 +3664,21 @@ it in the preview:
 - Tried in the one reused "Plume Preview" artifact
   (https://claude.ai/artifact/1RPFnrVthk3pbdRFpuRDyQ); she approved it.
   Tests: test/test-lotentry.js.
+
+### Session 26 (cont., 25 October 2026): Arrange the formulation cards (core v1.53)
+
+Her ask: move the formulation cards and have them stay where she puts them.
+
+- Each card has a grip (⋮⋮, top right). Drag it with a mouse or a finger
+  (pointer events, `touch-action: none` on the grip) and drop on another card:
+  the target's edge turns terracotta on the side it will land (left/right in
+  the grid; top/bottom when cards stack one per row on a phone). Near the
+  window's top or bottom edge the page scrolls. On a keyboard, focus the grip
+  and use the arrow keys.
+- The order is the formulations' saved array order (`moveFormBefore`,
+  `saveAll`), so it stays after a reload and travels with backups. With a
+  filter on, a card moves next to the one it is dropped on; hidden
+  formulations keep their places.
+- Letting go after a drag would count as a click on the card under the
+  pointer and open it; that one click is swallowed.
+- Tests: test/test-cardorder.js.
