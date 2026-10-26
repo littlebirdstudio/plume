@@ -1444,7 +1444,7 @@
       <select id="filter-phase" hidden onchange="renderTable()">
         <option value="">All phases</option><option value="water">Water</option><option value="oil">Oil</option><option value="cool-down">Cool-down</option><option value="active">Active</option><option value="add-in">Add-in</option><option value="other">Other</option>
       </select>
-      <select id="filter-flag" hidden onchange="renderTable()"><option value="">All ingredients</option><option value="yes">Restricted only</option></select>
+      <select id="filter-flag" hidden onchange="renderTable()"><option value="">All ingredients</option><option value="yes">Cautions only</option></select>
     </div>
 
     <!-- Recently viewed -->
@@ -2124,7 +2124,8 @@ function exportData() {
 var pendingUpdate = null;
 function updateMatches(data) {
   var byId = {}, byName = {};
-  ingredients.forEach(function (i) { byId[String(i.id)] = i; byName[String(i.name || '').toLowerCase()] = byName[String(i.name || '').toLowerCase()] || i; });
+  // By name, an active ingredient wins over an archived one of the same name.
+  ingredients.forEach(function (i) { byId[String(i.id)] = i; var k = String(i.name || '').toLowerCase(); if (!byName[k] || (byName[k].archived && !i.archived)) byName[k] = i; });
   var found = [], missing = [];
   (data.updates || []).forEach(function (u) {
     var ing = (u.id != null && byId[String(u.id)]) || byName[String(u.name || '').toLowerCase()];
@@ -2166,9 +2167,10 @@ function applyUpdateFile(changes) {
         : { min: ing.min || '', max: ing.max || '', useRate: ing.useRate || '', flag: ing.flag || '', restrictions: ing.restrictions || '', dermalLimits: ing.dermalLimits || '', at: day };
     }
     Plume.setUsage(ing, f.u.usage);
-    ['min', 'max', 'useRate', 'flag', 'restrictions'].forEach(function (k) { delete ing[k]; });
+    ['min', 'max', 'useRate', 'flag', 'restrictions', 'dermalLimits'].forEach(function (k) { delete ing[k]; });
   });
-  if (!saveData()) return;
+  // A failed save leaves memory ahead of storage; reload from storage.
+  if (!saveData()) { ingredients = Store.getJSON(STORE_KEY, []) || ingredients; renderTable(); renderStats(); return; }
   renderTable(); renderStats();
   Plume.tell('Updated ' + changes.length + ' ingredient' + (changes.length === 1 ? '' : 's') + '.', { title: 'Update complete' });
 }
@@ -3439,7 +3441,8 @@ function viewIngredient(id) {
   var stockTxt = (tg !== null ? tg.toFixed(0) + 'g' : '—') + (thresh ? ' <span style="font-size:11px;color:' + (low ? 'var(--warning)' : 'var(--success)') + '">' + (low ? '▼ low — threshold ' + thresh : '✓ above ' + thresh) + '</span>' : '');
   var cpg = bestCpg(i);
   var glanceOpt = [
-    { label: 'Usage', v: (function () { var u = Plume.usage(i); return (u.recMin || u.recMax || u.effMin || u.effMax || u.safeMax) ? Plume.usageText(i) : ''; })(), name: 'usage', tab: 'basics', id: 'f-recmin', note: Plume.usage(i).usageNote },
+    { label: 'Usage', v: (function () { var u = Plume.usage(i); return (u.recMin || u.recMax || u.effMin || u.effMax || u.safeMax) ? Plume.usageText(i) : u.usageNote; })(), name: 'usage', tab: 'basics', id: 'f-recmin',
+      note: (function () { var u = Plume.usage(i); return (u.recMin || u.recMax || u.effMin || u.effMax || u.safeMax) ? u.usageNote : ''; })() },
     { label: 'Caution', v: Plume.usage(i).caution, name: 'caution', tab: 'basics', id: 'f-caution', quiet: true },
     { label: 'Solubility', v: SOL[i.solubility] || i.solubility, name: 'solubility', tab: 'basics', id: 'f-solubility', note: i.solNote },
     { label: 'Substitutes', v: i.substitution, name: 'substitutes', tab: 'glance', id: 'f-substitution' },
@@ -3594,9 +3597,10 @@ function fillUsageForm(pf, ing) {
   var k = document.getElementById(pf + '-safe-kind');
   if (k) k.value = u.safeMax === 'none' ? 'none' : (u.safeMax ? 'num' : (ing ? '' : 'num'));
   set('safemax', u.safeMax === 'none' ? '' : u.safeMax);
-  // An older dermal-limits line is kept in the usage note, so nothing is lost.
-  var note = u.usageNote || (ing && ing.dermalLimits ? 'Dermal limits: ' + ing.dermalLimits : '');
-  set('usagenote', note); set('caution', u.caution === 'Marked restricted (no note yet).' ? '' : u.caution);
+  // An old record's dermal limits and wordy Recommended arrive in the usage
+  // note, and a bare Restricted tick as a caution sentence (Plume.usage), so a
+  // save keeps them and the orange dot.
+  set('usagenote', u.usageNote); set('caution', u.caution);
   syncSafeKind(pf);
 }
 function readUsageForm(pf) {
@@ -3613,18 +3617,16 @@ function usageFormProblem(v) {
   var f = parseFloat;
   if (v.recMin && v.recMax && f(v.recMin) > f(v.recMax)) return 'The recommended range runs low to high.';
   if (v.effMin && v.effMax && f(v.effMin) > f(v.effMax)) return 'The effective range runs low to high.';
-  var cap = v.safeMax && v.safeMax !== 'none' ? f(v.safeMax) : null;
+  return '';
+}
+function usageCapProblem(v) {
+  var f = parseFloat, cap = v.safeMax && v.safeMax !== 'none' ? f(v.safeMax) : null;
   if (cap !== null && ((v.recMax && f(v.recMax) > cap) || (v.effMax && f(v.effMax) > cap))) return 'A range runs above the safe limit (' + v.safeMax + '%).';
   return '';
 }
 
-// ── Restricted use (retired 2026-10-26: now Caution) ──
-// One fact, formerly split across two fields: a yes/no flag (which drives
-// the orange dot in Formulations) and a free-text Restrictions line in
-// Properties. Now a checkbox that reveals the text box. The box also stays
-// visible whenever it already holds text, so imported notes (e.g. a nut
-// allergy caution) are never hidden from the editor -- and unchecking never
-// deletes what was written.
+// ── Restricted use (retired 2026-10-26) ──
+// The Restricted tick and its text became Caution (see the usage block).
 function syncRestrictField() {}   // kept for old callers; Caution replaced it
 
 // ── Function chips ────────────────────────────────────
@@ -3821,6 +3823,8 @@ function qaBuild() {
     document.getElementById(name ? 'qa-inci' : 'qa-name').focus();
     return null;
   }
+  var qv0 = readUsageForm('qa'), qProblem = usageFormProblem(qv0) || usageCapProblem(qv0);
+  if (qProblem) { document.getElementById('qa-err').textContent = qProblem; document.getElementById('qa-recmin').focus(); return null; }
   var ing = qaStarter ? starterToIngredient(qaStarter) : {
     id: Date.now().toString() + Math.random().toString(36).slice(2, 6), created: new Date().toISOString(), lots: []
   };
@@ -3831,7 +3835,7 @@ function qaBuild() {
   // usage note, caution) comes from the starter list when one was used.
   var qu = Plume.usage(ing), qv = readUsageForm('qa');
   Plume.setUsage(ing, { recMin: qv.recMin, recMax: qv.recMax, safeMax: qv.safeMax, effMin: qu.effMin, effMax: qu.effMax, usageNote: qu.usageNote, caution: qu.caution });
-  ['min', 'max', 'useRate', 'flag', 'restrictions'].forEach(function(k) { delete ing[k]; });
+  ['min', 'max', 'useRate', 'flag', 'restrictions', 'dermalLimits'].forEach(function(k) { delete ing[k]; });
   ing.functionCategory = qaReadFuncs();
   var p = qaPurchase(), sup = qaVal('qa-sup');
   var onOrd = document.getElementById('qa-onorder').checked;
@@ -4063,6 +4067,16 @@ function saveIngredient(keepOpen) {
   if (!name || !inci) { Plume.tell('Common name and INCI name are required.'); return; }
   var useV = readUsageForm('f'), useBad = usageFormProblem(useV);
   if (useBad) { setIngTab('basics'); Plume.tell(useBad, { title: 'Check the usage numbers' }); return; }
+  // A range above the safe limit asks rather than blocks: old records can
+  // hold one (the two numbers came from different places), and an unrelated
+  // edit must still save.
+  var useCap = usageCapProblem(useV);
+  if (useCap && !saveIngredient.capOk) {
+    setIngTab('basics');
+    Plume.ask(useCap + ' Save anyway?', function () { saveIngredient.capOk = true; try { saveIngredient(keepOpen); } finally { saveIngredient.capOk = false; } },
+      { title: 'Check the usage numbers', yes: 'Save anyway', no: 'Go back' });
+    return;
+  }
   var data = {
     name:     name,
     inci:     inci,

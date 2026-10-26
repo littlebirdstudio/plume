@@ -3823,3 +3823,13 @@ page with researched proposals.
   Sinensis INCI). Red clay INCI "Illite / Montmorillonite / Kaolin".
   Preservatives all carry the Preservative function.
 - Tests: test/test-usage.js; ingpage, quickadd, starter and sweep updated.
+- From the independent review, fixed before the PR: a bare Restricted tick
+  reads as the caution "Restricted (no note recorded)." so a save keeps the
+  dot; old free-text Recommended that is not a plain number or range ("pH 5:
+  2%", "2% leave-on, 1% rinse-off") is not guessed at but kept as the usage
+  note, and "up to 5%" is a top only; old dermal limits read into the usage
+  note and are cleared (into `usageOld`) by updates and Quick add; a range
+  above the safe limit asks "Save anyway?" instead of blocking (old records
+  can hold one); `usageNum` accepts a trailing %; Quick add checks its
+  numbers; matching an update by name prefers an active ingredient; an old
+  preservative max of 100 is no limit, not part of its effective range.

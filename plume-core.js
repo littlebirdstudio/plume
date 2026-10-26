@@ -3201,16 +3201,25 @@ function recText(v) {
 // Usage rate box (safety; 100 meant no limit), flag + restrictions her
 // Restricted tick and note.
 function usageNum(v) {
-  var s = String(v == null ? '' : v).trim().replace(',', '.');
+  // A trailing % is allowed ("10%" is 10); anything else not a number is ''.
+  var s = String(v == null ? '' : v).trim().replace(',', '.').replace(/\s*%$/, '');
   return /^\d*\.?\d+$/.test(s) ? s.replace(/^\./, '0.') : '';
 }
+// An old free-text Recommended: a bare number or range becomes the range;
+// "up to X" becomes a top only; anything else ("pH 5: 2%", "2% leave-on, 1%
+// rinse-off", "10%+") is not guessed at: it reads as text, [ '', '', text ].
 function usageRangeOf(text) {
-  var s = String(text == null ? '' : text).replace(/(\d),(\d)/g, '$1.$2');
-  var m = s.match(/(\d*\.?\d+)\s*%?\s*(?:-|–|—|to)\s*(\d*\.?\d+)/i);
-  if (m) return [usageNum(m[1]), usageNum(m[2])];
-  m = s.match(/(\d*\.?\d+)/);
-  return m ? [usageNum(m[1]), usageNum(m[1])] : ['', ''];
+  var s = String(text == null ? '' : text).trim().replace(/(\d),(\d)/g, '$1.$2');
+  if (!s) return ['', '', ''];
+  var m = s.match(/^(\d*\.?\d+)\s*%?\s*(?:-|\u2013|\u2014|to)\s*(\d*\.?\d+)\s*%?$/i);
+  if (m) return [usageNum(m[1]), usageNum(m[2]), ''];
+  m = s.match(/^(\d*\.?\d+)\s*%?$/);
+  if (m) return [usageNum(m[1]), usageNum(m[1]), ''];
+  m = s.match(/^up\s*to\s*(\d*\.?\d+)\s*%?$/i);
+  if (m) return ['', usageNum(m[1]), ''];
+  return ['', '', s];
 }
+var USAGE_FLAG_ONLY = 'Restricted (no note recorded).';
 function isPreservativeIng(ing) { return funcCats(ing).indexOf('Preservative') !== -1; }
 function usage(ing) {
   ing = ing || {};
@@ -3227,12 +3236,17 @@ function usage(ing) {
   }
   var r = usageRangeOf(ing.useRate), mx = usageNum(ing.max), mn = usageNum(ing.min);
   var pres = isPreservativeIng(ing) && (mn || mx);
+  var noLimit = mx !== '' && parseFloat(mx) >= 100;
+  // Words that were not a range, and an old dermal-limits line, become the
+  // usage note, so they show (and carry over when saved) instead of vanishing.
+  var dl = String(ing.dermalLimits || '').trim();
+  var note = [r[2] ? 'Recommended: ' + r[2] : '', dl ? 'Dermal limits: ' + dl : ''].filter(Boolean).join(' ');
   return {
     recMin: r[0], recMax: r[1],
-    safeMax: mx === '' ? '' : (parseFloat(mx) >= 100 ? 'none' : mx),
-    effMin: pres ? mn : '', effMax: pres ? mx : '',
-    usageNote: '',
-    caution: String(ing.restrictions || '').trim() || (ing.flag === 'yes' ? 'Marked restricted (no note yet).' : ''),
+    safeMax: mx === '' ? '' : (noLimit ? 'none' : mx),
+    effMin: pres ? mn : '', effMax: pres && !noLimit ? mx : '',
+    usageNote: note,
+    caution: String(ing.restrictions || '').trim() || (ing.flag === 'yes' ? USAGE_FLAG_ONLY : ''),
     legacy: true
   };
 }

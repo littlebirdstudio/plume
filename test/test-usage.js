@@ -37,7 +37,14 @@ const INGS = [
   { id: 'jo', name: 'Jojoba oil', inci: 'Simmondsia Chinensis Seed Oil', phase: 'oil', min: '1', max: '100', lots: [lot('j1', 500, 0.04)] },
   { id: 'geo', name: 'Geogard', inci: 'Gluconolactone', phase: 'cool-down', functionCategory: ['Preservative'], min: '0.75', max: '1.5', lots: [] },
   { id: 'ylg', name: 'Ylang ylang', inci: 'Cananga Odorata Flower Oil', phase: 'cool-down', flag: 'yes', restrictions: 'Sensitizer.', max: '0.8', lots: [] },
-  { id: 'old', name: 'Old flag only', inci: 'X', phase: 'oil', flag: 'yes', lots: [] }
+  { id: 'old', name: 'Old flag only', inci: 'X', phase: 'oil', flag: 'yes', lots: [] },
+  // Old records the review caught (2026-10-26): wordy Recommended, dermal
+  // limits, and a Recommended above the old max.
+  { id: 'wph', name: 'Wordy pH', inci: 'X', phase: 'water', useRate: 'pH 5: 2%', lots: [] },
+  { id: 'wup', name: 'Up to five', inci: 'X', phase: 'water', useRate: 'Up to 5%', lots: [] },
+  { id: 'clv', name: 'Clove EO', inci: 'Eugenia Caryophyllus Leaf Oil', phase: 'cool-down', dermalLimits: '0.5% max', max: '0.5', lots: [] },
+  { id: 'cap', name: 'Capped', inci: 'X', phase: 'water', useRate: '2-5', max: '3', lots: [] },
+  { id: 'pr1', name: 'Old preservative', inci: 'X', phase: 'cool-down', functionCategory: ['Preservative'], min: '0.5', max: '100', lots: [] }
 ];
 const V = (vid, lines) => ({ vid, num: 1, label: '', status: 'draft', lines, instructions: '', batchSize: 100, usageLog: [], history: [] });
 const lines = [
@@ -102,6 +109,16 @@ console.log('\n0. The starter list');
   ok('the short form for the list', r.niaS === '2–5% · up to 10%', r.niaS);
   ok('an old restriction note becomes the caution', r.ylg.caution === 'Sensitizer.' && r.ylg.safeMax === '0.8', r.ylg);
   ok('an old flag with no note still counts as a caution', !!r.old, r.old);
+  const r2 = await page.evaluate(`(function () {
+    var by = function (id) { return ingredients.filter(function (i) { return i.id === id; })[0]; };
+    return { wph: Plume.usage(by('wph')), wup: Plume.usage(by('wup')), clv: Plume.usage(by('clv')), pr1: Plume.usageText(by('pr1')),
+      nums: [Plume.usageNum('10%'), Plume.usageNum('2 %'), Plume.usageNum('.5'), Plume.usageNum('abc')] };
+  })()`);
+  ok('words that are not a range are kept as a note, not guessed at', r2.wph.recMin === '' && r2.wph.recMax === '' && r2.wph.usageNote === 'Recommended: pH 5: 2%', r2.wph);
+  ok('"up to 5%" is a top only', r2.wup.recMin === '' && r2.wup.recMax === '5', r2.wup);
+  ok('old dermal limits show in the usage note', r2.clv.usageNote === 'Dermal limits: 0.5% max', r2.clv);
+  ok('an old preservative max of 100 is no limit, not part of its effective range', r2.pr1 === 'from 0.5% · no upper limit' || /^Effective from 0\.5%/.test(r2.pr1), r2.pr1);
+  ok('a trailing % is fine in a number', JSON.stringify(r2.nums) === JSON.stringify(['10', '2', '0.5', '']), r2.nums);
   const ck = await page.evaluate(`(function () {
     var by = function (id) { return ingredients.filter(function (i) { return i.id === id; })[0]; };
     var c = function (id, p) { return Plume.usageCheck(by(id), p).map(function (x) { return x.level; }).join(','); };
@@ -125,8 +142,9 @@ console.log('\n0. The starter list');
   await page.evaluate("document.getElementById('f-recmax').value = '1'; saveIngredient(false)"); await page.waitForTimeout(200);
   ok('a range that runs high to low is refused', dialogs.some(d => /low to high/.test(d)), dialogs);
   dialogs.length = 0;
-  await page.evaluate("document.getElementById('f-recmax').value = '12'; saveIngredient(false)"); await page.waitForTimeout(200);
-  ok('a range above the safe limit is refused', dialogs.some(d => /above the safe limit/.test(d)), dialogs);
+  await page.evaluate("window.PLUME_TEST_ANSWER = false; document.getElementById('f-recmax').value = '12'; saveIngredient(false)"); await page.waitForTimeout(200);
+  ok('a range above the safe limit asks first; Go back saves nothing', dialogs.some(d => /above the safe limit/.test(d) && /Save anyway/.test(d)) && !(await page.evaluate(getIngs)).find(i => i.id === 'gly').usageV2, dialogs);
+  await page.evaluate("window.PLUME_TEST_ANSWER = undefined");
   dialogs.length = 0;
   await page.evaluate(`document.getElementById('f-recmax').value = '7';
     document.getElementById('f-safe-kind').value = 'none'; syncSafeKind('f');
@@ -142,22 +160,38 @@ console.log('\n0. The starter list');
   g = (await page.evaluate(getIngs)).find(i => i.id === 'gly');
   ok('Not established saves as blank, not as no limit', g.safeMax === '' && g.usageOld.useRate === '2–5%', g);
   await page.evaluate("closeModal('modal-add')");
+  // Old records, saved for an unrelated edit, keep what they had.
+  const saveOld = async (id) => { await page.evaluate("viewIngredient('" + id + "'); editCurrent('basics'); document.getElementById('f-solnote').value = 'edited'; saveIngredient(false)"); await page.waitForTimeout(250); return (await page.evaluate(getIngs)).find(i => i.id === id); };
+  dialogs.length = 0;
+  const o1 = await saveOld('old');
+  ok('a bare Restricted tick keeps its orange dot as a caution sentence', o1.caution === 'Restricted (no note recorded).' && o1.flag === undefined, o1);
+  const o2 = await saveOld('wph');
+  ok('wordy Recommended text is kept in the usage note', o2.usageNote === 'Recommended: pH 5: 2%' && o2.recMin === '' && o2.useRate === undefined, o2);
+  const o3 = await saveOld('clv');
+  ok('dermal limits are kept in the usage note, and the old field goes', o3.usageNote === 'Dermal limits: 0.5% max' && o3.dermalLimits === undefined && o3.usageOld.dermalLimits === '0.5% max', o3);
+  const o4 = await saveOld('cap');
+  ok('an old Recommended above its old max asks, and an unrelated edit still saves on yes', dialogs.some(d => /above the safe limit \(3%\)/.test(d)) && o4.solNote === 'edited' && o4.recMax === '5' && o4.safeMax === '3', [o4, dialogs]);
+  await page.evaluate("closeModal('modal-add')");
 
   console.log('\n4. Updating from a file');
   const upd = { kind: 'plume-ingredient-update', title: 'Usage review', updates: [
     { id: 'jo', name: 'Jojoba oil', usage: { recMin: '1', recMax: '100', safeMax: 'none', effMin: '', effMax: '', usageNote: 'Can be used neat.', caution: '' } },
+    { id: 'clv2', name: 'Clove leaf', usage: { recMin: '', recMax: '0.5', safeMax: '0.5', effMin: '', effMax: '', usageNote: '', caution: 'Sensitizer.' } },
     { id: 'zzz', name: 'Renamed geogard', usage: { recMin: '', recMax: '', safeMax: '1.5', effMin: '0.75', effMax: '1.5', usageNote: '', caution: '' } },
     { id: 'nope', name: 'Not here', usage: { recMin: '1', recMax: '2', safeMax: '', effMin: '', effMax: '', usageNote: '', caution: '' } },
     { id: 'nia', name: 'Niacinamide', usage: { recMin: '2', recMax: '5', safeMax: '10', effMin: '', effMax: '', usageNote: 'Above 5% can flush sensitive skin.', caution: '' } }
   ] };
   fs.writeFileSync(path.join(__dirname, 'tmp', 'usage-update.json'), JSON.stringify(upd));
   // Matched by id, then by name: rename Geogard so only its id would miss.
-  await page.evaluate("var a = " + getIngs + "; a.filter(function (i) { return i.id === 'geo'; })[0].name = 'Renamed geogard'; localStorage.setItem('aerie-ingredients-v2', JSON.stringify(a));");
+  await page.evaluate("var a = " + getIngs + "; a.filter(function (i) { return i.id === 'geo'; })[0].name = 'Renamed geogard';" +
+    " a.push({ id: 'clv2', name: 'Clove leaf', inci: 'X', phase: 'cool-down', dermalLimits: '0.5%', lots: [] });" +
+    " a.push({ id: 'clv3', name: 'Renamed geogard', inci: 'X', phase: 'oil', archived: true, lots: [] });" +
+    " localStorage.setItem('aerie-ingredients-v2', JSON.stringify(a));");
   await page.reload(); await page.waitForTimeout(400);
   dialogs.length = 0;
   await page.evaluate("window.PLUME_TEST_ANSWER = false");
   await page.setInputFiles('#import-file-input', path.join(__dirname, 'tmp', 'usage-update.json')); await page.waitForTimeout(400);
-  ok('the preview lists only what changes, and what is not in the library', dialogs.length === 1 && /Update 2 ingredients\?/.test(dialogs[0]) && /Jojoba oil/.test(dialogs[0]) && /Renamed geogard/.test(dialogs[0]) && /Not here/.test(dialogs[0]) && !/Niacinamide/.test(dialogs[0]), dialogs);
+  ok('the preview lists only what changes, and what is not in the library', dialogs.length === 1 && /Update 3 ingredients\?/.test(dialogs[0]) && /Jojoba oil/.test(dialogs[0]) && /Renamed geogard/.test(dialogs[0]) && /Not here/.test(dialogs[0]) && !/Niacinamide/.test(dialogs[0]), dialogs);
   let L = await page.evaluate(getIngs);
   ok('saying no changes nothing', !L.find(i => i.id === 'jo').usageV2, L.find(i => i.id === 'jo'));
   dialogs.length = 0;
@@ -167,7 +201,10 @@ console.log('\n0. The starter list');
   const jo = L.find(i => i.id === 'jo'), geo = L.find(i => i.id === 'geo');
   ok('saying yes applies them', jo.usageV2 && jo.safeMax === 'none' && jo.usageNote === 'Can be used neat.' && geo.usageV2 && geo.effMin === '0.75' && geo.recMin === '', [jo, geo]);
   ok('each keeps its old values once, and drops the old fields', jo.usageOld && jo.usageOld.max === '100' && jo.min === undefined && geo.usageOld.min === '0.75' && geo.max === undefined, [jo, geo]);
-  ok('nothing new was added', L.length === INGS.length, L.length);
+  ok('nothing new was added', L.length === INGS.length + 2, L.length);
+  const c2 = L.find(i => i.id === 'clv2');
+  ok('an update clears old dermal limits too (they stay in its history)', c2.dermalLimits === undefined && c2.usageOld.dermalLimits === '0.5%' && c2.usageNote === '', c2);
+  ok('by name, the active ingredient is matched, not an archived namesake', !L.find(i => i.id === 'clv3').usageV2);
   dialogs.length = 0;
   await page.setInputFiles('#import-file-input', path.join(__dirname, 'tmp', 'usage-update.json')); await page.waitForTimeout(400);
   ok('the same file again has nothing to do', dialogs.length === 1 && /Nothing to update/.test(dialogs[0]), dialogs);
