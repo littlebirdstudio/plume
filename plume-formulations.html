@@ -2512,14 +2512,16 @@ function buildRow(l, idx, ing, bs, isAddin) {
   var noteTip = (useU.usageNote && !outOfRange) ? ' has-note" title="' + esc(useU.usageNote) : '';
   if (!ing.missing && (useU.recMin || useU.recMax || useU.effMin || useU.effMax || useU.safeMax)) row += '<div class="rec-note' + noteTip + '">' + esc(Plume.usageText(ing)) + '</div>';
   else if (!ing.missing && noteTip) row += '<div class="rec-note' + noteTip + '">Usage note</div>';
-  if (quiet.length) row += '<div class="use-quiet">' + esc(quiet.map(function (c) { return c.text; }).join(' ')) + (useU.usageNote ? ' ' + esc(useU.usageNote) : '') + '</div>';
-  else if (firm.length && useU.usageNote && !ing.missing) row += '<div class="use-quiet use-note-only">' + esc(useU.usageNote) + '</div>';
+  // A firm warning comes first, right under the numbers it refers to; the
+  // quiet "above recommended" would only repeat it, so it is left out.
+  if (warn) row += '<div class="warn-txt">' + esc(firm.map(function (c) { return c.text; }).join(' ')) + '</div>';
+  if (quiet.length && !warn) row += '<div class="use-quiet">' + esc(quiet.map(function (c) { return c.text; }).join(' ')) + (useU.usageNote ? ' ' + esc(useU.usageNote) : '') + '</div>';
+  else if (warn && useU.usageNote && !ing.missing) row += '<div class="use-quiet use-note-only">' + esc(useU.usageNote) + '</div>';
   if (useU.caution && !ing.missing) row += '<div class="caution-line">Caution: ' + esc(useU.caution) + '</div>';
   var solNote = isAddin ? '' : solubilityNote(ing, ePh);
   if (solNote) row += '<div class="sol-note">' + esc(solNote) + '</div>';
   if (obR.note) row += obR.note;
   else if (sst === 'partial') row += '<div class="stock-note">' + Math.round(sg) + 'g on hand &middot; need ' + gNum.toFixed(1) + 'g</div>';
-  if (warn) row += '<div class="warn-txt">' + esc(firm.map(function (c) { return c.text; }).join(' ')) + '</div>';
   if (isAddin) {
     row += '<div class="drops-row"><span style="color:var(--ink-lighter)">approx</span>';
     row += '<input class="drops-inp" value="' + dropsDisp + '" placeholder="drops" onclick="this.select()" oninput="onDrops(' + idx + ',this.value,' + dpg + ')">';
