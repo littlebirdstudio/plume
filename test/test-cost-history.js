@@ -89,11 +89,11 @@ const PRODUCTS = [
   // Two face oils at today's $4.422 plus a $1.00 box.
   ok('two face oils at today\'s cost plus the box', kb && kb.kit && Math.abs(kb.unitCost - 9.844) < 1e-6 && Math.abs(kb.ingCost - 8.844) < 1e-6 && kb.pkgCost === 1, kb);
 
-  console.log('\n4. The Cost to make panel');
+  console.log('\n4. Analytics: Cost to make');
   ok('it sits in the sidebar under Stock, after Stock history', await page.evaluate(
-    "var b = document.getElementById('ps-nav-costs'); !!b && b.previousElementSibling.id === 'ps-nav-history' && b.textContent.trim() === 'Cost to make'"));
+    "var b = document.getElementById('ps-nav-costs'); !!b && b.previousElementSibling.id === 'ps-nav-history' && b.textContent.trim() === 'Analytics'"));
   await page.click('#ps-nav-costs'); await page.waitForTimeout(350);
-  ok('it opens as the side panel and marks its button', await page.evaluate("document.getElementById('ps-peek').classList.contains('open') && !!document.querySelector('.ct-panel') && document.getElementById('ps-nav-costs').classList.contains('on')"));
+  ok('it opens as the side panel titled Analytics, Cost to make first, and marks its button', await page.evaluate("document.getElementById('ps-peek').classList.contains('open') && document.querySelector('.ct-panel h2').textContent === 'Analytics' && document.querySelector('.ct-panel .ct-sec').textContent === 'Cost to make' && document.getElementById('ps-nav-costs').classList.contains('on')"));
   const listText = await page.evaluate("document.querySelector('.ct-list').innerText.replace(/\\s+/g, ' ')");
   ok('products sit under their formulation; kits last', /Face oil Face oil 30 mL[\s\S]*Face oil mini[\s\S]*Kits and sample packs Gift set/.test(listText), listText);
   ok('each shows today\'s cost a unit', /Face oil 30 mL 1 fl oz \$4\.42 a unit today/.test(listText), listText);

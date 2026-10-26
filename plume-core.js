@@ -1097,7 +1097,7 @@ function shell(opts) {
       '<nav class="ps-nav-list" aria-label="Stock">' +
         '<button type="button" class="ps-nav" id="ps-nav-stock" onclick="Plume.stock.open()" title="Sold, gifted, marketing, damaged, returned, or reconcile to a count">' + icon('stock') + '<span class="ps-nav-label">Update stock</span></button>' +
         '<button type="button" class="ps-nav" id="ps-nav-history" onclick="Plume.stock.history()" title="Where your stock went: by market or event, month or product, and what it cost">' + icon('history') + '<span class="ps-nav-label">Stock history</span></button>' +
-        '<button type="button" class="ps-nav" id="ps-nav-costs" onclick="Plume.costs.open()" title="What one unit of each product cost to make and package, over time">' + icon('trend') + '<span class="ps-nav-label">Cost to make</span></button>' +
+        '<button type="button" class="ps-nav" id="ps-nav-costs" onclick="Plume.costs.open()" title="Analytics: what one unit of each product cost to make and package, over time">' + icon('trend') + '<span class="ps-nav-label">Analytics</span></button>' +
       '</nav>' +
       '<div class="ps-grow"></div>' +
       '<button type="button" class="ps-nav" onclick="if (typeof openSettings === \'function\') openSettings()" title="Settings">' + icon('settings') + '<span class="ps-nav-label">Settings</span></button>' +
@@ -1915,7 +1915,8 @@ function injectStyles() {
     '.sh-panel .sh-line b{color:var(--ink)}' +
     '.sh-panel .sh-foot{font-size:12px;color:var(--ink-lighter);line-height:1.5;margin:12px 0 0}' +
     '.sh-panel .sh-actions{margin-top:10px}' +
-    '.ct-panel .ct-sub{font-size:13px;color:var(--ink-light);margin:6px 0 12px;line-height:1.5}' +
+    '.ct-panel .ct-sec{font-size:15px;font-weight:600;color:var(--ink);margin:16px 0 0}' +
+    '.ct-panel .ct-sub{font-size:13px;color:var(--ink-light);margin:4px 0 12px;line-height:1.5}' +
     '.ct-panel .ct-form{font-size:12px;font-weight:600;color:var(--bark);margin:14px 0 2px;padding:0 4px}' +
     '.ct-panel .ct-item{border-bottom:1px solid var(--cream-border)}' +
     '.ct-panel .ct-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;width:100%;text-align:left;border:0;background:none;padding:9px 4px;cursor:pointer;font:inherit;color:var(--ink);align-items:center}' +
@@ -5342,7 +5343,8 @@ function ctHtml() {
         '</button>' + (open ? '<div class="ct-detail">' + ctDetail(p, rows) + '</div>' : '') + '</div>';
     }).join('');
   }).join('');
-  return '<div class="sh-panel ct-panel"><div class="sup-title">' + icon('trend') + '<h2>Cost to make</h2></div>' +
+  return '<div class="sh-panel ct-panel"><div class="sup-title">' + icon('trend') + '<h2>Analytics</h2></div>' +
+    '<h3 class="ct-sec">Cost to make</h3>' +
     '<p class="ct-sub">What one unit cost to make and package each time you filled it. Open a product to see it over time.</p>' +
     '<label class="ps-search sh-search">' + icon('search') + '<input type="search" id="ct-q" placeholder="Search products or formulations" value="' + esc(ctQ) + '" oninput="Plume.costs.find(this.value)" aria-label="Search products"></label>' +
     '<div class="ct-list">' + (body || '<div class="st-empty">' + (q ? 'Nothing matches “' + esc(ctQ) + '”.' : 'No products yet. Products &amp; Costing is where they are set up.') + '</div>') + '</div>' +
@@ -5365,7 +5367,7 @@ function ctRender() { var b = document.getElementById('ps-peek-body'); if (b) b.
 function costsOpen() {
   ctOpen = ''; ctQ = '';
   openPeek(ctHtml(), {
-    label: 'Cost to make',
+    label: 'Analytics',
     onClose: function () { var b = document.getElementById('ps-nav-costs'); if (b) b.classList.remove('on'); }
   });
   ['ps-nav-stock', 'ps-nav-history'].forEach(function (k) { var e = document.getElementById(k); if (e) e.classList.remove('on'); });
