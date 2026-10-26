@@ -163,7 +163,7 @@ console.log('\n2. Every palette stays readable in dark');
   console.log('\n6. The landing page');
   {
     let html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-    html = html.replace('<script src="plume-core.js"></script>', '<script>\n' + core + '\n</script>');
+    html = html.replace('<script src="plume-core.js"></script>', () => '<script>\n' + core + '\n</script>');
     const out = path.join(TMP, 'preview-index-theme.html');
     fs.mkdirSync(TMP, { recursive: true });
     fs.writeFileSync(out, html);

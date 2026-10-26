@@ -3755,3 +3755,22 @@ function changes, Enter-Enter with bold on).
   placeholder is short (full text in its title); the consignment link uses
   the app's link colour.
 - **Batches:** filled past its yield reads "45 g over", not "-45 g of 300 g".
+
+### Session 27 (cont., 26 October 2026): One-time repair of lot prices bought by volume (core v1.56)
+
+The v1.55 density fix stopped new wrong prices, but the wrong ones were
+already saved. Her call: repair them automatically.
+
+- `fixVolumeLotCosts()` runs once at boot on any page (before the page
+  reads), flag `plume-fix-volcpg-v1`. A lot bought in mL or fl oz is
+  repriced only when its saved cost per gram equals the old water figure
+  (price / mL, to 4 places) and the density Plume uses now is not 1.0. A
+  price she typed, a lot priced with a set density, and lots by weight are
+  untouched. On her 25 October backup: 32 lots (oils and essential oils
+  about 8-24% up, glycerin and sodium lactate about 21-24% down).
+- Ingredients shows the list once (`fixVolumeNote`, a table in the dialog;
+  `tell` takes `opts.html` for markup whose values are already escaped).
+- Retroactive on purpose: it corrects a calculation error, so batches made
+  from those lots really cost the corrected amount.
+- Tests: test/test-costrepair.js. test-theme and test-version now insert
+  core with a function replacement (a `$'` in core broke the string one).
