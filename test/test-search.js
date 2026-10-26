@@ -95,7 +95,7 @@ const NA_ORDER = ['Natural vitamin E', 'Hemp seed oil', 'Niacinamide', 'Activate
     const names = async (q) => page.evaluate(`(function () {
       var s = document.getElementById('search'); s.value = ${JSON.stringify(q)}; renderTable();
       return Array.from(document.querySelectorAll('#tbody tr[data-ing] .td-name'))
-        .map(function (td) { return td.childNodes[0].textContent.trim(); });
+        .map(function (td) { var n = Array.from(td.childNodes).find(function (c) { return c.nodeType === 3 && c.textContent.trim(); }); return n ? n.textContent.trim() : ''; });
     })()`);
     const browse = await names('');
     ok('browsing is still plain alphabetical',
