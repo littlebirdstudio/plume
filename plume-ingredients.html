@@ -1277,6 +1277,14 @@
   #ing-table tbody td:last-child { border-right: 1px solid var(--cream-border); border-radius: 0 9px 9px 0; }
   #ing-table tbody td:first-child:last-child { border-radius: 9px; }
   #ing-table tbody tr.has-stock td { border-color: color-mix(in srgb, var(--clay-hover) 70%, var(--cream-border)); }
+  /* On order with nothing here yet (2026-10-26, her ask): a dashed terracotta
+     outline, so it reads as something to plan with, not something missing.
+     In stock is tinted; nothing at all stays plain. */
+  #ing-table tbody tr.on-order-row td { border-top: 2px dashed var(--clay); border-bottom: 2px dashed var(--clay); background: color-mix(in srgb, var(--clay) 5%, var(--white)); }
+  #ing-table tbody tr.on-order-row td:first-child { border-left: 2px dashed var(--clay); }
+  #ing-table tbody tr.on-order-row td:last-child { border-right: 2px dashed var(--clay); }
+  #ing-table tbody tr.on-order-row:hover td { background: color-mix(in srgb, var(--clay) 10%, var(--white)); }
+  #ing-table tbody tr.on-order-row .ord-tag { background: color-mix(in srgb, var(--clay) 16%, var(--white)); border: 1px solid var(--clay); color: var(--clay-dark); font-style: normal; font-weight: 600; }
 /* Stock solutions (2026-10-21) */
 .made-from { font-size: 12.5px; color: var(--ink-light); background: var(--sage-light); border-radius: 8px; padding: 8px 12px; margin: 6px 0 10px; line-height: 1.5; }
 .made-from a { color: var(--sage-dark); }
@@ -2834,7 +2842,7 @@ function renderTable() {
       ? '<span class="ps-stock">' + (low ? '<span class="ps-dot" style="background:var(--warning)" title="Running low"></span>' : '') +
           formatStockDisplay(i) + (low ? ' <span class="ps-muted">\u00b7 low</span>' : '') + '</span>' + (ordTag ? '<div>' + ordTag + '</div>' : '')
       : (ordTag || '<span class="ps-muted">' + (calcTotalStockG(i) === null ? '\u2014' : 'None') + '</span>');
-    return '<tr data-ing="' + i.id + '" class="' + (inStock ? 'has-stock' : '') + (sel ? ' sel' : '') + (i.archived ? ' row-archived' : '') + '" onclick="toggleQuickLook(\'' + i.id + '\')" title="Click for a quick look">' +
+    return '<tr data-ing="' + i.id + '" class="' + (inStock ? 'has-stock' : (ordAny ? 'on-order-row' : '')) + (sel ? ' sel' : '') + (i.archived ? ' row-archived' : '') + '" onclick="toggleQuickLook(\'' + i.id + '\')" title="Click for a quick look">' +
       '<td class="td-name">' + cmpBox(i.id) + esc(i.name) + (i.archived ? '<span class="arch-tag">archived</span>' : '') +
         (warn ? '<span class="expiry-warn" title="A lot expires soon"> &#9888;</span>' : '') +
         // INCI under the name (the redesign). Her function notes moved to the
