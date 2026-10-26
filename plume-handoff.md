@@ -3834,3 +3834,47 @@ page with researched proposals.
   can hold one); `usageNum` accepts a trailing %; Quick add checks its
   numbers; matching an update by name prefers an active ingredient; an old
   preservative max of 100 is no limit, not part of its effective range.
+
+### Session 28 (26 October 2026): Quick add as a slide-in panel (core v1.58)
+
+Her report: Quick add looked unlike the rest of the app ("some unnecessary
+clunk"), and the Safe limit box ran past the edge of the page.
+
+- **Quick add** (`#modal-quick`) slides in from the right like the lots
+  drawer: title and one-line note in the head, the form on a cream body in
+  two white sections, footer pinned (Add more details is a quiet text
+  button). Labels are sentence case. Phase is pills (`qaRenderPhase`,
+  `qaSetPhase`) over the hidden `#qa-phase` select, built from its options
+  so a starter item's unusual phase still gets a pill. The Purchase section
+  has Here / On order pills (`qaSetOrder`) driving the hidden `#qa-onorder`
+  checkbox; `qaOnOrder` keeps the pills in step. Wording follows the lots
+  drawer: Bought (total), Price paid, total ($). Certifications are
+  `lot-tog` pills; in Quick add the checkbox covers its pill, so a click
+  (and Playwright's `check`) lands on the box itself. The density note sits
+  under the cost per gram ("at 0.92 g/mL", or "at 1 g/mL, a guess" when no
+  density is known; the reason is its tooltip). Every id is kept. All
+  styles are scoped to `#modal-quick`.
+- **The overflow, and the same bug in the full editor:** `.form-row3` and
+  `.form-grid` used plain `1fr` columns, which grow to fit their contents,
+  so the usage row (two boxes and a select per field) pushed past the edge:
+  Safe limit in Quick add, Effective % in the editor's Basics tab. Now
+  `minmax(0, 1fr)` with `min-width: 0` on the fields.
+- **Function chips shouted** in both forms: `.field label` (uppercase,
+  letter-spaced) outranked `.fcat-chip`'s own sentence case. Fixed with
+  `.field .fcat-chip`.
+- Tests: `test-quickadd.js` reads the cost per gram and its note. 38 suites, all passing.
+
+Also decided this session (see the backlog): cost over time goes with option
+A, a cost stamped on each batch from the lots it drew (her May 15 decision,
+lost when Costing was rebuilt on May 18 and later written up too broadly in
+session 9); receipts go with option A first (chat, then Import with a
+preview), lots start On order, packaging on a receipt goes to Packaging, and
+shipping is recorded apart, never spread into cost, packaging included.
+Named groups on the board are parked; rinse-off limits and an essential oil
+blend check are declined.
+
+**Test environment note:** the workspace could not download Playwright's
+Chromium (the CDN is blocked), but /opt/pw-browsers has build 1243. Pointing
+`PLAYWRIGHT_BROWSERS_PATH` at a folder with `chromium-1194` and
+`chromium_headless_shell-1194` linked to those (plus `chrome-linux` and
+`headless_shell` name links) runs every suite.
