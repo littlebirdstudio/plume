@@ -3693,3 +3693,17 @@ that only reordered the list was not what she meant.)
 - Saved with the formulations (`saveAll`), so it stays after a reload and
   travels with backups. For named groups later: `f.board` can gain a group.
 - Tests: test/test-cardorder.js.
+
+### Session 27 (26 October 2026): On order stands out (core v1.54)
+
+Her point: an ingredient on order with nothing here yet looked like one she
+does not have, when it is one she can start planning with. Only matters when
+nothing is on hand.
+
+- Ingredients list: such a row (`tr.on-order-row`: not in stock, has an
+  on-order lot) gets a 2 px dashed terracotta (`--clay`) outline, a faint
+  terracotta wash, and a filled "N g on order" pill. In stock stays tinted
+  (even with more on order); nothing at all stays plain.
+- Formulations' ingredient search: the same item gets a terracotta outline
+  and pill (`.dd-item.on-order`).
+- Tests: test-onorder.js section 8.

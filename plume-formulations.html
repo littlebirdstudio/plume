@@ -510,7 +510,8 @@ body.fc-moving,body.fc-moving *{cursor:grabbing!important;user-select:none}
 .dd-item.in-stock:hover{background:var(--clay-hover,#EFDFD5)}
 .dd-stock{font-size:10px;color:var(--ink-light);margin-right:8px;font-variant-numeric:tabular-nums;white-space:nowrap}
 /* On order: an outline, not the in-stock tint (2026-10-25) */
-.dd-item.on-order{box-shadow:inset 3px 0 0 var(--bark-light)}
+.dd-item.on-order{box-shadow:inset 0 0 0 1.5px var(--clay);outline:none;background:color-mix(in srgb,var(--clay) 5%,var(--white));border-radius:6px}
+.dd-item.on-order .dd-stock.ord{background:color-mix(in srgb,var(--clay) 16%,var(--white));border:1px solid var(--clay);color:var(--clay-dark);font-style:normal;font-weight:600;border-radius:999px;padding:1px 7px}
 .dd-stock.ord{color:var(--bark);font-style:italic}
 .ing-row.on-order:not(.warn),.soap-row.on-order:not(.no-sap){border-left:3px dashed var(--bark-light);padding-left:8px}
 .order-note{font-size:10px;color:var(--bark);font-style:italic;margin-top:2px}

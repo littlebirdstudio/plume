@@ -176,6 +176,20 @@ const getIngs = "JSON.parse(localStorage.getItem('aerie-ingredients-v2'))";
     after.filter(i => i.id === 'ij').length === 1 && after.find(i => i.id === 'ij').name === 'Jojoba oil (golden)' && after.some(i => i.id === 'inew'),
     after.filter(i => i.id === 'ij' || i.id === 'inew').map(i => i.id + ':' + i.name));
 
+  // ── 8. On order stands out (2026-10-26, her ask) ──────────────────
+  console.log('\n8. On order with nothing here: a dashed terracotta outline');
+  await page.evaluate(SEED); await page.goto(previewUrl('ingredients')); await page.waitForTimeout(500);
+  const rowInfo = (id) => page.evaluate(`(function () { var r = document.querySelector('tr[data-ing="${id}"]'); var td = r.querySelector('td');
+    return { cls: r.className, style: getComputedStyle(td).borderTopStyle, tag: (r.querySelector('.ord-tag') || {}).textContent || '' }; })()`);
+  const rO = await rowInfo('io'), rS = await rowInfo('is'), rJ = await rowInfo('ij');
+  ok('on order and nothing here (Olivem): marked, with a dashed border', /on-order-row/.test(rO.cls) && rO.style === 'dashed' && /250 g on order/.test(rO.tag), rO);
+  ok('some here and more on order (Squalane): tinted like stock, not dashed', /has-stock/.test(rS.cls) && !/on-order-row/.test(rS.cls) && rS.style !== 'dashed', rS);
+  ok('in stock only (Jojoba): no on-order mark', !/on-order-row/.test(rJ.cls), rJ);
+  await page.goto(previewUrl('formulations')); await page.waitForTimeout(500);
+  await page.evaluate("openFormula('f1'); fLines = fLines.filter(function (l) { return l.ingId !== 'io'; }); var s = document.getElementById('ing-search'); s.value = 'olivem'; s.dispatchEvent(new Event('input', { bubbles: true }));"); await page.waitForTimeout(200);
+  const ddo = await page.evaluate("(function () { var d = document.querySelector('#ing-dd .dd-item.on-order'); return d ? { shadow: getComputedStyle(d).boxShadow, txt: d.innerText } : null; })()");
+  ok('the Formulations search marks it the same way', ddo && /Olivem/.test(ddo.txt) && /on order/.test(ddo.txt) && /inset/.test(ddo.shadow), ddo);
+
   ok('no page errors', errors.length === 0, errors);
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
