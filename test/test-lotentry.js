@@ -1,5 +1,5 @@
-// Lot entry (2026-10-25 preview): Bought is a count x a size, the price is
-// for all of them or each, and On hand is not typed. A new lot starts at what
+// Lot entry (2026-10-25 preview): Bought and Price paid are totals for the
+// whole purchase, and On hand is not typed. A new lot starts at what
 // was bought and follows Bought until some is used; after that it changes
 // only through a batch or Adjust, which keeps a dated note on the lot.
 const { chromium } = require('playwright');
@@ -12,9 +12,9 @@ function ok(label, cond, got) {
 }
 
 const INGS = [
-  // Bought 2 x 4 oz for $20 total, nothing used yet.
+  // Bought 8 oz for $20, nothing used yet.
   { id: 'ia', name: 'Argan oil', inci: 'Argania Spinosa Kernel Oil', phase: 'oil', density: '0.91',
-    lots: [{ id: 'L1', supplier: 'Lotioncrafter', purchaseCount: '2', purchaseSize: '4', purchaseUnit: 'oz', purchasePrice: '20',
+    lots: [{ id: 'L1', supplier: 'Lotioncrafter', purchaseSize: '8', purchaseUnit: 'oz', purchasePrice: '20',
              qtyPurchased: '8', qtyUnit: 'oz', costPerG: '0.0882', received: '2026-10-01' }], activeLotId: 'L1' },
   // Bought 500 g, a batch has used 120 g.
   { id: 'ig', name: 'Glycerin', inci: 'Glycerin', phase: 'water',
@@ -51,20 +51,18 @@ const getIng = (id) => `JSON.parse(localStorage.getItem('aerie-ingredients-v2'))
   const text = (sel) => page.evaluate(`(function () { var el = document.getElementById(${JSON.stringify(sel)}); return el ? el.textContent : null; })()`);
 
   // ── 1. A new lot ──────────────────────────────────────────────────
-  console.log('\n1. A new lot: count x size, price total or each');
+  console.log('\n1. A new lot: the total bought and the total paid');
   await page.evaluate("openAdd(); addLotRow();"); await page.waitForTimeout(150);
   let id = await rid(0);
   ok('On hand is not a typed field', await page.evaluate(`${row(0)}.querySelector('[data-field="qtyPurchased"]').type === 'hidden'`));
+  ok('no count or each fields (her call: totals only)', await page.evaluate(`!${row(0)}.querySelector('[data-field="purchaseCount"]') && !${row(0)}.querySelector('[data-field="priceIs"]')`));
   ok('before Bought is filled it says it will start there', /Fill in Bought/.test(await text(id + '-qty-note')));
-  await setF(0, 'purchaseCount', '2'); await setF(0, 'purchaseSize', '4'); await setF(0, 'purchaseUnit', 'oz'); await setF(0, 'purchasePrice', '20');
-  ok('on hand starts at 2 x 4 oz = 8 oz', await field(0, 'qtyPurchased') === '8' && await field(0, 'qtyUnit') === 'oz' && /^8 oz/.test(await text(id + '-qty-show')), [await field(0, 'qtyPurchased'), await text(id + '-qty-show')]);
-  ok('cost per gram is the total over all of it ($20 / 226.8 g)', Math.abs(parseFloat(await field(0, 'costPerG')) - 20 / (8 * 28.3495)) < 0.0001, await field(0, 'costPerG'));
-  ok('a line spells it out', /2 × 4 oz = 8 oz \(226\.8 g\) for \$20\.00/.test(await text(id + '-buy-sum')), await text(id + '-buy-sum'));
-  await setF(0, 'priceIs', 'each');
-  ok('"each" doubles what was paid', Math.abs(parseFloat(await field(0, 'costPerG')) - 40 / (8 * 28.3495)) < 0.0001 && /for \$40\.00 \(\$20\.00 each\)/.test(await text(id + '-buy-sum')), await text(id + '-buy-sum'));
-  await setF(0, 'purchaseCount', '3');
-  ok('changing the count moves on hand with it (not saved yet)', await field(0, 'qtyPurchased') === '12');
-  ok('a blank count means 1', await page.evaluate("boughtCount('') === 1 && boughtCount('0') === 1 && boughtCount('2') === 2"));
+  await setF(0, 'purchaseSize', '8'); await setF(0, 'purchaseUnit', 'oz'); await setF(0, 'purchasePrice', '20');
+  ok('on hand starts at what was bought (8 oz)', await field(0, 'qtyPurchased') === '8' && await field(0, 'qtyUnit') === 'oz' && /^8 oz/.test(await text(id + '-qty-show')), [await field(0, 'qtyPurchased'), await text(id + '-qty-show')]);
+  ok('cost per gram is the total paid over the total bought ($20 / 226.8 g)', Math.abs(parseFloat(await field(0, 'costPerG')) - 20 / (8 * 28.3495)) < 0.0001, await field(0, 'costPerG'));
+  ok('a line spells it out', /^8 oz \(226\.8 g\) for \$20\.00, \$0\.0882\/g/.test(await text(id + '-buy-sum')), await text(id + '-buy-sum'));
+  await setF(0, 'purchaseSize', '12');
+  ok('changing Bought moves on hand with it (not saved yet)', await field(0, 'qtyPurchased') === '12');
   ok('a new lot has no Adjust button yet', await page.evaluate(`!${row(0)}.querySelector('.lot-adj-btn')`));
 
   // ── 2. Saved lots ─────────────────────────────────────────────────
@@ -72,9 +70,9 @@ const getIng = (id) => `JSON.parse(localStorage.getItem('aerie-ingredients-v2'))
   await page.evaluate("closeModal('modal-add'); viewIngredient('ia'); editCurrent();"); await page.waitForTimeout(200);
   id = await rid(0);
   ok('a saved lot nothing has been used from still follows Bought', await page.evaluate(`${row(0)}.dataset.follows === '1'`) && /Starts at what you bought/.test(await text(id + '-qty-note')));
-  await setF(0, 'purchaseCount', '3');
-  ok('fixing its count fixes on hand too (12 oz)', await field(0, 'qtyPurchased') === '12');
-  await setF(0, 'purchaseCount', '2');
+  await setF(0, 'purchaseSize', '12');
+  ok('fixing what was bought fixes on hand too (12 oz)', await field(0, 'qtyPurchased') === '12');
+  await setF(0, 'purchaseSize', '8');
   await page.evaluate("closeModal('modal-add'); viewIngredient('ig'); editCurrent();"); await page.waitForTimeout(200);
   id = await rid(0);
   ok('a lot a batch has used from does not follow', await page.evaluate(`${row(0)}.dataset.follows !== '1'`) && /use Adjust/.test(await text(id + '-qty-note')), await text(id + '-qty-note'));
@@ -96,7 +94,6 @@ const getIng = (id) => `JSON.parse(localStorage.getItem('aerie-ingredients-v2'))
   let g = await page.evaluate(getIng('ig'));
   ok('Save keeps the new amount and the note on the lot', g.lots[0].qtyPurchased === '352.5' && Array.isArray(g.lots[0].adjustments) && g.lots[0].adjustments.length === 1 &&
      g.lots[0].adjustments[0].from === 380 && g.lots[0].adjustments[0].to === 352.5 && g.lots[0].adjustments[0].reason === 'Recount' && /^\d{4}-\d\d-\d\d$/.test(g.lots[0].adjustments[0].date), g.lots[0]);
-  ok('no empty fields are added to the lot', !('purchaseCount' in g.lots[0]) && !('priceIs' in g.lots[0]), g.lots[0]);
   await page.evaluate("viewIngredient('ig'); editCurrent();"); await page.waitForTimeout(200);
   id = await rid(0);
   ok('reopened, the history is there', /380 → 352\.5 g/.test(await text(id + '-adj-hist')));
@@ -114,7 +111,7 @@ const getIng = (id) => `JSON.parse(localStorage.getItem('aerie-ingredients-v2'))
   ok('Reference only turns Adjust off', await page.evaluate(`${row(0)}.querySelector('.lot-adj-btn').disabled`));
   await page.evaluate("closeModal('modal-add'); viewIngredient('ia');"); await page.waitForTimeout(200);
   const det = await page.evaluate("document.body.innerText.replace(/\\s+/g, ' ')");
-  ok('the details page shows 2 × 4 oz for $20.00', /2 × 4 oz for \$20\.00/.test(det), det.slice(0, 600));
+  ok('the details page shows 8 oz for $20.00', /8 oz for \$20\.00/.test(det), det.slice(0, 600));
 
   ok('no page errors', errors.length === 0, errors);
   await browser.close();
