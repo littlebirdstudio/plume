@@ -5554,6 +5554,8 @@ if (typeof Plume === 'undefined') {
       var m = document.getElementById('modal-add');
       return !!m && m.classList.contains('open') && isEditFormDirty();
     } });
+    // The one-time volume price repair (2026-10-26) ran at boot; say what it changed.
+    Plume.fixVolumeNote();
   });
 }
 </script>
