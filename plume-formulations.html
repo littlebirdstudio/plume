@@ -255,23 +255,26 @@ span.ing-name-btn{text-decoration:none}
   color:var(--ink-lighter);border:1px solid var(--cream-border);border-radius:3px;
   padding:1px 5px;margin-left:8px;vertical-align:middle}
 .fcard-archived{opacity:0.68;border-style:dashed}
-/* Card order (2026-10-25): drag the grip to move a card; the order is the
-   formulations' saved order, so it stays. */
+/* The board (2026-10-25): cards sit in slots; she drags one to any slot
+   and blank slots stay blank. Positions are saved on each formulation. */
 .fcard{position:relative}
 .fcard-grip{position:absolute;top:8px;right:8px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:6px;color:var(--ink-lighter);letter-spacing:-2px;font-size:14px;cursor:grab;user-select:none;touch-action:none;opacity:0.35;transition:opacity .12s,background .12s}
 .fcard:hover .fcard-grip,.fcard-grip:focus-visible{opacity:1}
 .fcard-grip:hover{background:var(--cream-dark);color:var(--ink)}
 .fcard-grip:focus-visible{outline:2px solid var(--bark);outline-offset:1px}
 @media (hover:none){.fcard-grip{opacity:0.8}}
-.fcard.fc-dragging{opacity:0.4}
-.fcard.fc-before::before,.fcard.fc-after::before{content:'';position:absolute;z-index:2;background:var(--clay);border-radius:3px;pointer-events:none}
-/* Inside the edge: shell cards clip anything outside them. */
-.fcard.fc-before,.fcard.fc-after,body.ps-shell .fcard.fc-before,body.ps-shell .fcard.fc-after{border-color:var(--clay)}
-.fcard.fc-before:not(.fc-col)::before{left:0;top:0;bottom:0;width:6px;border-radius:0}
-.fcard.fc-after:not(.fc-col)::before{right:0;top:0;bottom:0;width:6px;border-radius:0}
-.fcard.fc-col.fc-before::before{top:0;left:0;right:0;height:6px;border-radius:0}
-.fcard.fc-col.fc-after::before{bottom:0;left:0;right:0;height:6px;border-radius:0}
+.fboard-wrap{overflow-x:auto;padding-bottom:4px}
+.fboard{align-items:stretch}
+.fslot{min-height:120px;border-radius:12px;border:2px dashed transparent;transition:border-color .12s,background .12s}
+.fslot.fslot-spare{min-height:0}
+body.fc-moving .fslot{border-color:color-mix(in srgb,var(--ink-lighter) 35%,transparent)}
+body.fc-moving .fslot.fslot-spare{min-height:120px}
+.fslot.fc-over{border-color:var(--clay)!important;background:color-mix(in srgb,var(--clay) 8%,transparent)}
+.fcard.fc-over,body.ps-shell .fcard.fc-over{border-color:var(--clay);box-shadow:0 0 0 3px color-mix(in srgb,var(--clay) 30%,transparent)}
+.fcard.fc-dragging{opacity:0.35}
 .fc-ghost{position:fixed;z-index:3000;pointer-events:none;opacity:0.92;transform:rotate(1.5deg);box-shadow:0 10px 28px rgba(0,0,0,.22)}
+.fboard-note{font-size:12px;color:var(--ink-lighter);margin:-4px 0 10px}
+.fboard-list .fcard-grip{display:none}
 body.fc-moving,body.fc-moving *{cursor:grabbing!important;user-select:none}
 .fcard-archived:hover{opacity:1}
 /* ── Locked (approved) version ── */
@@ -1652,7 +1655,11 @@ function renderCards() {
     return;
   }
 
-  var html = '<div class="cards-grid">';
+  var lay = boardLayout(list, el);
+  var html = lay.mode === 'list'
+    ? '<div class="fboard-note">Arrange the cards on a wider screen; here they are listed in board order.</div><div class="cards-grid fboard-list">'
+    : '<div class="fboard-wrap"><div class="cards-grid fboard" style="grid-template-columns:repeat(' + lay.cols + ',minmax(' + lay.minW + 'px,1fr))">';
+  list = lay.order;
   list.forEach(function(f) {
     // Per 100 g of the formula as the editor prices it: at the version's own
     // batch size (add-in grams are scaled from it), add-ins only when they
@@ -1665,7 +1672,10 @@ function renderCards() {
     var costStr = cost !== null ? ('$' + cost.toFixed(2) + ' <span class="ps-muted">/ 100 g</span>') : '<span class="ps-muted">No cost data</span>';
     var d = f.updatedAt ? new Date(f.updatedAt) : null;
     var dateStr = d && !isNaN(d.getTime()) ? d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '';
-    html += '<div class="fcard' + (f.archived ? ' fcard-archived' : '') + '" data-fid="' + esc(f.id) + '" tabindex="0" role="button" onclick="openFormula(\'' + f.id + '\')" onkeydown="if(event.key===\'Enter\')openFormula(\'' + f.id + '\')">';
+    var at = lay.pos[f.id];
+    html += '<div class="fcard' + (f.archived ? ' fcard-archived' : '') + '" data-fid="' + esc(f.id) + '"' +
+      (at ? ' data-r="' + at.r + '" data-c="' + at.c + '" style="grid-row:' + (at.r + 1) + ';grid-column:' + (at.c + 1) + '"' : '') +
+      ' tabindex="0" role="button" onclick="openFormula(\'' + f.id + '\')" onkeydown="if(event.key===\'Enter\')openFormula(\'' + f.id + '\')">';
     html += '<span class="fcard-grip" tabindex="0" role="button" aria-label="Move ' + esc(f.name) + ' (drag, or use the arrow keys)" title="Drag to move" ' +
       'onpointerdown="cardGripDown(event,\'' + f.id + '\')" onclick="event.stopPropagation()" onkeydown="cardGripKey(event,\'' + f.id + '\')">&#8942;&#8942;</span>';
     html += '<div class="fcard-name">' + esc(f.name) +
@@ -1680,42 +1690,97 @@ function renderCards() {
     html += '<div class="fcard-foot"><span>' + costStr + '</span><span class="ps-muted">' + dateStr + '</span></div>';
     html += '</div>';
   });
+  if (lay.mode === 'board') {
+    // Empty slots: drop targets, invisible until a card is being moved. One
+    // spare row below the last lets a card start a new row.
+    for (var r = 0; r <= lay.rows; r++) for (var c = 0; c < lay.cols; c++) {
+      if (lay.taken[r + ',' + c]) continue;
+      html += '<div class="fslot' + (r === lay.rows ? ' fslot-spare' : '') + '" data-r="' + r + '" data-c="' + c + '" style="grid-row:' + (r + 1) + ';grid-column:' + (c + 1) + '"></div>';
+    }
+    html += '</div>';
+  }
   html += '</div>';
   el.innerHTML = html;
 }
 
-// ── Card order (2026-10-25) ────────────────────────────
-// Her ask: move the formulation cards and have them stay. The list shows
-// formulations in their saved order, so moving a card moves the formulation
-// in that array and saves. Works with a mouse or a finger (pointer events on
-// the grip) and the keyboard (arrow keys on the grip). With a filter on, a
-// card moves next to the card it is dropped on; hidden ones keep their place.
+// ── The board (2026-10-25) ─────────────────────────────
+// Her ask: put the cards where she wants them, near like ones, with blank
+// spaces between if she likes (named groups may come later). Each
+// formulation keeps f.board = { r, c, t } (row, column, when placed); the
+// list draws them in a grid at those slots. A card is dragged by its grip
+// (mouse or finger) to an empty slot, or onto a card to swap the two; arrow
+// keys on the grip move it one slot. A card with no slot yet (a new one)
+// takes the first open slot. On a screen too narrow for two columns the
+// cards are listed in board order instead.
 var cardDrag = null;
-function moveFormBefore(srcId, tgtId, after) {
-  if (!srcId || srcId === tgtId) return false;
-  var src = forms.filter(function (f) { return f.id === srcId; })[0];
-  if (!src || !forms.some(function (f) { return f.id === tgtId; })) return false;
-  var from = forms.indexOf(src);
-  forms.splice(from, 1);
-  var t = -1;
-  forms.forEach(function (f, i) { if (f.id === tgtId) t = i; });
-  forms.splice(after ? t + 1 : t, 0, src);
-  if (forms.indexOf(src) === from) return false;
+function boardOk(b) { return b && b.r >= 0 && b.c >= 0 && Math.floor(b.r) === b.r && Math.floor(b.c) === b.c; }
+function boardFit(el) {
+  var shell = document.body.classList.contains('ps-shell');
+  var minW = shell ? 250 : 280, gap = shell ? 12 : 16;
+  var w = (el && el.clientWidth) || 0;
+  return { minW: minW, gap: gap, w: w, fit: w ? Math.max(1, Math.floor((w + gap) / (minW + gap))) : 3 };
+}
+function boardLayout(list, el) {
+  var fit = boardFit(el);
+  var byPos = function (a, b) { return (a.board.r - b.board.r) || (a.board.c - b.board.c); };
+  if (fit.fit < 2) {
+    var placed = list.filter(function (f) { return boardOk(f.board); }).sort(byPos);
+    return { mode: 'list', order: placed.concat(list.filter(function (f) { return !boardOk(f.board); })), pos: {}, taken: {} };
+  }
+  var cols = fit.fit;
+  list.forEach(function (f) { if (boardOk(f.board) && f.board.c + 1 > cols) cols = f.board.c + 1; });
+  // Laid out on a wider screen: narrower cards (down to 190 px) before the
+  // board scrolls sideways.
+  if (cols > fit.fit && fit.w) fit.minW = Math.max(190, Math.floor((fit.w - fit.gap * (cols - 1)) / cols));
+  var taken = {}, pos = {}, waiting = [], changed = false;
+  // Two cards on one slot (one moved while the other was hidden by a
+  // filter): the one placed last keeps it.
+  list.filter(function (f) { return boardOk(f.board); })
+    .sort(function (a, b) { return (b.board.t || 0) - (a.board.t || 0); })
+    .forEach(function (f) {
+      var k = f.board.r + ',' + f.board.c;
+      if (taken[k]) waiting.push(f); else { taken[k] = f.id; pos[f.id] = { r: f.board.r, c: f.board.c }; }
+    });
+  list.forEach(function (f) { if (!boardOk(f.board)) waiting.push(f); });
+  waiting.sort(function (a, b) { return forms.indexOf(a) - forms.indexOf(b); });
+  var r = 0, c = 0;
+  waiting.forEach(function (f) {
+    while (taken[r + ',' + c]) { c++; if (c >= cols) { c = 0; r++; } }
+    taken[r + ',' + c] = f.id; pos[f.id] = { r: r, c: c };
+    f.board = { r: r, c: c, t: 0 }; changed = true;
+  });
+  if (changed) saveAll();
+  var rows = 0;
+  Object.keys(pos).forEach(function (id) { if (pos[id].r + 1 > rows) rows = pos[id].r + 1; });
+  var order = list.slice().sort(function (a, b) { return (pos[a.id].r - pos[b.id].r) || (pos[a.id].c - pos[b.id].c); });
+  return { mode: 'board', cols: cols, rows: rows, minW: fit.minW, pos: pos, taken: taken, order: order };
+}
+// Put a formulation at a slot. Whatever was there (shown or hidden by a
+// filter) moves to the slot this one left.
+function boardMove(id, r, c) {
+  var f = forms.filter(function (x) { return x.id === id; })[0];
+  if (!f || !boardOk(f.board) || r < 0 || c < 0) return false;
+  if (f.board.r === r && f.board.c === c) return false;
+  var now = Date.now(), from = { r: f.board.r, c: f.board.c };
+  forms.forEach(function (o) {
+    if (o !== f && boardOk(o.board) && o.board.r === r && o.board.c === c) o.board = { r: from.r, c: from.c, t: now };
+  });
+  f.board = { r: r, c: c, t: now };
   saveAll();
   return true;
 }
 function cardGripDown(e, id) {
   if (e.button !== undefined && e.button !== 0) return;
+  var card = e.currentTarget.closest('.fcard'); if (!card || !card.hasAttribute('data-r')) return;
   e.preventDefault(); e.stopPropagation();
-  var card = e.currentTarget.closest('.fcard'); if (!card) return;
-  var r = card.getBoundingClientRect();
-  cardDrag = { id: id, card: card, x0: e.clientX, y0: e.clientY, dx: e.clientX - r.left, dy: e.clientY - r.top, w: r.width, ghost: null, target: null, after: false, moved: false };
+  var rc = card.getBoundingClientRect();
+  cardDrag = { id: id, card: card, x0: e.clientX, y0: e.clientY, dx: e.clientX - rc.left, dy: e.clientY - rc.top, w: rc.width, ghost: null, target: null, moved: false };
   document.addEventListener('pointermove', cardGripMove);
   document.addEventListener('pointerup', cardGripUp);
   document.addEventListener('pointercancel', cardGripCancel);
 }
 function cardDragClear() {
-  Array.prototype.forEach.call(document.querySelectorAll('.fcard.fc-before, .fcard.fc-after'), function (c) { c.classList.remove('fc-before', 'fc-after', 'fc-col'); });
+  Array.prototype.forEach.call(document.querySelectorAll('.fc-over'), function (x) { x.classList.remove('fc-over'); });
 }
 function cardGripMove(e) {
   var d = cardDrag; if (!d) return;
@@ -1724,6 +1789,7 @@ function cardGripMove(e) {
     d.moved = true;
     d.ghost = d.card.cloneNode(true);
     d.ghost.classList.add('fc-ghost'); d.ghost.style.width = d.w + 'px';
+    d.ghost.style.gridRow = ''; d.ghost.style.gridColumn = '';
     document.body.appendChild(d.ghost);
     d.card.classList.add('fc-dragging');
     document.body.classList.add('fc-moving');
@@ -1732,19 +1798,13 @@ function cardGripMove(e) {
   d.ghost.style.left = (e.clientX - d.dx) + 'px';
   d.ghost.style.top = (e.clientY - d.dy) + 'px';
   var under = document.elementFromPoint(e.clientX, e.clientY);
-  var tc = under && under.closest ? under.closest('.fcard:not(.fc-ghost)') : null;
+  var t = under && under.closest ? under.closest('.fboard .fslot, .fboard .fcard') : null;
   cardDragClear();
   d.target = null;
-  if (tc && tc !== d.card) {
-    var r = tc.getBoundingClientRect();
-    // One card per row (a phone): before and after are above and below.
-    var col = tc.parentNode && tc.offsetWidth > tc.parentNode.offsetWidth * 0.6;
-    d.after = col ? e.clientY > r.top + r.height / 2 : e.clientX > r.left + r.width / 2;
-    d.target = tc.getAttribute('data-fid');
-    tc.classList.add(d.after ? 'fc-after' : 'fc-before');
-    if (col) tc.classList.add('fc-col');
+  if (t && t !== d.card) {
+    d.target = { r: parseInt(t.getAttribute('data-r'), 10), c: parseInt(t.getAttribute('data-c'), 10) };
+    t.classList.add('fc-over');
   }
-  // Near the top or bottom of the window, scroll so a long list can be crossed.
   if (e.clientY < 60) window.scrollBy(0, -12);
   else if (e.clientY > window.innerHeight - 60) window.scrollBy(0, 12);
 }
@@ -1768,25 +1828,43 @@ function cardGripUp() {
     document.addEventListener('click', eat, true);
     setTimeout(function () { document.removeEventListener('click', eat, true); }, 0);
   }
-  if (d && d.moved && d.target && moveFormBefore(d.id, d.target, d.after)) renderCards();
+  if (d && d.moved && d.target && boardMove(d.id, d.target.r, d.target.c)) renderCards();
 }
 function cardGripCancel() { cardGripEnd(); }
-// Arrow keys on a focused grip move the card one place among those shown.
+// Arrow keys on a focused grip move the card one slot that way (swapping
+// with a card already there).
 function cardGripKey(e, id) {
   var k = e.key;
   if (k === 'Enter' || k === ' ') { e.preventDefault(); e.stopPropagation(); return; }
-  var back = k === 'ArrowLeft' || k === 'ArrowUp', fwd = k === 'ArrowRight' || k === 'ArrowDown';
-  if (!back && !fwd) return;
+  var dir = { ArrowLeft: [0, -1], ArrowRight: [0, 1], ArrowUp: [-1, 0], ArrowDown: [1, 0] }[k];
+  if (!dir) return;
   e.preventDefault(); e.stopPropagation();
-  var shown = Array.prototype.map.call(document.querySelectorAll('#fcard-container .fcard'), function (c) { return c.getAttribute('data-fid'); });
-  var i = shown.indexOf(id), j = back ? i - 1 : i + 1;
-  if (i === -1 || j < 0 || j >= shown.length) return;
-  if (moveFormBefore(id, shown[j], fwd)) {
+  var f = forms.filter(function (x) { return x.id === id; })[0];
+  var grid = document.querySelector('#fcard-container .fboard');
+  if (!f || !boardOk(f.board) || !grid) return;
+  var cols = grid.style.gridTemplateColumns.match(/repeat\((\d+)/);
+  cols = cols ? parseInt(cols[1], 10) : 1;
+  var r = f.board.r + dir[0], c = f.board.c + dir[1];
+  if (r < 0 || c < 0 || c >= cols) return;
+  if (boardMove(id, r, c)) {
     renderCards();
     var g = document.querySelector('#fcard-container .fcard[data-fid="' + (window.CSS && CSS.escape ? CSS.escape(id) : id) + '"] .fcard-grip');
     if (g) g.focus();
   }
 }
+// The number of columns that fit changes with the window: redraw.
+(function () {
+  var last = null, timer = null;
+  window.addEventListener('resize', function () {
+    clearTimeout(timer);
+    timer = setTimeout(function () {
+      var el = document.getElementById('fcard-container');
+      if (!el || !el.offsetParent) return;
+      var fit = boardFit(el).fit;
+      if (fit !== last) { last = fit; renderCards(); }
+    }, 150);
+  });
+})();
 
 // ── Formula create / open ─────────────────────────────
 function newFormula(type) {

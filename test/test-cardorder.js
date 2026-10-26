@@ -1,6 +1,8 @@
-// Formulation card order (2026-10-25): drag a card's grip to move it, or use
-// the arrow keys on the grip. The order is the saved order of the
-// formulations, so it stays after a reload.
+// The formulation board (2026-10-25): cards sit in slots. Drag a card's grip
+// to an empty slot (blank slots stay blank) or onto a card to swap the two;
+// arrow keys on the grip move it one slot. Positions are saved on each
+// formulation (f.board), so they stay. Too narrow for two columns: a list in
+// board order.
 const { chromium } = require('playwright');
 const { previewUrl } = require('./helpers');
 
@@ -17,91 +19,95 @@ const SEED = `
   localStorage.setItem('aerie-ingredients-v2', '[]');
   localStorage.setItem('aerie-formulations-v1', ${JSON.stringify(JSON.stringify(FORMS))});
   localStorage.setItem('plume-theme', 'light');`;
-const stored = "JSON.parse(localStorage.getItem('aerie-formulations-v1')).map(function (f) { return f.name; }).join(',')";
-const shown = "Array.from(document.querySelectorAll('#fcard-container .fcard')).map(function (c) { return c.querySelector('.fcard-name').textContent; }).join(',')";
+// "Alpha 0,0; Bravo 0,1; ..." from storage
+const where = "JSON.parse(localStorage.getItem('aerie-formulations-v1')).map(function (f) { return f.name + ' ' + (f.board ? f.board.r + ',' + f.board.c : '-'); }).join('; ')";
+const cardAt = "Array.from(document.querySelectorAll('#fcard-container .fcard')).map(function (c) { return c.querySelector('.fcard-name').textContent + ' ' + c.getAttribute('data-r') + ',' + c.getAttribute('data-c'); }).join('; ')";
 
 (async () => {
   const browser = await chromium.launch();
-  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  const page = await browser.newPage({ viewport: { width: 1100, height: 900 } });
   const errors = [];
   page.on('pageerror', e => errors.push(String(e)));
   await page.goto(previewUrl('formulations')); await page.evaluate(SEED); await page.reload(); await page.waitForTimeout(500);
+  const cols = await page.evaluate("parseInt(document.querySelector('.fboard').style.gridTemplateColumns.match(/repeat\\((\\d+)/)[1], 10)");
 
-  console.log('\n1. Drag a card');
-  ok('cards show in saved order, each with a grip', await page.evaluate(shown) === 'Alpha,Bravo,Charlie,Delta' && await page.locator('.fcard-grip').count() === 4);
-  const box = async (name) => (await page.locator('.fcard', { hasText: name }).boundingBox());
-  const drag = async (from, to, side) => {
-    const g = await page.locator('.fcard', { hasText: from }).locator('.fcard-grip').boundingBox();
-    const t = await box(to);
+  console.log('\n1. Placing cards');
+  ok('the board has 3 columns at this width', cols === 3, cols);
+  ok('cards without a slot take the first open ones, and that is saved', await page.evaluate(where) === 'Alpha 0,0; Bravo 0,1; Charlie 0,2; Delta 1,0', await page.evaluate(where));
+  ok('empty slots are invisible until a card is moved', await page.evaluate("getComputedStyle(document.querySelector('.fslot')).borderTopColor") === 'rgba(0, 0, 0, 0)');
+  const center = async (sel) => { const b = await page.locator(sel).first().boundingBox(); return { x: b.x + b.width / 2, y: b.y + Math.min(b.height / 2, 60) }; };
+  const drag = async (name, sel) => {
+    const g = await page.locator('.fcard', { hasText: name }).locator('.fcard-grip').boundingBox();
     await page.mouse.move(g.x + g.width / 2, g.y + g.height / 2);
     await page.mouse.down();
     await page.mouse.move(g.x + 20, g.y + 20, { steps: 3 });
-    const x = side === 'after' ? t.x + t.width * 0.8 : t.x + t.width * 0.2;
-    await page.mouse.move(x, t.y + t.height / 2, { steps: 8 });
-    const mark = await page.evaluate("(function(){ var b = document.querySelector('.fcard.fc-before, .fcard.fc-after'); return b ? b.querySelector('.fcard-name').textContent + (b.classList.contains('fc-after') ? ':after' : ':before') : ''; })()");
+    const t = await center(sel);
+    await page.mouse.move(t.x, t.y, { steps: 8 });
+    const seen = await page.evaluate("({ over: (document.querySelector('.fc-over') || {}).className || '', slotsShow: getComputedStyle(document.querySelector('.fslot')).borderTopColor !== 'rgba(0, 0, 0, 0)' })");
     await page.mouse.up(); await page.waitForTimeout(150);
-    return mark;
+    return seen;
   };
-  let mark = await drag('Delta', 'Alpha', 'before');
-  ok('while dragging, a line shows where it will land', mark === 'Alpha:before', mark);
-  ok('Delta dropped before Alpha moves to the front', await page.evaluate(shown) === 'Delta,Alpha,Bravo,Charlie', await page.evaluate(shown));
-  ok('and is saved in that order', await page.evaluate(stored) === 'Delta,Alpha,Bravo,Charlie', await page.evaluate(stored));
-  ok('the drag left nothing behind (no ghost, no marks)', await page.evaluate("!document.querySelector('.fc-ghost, .fc-dragging, .fc-before, .fc-after') && !document.body.classList.contains('fc-moving')"));
-  ok('no editor opened', await page.evaluate("!document.getElementById('editor-view') || getComputedStyle(document.getElementById('editor-view')).display === 'none' || !curId"));
-  await drag('Alpha', 'Charlie', 'after');
-  ok('Alpha dropped after Charlie goes to the end', await page.evaluate(stored) === 'Delta,Bravo,Charlie,Alpha', await page.evaluate(stored));
+  let seen = await drag('Delta', '.fslot[data-r="1"][data-c="2"]');
+  ok('while dragging, the empty slots show and the one under the card lights up', seen.slotsShow && /fslot/.test(seen.over) && /fc-over/.test(seen.over), seen);
+  ok('Delta dropped in an empty slot goes there, leaving blanks beside it', await page.evaluate(where) === 'Alpha 0,0; Bravo 0,1; Charlie 0,2; Delta 1,2', await page.evaluate(where));
+  ok('and is drawn there', /Delta 1,2/.test(await page.evaluate(cardAt)) && (await page.evaluate("document.querySelector('.fcard[data-fid=\"d\"]').style.gridColumn")).startsWith('3'));
+  ok('the drag left nothing behind', await page.evaluate("!document.querySelector('.fc-ghost, .fc-dragging, .fc-over') && !document.body.classList.contains('fc-moving')"));
+  ok('no editor opened', await page.evaluate("!curId"));
   await page.reload(); await page.waitForTimeout(400);
-  ok('the order stays after a reload', await page.evaluate(shown) === 'Delta,Bravo,Charlie,Alpha', await page.evaluate(shown));
-  // A click on the grip without moving does nothing.
-  await page.locator('.fcard', { hasText: 'Bravo' }).locator('.fcard-grip').click(); await page.waitForTimeout(150);
-  ok('a click on the grip neither moves the card nor opens it', await page.evaluate(stored) === 'Delta,Bravo,Charlie,Alpha' && await page.evaluate("typeof curId === 'undefined' || !curId"));
-  // Dropping outside any card changes nothing.
-  const g = await page.locator('.fcard', { hasText: 'Charlie' }).locator('.fcard-grip').boundingBox();
-  await page.mouse.move(g.x + 5, g.y + 5); await page.mouse.down(); await page.mouse.move(g.x + 40, g.y + 400, { steps: 6 }); await page.mouse.up();
-  ok('dropping on empty space changes nothing', await page.evaluate(stored) === 'Delta,Bravo,Charlie,Alpha');
-  // Dragged around and let go over its own card: no move, and it does not open.
-  const own = await box('Charlie'), cg = await page.locator('.fcard', { hasText: 'Charlie' }).locator('.fcard-grip').boundingBox();
+  ok('the layout stays after a reload', /Delta 1,2/.test(await page.evaluate(cardAt)) && await page.evaluate(where) === 'Alpha 0,0; Bravo 0,1; Charlie 0,2; Delta 1,2');
+  seen = await drag('Alpha', '.fcard[data-fid="c"]');
+  ok('dropping on a card lights it up', /fcard/.test(seen.over) && /fc-over/.test(seen.over), seen);
+  ok('and swaps the two', await page.evaluate(where) === 'Alpha 0,2; Bravo 0,1; Charlie 0,0; Delta 1,2', await page.evaluate(where));
+  await drag('Bravo', '.fslot[data-r="2"][data-c="1"]');
+  ok('the spare row below lets a card start a new row', await page.evaluate(where) === 'Alpha 0,2; Bravo 2,1; Charlie 0,0; Delta 1,2', await page.evaluate(where));
+  ok('a new spare row appears below it', await page.evaluate("!!document.querySelector('.fslot.fslot-spare[data-r=\"3\"]')"));
+
+  console.log('\n2. Things that should not move or open');
+  await page.locator('.fcard', { hasText: 'Charlie' }).locator('.fcard-grip').click(); await page.waitForTimeout(150);
+  ok('a click on the grip neither moves the card nor opens it', await page.evaluate(where) === 'Alpha 0,2; Bravo 2,1; Charlie 0,0; Delta 1,2' && await page.evaluate("!curId"));
+  const own = await page.locator('.fcard', { hasText: 'Charlie' }).boundingBox(), cg = await page.locator('.fcard', { hasText: 'Charlie' }).locator('.fcard-grip').boundingBox();
   await page.mouse.move(cg.x + 5, cg.y + 5); await page.mouse.down();
   await page.mouse.move(own.x + 40, own.y + own.height / 2, { steps: 6 }); await page.mouse.up(); await page.waitForTimeout(150);
-  ok('let go over its own card: nothing moves and it does not open', await page.evaluate(stored) === 'Delta,Bravo,Charlie,Alpha' && await page.evaluate("!curId"), await page.evaluate("curId"));
+  ok('let go over its own card: nothing moves and it does not open', await page.evaluate(where) === 'Alpha 0,2; Bravo 2,1; Charlie 0,0; Delta 1,2' && await page.evaluate("!curId"));
+  await page.mouse.move(cg.x + 5, cg.y + 5); await page.mouse.down(); await page.mouse.move(60, 60, { steps: 6 }); await page.mouse.up(); await page.waitForTimeout(150);
+  ok('dropping off the board changes nothing', await page.evaluate(where) === 'Alpha 0,2; Bravo 2,1; Charlie 0,0; Delta 1,2');
   await page.locator('.fcard', { hasText: 'Bravo' }).click(); await page.waitForTimeout(200);
   ok('an ordinary click on a card still opens it', await page.evaluate("curId") === 'b');
   await page.evaluate("goList()"); await page.waitForTimeout(150);
 
-  console.log('\n2. Keyboard and filters');
-  await page.locator('.fcard', { hasText: 'Charlie' }).locator('.fcard-grip').focus();
-  await page.keyboard.press('ArrowLeft'); await page.waitForTimeout(100);
-  ok('Left arrow on the grip moves it one place earlier', await page.evaluate(stored) === 'Delta,Charlie,Bravo,Alpha', await page.evaluate(stored));
-  ok('focus stays on its grip', await page.evaluate("document.activeElement && document.activeElement.classList.contains('fcard-grip') && document.activeElement.closest('.fcard').getAttribute('data-fid') === 'c'"));
-  await page.keyboard.press('ArrowRight'); await page.keyboard.press('ArrowRight'); await page.waitForTimeout(100);
-  ok('Right arrow moves it later', await page.evaluate(stored) === 'Delta,Bravo,Alpha,Charlie', await page.evaluate(stored));
+  console.log('\n3. Keyboard, new formulations, filters');
+  await page.locator('.fcard', { hasText: 'Delta' }).locator('.fcard-grip').focus();
+  await page.keyboard.press('ArrowLeft'); await page.keyboard.press('ArrowUp'); await page.waitForTimeout(100);
+  ok('arrow keys move a card one slot at a time', await page.evaluate(where) === 'Alpha 0,2; Bravo 2,1; Charlie 0,0; Delta 0,1', await page.evaluate(where));
+  ok('focus stays on its grip', await page.evaluate("document.activeElement && document.activeElement.closest('.fcard').getAttribute('data-fid') === 'd'"));
   await page.keyboard.press('ArrowRight'); await page.waitForTimeout(100);
-  ok('at the end it stays put', await page.evaluate(stored) === 'Delta,Bravo,Alpha,Charlie');
-  // With a filter on, the move is among the cards shown; hidden ones keep their place.
+  ok('into an occupied slot it swaps', await page.evaluate(where) === 'Alpha 0,1; Bravo 2,1; Charlie 0,0; Delta 0,2', await page.evaluate(where));
+  await page.keyboard.press('ArrowRight'); await page.keyboard.press('ArrowUp'); await page.waitForTimeout(100);
+  ok('not past the edge', await page.evaluate(where) === 'Alpha 0,1; Bravo 2,1; Charlie 0,0; Delta 0,2');
+  await page.evaluate(`(function () { forms.push(${JSON.stringify(F('e', 'Echo'))}); saveAll(); renderCards(); })()`); await page.waitForTimeout(100);
+  ok('a new formulation takes the first open slot', /Echo 1,0$/.test(await page.evaluate(where)), await page.evaluate(where));
   await page.evaluate("listStatus = 'approved'; renderCards();"); await page.waitForTimeout(100);
-  ok('filtered to approved: Delta, Bravo', await page.evaluate(shown) === 'Delta,Bravo', await page.evaluate(shown));
-  await drag('Bravo', 'Delta', 'before');
-  ok('moving Bravo before Delta leaves the others where they were', await page.evaluate(stored) === 'Bravo,Delta,Alpha,Charlie', await page.evaluate(stored));
+  ok('filtered: the shown cards keep their slots, with blanks for the rest', await page.evaluate(cardAt) === 'Delta 0,2; Bravo 2,1', await page.evaluate(cardAt));
+  await drag('Bravo', '.fslot[data-r="0"][data-c="1"]');
+  ok('moving into a slot a hidden card holds swaps with the hidden card', await page.evaluate(where) === 'Alpha 2,1; Bravo 0,1; Charlie 0,0; Delta 0,2; Echo 1,0', await page.evaluate(where));
   await page.evaluate("listStatus = ''; renderCards();");
+  ok('all shown again, no two cards share a slot', await page.evaluate(cardAt) === 'Charlie 0,0; Bravo 0,1; Delta 0,2; Echo 1,0; Alpha 2,1', await page.evaluate(cardAt));
 
-  console.log('\n3. Touch-sized screen');
+  console.log('\n4. Window sizes');
+  await page.setViewportSize({ width: 1600, height: 900 }); await page.waitForTimeout(400);
+  const wide = await page.evaluate("parseInt(document.querySelector('.fboard').style.gridTemplateColumns.match(/repeat\\((\\d+)/)[1], 10)");
+  ok('a wider window shows more columns; the cards stay in their slots', wide > 3 && await page.evaluate(cardAt) === 'Charlie 0,0; Bravo 0,1; Delta 0,2; Echo 1,0; Alpha 2,1', wide);
+  await page.setViewportSize({ width: 1100, height: 900 }); await page.waitForTimeout(400);
   const ctx = await browser.newContext({ viewport: { width: 400, height: 800 }, hasTouch: true, isMobile: true });
   const m = await ctx.newPage(); m.on('pageerror', e => errors.push(String(e)));
-  await m.goto(previewUrl('formulations')); await m.evaluate(SEED); await m.reload(); await m.waitForTimeout(500);
-  ok('the grip is visible without hovering', parseFloat(await m.evaluate("getComputedStyle(document.querySelector('.fcard-grip')).opacity")) >= 0.8);
-  ok('and does not let the page scroll while dragging', await m.evaluate("getComputedStyle(document.querySelector('.fcard-grip')).touchAction") === 'none');
-  // One column: dropping on the lower half of a card puts it below.
-  await m.evaluate("window.scrollTo(0, 0)");
-  const tb = await m.locator('.fcard', { hasText: 'Alpha' }).boundingBox(), dg = await m.locator('.fcard', { hasText: 'Bravo' }).locator('.fcard-grip').boundingBox();
-  await m.mouse.move(dg.x + 5, dg.y + 5); await m.mouse.down();
-  await m.mouse.move(tb.x + tb.width / 2, tb.y + tb.height * 0.8, { steps: 10 });
-  const mk = await m.evaluate("(function(){ var b = document.querySelector('.fcard.fc-before, .fcard.fc-after'); return b ? b.className : ''; })()");
-  await m.mouse.up(); await m.waitForTimeout(150);
-  ok('in one column the line goes below the card, and the card lands there', /fc-after/.test(mk) && /fc-col/.test(mk) && await m.evaluate(stored) === 'Alpha,Bravo,Charlie,Delta', [mk, await m.evaluate(stored)]);
-  await m.mouse.move(dg.x + 5, dg.y + 5); await m.mouse.down();
-  await m.mouse.move(tb.x + tb.width / 2, tb.y + tb.height * 0.2, { steps: 10 });
-  await m.mouse.up(); await m.waitForTimeout(150);
-  ok('and on the upper half, above it', await m.evaluate(stored) === 'Bravo,Alpha,Charlie,Delta', await m.evaluate(stored));
+  await m.goto(previewUrl('formulations'));
+  await m.evaluate(`localStorage.setItem('aerie-formulations-v1', ${JSON.stringify(await page.evaluate("localStorage.getItem('aerie-formulations-v1')"))}); localStorage.setItem('plume-theme', 'light');`);
+  await m.reload(); await m.waitForTimeout(500);
+  const names = await m.evaluate("Array.from(document.querySelectorAll('#fcard-container .fcard .fcard-name')).map(function (n) { return n.textContent; }).join(',')");
+  ok('on a phone: a list in board order (row by row)', names === 'Charlie,Bravo,Delta,Echo,Alpha', names);
+  ok('with a note to arrange on a wider screen, and no grips', /wider screen/.test(await m.evaluate("document.getElementById('fcard-container').innerText")) &&
+     await m.evaluate("getComputedStyle(document.querySelector('.fcard-grip')).display") === 'none');
+  ok('and nothing was moved by looking at it there', await m.evaluate(where) === await page.evaluate(where));
   await ctx.close();
 
   ok('no page errors', errors.length === 0, errors);
