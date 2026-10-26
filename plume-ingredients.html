@@ -1435,7 +1435,7 @@
       <button type="button" class="ps-chip" id="on-order-btn" onclick="toggleOnOrder()" title="Bought, not here yet"><span class="ps-swatch ord-sw"></span>On order</button>
       <button type="button" class="ps-chip" id="restricted-chip" onclick="toggleRestrictedChip()" title="Ingredients marked restricted">Restricted</button>
       <select id="filter-phase" hidden onchange="renderTable()">
-        <option value="">All phases</option><option value="water">Water</option><option value="oil">Oil</option><option value="cool-down">Cool-down</option><option value="add-in">Add-in</option>
+        <option value="">All phases</option><option value="water">Water</option><option value="oil">Oil</option><option value="cool-down">Cool-down</option><option value="active">Active</option><option value="add-in">Add-in</option><option value="other">Other</option>
       </select>
       <select id="filter-flag" hidden onchange="renderTable()"><option value="">All ingredients</option><option value="yes">Restricted only</option></select>
     </div>
@@ -2292,7 +2292,7 @@ function setActiveLot(ingredientId, lotId) {
 // the active-lot banner. Falls back to the raw string if parsing fails.
 function formatDateShort(iso) {
   if (!iso) return '';
-  var d = new Date(iso);
+  var d = Plume.parseLocalDate(iso) || new Date(NaN);
   if (isNaN(d.getTime())) return iso;
   var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   return months[d.getMonth()] + ' ' + d.getFullYear();
@@ -2313,12 +2313,22 @@ function primarySupplier(ing) {
   return any.length ? any[0].supplier : null;
 }
 
+// A best-by date is a calendar day. new Date('2026-11-01') is midnight UTC,
+// which is the evening before in Alaska, so the warning was a day off
+// (2026-10-26 fix): parse it as a local day and compare with today's start.
+function bestByDay(s) { return s ? Plume.parseLocalDate(s) : null; }
+function todayStart() { var t = new Date(); t.setHours(0, 0, 0, 0); return t; }
+function expiresSoon(bestBy) {
+  var d = bestByDay(bestBy); if (!d) return false;
+  var soon = todayStart(); soon.setMonth(soon.getMonth() + 3);
+  return d <= soon;
+}
 function isExpiring(lots) {
-  var soon = new Date(); soon.setMonth(soon.getMonth() + 3);
+  var today = todayStart();
   return lots.some(function(l) {
     if (l.referenceOnly) return false; // watchlist entries can't expire
-    if (!l.bestBy) return false;
-    var d = new Date(l.bestBy); return d <= soon && d >= new Date();
+    var d = bestByDay(l.bestBy);
+    return !!d && d >= today && expiresSoon(l.bestBy);
   });
 }
 
@@ -2696,7 +2706,9 @@ var PHASE_CHIPS = [
   { v: 'oil', label: 'Oil phase', dot: 'var(--ph-oil-fg,#7A4E10)' },
   { v: 'water', label: 'Water phase', dot: 'var(--ph-water-fg,#2A5C8A)' },
   { v: 'cool-down', label: 'Cool-down', dot: 'var(--ph-cool-down-fg,#2A5C40)' },
-  { v: 'add-in', label: 'Add-in', dot: 'var(--ink-lighter)' }
+  { v: 'active', label: 'Active', dot: 'var(--ph-active-fg,#4A3A8A)' },
+  { v: 'add-in', label: 'Add-in', dot: 'var(--ink-lighter)' },
+  { v: 'other', label: 'Other', dot: 'var(--ph-other,#888780)' }
 ];
 function renderPhaseChips() {
   var cur = document.getElementById('filter-phase').value;
@@ -2825,7 +2837,7 @@ function renderTable() {
       '<span>' + (noActive ? 'Click &quot;+ New ingredient&quot; to get started, or use Quick add from Settings for a curated starter list' : (lowStockActive ? 'All stocked items are above their threshold' : (inStockActive ? 'Add lot quantities to ingredients you have on hand' : 'Try adjusting your search or filters'))) + '</span></div></td></tr>';
     return;
   }
-  var PH = { water: 'Water', oil: 'Oil', 'cool-down': 'Cool-down', 'add-in': 'Add-in' };
+  var PH = { water: 'Water', oil: 'Oil', 'cool-down': 'Cool-down', 'add-in': 'Add-in', active: 'Active', other: 'Other' };
   tbody.innerHTML = list.map(function(i) {
     var lots = migrateLots(i);
     var cost = activeCost(i);
@@ -3064,7 +3076,7 @@ function quickLookHtml(i) {
   var cats = Plume.funcCats(i);
   var stock = formatStockDisplay(i);
   var used = (typeof PlumeCheat !== 'undefined' && PlumeCheat.usageMap) ? (PlumeCheat.usageMap()[i.id] || []) : [];
-  var PH = { water: 'Water', oil: 'Oil', 'cool-down': 'Cool-down', 'add-in': 'Add-in' };
+  var PH = { water: 'Water', oil: 'Oil', 'cool-down': 'Cool-down', 'add-in': 'Add-in', active: 'Active', other: 'Other' };
   var cost = activeCost(i);
   var lot = getActiveLot(i);
   var buy = reorderLink(i);
@@ -3161,6 +3173,7 @@ function startNoteEdit(e, el) {
   var cancelled = false, done = false;
   var r = Plume.rt.editor(ing[field] || '', {
     single: field !== 'purpose',
+    max: field === 'purpose' ? 300 : 200,
     label: field === 'purpose' ? 'What I had in mind' : 'The lowdown',
     onEnter: function () { r.ed.blur(); }
   });
@@ -3465,7 +3478,7 @@ function viewIngredient(id) {
         else if (l.wasReversal) notes += '<small class="lt-note">↺ Auto-created from a batch decommit.' + (l.notes ? ' ' + esc(l.notes) : '') + '</small>';
         else if (l.wasResurrected) notes += '<small class="lt-note">↺ Stock returned by a batch decommit' + (l.resurrectedAt ? ' on ' + new Date(l.resurrectedAt).toLocaleDateString() : '') + '.</small>';
         var purchase = l.purchaseSize && l.purchaseUnit ? l.purchaseSize + ' ' + l.purchaseUnit + (l.purchasePrice ? ' for $' + parseFloat(l.purchasePrice).toFixed(2) : '') : '';
-        var soon = l.bestBy && new Date(l.bestBy) < new Date(new Date().setMonth(new Date().getMonth() + 3));
+        var soon = expiresSoon(l.bestBy);
         var links = (l.buyLink ? '<a class="detail-link" href="' + esc(l.buyLink) + '" target="_blank" rel="noopener">Reorder &#8599;</a>' : '') +
           (l.receiptLink ? '<a class="detail-link" href="' + esc(l.receiptLink) + '" target="_blank" rel="noopener">Receipt &#8599;</a>' : '');
         var canSetActive = !l.referenceOnly && !isActive && l.costPerG && parseFloat(l.costPerG) > 0;
@@ -3564,6 +3577,15 @@ function openQuickAdd() {
   setTimeout(function() { var n = document.getElementById('qa-name'); if (n) n.focus(); }, 60);
 }
 function closeQuickAdd() { closeModal('modal-quick'); }
+// Anything typed or ticked for this ingredient (2026-10-26 fix: the close
+// guard looked only at name, INCI, size and price, so a lot #, link,
+// certification or function could be lost without asking). The supplier,
+// order # and date are kept between items on purpose, so they do not count.
+function qaHasInput() {
+  if (['qa-name', 'qa-inci', 'qa-min', 'qa-max', 'qa-size', 'qa-price', 'qa-lot', 'qa-link', 'qa-c-other'].some(function(id) { return qaVal(id); })) return true;
+  if (qaReadFuncs().length) return true;
+  return Plume.CERTS.some(function(c) { var el = document.getElementById('qa-c-' + c.key); return el && el.checked; });
+}
 function qaVal(id) { var el = document.getElementById(id); return el ? String(el.value || '').trim() : ''; }
 // Saved suppliers first, then any name already on a lot.
 function qaSupplierList() {
@@ -3630,7 +3652,14 @@ function qaHint() {
   var el = document.getElementById('qa-hint');
   var name = qaVal('qa-name'), key = seederNameKey(name), html = '';
   if (key.length >= 2) {
-    var dup = ingredients.filter(function(i) { return seederNameKey(i.name) === key; })[0];
+    // Also under the starter list's other names for it (2026-10-26 fix):
+    // "Rosehip seed oil" typed with "Rosehip oil" in the library said nothing.
+    var keys = [key];
+    SEEDER_ITEMS.forEach(function(it) {
+      var ks = [it.name].concat(it.aka || []).map(seederNameKey);
+      if (ks.indexOf(key) !== -1) ks.forEach(function(k) { if (keys.indexOf(k) === -1) keys.push(k); });
+    });
+    var dup = ingredients.filter(function(i) { return keys.indexOf(seederNameKey(i.name)) !== -1; })[0];
     if (dup) html += '<div class="qa-hint dup"><span>Already in your library: <b>' + esc(dup.name) + '</b>' + (dup.archived ? ' (archived)' : '') + '.</span>' +
       '<button type="button" class="btn btn-sm" onclick="qaOpen(\'' + dup.id + '\')">Open it</button></div>';
   }
@@ -3721,7 +3750,10 @@ function qaBuild() {
   return ing;
 }
 // A pasted link without its https:// still opens (Reorder ↗ on the lot).
-function qaLink(u) { u = String(u || '').trim(); return u && !/^https?:\/\//i.test(u) ? 'https://' + u : u; }
+// Adds https:// only to a bare address ("example.com/oil"); anything with a
+// scheme already (mailto:, http:) is left alone (2026-10-26 fix: mailto:
+// became https://mailto:...).
+function qaLink(u) { u = String(u || '').trim(); return u && !/^[a-z][a-z0-9+.-]*:(?!\d)/i.test(u) ? 'https://' + u : u; }
 // A supplier typed here that the list does not have yet is added to it, so
 // the lot editor's supplier list shows it.
 // Returns the supplier's name as saved, so the lot carries the same spelling
@@ -4460,9 +4492,14 @@ function lotBoughtMatches(lot) {
 }
 // The row's on hand display, and while it follows Bought, its value.
 // Grams in one of a unit, for moving on hand by a change in Bought.
-function rowDensity() {
-  var d = parseFloat((document.getElementById('f-density') || {}).value);
-  return d > 0 ? d : 1.0;
+function rowDensity() { return formDensity().value; }
+// The density of the ingredient in the edit form, resolved the way
+// Plume.densityFor does for a saved one.
+function formDensity() {
+  var v = function (id) { var el = document.getElementById(id); return el ? el.value : ''; };
+  var cats = [];
+  try { cats = readFuncChips(); } catch (e) {}
+  return Plume.densityFor({ density: v('f-density'), inci: v('f-inci'), phase: v('f-phase'), functionCategory: cats });
 }
 function rowBoughtG(rowId) {
   var size = (document.getElementById(rowId + '-psize') || {}).value;
@@ -4883,17 +4920,14 @@ function calcLotCostPerG(lotId) {
   if (!size || isNaN(price) || price <= 0) return; // not enough data yet
 
 
-  // Get density from ingredient density field
-  var densityEl = document.getElementById('f-density');
-  var densityVal = densityEl ? parseFloat(densityEl.value) : NaN;
-  var usingDefault = false;
-
-  // For weight-based units, density doesn't matter
+  // Density as the rest of Plume resolves it (2026-10-26 fix): typed, else
+  // the INCI or category figure, else water. Using 1.0 whenever the field
+  // was blank repriced a Quick add argan oil bought in mL about 14% low on
+  // its next save, since Quick add had used the category figure.
+  var fd = formDensity();
+  var densityVal = fd.value;
   var needsDensity = (unit === 'mL' || unit === 'fl oz');
-  if (needsDensity && isNaN(densityVal)) {
-    densityVal = 1.0;
-    usingDefault = true;
-  }
+  var usingDefault = needsDensity && fd.source === 'default';
 
   var grams = lotSizeToGrams(size, unit, densityVal);
   if (!grams) return;
@@ -4910,7 +4944,7 @@ function calcLotCostPerG(lotId) {
       cpgNote.textContent = '(est. \u2014 add density for accuracy)';
       cpgNote.style.color = 'var(--warning)';
     } else if (needsDensity) {
-      cpgNote.textContent = '(calc. from density)';
+      cpgNote.textContent = fd.source === 'set' ? '(calc. from density)' : '(calc. from typical density)';
       cpgNote.style.color = 'var(--sage-dark)';
     } else {
       cpgNote.textContent = '(auto-calculated)';
@@ -5094,7 +5128,7 @@ document.querySelectorAll('.modal-overlay').forEach(function(el) {
       return;
     }
     // Quick add: a click outside with something typed asks first.
-    if (el.id === 'modal-quick' && (qaVal('qa-name') || qaVal('qa-inci') || qaVal('qa-size') || qaVal('qa-price'))) {
+    if (el.id === 'modal-quick' && qaHasInput()) {
       Plume.ask('What you typed for this ingredient will be lost. The ones you already saved stay.', function () {
         el.classList.remove('open');
       }, { title: 'Close Quick add?', yes: 'Close', no: 'Keep typing', danger: true });

@@ -640,7 +640,7 @@ details.bc-tips .bc-note { border: 0; padding: 6px 0 0; margin: 0; font-size: 12
       <span class="ps-title-icon" data-ps-icon="costing"></span>
       <div class="fe-head-body">
         <input class="fe-name" id="p-name" placeholder="Product name..." aria-label="Product name" oninput="markDirty(); syncCrumb()">
-        <input class="fe-intent" id="p-netwt-display" placeholder="Weight or description for the label, e.g. 1 oz / 30 g or 3 mL + 5 mL sample duo" aria-label="Display weight or description (label text)" oninput="markDirty()">
+        <input class="fe-intent" id="p-netwt-display" placeholder="Label weight, e.g. 1 oz / 30 g" title="Weight or description for the label, e.g. 1 oz / 30 g or 3 mL + 5 mL sample duo" aria-label="Display weight or description (label text)" oninput="markDirty()">
         <div class="fe-meta">
           <div class="fe-mf"><label for="p-sku">SKU</label><input type="text" id="p-sku" placeholder="e.g. HSL-1OZ" oninput="markDirty()"></div>
           <div class="fe-mf"><label for="p-barcode">Barcode value</label><input type="text" id="p-barcode" placeholder="same as SKU" oninput="markDirty()"></div>
@@ -3161,6 +3161,7 @@ function applyKindVisibility(kind) {
     b.classList.toggle('on', k === kind); b.setAttribute('aria-pressed', k === kind ? 'true' : 'false');
   });
   document.getElementById('pkg-sub').textContent = kind === 'kit' ? 'what the kit adds: box, insert, label' : 'what goes around each unit';
+  renderLabelMarks();
 }
 
 function onKindChange() {
@@ -3554,6 +3555,12 @@ var markUsed = {};   // key -> mark, filled while a list is built
 function renderLabelMarks() {
   var box = document.getElementById('lbl-marks');
   if (!box) return;
+  // A kit's list uses each product's own marks, so chips here did nothing
+  // (2026-10-26 fix): say where to set them instead.
+  if (typeof curKind === 'function' && curKind() === 'kit') {
+    box.innerHTML = '<div class="mk-hint">Certified ingredients are marked as each product in the kit marks them. Set the marks on those products.</div>';
+    return;
+  }
   var on = {};
   curMarks.forEach(function(m) { on[m.key] = m; });
   var html = '<div class="mk-line"><span class="mk-l">Mark certified ingredients</span>' +
@@ -3597,11 +3604,20 @@ function ingHasCert(ing, key) {
 function marksFor(ingsList, marks) {
   return (marks || []).filter(function(m) {
     return m.sym && ingsList.length && ingsList.every(function(ing) { return ingHasCert(ing, m.key); });
-  }).map(function(m) { markUsed[m.key] = m; return m.sym; }).join('');
+  }).map(function(m) { markUsed[m.key + '\u0001' + m.sym] = m; return m.sym; }).join('');
 }
+// One footnote per symbol used. Keyed by certification AND symbol: in a kit
+// two products can mark the same certification differently, and only the
+// last one's symbol was explained (2026-10-26 fix).
 function markFootnotes() {
-  return Plume.CERTS.map(function(c) { return markUsed[c.key]; }).filter(Boolean)
-    .map(function(m) { return m.sym + (m.note || ''); });
+  var out = [];
+  Plume.CERTS.forEach(function(c) {
+    Object.keys(markUsed).forEach(function(k) {
+      var m = markUsed[k];
+      if (m.key === c.key) out.push(m.sym + (m.note || ''));
+    });
+  });
+  return out;
 }
 
 function singleFormulaIngredients(f, mode, marks) {
@@ -4377,7 +4393,14 @@ function renderLsPaper() {
   el.innerHTML = lsSheetHtml();
 }
 
+// Nothing ticked: printing made a blank page (2026-10-26 fix).
+function lsNothing() {
+  if (lsPicked().length) return false;
+  Plume.tell('Tick at least one product to put on the line sheet.', { title: 'The line sheet is empty' });
+  return true;
+}
 function printLineSheet() {
+  if (lsNothing()) return;
   var rules = [];
   // Copy the .lsx rules out of this page's stylesheet, so print and
   // screen cannot disagree.
@@ -4404,6 +4427,7 @@ function lsTableText() {
   return out.join('\n');
 }
 function copyLineSheet() {
+  if (lsNothing()) return;
   var text = lsTableText();
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(text).then(function() { toast('Copied. Paste into an email or a spreadsheet.'); },

@@ -30,7 +30,7 @@ function range(a, b) {
   if (a) return a + '+';
   return '';
 }
-var PHASE_NAMES = { water: 'Water', oil: 'Oil', 'cool-down': 'Cool-down', 'add-in': 'Add-in' };
+var PHASE_NAMES = { water: 'Water', oil: 'Oil', 'cool-down': 'Cool-down', 'add-in': 'Add-in', active: 'Active', other: 'Other' };
 
 var COLS = {
   use:    { label: 'Use %',          get: function (i) { return range(i.min, i.max); } },
