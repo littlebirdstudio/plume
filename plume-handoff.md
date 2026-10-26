@@ -3664,3 +3664,32 @@ it in the preview:
 - Tried in the one reused "Plume Preview" artifact
   (https://claude.ai/artifact/1RPFnrVthk3pbdRFpuRDyQ); she approved it.
   Tests: test/test-lotentry.js.
+
+### Session 26 (cont., 25 October 2026): The formulation board (core v1.53)
+
+Her ask: put the formulation cards where she wants them, near like ones,
+with blank spaces between if she likes. Offered named groups or a free board;
+she chose **a free board first, named groups maybe later**. (A first version
+that only reordered the list was not what she meant.)
+
+- Each formulation keeps `f.board = { r, c, t }`: row, column, and when it
+  was placed. The list draws a CSS grid with each card at its slot; empty
+  slots (`.fslot`) are drop targets, invisible until a card is moving, plus
+  a spare row below the last for starting a new row.
+- Drag the grip (⋮⋮, top right; mouse or finger via pointer events,
+  `touch-action: none`) to an empty slot, or onto a card to swap the two
+  (`boardMove`; whatever holds the slot, shown or hidden by a filter, takes
+  the slot the card left). Arrow keys on a focused grip move it one slot.
+  Letting go after a drag would click the card underneath; that click is
+  swallowed.
+- Columns: as many as fit (`boardFit`: 250 px cards and 12 px gaps in the
+  shell), or more if cards were placed further right on a wider screen; then
+  the cards narrow to 190 px before the board scrolls sideways. Redrawn when
+  the window is resized. Under two columns (a phone) the cards are a plain
+  list in board order, with a note to arrange on a wider screen.
+- A card with no slot (older data, a new formulation) takes the first open
+  slot in reading order, saved then. Two cards on one slot: the later `t`
+  keeps it, the other takes the first open slot.
+- Saved with the formulations (`saveAll`), so it stays after a reload and
+  travels with backups. For named groups later: `f.board` can gain a group.
+- Tests: test/test-cardorder.js.
