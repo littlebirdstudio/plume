@@ -810,14 +810,35 @@ function toggleAdjForm() {
   }
 }
 
+// Stock as the edit panel has it now: purchases on screen plus adjustments.
+function modalStock() {
+  var t = 0;
+  document.querySelectorAll('#purchase-rows .purchase-row').forEach(function(row) {
+    t += parseInt(row.querySelector('[data-field="qty"]').value, 10) || 0;
+  });
+  return t + pendingAdjustments.reduce(function(sum, a) { return sum + (parseInt(a.qty,10)||0); }, 0);
+}
 function saveAdjustment() {
   var qty  = parseInt(document.getElementById('adj-qty').value, 10);
   var note = document.getElementById('adj-note').value.trim();
   if (isNaN(qty) || qty === 0) { Plume.tell('Enter a non-zero quantity (use negative to subtract).'); return; }
-  pendingAdjustments.push({ qty: qty, note: note, date: todayISO() });
-  renderAdjLog();
-  updateModalSummary();
-  toggleAdjForm();
+  var add = function () {
+    pendingAdjustments.push({ qty: qty, note: note, date: todayISO() });
+    renderAdjLog();
+    updateModalSummary();
+    toggleAdjForm();
+  };
+  // Below zero (2026-10-25, her rule, as fills already stop on short
+  // packaging): it almost always means a purchase was not entered, or a
+  // count or this number is off. Say so and let her fix it first.
+  var have = modalStock(), after = have + qty;
+  if (qty < 0 && after < 0) {
+    Plume.ask('There are ' + have + ' in stock, so taking ' + (-qty) + ' would leave ' + after + '.\n\n' +
+      'Usually that means a purchase has not been entered yet, or a count or this number is off. Check the purchases on this item, or the number, before saving.',
+      add, { title: 'That goes below zero', yes: 'Save anyway', no: 'Go back and fix it', danger: true });
+    return;
+  }
+  add();
 }
 
 function renderAdjLog() {

@@ -179,7 +179,9 @@ const SEED = `
   ok('the Filled tab shows the lot beside bulk left', /LOT ?261001B/.test(await page.evaluate("document.querySelector('#d-fills .bulk-card').innerText.replace(/\\s+/g, '')")));
   dialogs.length = 0;
   await page.evaluate("window.PLUME_TEST_ANSWER = false; deleteBatch(); window.PLUME_TEST_ANSWER = undefined;"); await page.waitForTimeout(150);
-  ok('deleting says fills keep the lot code, and the log entry stays', /keeps lot code 261001B/.test(dialogs.join(' ')) && /log entry stays/.test(dialogs.join(' ')), dialogs);
+  // Since v1.52 a batch that product was filled from cannot be deleted.
+  ok('deleting a batch with fills is blocked: undo the fills first, or mark it Discarded', dialogs.length === 1 && /cannot be deleted yet/.test(dialogs[0]) && /Rose toner 100 mL/.test(dialogs[0]) && /undo that fill/.test(dialogs[0]) && /Discarded/.test(dialogs[0]), dialogs);
+  ok('and the batch is still there', !!(await batch('b2')));
   await page.evaluate("closeDetail()"); await page.waitForTimeout(250);
   await page.evaluate(`openBatchDetail(${JSON.stringify(nb.id)})`); await page.waitForTimeout(250);
   dialogs.length = 0;
