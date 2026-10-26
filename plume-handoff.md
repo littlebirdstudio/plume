@@ -3599,3 +3599,63 @@ oils only (no additive, no lye; a bar about 20% low); add-ins and soap
 additives stay fixed grams when the batch size changes, with no warning (her
 open question); deleting a batch returns all its ingredients to stock even
 when part was already filled; packaging can go below zero without a warning.
+
+### Session 26 (cont., 25 October 2026): Soap costs, packaging warning (core v1.51)
+
+- **Soap is priced with its additives and lye everywhere.** Core
+  `Plume.soapCost(f, ings)`: oils by their percents, additives by their
+  grams, and the lye (`Plume.lyeIngredient`, the sodium or potassium
+  hydroxide in Ingredients, at the recipe's superfat and KOH purity), per gram
+  of cured soap. Water is left out of the weight (it evaporates). The editor,
+  the card and Products & Costing all use it. With no lye in Ingredients, the
+  cost says the lye is missing rather than leaving it out silently.
+- **Packaging warns before going below zero.** An adjustment that would take
+  stock under zero asks first (Plume.ask, "That goes below zero"), naming the
+  likely cause (a purchase not entered yet). "Go back and fix it" leaves it
+  unsaved; "Save anyway" records it.
+
+### Session 26 (cont., 25 October 2026): Pins on add-ins only; add-ins scale; delete waits for fills (core v1.52)
+
+Her decision after reading the early chats on why pins exist: **"remove the
+pin in all cases except add-ins."** The one real case is a decorative
+charcoal line in soap: a fixed amount whatever the batch size.
+
+- **Percent lines have no pin.** A pin stored on a % line is ignored: it
+  scales by its %. Formulations converts an old pinned % line on load to the
+  % its grams made at the version's batch size, so nothing changes for a
+  formula at its saved size. (Her real data had no pinned or add-in lines.)
+- **Add-ins and soap additives scale with the batch unless pinned.** A line
+  now carries `gramsAt`, the batch size its grams were typed at (set on every
+  grams edit and on pin/unpin; older lines use the version's batch size).
+  Core `Plume.addinGrams(line, bs, refBs)` gives the grams at batch size bs:
+  `gramsFixed x bs / gramsAt`, or `gramsFixed` when pinned. Used by
+  Formulations (rows, totals, cost, INCI order), Batches (`fixedGrams(l,
+  yieldG)`), the bench sheet (marks "(fixed amount)"), `lineShare` and
+  `soapCost`. A preservative or fragrance typed in grams now doses correctly
+  at any batch size; earlier advice that preservatives should stay fixed was
+  wrong (they are percent-dosed).
+- **The Pin button** sits on add-in and soap additive rows only: "Scales" or
+  "Fixed". Pinning keeps the grams it shows at the current batch size.
+- **A batch can be deleted only while nothing has been filled from it.** With
+  fills, Delete says to undo the fills first (a test) or mark it Discarded (a
+  real batch that went wrong; keeps the record and the trace). Her four cases:
+  started by mistake or a test, delete; made, then discard; packaging from a
+  discarded batch is handled in Packaging, not by undoing the batch.
+
+### Lot entry preview (lot-drawer branch, not merged)
+
+The lots drawer refresh (status pills Here / On order / Reference only,
+grouped sections) plus, on her "yes to preview":
+
+- **Bought** is a count x a size + unit; the price is "total" or "each".
+  Cost per gram uses the whole purchase; a line spells it out
+  ("2 x 4 oz = 8 oz (226.8 g) for $20.00, $0.0882/g"). New lot fields
+  `purchaseCount`, `priceIs` (only stored when set).
+- **On hand is not typed.** A new lot starts at what was bought and follows
+  Bought until something is used or adjusted (`row.dataset.follows`). After
+  that it changes only through a batch or **Adjust** (new amount, why, an
+  optional note), kept on the lot as `adjustments: [{date, from, to, unit,
+  reason, note}]` and listed under it.
+- Preview: the one reused "Plume Preview" artifact
+  (https://claude.ai/artifact/1RPFnrVthk3pbdRFpuRDyQ). Tests:
+  test/test-lotentry.js.
