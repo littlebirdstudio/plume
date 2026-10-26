@@ -35,7 +35,7 @@ var Plume = (function () {
 // (v0.4 / v0.5 / v0.6 across five modules). BUMP IT IN EVERY PULL REQUEST,
 // core change or not: it is how "is this the update I just merged?" is
 // answered by looking, and browsers cache .js files stubbornly.
-var VERSION = '1.54';
+var VERSION = '1.55';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -1832,6 +1832,9 @@ function injectStyles() {
     '.st-panel .st-modes{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0 10px;align-items:center}' +
     '.st-panel .st-mct{font-variant-numeric:tabular-nums;opacity:.75}' +
     '.st-panel .st-help{font-size:13px;color:var(--ink-light);margin:0 0 12px;line-height:1.45}' +
+    // The consignment links read as plain words before (2026-10-26 fix).
+    '.st-panel .st-help a{color:var(--bark);text-decoration:underline;text-underline-offset:2px;white-space:nowrap}' +
+    '.st-panel .st-help a:hover{color:var(--bark-dark)}' +
     '.st-panel .st-fields{display:grid;grid-template-columns:150px minmax(0,1fr);gap:10px;margin-bottom:12px}' +
     '.st-panel .st-fields label{display:block;font-size:12.5px;color:var(--ink-light);margin-bottom:3px}' +
     '.st-panel .st-fields input{width:100%;box-sizing:border-box;font:inherit;font-size:14px;padding:6px 8px;border:1px solid var(--cream-border);border-radius:7px;background:var(--white);color:var(--ink)}' +
@@ -2900,9 +2903,15 @@ function inciMerged(entries) {
 // so backups, search and exports stay readable and nothing stored is HTML.
 // toHtml escapes first and only then adds its own tags, so a stored value
 // can never inject markup.
+// A mark counts only when it hugs its words (no space just inside the
+// asterisks) and no digit touches it outside (2026-10-26 fix): "2*3*4",
+// "a * b * c" and "5*2" stay as typed, while "*this*", "**that**" and bold
+// on part of a word ("**Lavender**s", which the editor writes) still format.
+// A bold+italic "***x***" reads as both.
+var RT_BOLD = /(^|[^\d])\*\*(?=[^\s*])([^*\n]*?[^\s*])\*\*(?!\d)/g;
+var RT_ITAL = /(^|[^*\d])\*(?=[^\s*])([^*\n]*?[^\s*])\*(?![*\d])/g;
 function rtInline(t) {
-  return t.replace(/\*\*([^*\n]+?)\*\*/g, '<strong>$1</strong>')
-          .replace(/(^|[^*])\*([^*\n]+?)\*(?!\*)/g, '$1<em>$2</em>');
+  return t.replace(RT_BOLD, '$1<strong>$2</strong>').replace(RT_ITAL, '$1<em>$2</em>');
 }
 function rtToHtml(md) {
   try { rtStyle(); } catch (e) {}
@@ -2924,7 +2933,7 @@ function rtToHtml(md) {
 }
 // The words alone, for one-line summaries and title attributes.
 function rtPlain(md) {
-  return String(md == null ? '' : md).replace(/\*\*([^*\n]+?)\*\*/g, '$1').replace(/(^|[^*])\*([^*\n]+?)\*(?!\*)/g, '$1$2').replace(/^\s*[-•]\s+/gm, '');
+  return String(md == null ? '' : md).replace(RT_BOLD, '$1$2').replace(RT_ITAL, '$1$2').replace(/^\s*[-•]\s+/gm, '');
 }
 // The marks back out of an edited box. Chrome's editing writes <b>/<strong>,
 // <i>/<em>, <div> or <br> for new lines, and <ul><li> for lists.
@@ -2947,11 +2956,34 @@ function rtFromEl(root) {
     }
     var block = tag === 'div' || tag === 'p';
     if (block && cur) push();
-    var start = cur.length;
-    Array.prototype.forEach.call(n.childNodes, function (c) { walk(c); });
+    var start = cur.length, startLine = lines.length;
+    var kids = Array.prototype.slice.call(n.childNodes);
+    // A <br> that ends a block is Chrome's way of holding an empty line
+    // open, not a second line: "<div><br></div>" is one blank line (it was
+    // two, so every Enter-Enter or pasted blank line doubled).
+    var lastBr = function (k) {
+      if (!k) return false;
+      var t = k.nodeName.toLowerCase();
+      if (t === 'br') return true;
+      // With bold or italic on, Chrome writes <div><b><br></b></div>.
+      return /^(b|i|strong|em|span)$/.test(t) && k.childNodes.length === 1 && lastBr(k.firstChild);
+    };
+    if (block && kids.length && lastBr(kids[kids.length - 1])) kids.pop();
+    kids.forEach(function (c) { walk(c); });
     if (bold || ital) {
-      var inner = cur.slice(start), lead = inner.match(/^\s*/)[0], trail = inner.match(/\s*$/)[0], core = inner.trim();
-      if (core) { var m = bold ? '**' : '*'; if (bold && ital) m = '***'; cur = cur.slice(0, start) + lead + m + core + (m === '***' ? '***' : m) + trail; }
+      // Marks go round each line's words separately: bold running over a
+      // line break used to be lost or land on the wrong line.
+      var m = bold && ital ? '***' : bold ? '**' : '*';
+      var wrapSeg = function (inner) {
+        var lead = inner.match(/^\s*/)[0], trail = inner.match(/\s*$/)[0], core = inner.trim();
+        return core ? lead + m + core + m + trail : inner;
+      };
+      if (lines.length === startLine) cur = cur.slice(0, start) + wrapSeg(cur.slice(start));
+      else {
+        lines[startLine] = lines[startLine].slice(0, start) + wrapSeg(lines[startLine].slice(start));
+        for (var li = startLine + 1; li < lines.length; li++) lines[li] = wrapSeg(lines[li]);
+        cur = wrapSeg(cur);
+      }
     }
     if (block) push();
   };
@@ -2979,6 +3011,17 @@ function rtEditor(value, opts) {
     x.onclick = function (e) { e.preventDefault(); ed.focus(); try { document.execCommand(b[1], false, null); } catch (err) {} if (opts.onInput) opts.onInput(); };
     bar.appendChild(x);
   });
+  // A character limit (the field's maxlength; 2026-10-26 fix: the rich boxes
+  // ignored it). Counted on the words she sees, not the stored marks.
+  var max = parseInt(opts.max, 10) > 0 ? parseInt(opts.max, 10) : 0, count = null;
+  if (max) { count = document.createElement('span'); count.className = 'rt-count'; bar.appendChild(count); }
+  var plainLen = function () { return rtPlain(rtFromEl(ed)).length; };
+  var showCount = function () {
+    if (!count) return;
+    var n = plainLen();
+    count.textContent = n + ' / ' + max;
+    count.classList.toggle('full', n >= max);
+  };
   var ed = document.createElement('div');
   ed.className = 'rt-ed';
   ed.contentEditable = 'true';
@@ -2987,7 +3030,12 @@ function rtEditor(value, opts) {
   if (opts.label) ed.setAttribute('aria-label', opts.label);
   if (opts.placeholder) ed.setAttribute('data-ph', opts.placeholder);
   ed.innerHTML = rtToHtml(value);
-  ed.addEventListener('input', function () { if (opts.onInput) opts.onInput(); });
+  ed.addEventListener('input', function () { showCount(); if (opts.onInput) opts.onInput(); });
+  ed.addEventListener('beforeinput', function (e) {
+    if (!max || !/^insert/.test(e.inputType || '') || e.inputType === 'insertFromPaste') return;
+    var sel = window.getSelection && window.getSelection();
+    if (plainLen() >= max && (!sel || sel.isCollapsed)) e.preventDefault();
+  });
   ed.addEventListener('keydown', function (e) {
     if (e.key === 'Enter' && opts.single) { e.preventDefault(); if (opts.onEnter) opts.onEnter(); }
     if ((e.ctrlKey || e.metaKey) && (e.key === 'b' || e.key === 'i')) { e.preventDefault(); try { document.execCommand(e.key === 'b' ? 'bold' : 'italic', false, null); } catch (err) {} if (opts.onInput) opts.onInput(); }
@@ -2999,14 +3047,19 @@ function rtEditor(value, opts) {
     e.preventDefault();
     var txt = t.getData('text/plain') || '';
     if (opts.single) txt = txt.replace(/\s*\n\s*/g, ' ');
+    if (max) {
+      var sel = window.getSelection && window.getSelection(), picked = sel ? String(sel).length : 0;
+      txt = txt.slice(0, Math.max(0, max - plainLen() + picked));
+    }
     try { document.execCommand('insertText', false, txt); } catch (err) {}
     if (opts.onInput) opts.onInput();
   });
   wrap.appendChild(bar); wrap.appendChild(ed);
+  showCount();
   return {
     wrap: wrap, ed: ed,
     get: function () { return rtFromEl(ed); },
-    set: function (v) { ed.innerHTML = rtToHtml(v); },
+    set: function (v) { ed.innerHTML = rtToHtml(v); showCount(); },
     focus: function () {
       ed.focus();
       try { var r = document.createRange(); r.selectNodeContents(ed); r.collapse(false); var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r); } catch (err) {}
@@ -3024,6 +3077,7 @@ function rtAttach(id, opts) {
   opts = opts || {};
   var r = rtEditor(el.value, {
     single: opts.single, placeholder: el.getAttribute('placeholder') || '', label: opts.label,
+    max: opts.max || (el.maxLength > 0 ? el.maxLength : 0),
     onInput: function () { el.value = r.get(); el.dispatchEvent(new Event('input', { bubbles: true })); }
   });
   el.style.display = 'none';
@@ -3043,7 +3097,9 @@ var RT_CSS = '.rt-wrap{border:1px solid var(--cream-border);border-radius:4px;ba
   '.rt-single .rt-ed{min-height:0;white-space:normal}' +
   '.rt-ed:empty:before{content:attr(data-ph);color:var(--ink-lighter)}' +
   '.rt-ed ul,.rt-ul{margin:4px 0;padding-left:20px}.rt-ul li,.rt-ed li{margin:1px 0}' +
-  '.rt-text strong,.rt-ed b,.rt-ed strong{font-weight:600}';
+  '.rt-text strong,.rt-ed b,.rt-ed strong{font-weight:600}' +
+  '.rt-count{margin-left:auto;align-self:center;font-size:11px;color:var(--ink-lighter);padding:0 4px;font-variant-numeric:tabular-nums}' +
+  '.rt-count.full{color:var(--warning)}';
 // Injected the first time a box is made or rich text is shown.
 function rtStyle() {
   if (typeof document === 'undefined' || !document.head || !document.getElementById || document.getElementById('plume-rt-css')) return;
@@ -3063,7 +3119,14 @@ function recStart(v) {
   var n = m ? parseFloat(m[1]) : NaN;
   return isFinite(n) && n > 0 && n <= 100 ? String(n) : '';
 }
-function recText(v) { return String(v == null ? '' : v).replace(/\s*%\s*/g, '').trim(); }
+// Drops the % only from a bare number or range ("2–5%" reads "2–5" beside a
+// label that says %). Words keep theirs: "2% leave-on, 1% rinse-off" read
+// "2leave-on, 1rinse-off" (2026-10-26 fix).
+function recText(v) {
+  var s = String(v == null ? '' : v).trim();
+  var bare = /^\d*[.,]?\d+\s*%?\s*(?:(?:-|\u2013|\u2014|to)\s*\d*[.,]?\d+\s*%?)?$/i;
+  return bare.test(s) ? s.replace(/\s*%/g, '').trim() : s;
+}
 
 // ══ Certifications (2026-10-24) ═══════════════════════
 // Ticked on a lot (a purchase), not the ingredient: the same oil from two

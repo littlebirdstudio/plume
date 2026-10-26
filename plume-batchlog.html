@@ -1152,7 +1152,8 @@ function leftHtml(b) {
   var runs = (b.packagingRuns || []).length;
   var what = fills.length ? fills.length + ' fill' + (fills.length === 1 ? '' : 's') + ' &middot; ' + units + ' units'
     : runs ? runs + ' older packaging run' + (runs === 1 ? '' : 's') : '';
-  return '<span class="bl-left' + (left < 0 ? ' neg' : '') + '">' + Plume.fmtG(left) + ' <small>of ' + Plume.fmtG(made) + '</small></span>' +
+  // Filled past its yield: "45 g over", not "-45 g of 300 g" (2026-10-26).
+  return '<span class="bl-left' + (left < 0 ? ' neg' : '') + '">' + (left < 0 ? Plume.fmtG(-left) + ' over <small>' + Plume.fmtG(made) + ' made</small>' : Plume.fmtG(left) + ' <small>of ' + Plume.fmtG(made) + '</small>') + '</span>' +
     '<span class="left-bar" aria-hidden="true"><i style="width:' + pct + '%"></i></span>' +
     (what ? '<span class="bl-when">' + what + '</span>' : '');
 }
@@ -2224,7 +2225,7 @@ function renderFills(b) {
   var closed = b.status === 'discarded' || b.status === 'depleted';
   var pct = made ? Math.max(0, Math.min(100, Math.round(left / made * 100))) : 0;
   var html = '<div class="bulk-card"><div><div class="lbl">Bulk left' + (b.lotCode ? ' &middot; ' + Plume.lotChip(b.lotCode) : '') + '</div>' +
-      '<div class="big' + (left < 0 ? ' neg' : '') + '">' + Plume.fmtG(left) + ' <small>of ' + Plume.fmtG(made) + ' made</small></div>' +
+      '<div class="big' + (left < 0 ? ' neg' : '') + '">' + (left < 0 ? Plume.fmtG(-left) + ' over <small>' + Plume.fmtG(made) + ' made</small>' : Plume.fmtG(left) + ' <small>of ' + Plume.fmtG(made) + ' made</small>') + '</div>' +
       '<span class="left-bar" aria-hidden="true"><i style="width:' + pct + '%"></i></span></div></div>';
   if (b.status === 'depleted') {
     html += '<div class="bp-note">Marked Used up, so bulk left reads 0 g.' + (numbers > 0 ? ' By the numbers ' + Plume.fmtG(numbers) + ' was left: what stayed in the bowl.' : '') + ' Set it back to Ready and the number returns.</div>';
@@ -3053,7 +3054,22 @@ function madeCpg(cost, g) { return String(Math.round(cost / g * 1000000) / 10000
 // stock solution, or already added). With no ingredient linked yet, the
 // first batch creates it (her call, 2026-10-21): named for the formulation,
 // its INCI read off its lines.
+// The made lot that prices a stock solution: the batch made most recently by
+// its date, not the one entered last (2026-10-26 fix: a back-dated batch
+// took over the price). Ties go to the one entered later.
+function newestMadeLot(ing) {
+  var best = null;
+  ((ing && ing.lots) || []).forEach(function (l) {
+    if (!l.madeBatchId || l.referenceOnly) return;
+    if (!best || String(l.received || '') >= String(best.received || '')) best = l;
+  });
+  return best;
+}
 function addMadeLot(b) {
+  // Its lot was deleted in Ingredients: the batch's link to it is stale, and
+  // "Add N g to its stock" did nothing (2026-10-26 fix). Clear it so the
+  // lot can be added again.
+  if (b && b.madeLotId && !madeLot(b)) { delete b.madeIngId; delete b.madeLotId; delete b.madeIngNew; }
   var f = findFormula(b.formulaId);
   var g = parseFloat(b.actualYield) || 0;
   if (!f || !Plume.isStockType(f.type) || b.madeLotId || !b.committed || g <= 0) return null;
@@ -3077,7 +3093,7 @@ function addMadeLot(b) {
   };
   if (!ing.lots) ing.lots = [];
   ing.lots.push(lot);
-  ing.activeLotId = lot.id;   // the newest batch prices it
+  ing.activeLotId = newestMadeLot(ing).id;   // the most recently made batch prices it
   b.madeIngId = ing.id;
   b.madeLotId = lot.id;
   return lot;
@@ -3093,11 +3109,17 @@ function madeLotSync(b, yieldG, code, date, dry) {
     return { error: Plume.fmtG(was - leftNow) + ' of this batch has already gone into other batches (see the Trace tab), so its yield cannot be less than that.' };
   }
   if (dry) return { lot: lot };
+  // Re-pick the price lot only when a date change makes another batch the
+  // newest and the newest was the one pricing it: a made lot she chose in
+  // Ingredients stays chosen through any other edit.
+  var newest0 = newestMadeLot(ml.ing), followNewest = newest0 && ml.ing.activeLotId === newest0.id;
+  var dateChanged = !!date && date !== lot.received;
   lot.qtyPurchased = String(Math.round(Math.max(left, 0) * 100000) / 100000);
   lot.madeG    = yieldG;
   lot.lotNum   = code || '';
   lot.received = date || lot.received;
   if (typeof lot.madeCost === 'number' && lot.madeCost > 0 && yieldG > 0) lot.costPerG = madeCpg(lot.madeCost, yieldG);
+  if (dateChanged && followNewest) { var n1 = newestMadeLot(ml.ing); if (n1) ml.ing.activeLotId = n1.id; }
   return { lot: lot };
 }
 // The batches that drew on this batch's lot, and how much.
@@ -3131,9 +3153,9 @@ function removeMadeLot(b) {
   if (ml) {
     ml.ing.lots = ml.ing.lots.filter(function(l) { return l.id !== ml.lot.id; });
     if (ml.ing.activeLotId === ml.lot.id) {
-      // The newest batch left prices it now.
-      var rest = ml.ing.lots.filter(function(l) { return l.madeBatchId && !l.referenceOnly; });
-      ml.ing.activeLotId = rest.length ? rest[rest.length - 1].id : null;
+      // The most recently made batch left prices it now.
+      var n = newestMadeLot(ml.ing);
+      ml.ing.activeLotId = n ? n.id : null;
     }
   }
   delete b.madeIngId;
