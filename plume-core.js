@@ -35,7 +35,7 @@ var Plume = (function () {
 // (v0.4 / v0.5 / v0.6 across five modules). BUMP IT IN EVERY PULL REQUEST,
 // core change or not: it is how "is this the update I just merged?" is
 // answered by looking, and browsers cache .js files stubbornly.
-var VERSION = '1.50';
+var VERSION = '1.51';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -4303,8 +4303,63 @@ function lineShare(line, f, opts) {
   if (p > 0) return p;
   return g / bs * 100;
 }
+// ── Soap cost (2026-10-25, her call: "they are all in the ingredients list") ──
+// A soap's cost is its oils, its additives AND its lye; Products & Costing
+// used to price the oils alone (a bar about 20% low). Per gram of cured
+// soap: water is left out of the weight on the reasoning that it cures off,
+// which reads a touch high, never low. The lye is found in the library the
+// way Batches finds it (INCI, then name).
+function lyeIngredient(ings, lyeType) {
+  var inciT = lyeType === 'koh' ? 'potassium hydroxide' : 'sodium hydroxide';
+  var a = lyeType === 'koh' ? 'koh' : 'naoh', b = inciT, list = ings || [], i;
+  for (i = 0; i < list.length; i++) if (String(list[i].inci || '').toLowerCase() === inciT) return list[i];
+  for (i = 0; i < list.length; i++) if (String(list[i].inci || '').toLowerCase().indexOf(inciT) >= 0) return list[i];
+  for (i = 0; i < list.length; i++) { var nm = String(list[i].name || '').toLowerCase(); if (nm.indexOf(a) >= 0 || nm.indexOf(b) >= 0) return list[i]; }
+  return null;
+}
+// o: { lines, bs (oil weight, g), superfat, lyeType, kohPurity (0-1), ings }
+// or soapCost(f, ings) for a stored formulation (its version's batch size and
+// soap settings). Returns { cost, mass, perG, oilG, addG, lyeG, lyeIng,
+// missing: [names without a price], noSap: [oils without SAP] }.
+function soapCost(o, ings2) {
+  if (o && o.lines && ings2 && !o.ings) {
+    var f = o, s = f.soapSettings || {};
+    o = { lines: f.lines, bs: formBatchSize(f), superfat: s.superfat, lyeType: s.lyeType, kohPurity: s.kohPurity, ings: ings2 };
+  }
+  var ings = o.ings || [], bs = parseFloat(o.bs) || 1000;
+  var superfat = parseFloat(o.superfat); if (!isFinite(superfat)) superfat = 5;
+  var lyeType = o.lyeType === 'koh' ? 'koh' : 'naoh';
+  var purity = lyeType === 'koh' ? (parseFloat(o.kohPurity) > 1 ? parseFloat(o.kohPurity) / 100 : (parseFloat(o.kohPurity) || 0.9)) : 1;
+  var cost = 0, mass = 0, any = false, missing = [], noSap = [], pure = 0, oilG = 0, addG = 0;
+  var price = function (ing, g, name) {
+    if (!(g > 0)) return;
+    mass += g;
+    var c = costPerG(ing);
+    if (c === null) { if (missing.indexOf(name) === -1) missing.push(name); return; }
+    cost += c * g; any = true;
+  };
+  (o.lines || []).forEach(function (l) {
+    var ing = findIngIn(ings, l.ingId);
+    var name = (ing && (ing.name || ing.inci)) || '(a deleted ingredient)';
+    if (l.soapAddin) { var ag = parseFloat(l.gramsFixed) || 0; addG += ag; price(ing, ag, name); return; }
+    var g = (parseFloat(l.pct) || 0) / 100 * bs;
+    if (!(g > 0)) return;
+    oilG += g; price(ing, g, name);
+    var sap = ing && ing.soap && parseFloat(ing.soap[lyeType]);
+    if (sap > 0) pure += g * sap * (1 - superfat / 100); else noSap.push(name);
+  });
+  var lyeG = purity > 0 ? pure / purity : pure;
+  var lyeIng = lyeIngredient(ings, lyeType);
+  if (lyeG > 0) {
+    if (lyeIng) price(lyeIng, lyeG, lyeIng.name || 'Lye');
+    else { mass += lyeG; missing.push((lyeType === 'koh' ? 'Potassium hydroxide' : 'Sodium hydroxide') + ' (not in Ingredients)'); }
+  }
+  return { cost: cost, mass: mass, perG: (any && mass > 0) ? cost / mass : null,
+           oilG: oilG, addG: addG, lyeG: lyeG, lyeIng: lyeIng, missing: missing, noSap: noSap };
+}
 function formCostPerG(f, d) {
   if (!f || !f.lines || !f.lines.length) return null;
+  if (isSoapType(f.type)) return soapCost(f, d.ings).perG;
   var cost = 0, mass = 0, any = false;
   f.lines.forEach(function (line) {
     if (line.soapAddin) return;
@@ -4995,7 +5050,7 @@ return {
   fillShortages: fillShortages, fillPull: fillPull, fillReturn: fillReturn,
   makeFill: makeFill, undoFill: undoFill, undoFillText: undoFillText, fmtG: fmtG,
   lotBase: lotBase, lotNorm: lotNorm, lotsInUse: lotsInUse, nextLotCode: nextLotCode, lotCheck: lotCheck,
-  batchLot: batchLot, lotChip: lotChip, lotStickerSvg: lotStickerSvg, printLotStickers: printLotStickers, lotStickerSize: lotStickerSize, lotStickerRemember: lotStickerRemember, drawLot: drawLot, varTitle: varTitle, findVariant: findVariant, batchVersion: batchVersion, trackList: trackList, saveList: saveList, lotHere: lotHere, onOrderG: onOrderG, mergeList: mergeList, lineShare: lineShare, formBatchSize: formBatchSize,
+  batchLot: batchLot, lotChip: lotChip, lotStickerSvg: lotStickerSvg, printLotStickers: printLotStickers, lotStickerSize: lotStickerSize, lotStickerRemember: lotStickerRemember, drawLot: drawLot, varTitle: varTitle, findVariant: findVariant, batchVersion: batchVersion, soapCost: soapCost, lyeIngredient: lyeIngredient, trackList: trackList, saveList: saveList, lotHere: lotHere, onOrderG: onOrderG, mergeList: mergeList, lineShare: lineShare, formBatchSize: formBatchSize,
   migrateBatches: migrateBatches, logEntryFor: logEntryFor,
   boot: boot
 };

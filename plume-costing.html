@@ -2451,6 +2451,12 @@ function importData(e) {
 // cost/g data in the Ingredients library.
 function formulationCostDetail(f) {
   if (!f || !f.lines || !f.lines.length) return { perG:null, lines:[], missing:[], complete:false };
+  // Soap: oils, additives and lye, per gram of cured soap (core soapCost,
+  // 2026-10-25; it used to be the oils alone).
+  if (Plume.isSoapType(f.type)) {
+    var sc = Plume.soapCost(f, ings);
+    return { perG: sc.perG, lines: [], totalMass: sc.mass, missing: sc.missing, complete: sc.perG !== null && !sc.missing.length };
+  }
   var lineInfo = [];
   var totalCost = 0;
   var totalMass = 0;

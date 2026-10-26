@@ -1641,7 +1641,8 @@ function renderCards() {
     var cbs  = Plume.formBatchSize(f);
     var cl   = (f.lines || []).filter(function (l) { return f.addinsInTotal || !l.addin; });
     var cb   = Plume.isSoapType(f.type) ? null : calcBatchCost(cl, cbs);
-    var cost = cb !== null ? cb / cbs * 100 : (Plume.isSoapType(f.type) ? calcBatchCost(cl, 100) : null);
+    var sp   = Plume.isSoapType(f.type) ? Plume.soapCost(f, ings).perG : null;
+    var cost = cb !== null ? cb / cbs * 100 : (sp !== null ? sp * 100 : null);
     var costStr = cost !== null ? ('$' + cost.toFixed(2) + ' <span class="ps-muted">/ 100 g</span>') : '<span class="ps-muted">No cost data</span>';
     var d = f.updatedAt ? new Date(f.updatedAt) : null;
     var dateStr = d && !isNaN(d.getTime()) ? d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '';
@@ -2086,20 +2087,19 @@ function recalcSoap() {
 
   // Cost panel
   var cEl = document.getElementById('cost-panel');
-  var tc = 0; var hasCost = false;
-  fLines.forEach(function(l) {
-    var ing = ings.find(function(i) { return i.id === l.ingId; });
-    if (!ing) return;
-    var cpg = bestCpg(ing); if (cpg === null) return;
-    var g = l.soapAddin ? (parseFloat(l.gramsFixed) || 0) : ((parseFloat(l.pct) || 0) / 100 * bs);
-    tc += cpg * g; hasCost = true;
-  });
-  if (hasCost && totalBatch > 0) {
+  // Oils, additives and lye, the same figure Products & Costing uses
+  // (core soapCost, 2026-10-25). Per 100 g of cured soap: the water cures
+  // off, so it is left out of the weight.
+  var sc = Plume.soapCost({ lines: fLines, bs: bs, superfat: superfat, lyeType: lyeType, kohPurity: kohPurity, ings: ings });
+  var tc = sc.cost, hasCost = sc.perG !== null;
+  if (hasCost && sc.mass > 0) {
     var smiss = costMissingNote(fLines);
-    var sal = '';
+    var lyeMiss = sc.lyeG > 0 && !sc.lyeIng
+      ? '<div style="font-size:11px;color:var(--ink-lighter);margin-top:4px">' + (lyeType === 'koh' ? 'Potassium' : 'Sodium') + ' hydroxide is not in Ingredients, so the lye is not counted.</div>' : '';
     cEl.innerHTML =
-      '<div class="cost-row"><span>Total batch cost</span><span>' + sal + '$' + tc.toFixed(2) + '</span></div>' +
-      '<div class="cost-row"><span>Per 100g</span><span>' + sal + '$' + (tc / totalBatch * 100).toFixed(2) + '</span></div>' + smiss;
+      '<div class="cost-row"><span>Total batch cost</span><span>$' + tc.toFixed(2) + '</span></div>' +
+      '<div class="cost-row"><span>Per 100g of soap</span><span>$' + (sc.perG * 100).toFixed(2) + '</span></div>' +
+      '<div style="font-size:11px;color:var(--ink-lighter);margin-top:4px">Oils, additives and lye. Water is left out of the weight, as it cures off.</div>' + lyeMiss + smiss;
   } else {
     cEl.innerHTML = '<div style="font-size:12px;color:var(--ink-lighter)">Add ingredient costs in the library to see estimates.</div>';
   }
