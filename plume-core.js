@@ -35,7 +35,7 @@ var Plume = (function () {
 // (v0.4 / v0.5 / v0.6 across five modules). BUMP IT IN EVERY PULL REQUEST,
 // core change or not: it is how "is this the update I just merged?" is
 // answered by looking, and browsers cache .js files stubbornly.
-var VERSION = '1.55';
+var VERSION = '1.56';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -2002,7 +2002,9 @@ function dlgNext() {
   wrap.innerHTML =
     '<div class="plume-dlg" role="' + (isAsk ? 'alertdialog' : 'dialog') + '" aria-modal="true" aria-labelledby="plume-dlg-t" aria-describedby="plume-dlg-m">' +
       (o.title ? '<div class="plume-dlg-title" id="plume-dlg-t">' + esc(o.title) + '</div>' : '<span id="plume-dlg-t" hidden>Plume</span>') +
-      '<div class="plume-dlg-msg" id="plume-dlg-m">' + dlgParas(d.message) + '</div>' +
+      // opts.html: a message the caller built as markup, every value already
+      // escaped (the volume price repair's table). Everything else is text.
+      '<div class="plume-dlg-msg" id="plume-dlg-m">' + (o.html ? String(d.message) : dlgParas(d.message)) + '</div>' +
       (d.kind === 'value' ? '<input type="text" class="plume-dlg-input" value="' + esc(d.value == null ? '' : d.value) + '"' +
         (o.inputmode ? ' inputmode="' + esc(o.inputmode) + '"' : '') + '>' : '') +
       '<div class="plume-dlg-btns">' +
@@ -2220,9 +2222,59 @@ function boot(cb) {
   applySize();
   Store.init(function () {
     applyPalette(loadPaletteChoice());
+    try { fixVolumeLotCosts(); } catch (e) {}
     if (cb) cb();
     renderStorBanner();
   });
+}
+
+// ══ One-time repair: lots bought by volume (2026-10-26) ══
+// Before v1.55 a lot bought in mL or fl oz with no density typed on the
+// ingredient was priced as if it weighed like water, and that cost per gram
+// was saved: oils ~8-19% low, glycerin and sodium lactate ~26-32% high. Her
+// call: repair it automatically. Only a lot whose saved price still equals
+// the old water-based figure is changed (a price she typed is left alone),
+// and only where the density Plume now uses is not water's. Runs once; the
+// list of changes is kept for Ingredients to show her.
+var FIX_VOL_KEY = 'plume-fix-volcpg-v1';
+function fixVolumeLotCosts() {
+  if (Store.get(FIX_VOL_KEY)) return null;
+  var ings = Store.getJSON(KEYS.ings, null);
+  if (!Array.isArray(ings)) { Store.set(FIX_VOL_KEY, JSON.stringify({ at: todayISO(), changes: [], shown: true })); return null; }
+  var changes = [];
+  ings.forEach(function (ing) {
+    (ing.lots || []).forEach(function (l) {
+      var unit = l.purchaseUnit, size = parseFloat(l.purchaseSize), price = parseFloat(l.purchasePrice), cpg = parseFloat(l.costPerG);
+      if ((unit !== 'mL' && unit !== 'fl oz') || !(size > 0) || !(price > 0) || !(cpg > 0)) return;
+      var ml = size * (unit === 'fl oz' ? 29.5735 : 1);
+      if ((price / ml).toFixed(4) !== cpg.toFixed(4)) return;   // not the old figure
+      var d = densityFor(ing).value;
+      if (!(d > 0) || Math.abs(d - 1) < 1e-9) return;           // water: nothing to fix
+      var right = (price / (ml * d)).toFixed(4);
+      if (right === cpg.toFixed(4)) return;
+      changes.push({ ingId: ing.id, ing: ing.name || '', lotId: l.id || '', from: cpg.toFixed(4), to: right, density: d });
+      l.costPerG = right;
+    });
+  });
+  if (changes.length && !Store.setJSON(KEYS.ings, ings)) return null;   // try again next time
+  Store.set(FIX_VOL_KEY, JSON.stringify({ at: todayISO(), changes: changes, shown: !changes.length }));
+  return changes;
+}
+// Ingredients shows the list once.
+function fixVolumeNote() {
+  var r = null;
+  try { r = JSON.parse(Store.get(FIX_VOL_KEY) || 'null'); } catch (e) {}
+  if (!r || r.shown || !r.changes || !r.changes.length) return;
+  r.shown = true;
+  Store.set(FIX_VOL_KEY, JSON.stringify(r));
+  var rows = r.changes.map(function (c) {
+    var pct = Math.round((parseFloat(c.to) / parseFloat(c.from) - 1) * 100);
+    return '<tr><td>' + esc(c.ing) + '</td><td class="r">$' + esc(c.from) + '</td><td class="r">$' + esc(c.to) + '</td><td class="r">' + (pct > 0 ? '+' : '') + pct + '%</td></tr>';
+  }).join('');
+  tell('<p style="margin:0 0 8px">These lots were bought by volume with no density set, so their cost per gram had been figured as if they weighed like water. They now use the typical density for each ingredient. Typing the supplier\u2019s density on an ingredient makes its price exact.</p>' +
+    '<div style="max-height:320px;overflow:auto"><table class="fixvol"><thead><tr><th>Ingredient</th><th class="r">Was</th><th class="r">Now</th><th class="r"></th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
+    '<style>.fixvol{width:100%;border-collapse:collapse;font-size:12.5px}.fixvol th,.fixvol td{padding:4px 6px;border-bottom:1px solid var(--cream-dark);text-align:left}.fixvol .r{text-align:right;font-variant-numeric:tabular-nums}</style>',
+    { title: 'Corrected ' + r.changes.length + ' lot price' + (r.changes.length === 1 ? '' : 's'), html: true });
 }
 
 // ══ Ingredient functions & lookup ═════════════════════
@@ -5131,6 +5183,7 @@ return {
   lotBase: lotBase, lotNorm: lotNorm, lotsInUse: lotsInUse, nextLotCode: nextLotCode, lotCheck: lotCheck,
   batchLot: batchLot, lotChip: lotChip, lotStickerSvg: lotStickerSvg, printLotStickers: printLotStickers, lotStickerSize: lotStickerSize, lotStickerRemember: lotStickerRemember, drawLot: drawLot, varTitle: varTitle, findVariant: findVariant, batchVersion: batchVersion, soapCost: soapCost, lyeIngredient: lyeIngredient, addinGrams: addinGrams, addinRef: addinRef, trackList: trackList, saveList: saveList, lotHere: lotHere, onOrderG: onOrderG, mergeList: mergeList, lineShare: lineShare, formBatchSize: formBatchSize,
   migrateBatches: migrateBatches, logEntryFor: logEntryFor,
+  fixVolumeLotCosts: fixVolumeLotCosts, fixVolumeNote: fixVolumeNote,
   boot: boot
 };
 })();

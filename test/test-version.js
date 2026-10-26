@@ -52,7 +52,7 @@ PAGES.forEach(p => {
   {
     fs.mkdirSync(TMP, { recursive: true });
     let html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-    html = html.replace('<script src="plume-core.js"></script>', '<script>\n' + core + '\n</script>');
+    html = html.replace('<script src="plume-core.js"></script>', () => '<script>\n' + core + '\n</script>');
     const out = path.join(TMP, 'preview-index.html');
     fs.writeFileSync(out, html);
     const page = await browser.newPage();
