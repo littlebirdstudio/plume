@@ -673,7 +673,7 @@
     background: var(--white);
   }
   /* Lot card in drawer — three-row layout */
-  .drawer .lot-row {
+  #lots-block .lot-row {
     background: var(--cream);
     border-radius: 6px;
     padding: 14px 16px;
@@ -743,12 +743,12 @@
     font-weight: 600;
     letter-spacing: 0.08em;
   }
-  .drawer .lot-row .lf {
+  #lots-block .lot-row .lf {
     display: flex;
     flex-direction: column;
     gap: 4px;
   }
-  .drawer .lot-row label {
+  #lots-block .lot-row label {
     font-size: 9px;
     font-weight: 500;
     letter-spacing: 0.12em;
@@ -761,9 +761,9 @@
   .drawer-title { font-family: 'DM Sans', sans-serif; font-size: 19px; font-weight: 600; color: var(--ink); }
   .drawer-sub { font-size: 12.5px; }
   .drawer-body { padding: 18px 22px 26px; background: var(--cream); }
-  .drawer .lot-row { background: var(--white); border: 1px solid var(--cream-border); border-radius: 10px; padding: 14px 16px 6px; margin-bottom: 14px; }
-  .drawer .lot-row.lot-row-order { border: 1px dashed var(--bark-light); }
-  .drawer .lot-row.lot-row-reference { border-style: dashed; background: var(--cream); }
+  #lots-block .lot-row { background: var(--white); border: 1px solid var(--cream-border); border-radius: 10px; padding: 14px 16px 6px; margin-bottom: 14px; }
+  #lots-block .lot-row.lot-row-order { border: 1px dashed var(--bark-light); }
+  #lots-block .lot-row.lot-row-reference { border-style: dashed; background: var(--cream); }
   .lot-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
   .lot-pills { display: inline-flex; border: 1px solid var(--cream-border); border-radius: 999px; padding: 2px; background: var(--cream); }
   .lot-pill { font: inherit; font-size: 12.5px; border: 0; background: transparent; color: var(--ink-light); padding: 4px 12px; border-radius: 999px; cursor: pointer; white-space: nowrap; }
@@ -781,12 +781,12 @@
   .lot-sec { padding: 10px 0 8px; border-top: 1px solid var(--cream-dark); }
   .lot-sec:first-of-type { border-top: 0; }
   .lot-sec-h { font-size: 11.5px; font-weight: 600; color: var(--ink-light); margin-bottom: 7px; }
-  .drawer .lot-line { gap: 10px 12px; margin-bottom: 0; }
-  .drawer .lot-line-1 { grid-template-columns: 1.3fr 1fr 1.4fr 1fr 1fr; }
-  .drawer .lot-line-2 { grid-template-columns: 1.3fr 1fr 1fr 1fr; }
-  .drawer .lot-line-3 { grid-template-columns: 0.8fr 1.4fr 1.4fr; }
-  .drawer .lot-row .lf { gap: 4px; min-width: 0; }
-  .drawer .lot-row label { font-size: 11.5px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--ink-lighter); }
+  #lots-block .lot-line { gap: 10px 12px; margin-bottom: 0; }
+  #lots-block .lot-line-1 { grid-template-columns: 1.3fr 1fr 1.4fr 1fr 1fr; }
+  #lots-block .lot-line-2 { grid-template-columns: 1.3fr 1fr 1fr 1fr; }
+  #lots-block .lot-line-3 { grid-template-columns: 0.8fr 1.4fr 1.4fr; }
+  #lots-block .lot-row .lf { gap: 4px; min-width: 0; }
+  #lots-block .lot-row label { font-size: 11.5px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--ink-lighter); }
   .lot-inp, .lot-row .lot-inp, .lot-row select.lot-inp { font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 6px 8px; border: 1px solid var(--cream-border); border-radius: 7px; background: var(--white); color: var(--ink); outline: none; width: 100%; min-width: 0; box-sizing: border-box; }
   .lot-inp:focus, .lot-row .lot-inp:focus { border-color: var(--bark-light); box-shadow: 0 0 0 3px color-mix(in srgb, var(--bark) 14%, transparent); }
   .lot-inp:disabled, .lot-row .lot-inp:disabled { background: var(--cream-dark); color: var(--ink-lighter); }
@@ -821,19 +821,37 @@
   .lot-pair .lot-inp:first-child { flex: 1 1 60px; }
   .lot-pair .lot-unit { flex: 0 0 74px; padding-right: 4px; }
   .lot-row-order .lf-recv .lot-inp { border-style: dashed; }
-  .drawer .lot-certs { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 0; }
+  #lots-block .lot-certs { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 0; }
   .lot-tog { position: relative; display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px !important; color: var(--ink-light) !important;
     border: 1px solid var(--cream-border); border-radius: 999px; padding: 3px 11px; cursor: pointer; user-select: none; background: var(--white); }
   .lot-tog input { position: absolute; opacity: 0; pointer-events: none; }
   .lot-tog:has(input:checked) { background: var(--ink); color: var(--white) !important; border-color: var(--ink); }
   .lot-tog:has(input:checked)::before { content: '\2713'; }
   .lot-tog:has(input:focus-visible) { outline: 2px solid var(--bark); outline-offset: 1px; }
-  .drawer .lot-cert-other { width: 200px; flex: 0 1 200px; }
+  #lots-block .lot-cert-other { width: 200px; flex: 0 1 200px; }
+  /* The lots in the Stock & cost tab (2026-10-26): a cream well so the
+     white purchase cards stand out, as they do in the drawer. */
+  #lots-home #lots-block { background: var(--cream); border-radius: 12px; padding: 12px; }
+  #lots-block .lot-line-1 { grid-template-columns: 1.3fr 1fr; margin-bottom: 10px; }
+  #lots-block .lot-line-buy { grid-template-columns: 0.55fr 1.5fr 1.2fr 1fr; gap: 10px 12px; }
+  #lots-block .lot-row.lot-locked .lot-buyedit, #lots-block .lot-row.lot-locked .lot-buy-sum { display: none; }
+  #lots-block .lot-row:not(.lot-locked) .lot-buyfixed { display: none; }
+  #lots-block .lot-row.lot-locked .lot-buyfixed { grid-column: span 3; }
+  .lot-fixed { min-height: 32px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13.5px; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .lot-link { font: inherit; font-size: 12.5px; border: 0; background: none; padding: 0; color: var(--bark); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+  .lot-link:focus-visible { outline: 2px solid var(--bark); outline-offset: 2px; }
+  .lot-is { display: inline-flex; margin-left: 6px; border: 1px solid var(--cream-border); border-radius: 999px; padding: 1px; background: var(--cream); vertical-align: middle; }
+  .lot-is-b { font: inherit; font-size: 11px; border: 0; background: none; color: var(--ink-light); padding: 0 8px; border-radius: 999px; cursor: pointer; line-height: 1.7; text-transform: none; letter-spacing: 0; }
+  .lot-is-b.on { background: var(--ink); color: var(--white); }
+  .lot-is-b:focus-visible { outline: 2px solid var(--bark); outline-offset: 1px; }
+  .lot-correct-note { font-size: 12px; color: var(--bark); margin: 6px 0 0; }
+  .lot-correct-note[hidden] { display: none; }
   .add-lot-btn { border-radius: 9px; font-size: 13px; padding: 9px 14px; background: var(--white); }
   .add-sup-btn { flex: 0 0 auto; width: auto; white-space: nowrap; }
   @media (max-width: 720px) {
-    .drawer .lot-line-1, .drawer .lot-line-2, .drawer .lot-line-3 { grid-template-columns: 1fr 1fr; }
-    .drawer .lf-sup { grid-column: 1 / -1; }
+    #lots-block .lot-line-1, #lots-block .lot-line-2, #lots-block .lot-line-3, #lots-block .lot-line-buy { grid-template-columns: 1fr 1fr; }
+    #lots-block .lot-row.lot-locked .lot-buyfixed { grid-column: 1 / -1; }
+    #lots-block .lf-sup { grid-column: 1 / -1; }
     .lot-top-acts { margin-left: 0; }
   }
   .cpg-note-inline {
@@ -1748,10 +1766,39 @@
     </div>
 
     <div class="ed-pane" data-pane="stock" hidden>
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:4px 0 10px">
-        <div style="font-size:13px;color:var(--ink-light)" id="lots-summary">No lots added yet.</div>
-        <button class="btn btn-sm" onclick="openLotsDrawer()">Manage lots &rsaquo;</button>
+      <div style="font-size:13px;color:var(--ink-light);padding:4px 0 10px" id="lots-summary">No lots added yet.</div>
+      <!-- The lots sit right here (2026-10-26, her ask). The slide-in drawer,
+           opened from the list or the details page, borrows this block
+           (placeLots) and gives it back when it closes. -->
+      <div id="lots-home"><div id="lots-block">
+      <div id="lots-container"></div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="add-lot-btn" onclick="addLotRow()" style="flex:1">+ Add a purchase</button>
+        <button class="add-lot-btn add-sup-btn" onclick="toggleInlineSupplierForm()" id="add-supplier-toggle-btn">+ New supplier</button>
       </div>
+      <!-- Inline supplier mini-form -->
+      <div class="inline-supplier-form" id="inline-supplier-form">
+        <div class="inline-supplier-form-title">New supplier &mdash; saves automatically as you fill in each field</div>
+        <div class="isf-grid">
+          <div>
+            <label class="isf-label">Supplier name *</label>
+            <input type="text" class="isf-inp" id="isf-name" placeholder="e.g. Lotioncrafter" onblur="autoSaveInlineSupplier()">
+          </div>
+          <div>
+            <label class="isf-label">Website</label>
+            <input type="url" class="isf-inp" id="isf-web" placeholder="https://&hellip;" onblur="autoSaveInlineSupplier()">
+          </div>
+          <div>
+            <label class="isf-label">Notes</label>
+            <input type="text" class="isf-inp" id="isf-notes" placeholder="Shipping speed, specialty, etc." onblur="autoSaveInlineSupplier()">
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;align-items:center">
+          <span style="font-size:11px;color:var(--sage-dark);display:none" id="isf-saved-note">Saved</span>
+          <button class="btn btn-sm" onclick="closeInlineSupplierForm()">Done</button>
+        </div>
+      </div>
+      </div></div>
       <div class="made-from" id="f-madefrom" hidden></div>
       <label class="restrict-toggle" id="f-nocost-row" style="margin:4px 0 14px"><input type="checkbox" id="f-nocost"> Made in-house or free: count it as $0 <span class="hint">&mdash; when it has no lot price, so costs are not flagged as missing</span></label>
       <div class="form-grid">
@@ -1876,11 +1923,12 @@
           <div class="field span2"><label for="qa-sup">Supplier</label><input type="text" id="qa-sup" list="qa-sup-list" placeholder="e.g. Mountain Rose Herbs" autocomplete="off"><datalist id="qa-sup-list"></datalist></div>
           <div class="field"><label for="qa-order">Order #</label><input type="text" id="qa-order" placeholder="optional"></div>
           <div class="field"><label for="qa-received">Received</label><input type="date" id="qa-received"></div>
-          <div class="field span2"><label for="qa-size">Bought (total)</label><div class="lot-pair qa-bought"><input type="text" inputmode="decimal" id="qa-size" placeholder="e.g. 16, or 2 x 4" oninput="qaMathInput(this)" onblur="qaMathBlur(this)"><select id="qa-unit" onchange="qaCost()" aria-label="Unit"><option value="g">g</option><option value="kg">kg</option><option value="oz">oz (wt)</option><option value="lb">lb</option><option value="mL">mL</option><option value="L">L</option><option value="fl oz">fl oz</option><option value="gal">gal</option></select></div></div>
-          <div class="field"><label for="qa-price">Price paid, total ($)</label><input type="text" inputmode="decimal" id="qa-price" placeholder="0.00, or 2 x 9.99" oninput="qaMathInput(this)" onblur="qaMathBlur(this)"></div>
-          <div class="field"><label>Cost per gram</label><div class="qa-cpg none" id="qa-cpg">From bought and price</div><div class="qa-cpg-note" id="qa-cpg-note"></div></div>
+          <div class="field"><label for="qa-count">How many</label><input type="number" id="qa-count" step="1" min="1" value="1" oninput="qaCost()"></div>
+          <div class="field span2"><label for="qa-size">Size of each</label><div class="lot-pair qa-bought"><input type="number" id="qa-size" step="0.01" min="0" placeholder="e.g. 16" oninput="qaCost()"><select id="qa-unit" onchange="qaCost()" aria-label="Unit"><option value="g">g</option><option value="kg">kg</option><option value="oz">oz (wt)</option><option value="lb">lb</option><option value="mL">mL</option><option value="L">L</option><option value="fl oz">fl oz</option><option value="gal">gal</option></select></div></div>
+          <div class="field"><label for="qa-price">Price paid ($) <span class="lot-is qa-is" role="group" aria-label="The price is"><button type="button" class="lot-is-b on" data-is="each" aria-pressed="true" onclick="qaPriceIs('each')">each</button><button type="button" class="lot-is-b" data-is="total" aria-pressed="false" onclick="qaPriceIs('total')">total</button></span></label><input type="number" id="qa-price" step="0.01" min="0" placeholder="0.00" oninput="qaCost()"><input type="hidden" id="qa-price-is" value="each"></div>
+          <div class="field"><label>Cost per gram</label><div class="qa-cpg none" id="qa-cpg">From size and price</div><div class="qa-cpg-note" id="qa-cpg-note"></div></div>
           <div class="field"><label for="qa-lot">Lot #</label><input type="text" id="qa-lot" placeholder="optional"></div>
-          <div class="field qa-span3"><label for="qa-link">Purchase link <span class="qa-h">the product page, for reordering</span></label><input type="url" id="qa-link" placeholder="https://…" autocomplete="off"></div>
+          <div class="field span2"><label for="qa-link">Purchase link <span class="qa-h">the product page, for reordering</span></label><input type="url" id="qa-link" placeholder="https://…" autocomplete="off"></div>
         </div>
         <div class="field qa-certs-f">
           <label>Certifications</label>
@@ -2062,8 +2110,6 @@ function lotInp(attrs) {
   if (attrs.id)          html += ' id="' + attrs.id + '"';
   if (attrs.field)       html += ' data-field="' + attrs.field + '"';
   if (attrs.step)        html += ' step="' + attrs.step + '"';
-  if (attrs.inputmode)   html += ' inputmode="' + attrs.inputmode + '"';
-  if (attrs.title)       html += ' title="' + esc(attrs.title) + '"';
   if (attrs.min !== undefined) html += ' min="' + attrs.min + '"';
   if (attrs.placeholder) html += ' placeholder="' + esc(attrs.placeholder) + '"';
   if (attrs.value !== undefined && attrs.value !== null && attrs.value !== '') html += ' value="' + esc(attrs.value) + '"';
@@ -3824,7 +3870,9 @@ function qaOnOrder() {
   });
 }
 function qaClear(keepOrder) {
-  ['qa-name', 'qa-inci', 'qa-size', 'qa-price', 'qa-lot', 'qa-link'].forEach(function(id) { var el = document.getElementById(id); el.value = ''; if (el.dataset) delete el.dataset.expr; });
+  ['qa-name', 'qa-inci', 'qa-size', 'qa-price', 'qa-lot', 'qa-link'].forEach(function(id) { document.getElementById(id).value = ''; });
+  document.getElementById('qa-count').value = '1';
+  qaPriceIs('each');
   fillUsageForm('qa', null);
   document.getElementById('qa-phase').value = 'water';
   document.getElementById('qa-unit').value = 'g';
@@ -3899,28 +3947,31 @@ function qaUseStarter(idx) {
   qaCost();
 }
 // The grams the purchase holds, and its cost per gram, as typed.
+function qaPriceIs(v) {
+  document.getElementById('qa-price-is').value = v;
+  document.querySelectorAll('.qa-is .lot-is-b').forEach(function (b) { var on = b.getAttribute('data-is') === v; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
+  qaCost();
+}
+// How many × Size of each, and the price each or in total, into the totals
+// the lot stores.
 function qaPurchase() {
-  var sv = Plume.mathVal(qaVal('qa-size')), size = isNaN(sv) ? '' : String(sv);
-  var unit = document.getElementById('qa-unit').value, price = Plume.mathVal(qaVal('qa-price'));
+  var n = Math.max(1, parseInt(qaVal('qa-count'), 10) || 1), each = parseFloat(qaVal('qa-size'));
+  var is = document.getElementById('qa-price-is').value || 'each', pr = parseFloat(qaVal('qa-price'));
+  var size = each > 0 ? fmtQty(n * each) : '', unit = document.getElementById('qa-unit').value;
+  var price = pr > 0 ? Math.round((is === 'each' ? pr * n : pr) * 100) / 100 : NaN;
   var vol = Plume.isVolUnit(unit);
   var dens = vol ? Plume.densityFor({ inci: qaVal('qa-inci'), phase: document.getElementById('qa-phase').value, functionCategory: qaReadFuncs() }) : null;
   var g = lotSizeToGrams(size, unit, dens ? dens.value : 1);
-  return { size: size, unit: unit, price: price, grams: g, cpg: g && price > 0 ? price / g : null, dens: dens };
-}
-function qaMathInput(el) { if (el.dataset) delete el.dataset.expr; qaCost(); }
-function qaMathBlur(el) {
-  var m = Plume.mathNum(el.value);
-  if (m && m.parts) { el.dataset.expr = m.parts.join(' \u00d7 '); el.value = fmtQty(m.value); qaCost(); }
+  return { size: size, unit: unit, price: price, grams: g, cpg: g && price > 0 ? price / g : null, dens: dens, n: n, each: each, pr: pr, is: is };
 }
 function qaCost() {
   var p = qaPurchase(), el = document.getElementById('qa-cpg'), note = document.getElementById('qa-cpg-note');
-  if (p.cpg === null) { el.className = 'qa-cpg none'; el.textContent = 'From bought and price'; note.textContent = ''; return; }
+  if (p.cpg === null) { el.className = 'qa-cpg none'; el.textContent = 'From size and price'; note.textContent = ''; return; }
   el.className = 'qa-cpg';
   el.textContent = '$' + p.cpg.toFixed(4);
   // Bought by volume: say which density turned mL into grams.
   // A plain guess (no density known) says so on the page, not only on hover.
-  var spell = [mathSpell(document.getElementById('qa-size'), p.unit), mathSpell(document.getElementById('qa-price'), '', true)]
-    .filter(function (t) { return t.indexOf('=') !== -1; });
+  var spell = p.n > 1 && p.each > 0 ? [p.n + ' \u00d7 ' + fmtQty(p.each) + ' ' + p.unit + ' = ' + p.size + ' ' + p.unit + ' for $' + p.price.toFixed(2)] : [];
   note.textContent = spell.concat(p.dens ? ['at ' + p.dens.value + ' g/mL' + (p.dens.source === 'default' ? ', a guess' : '')] : []).join(' · ');
   note.title = p.dens ? 'Bought by volume: ' + p.dens.value + ' g/mL turns it into grams (' + (p.dens.why || 'assumed') + ').' : '';
 }
@@ -3955,6 +4006,7 @@ function qaBuild() {
     var lot = {
       id: 'L1', supplier: sup, brand: '',
       purchaseSize: p.size, purchaseUnit: p.unit, purchasePrice: p.price > 0 ? String(p.price) : '',
+      buyCount: String(p.n), buySize: p.each > 0 ? String(p.each) : '', buyPrice: p.pr > 0 ? String(p.pr) : '', buyPriceIs: p.is,
       costPerG: p.cpg !== null ? p.cpg.toFixed(4) : '',
       qtyPurchased: p.size, qtyUnit: p.unit,
       lotNum: qaVal('qa-lot'), received: onOrd ? '' : qaVal('qa-received'), bestBy: '', orderNum: qaVal('qa-order'),
@@ -4577,7 +4629,6 @@ function addLotRow(lot) {
 
   // ── Unit option builders ──
   function purchaseUnitOpts(sel) { return Plume.lotUnitOptions(sel); }
-  function qtyUnitOpts(sel) { return Plume.lotUnitOptions(sel); }
 
   // ── The 2026-10-25 refresh: status pills, then three labelled groups ──
   // Every input keeps its data-field, so getLots, duplicateLotRow and
@@ -4608,6 +4659,20 @@ function addLotRow(lot) {
     '</div>' +
     '<div class="lot-state-note" data-note>' + lotStateNote(state) + '</div>';
 
+  // ── What was bought (2026-10-26, her ask) ──
+  // How many, Size of each and Price each / total are what she types; the
+  // lot still stores the totals (purchaseSize, purchasePrice, hidden here)
+  // that everything else reads. A saved lot shows what was bought as text
+  // with "Correct it": typing new stock into a saved lot's Bought box read as
+  // "this purchase was smaller" and dropped on hand (Beeswax, 454 g bought,
+  // 300 g left, "30" typed: on hand went to 0). New stock is a new purchase.
+  var bCount = lot && lot.buyCount ? lot.buyCount : '1';
+  var bEach  = lot && lot.buySize ? lot.buySize : (lot && lot.purchaseSize ? lot.purchaseSize : '');
+  var bIs    = lot && lot.buyPriceIs ? lot.buyPriceIs : (lot && lot.purchasePrice ? 'total' : 'each');
+  var bPrice = lot && lot.buyPrice ? lot.buyPrice : (lot && lot.purchasePrice ? lot.purchasePrice : '');
+  var isPill = function (v, label) {
+    return '<button type="button" class="lot-is-b' + (bIs === v ? ' on' : '') + '" data-is="' + v + '" aria-pressed="' + (bIs === v) + '" onclick="lotPriceIs(\'' + id + '\',\'' + v + '\')">' + label + '</button>';
+  };
   var line1 =
     '<div class="lot-sec"><div class="lot-sec-h">Purchase</div>' +
     '<div class="lot-line lot-line-1">' +
@@ -4617,25 +4682,34 @@ function addLotRow(lot) {
       '<div class="lf"><label>Brand</label>' +
         lotInp({ field:'brand', placeholder:'e.g. NOW, Timeless', value: brandName, list:'brand-datalist', onblur:'saveNewBrand(this.value)' }) +
       '</div>' +
-      // Bought and Price paid are the whole purchase (2026-10-25, her call:
-      // enter the total amount and the total paid, not the containers).
-      '<div class="lf lf-bought"><label>Bought (total)</label>' +
+    '</div>' +
+    '<div class="lot-line lot-line-buy">' +
+      '<div class="lf lot-buyedit"><label>How many</label>' +
+        lotInp({ type:'number', field:'buyCount', id:id+'-bcount', step:'1', min:'1', value: bCount, oninput:"lotBuySync('" + id + "')" }) +
+      '</div>' +
+      '<div class="lf lf-bought lot-buyedit"><label>Size of each</label>' +
         '<div class="lot-pair">' +
-          lotInp({ field:'purchaseSize', id:id+'-psize', inputmode:'decimal', placeholder:'500, or 2 x 4', title:'The total bought. Several of the same? Type 2 x 4 for two of 4.',
-                   value: lot && lot.purchaseSize ? lot.purchaseSize : '', oninput:"lotMathInput(this,'" + id + "')", onblur:"lotMathBlur(this,'" + id + "')" }) +
-          '<select class="lot-inp lot-unit" data-field="purchaseUnit" id="' + id + '-punit" onchange="calcLotCostPerG(\'' + id + '\')">' + purchaseUnitOpts(pUnit) + '</select>' +
+          lotInp({ type:'number', field:'buySize', id:id+'-bsize', step:'0.01', min:'0', placeholder:'500', value: bEach, oninput:"lotBuySync('" + id + "')" }) +
+          '<select class="lot-inp lot-unit" data-field="purchaseUnit" id="' + id + '-punit" onchange="lotBuySync(\'' + id + '\')">' + purchaseUnitOpts(pUnit) + '</select>' +
         '</div>' +
       '</div>' +
-      '<div class="lf"><label>Price paid, total ($)</label>' +
-        lotInp({ field:'purchasePrice', id:id+'-pprice', inputmode:'decimal', placeholder:'0.00, or 2 x 9.99', title:'The total paid. Several at one price? Type 2 x 9.99.',
-                 value: lot && lot.purchasePrice ? lot.purchasePrice : '', oninput:"lotMathInput(this,'" + id + "')", onblur:"lotMathBlur(this,'" + id + "')" }) +
+      '<div class="lf lot-buyedit"><label>Price paid ($) <span class="lot-is" role="group" aria-label="The price is">' + isPill('each', 'each') + isPill('total', 'total') + '</span></label>' +
+        lotInp({ type:'number', field:'buyPrice', id:id+'-bprice', step:'0.01', min:'0', placeholder:'0.00', value: bPrice, oninput:"lotBuySync('" + id + "')" }) +
+        '<input type="hidden" data-field="buyPriceIs" id="' + id + '-bpis" value="' + bIs + '">' +
+      '</div>' +
+      '<div class="lf lot-buyfixed"><label>Bought</label>' +
+        '<div class="lot-fixed"><span id="' + id + '-fixed"></span> <button type="button" class="lot-link" onclick="lotCorrect(\'' + id + '\')">Correct it</button></div>' +
       '</div>' +
       '<div class="lf"><label>Cost per gram ($)</label>' +
         lotInp({ type:'number', field:'costPerG', id:id+'-cpg', step:'0.0001', min:'0', placeholder:'auto',
                  value: lot && lot.costPerG ? lot.costPerG : '' }) +
         '<div class="cpg-note-inline" id="' + id + '-cpg-note"></div>' +
       '</div>' +
-    '</div><div class="lot-buy-sum" id="' + id + '-buy-sum"></div></div>';
+      '<input type="hidden" data-field="purchaseSize" id="' + id + '-psize" value="' + esc(lot && lot.purchaseSize ? lot.purchaseSize : '') + '" oninput="calcLotCostPerG(\'' + id + '\')">' +
+      '<input type="hidden" data-field="purchasePrice" id="' + id + '-pprice" value="' + esc(lot && lot.purchasePrice ? lot.purchasePrice : '') + '" oninput="calcLotCostPerG(\'' + id + '\')">' +
+    '</div>' +
+    '<div class="lot-correct-note" id="' + id + '-correct-note" hidden>Correcting what this purchase was: on hand moves by the difference. New stock goes in with <b>+ Add a purchase</b>.</div>' +
+    '<div class="lot-buy-sum" id="' + id + '-buy-sum"></div></div>';
 
   var line2 =
     '<div class="lot-sec"><div class="lot-sec-h">Stock and dates</div>' +
@@ -4692,6 +4766,8 @@ function addLotRow(lot) {
 
   div.innerHTML = header + line1 + line2 + line3 + certLine + actions;
   c.appendChild(div);
+  // A saved lot is a purchase already made: what was bought shows as text.
+  if (lot && lot.id) div.classList.add('lot-locked');
   div.classList.toggle('lot-row-order', isOnOrder && !isRefOnly);
 
   // Apply reference-only state if loading a lot that was saved as such
@@ -4750,7 +4826,7 @@ function syncOnHand(rowId) {
   var qty = document.getElementById(rowId + '-qty'), qu = document.getElementById(rowId + '-qunit');
   var show = document.getElementById(rowId + '-qty-show'), note = document.getElementById(rowId + '-qty-note');
   if (!qty || !qu || !show) return;
-  var size = Plume.mathVal((document.getElementById(rowId + '-psize') || {}).value);
+  var size = parseFloat((document.getElementById(rowId + '-psize') || {}).value);
   var unit = (document.getElementById(rowId + '-punit') || {}).value || 'g';
   var follows = row.dataset.follows === '1';
   var boughtG = rowBoughtG(rowId);
@@ -4774,7 +4850,7 @@ function syncOnHand(rowId) {
     note.textContent = follows
       ? (size > 0 ? 'Starts at what you bought.' : 'Fill in Bought and this starts there.')
       : moved ? (floor ? 'Cannot go below zero. ' : '') + 'Was ' + fmtQty(parseFloat(row.dataset.qty0) || 0) + ': moved with Bought. Noted in this lot\u2019s history when you save.'
-      : (row.dataset.lotId ? 'Moves with Bought. Batches take from it; to correct it, use Adjust.' : '');
+      : (row.dataset.lotId ? 'Batches take from it. To set it to a count, use Adjust.' : '');
   }
 }
 var LOT_ADJ_REASONS = ['Recount', 'Entry error', 'Spilled or spoiled', 'Used outside a batch', 'Other'];
@@ -4970,7 +5046,13 @@ function hasStock(ing) {
 }
 
 // ── Lots drawer ───────────────────────────────────────
+// The lots block lives in the Stock & cost tab; the drawer borrows it.
+function placeLots(where) {
+  var b = document.getElementById('lots-block'), t = document.getElementById(where === 'drawer' ? 'lots-drawer-slot' : 'lots-home');
+  if (b && t && b.parentNode !== t) t.appendChild(b);
+}
 function openLotsDrawer() {
+  placeLots('drawer');
   var ingName = document.getElementById('f-name').value.trim();
   document.getElementById('lots-drawer-title').textContent = ingName ? 'Lots \u2014 ' + ingName : 'Supplier lots';
   document.getElementById('lots-drawer-overlay').classList.add('open');
@@ -4981,6 +5063,7 @@ function closeLotsDrawer(e) {
   if (e && e.target !== document.getElementById('lots-drawer-overlay')) return;
   document.getElementById('lots-drawer-overlay').classList.remove('open');
   document.body.style.overflow = '';
+  placeLots('home');
   updateLotsSummary();
   // Opened straight from the details page (no Edit form on screen): closing
   // the drawer saves the lots and refreshes the page, since there is no form
@@ -5124,30 +5207,48 @@ function saveNewBrand(val) {
 // ── Auto cost/g calculation ───────────────────────────
 // Conversion table to grams. For mL we need density from the ingredient field.
 function lotSizeToGrams(size, unit, density) {
-  var s = Plume.mathVal(size);   // "2 x 4" reads as 8
+  var s = parseFloat(size);
   if (isNaN(s) || s <= 0) return null;
   if (Plume.LOT_UNITS.every(function (u) { return u[0] !== unit; })) return null;
   return Plume.qtyToGrams(s, unit, parseFloat(density) || 1.0); // caller resolves density via Plume.densityFor
 }
-// Arithmetic in Bought and Price paid (2026-10-26): while typing, the line
-// under the purchase spells it out; on leaving the box the value becomes the
-// result and the parts are kept on the box (data-expr) for that line.
-function lotMathInput(el, rowId) { if (el.dataset) delete el.dataset.expr; calcLotCostPerG(rowId); }
-function lotMathBlur(el, rowId) {
-  var m = Plume.mathNum(el.value);
-  if (m && m.parts) { el.dataset.expr = m.parts.join(' \u00d7 '); el.value = fmtQty(m.value); calcLotCostPerG(rowId); }
-}
-// "2 \u00d7 4 oz = 8 oz" when a box was a product (typed now, or just turned
-// into its result); otherwise just the amount.
-function mathSpell(el, unit, money) {
-  var m = Plume.mathNum(el.value), parts = (m && m.parts) ? m.parts.join(' \u00d7 ') : (el.dataset ? el.dataset.expr : '');
-  var val = m ? m.value : NaN;
-  var show = function (v) { return money ? '$' + v.toFixed(2) : fmtQty(v) + (unit ? ' ' + unit : ''); };
-  if (!parts) return show(val);
-  var p = parts.split(' \u00d7 ');
-  return (money ? p.slice(0, -1).join(' \u00d7 ') + ' \u00d7 $' + parseFloat(p[p.length - 1]).toFixed(2) : parts + (unit ? ' ' + unit : '')) + ' = ' + show(val);
-}
 
+// How many × Size of each, and Price each / total, into the lot's stored
+// totals (purchaseSize, purchasePrice), then the cost per gram.
+function lotBuySync(id) {
+  var g = function (k) { return document.getElementById(id + '-' + k); };
+  var n = Math.max(1, parseInt((g('bcount') || {}).value, 10) || 1);
+  var each = parseFloat((g('bsize') || {}).value), price = parseFloat((g('bprice') || {}).value);
+  var is = ((g('bpis') || {}).value) || 'each';
+  if (g('psize')) g('psize').value = each > 0 ? fmtQty(n * each) : '';
+  if (g('pprice')) g('pprice').value = price > 0 ? String(Math.round((is === 'each' ? price * n : price) * 100) / 100) : '';
+  calcLotCostPerG(id);
+}
+function lotPriceIs(id, v) {
+  var h = document.getElementById(id + '-bpis'); if (h) h.value = v;
+  var row = document.getElementById(id);
+  if (row) row.querySelectorAll('.lot-is-b').forEach(function (b) { var on = b.getAttribute('data-is') === v; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
+  lotBuySync(id);
+}
+function lotCorrect(id) {
+  var row = document.getElementById(id); if (!row) return;
+  row.classList.remove('lot-locked');
+  var n = document.getElementById(id + '-correct-note'); if (n) n.hidden = false;
+  var f = document.getElementById(id + '-bsize'); if (f) f.focus();
+}
+// "2 × 4 oz = 8 oz" or "8 oz"; "2 × $9.99 = $19.98" or "$19.98".
+function lotBoughtText(id) {
+  var g = function (k) { return (document.getElementById(id + '-' + k) || {}).value; };
+  var n = Math.max(1, parseInt(g('bcount'), 10) || 1), each = parseFloat(g('bsize')), tot = parseFloat(g('psize')), u = g('punit') || 'g';
+  if (!(tot > 0)) return '';
+  return (n > 1 && each > 0 ? n + ' \u00d7 ' + fmtQty(each) + ' ' + u + ' = ' : '') + fmtQty(tot) + ' ' + u;
+}
+function lotPaidText(id) {
+  var g = function (k) { return (document.getElementById(id + '-' + k) || {}).value; };
+  var n = Math.max(1, parseInt(g('bcount'), 10) || 1), price = parseFloat(g('bprice')), tot = parseFloat(g('pprice'));
+  if (!(tot > 0)) return '';
+  return (n > 1 && g('bpis') === 'each' && price > 0 ? n + ' \u00d7 $' + price.toFixed(2) + ' = ' : '') + '$' + tot.toFixed(2);
+}
 function calcLotCostPerG(lotId) {
   var psize  = document.getElementById(lotId + '-psize');
   var punit  = document.getElementById(lotId + '-punit');
@@ -5156,12 +5257,17 @@ function calcLotCostPerG(lotId) {
   var cpgNote = document.getElementById(lotId + '-cpg-note');
   if (!psize || !punit || !pprice || !cpg) return;
 
-  var size  = Plume.mathVal(psize.value);
+  var size  = psize.value;
   var unit  = punit.value;
-  var price = Plume.mathVal(pprice.value);
+  var price = parseFloat(pprice.value);
   syncOnHand(lotId);
   var sum = document.getElementById(lotId + '-buy-sum');
   if (sum) sum.textContent = '';
+  var fixed = document.getElementById(lotId + '-fixed');
+  if (fixed) {
+    var bt = lotBoughtText(lotId), pt = lotPaidText(lotId);
+    fixed.textContent = bt ? bt + (pt ? ' for ' + pt : '') : 'Not recorded';
+  }
 
   if (!size || isNaN(price) || price <= 0) return; // not enough data yet
 
@@ -5181,8 +5287,8 @@ function calcLotCostPerG(lotId) {
   var result = price / grams;
   cpg.value = result.toFixed(4);
   if (sum) {
-    sum.textContent = mathSpell(psize, unit) + (unit !== 'g' ? ' (' + fmtQty(grams) + ' g)' : '') +
-      ' for ' + mathSpell(pprice, '', true) + ', $' + result.toFixed(4) + '/g';
+    sum.textContent = lotBoughtText(lotId) + (unit !== 'g' ? ' (' + fmtQty(grams) + ' g)' : '') +
+      ' for ' + lotPaidText(lotId) + ', $' + result.toFixed(4) + '/g';
   }
   if (cpgNote) {
     if (needsDensity && usingDefault) {
@@ -5305,11 +5411,6 @@ function getLots() {
         f[el.dataset.field] = el.checked;
       } else {
         f[el.dataset.field] = el.value.trim();
-        // "2 x 4" saves as 8 even if the box was never left.
-        if (el.dataset.field === 'purchaseSize' || el.dataset.field === 'purchasePrice') {
-          var mv = Plume.mathNum(f[el.dataset.field]);
-          if (mv && mv.parts) f[el.dataset.field] = String(mv.value);
-        }
       }
     });
     // Preserve the persisted lot id (or absence thereof — saveIngredient
@@ -5806,35 +5907,7 @@ if (typeof Plume === 'undefined') {
       </div>
       <button class="drawer-x" onclick="closeLotsDrawer()">&#x2715;</button>
     </div>
-    <div class="drawer-body">
-      <div id="lots-container"></div>
-      <div style="display:flex;gap:8px;margin-top:8px">
-        <button class="add-lot-btn" onclick="addLotRow()" style="flex:1">+ Add a lot</button>
-        <button class="add-lot-btn add-sup-btn" onclick="toggleInlineSupplierForm()" id="add-supplier-toggle-btn">+ New supplier</button>
-      </div>
-      <!-- Inline supplier mini-form -->
-      <div class="inline-supplier-form" id="inline-supplier-form">
-        <div class="inline-supplier-form-title">New supplier &mdash; saves automatically as you fill in each field</div>
-        <div class="isf-grid">
-          <div>
-            <label class="isf-label">Supplier name *</label>
-            <input type="text" class="isf-inp" id="isf-name" placeholder="e.g. Lotioncrafter" onblur="autoSaveInlineSupplier()">
-          </div>
-          <div>
-            <label class="isf-label">Website</label>
-            <input type="url" class="isf-inp" id="isf-web" placeholder="https://&hellip;" onblur="autoSaveInlineSupplier()">
-          </div>
-          <div>
-            <label class="isf-label">Notes</label>
-            <input type="text" class="isf-inp" id="isf-notes" placeholder="Shipping speed, specialty, etc." onblur="autoSaveInlineSupplier()">
-          </div>
-        </div>
-        <div style="display:flex;gap:8px;justify-content:flex-end;align-items:center">
-          <span style="font-size:11px;color:var(--sage-dark);display:none" id="isf-saved-note">Saved</span>
-          <button class="btn btn-sm" onclick="closeInlineSupplierForm()">Done</button>
-        </div>
-      </div>
-    </div>
+    <div class="drawer-body" id="lots-drawer-slot"></div>
     <div class="drawer-foot">
       <button class="btn" onclick="closeLotsDrawer()">Done</button>
     </div>
