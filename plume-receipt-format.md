@@ -41,7 +41,9 @@ reply: anything left out and why, anything guessed, and any question in
   ("Mountain Rose Herbs", not "MRH Inc. Order Confirmation").
 - `orderNum`: the order number exactly as printed. Plume uses it to spot a
   receipt imported twice.
-- `date`: the order date, `YYYY-MM-DD`.
+- `date`: the order date, `YYYY-MM-DD`. When the receipt has no date (Dauphine's
+  invoices don't), leave the field out and say so in the reply: Heide sets it
+  in Plume's preview, along with On order or Already here.
 - `shipping`, `tax`: numbers, the order's totals. Use `0` when the receipt
   shows none. Leave the field out when the receipt does not say. These stay
   with the order and are never added to what an ingredient or a jar costs.

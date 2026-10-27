@@ -1218,6 +1218,9 @@
   .rc-ordcard .rc-meta { color: var(--ink-light); font-size: 12px; margin-top: 2px; }
   .rc-ordcard .rc-money { margin-top: 6px; font-size: 12px; color: var(--ink-light); }
   .rc-ordcard .rc-money b { color: var(--ink); font-weight: 600; }
+  .rc-when { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin: 8px 0 4px; font-size: 12px; color: var(--ink-light); }
+  .rc-when input[type=date] { font: inherit; font-size: 12px; padding: 3px 6px; border: 1px solid var(--cream-border); border-radius: 4px; background: var(--white); color: var(--ink); margin-left: 4px; }
+  .rc-when .lot-is { margin-left: 0; }
   .rc-warn { background: var(--clay-light); border: 1px solid var(--clay); color: var(--ink); border-radius: 6px; padding: 8px 12px; font-size: 12px; margin-bottom: 10px; }
   .rc-lines { max-height: 52vh; overflow-y: auto; border-top: 1px solid var(--cream-dark); }
   .rc-sect { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-lighter); padding: 10px 0 4px; }
@@ -2456,7 +2459,11 @@ function previewReceipt(data) {
     if (r.dupe) r.on = false;
     return r;
   });
-  pendingReceipt = { data: data, rows: rows, pkgs: pkgs, before: before };
+  // The order date and whether it is here already are hers to set in the
+  // preview (2026-10-26, her ask): an invoice may carry no date, and an old
+  // receipt is for things already on the shelf.
+  var day = /^\d{4}-\d{2}-\d{2}$/.test(String(data.date || '')) ? data.date : todayISO();
+  pendingReceipt = { data: data, rows: rows, pkgs: pkgs, before: before, date: day, here: false, recv: day };
   renderReceipt();
   openModal('modal-receipt');
 }
@@ -2471,13 +2478,21 @@ function renderReceipt() {
   money.push('Items <b>' + rcMoney(goods) + '</b>');
   money.push('Shipping <b>' + (ship >= 0 ? rcMoney(ship) : '—') + '</b>');
   money.push('Tax <b>' + (tax >= 0 ? rcMoney(tax) : '—') + '</b>');
-  var meta = [d.orderNum ? 'Order ' + esc(d.orderNum) : 'No order number', d.date ? esc(fmtDate(d.date)) : 'no date'];
+  var meta = [d.orderNum ? 'Order ' + esc(d.orderNum) : 'No order number'];
   document.getElementById('rc-order').innerHTML =
     (P.before ? '<div class="rc-warn">This order came in once already, on ' + esc(fmtDate(String(P.before.imported || '').slice(0, 10))) + '. Lines already in Plume are unticked; importing again updates the order’s shipping and tax.</div>' : '') +
     '<div class="rc-ordcard"><div class="rc-sup">' + esc(d.supplier || 'Supplier not read') + '</div>' +
       '<div class="rc-meta">' + meta.join(' · ') + (d.receiptLink ? ' · <a href="' + esc(qaLink(d.receiptLink)) + '" target="_blank" rel="noopener">receipt</a>' : '') + '</div>' +
       '<div class="rc-money">' + money.join(' · ') + '</div>' +
-      '<div class="rc-meta">Everything comes in <span class="rc-tag ord">on order</span>, so it counts as stock once you mark it arrived. Shipping and tax are kept with the order, not added to cost per gram or per unit.</div></div>';
+      '<div class="rc-when">' +
+        '<label>Ordered <input type="date" id="rc-date" value="' + esc(P.date) + '" onchange="rcOrderSet(\'date\', this.value)"></label>' +
+        '<span class="lot-is" role="group" aria-label="Has it arrived?">' +
+          '<button type="button" class="lot-is-b' + (P.here ? '' : ' on') + '" id="rc-ord-b" aria-pressed="' + !P.here + '" onclick="rcOrderSet(\'here\', false)">On order</button>' +
+          '<button type="button" class="lot-is-b' + (P.here ? ' on' : '') + '" id="rc-here-b" aria-pressed="' + P.here + '" onclick="rcOrderSet(\'here\', true)">Already here</button></span>' +
+        (P.here ? '<label>Arrived <input type="date" id="rc-recv" value="' + esc(P.recv) + '" onchange="rcOrderSet(\'recv\', this.value)"></label>' : '') +
+      '</div>' +
+      '<div class="rc-meta">' + (P.here ? 'Everything comes in as stock, arrived on ' + esc(fmtDate(P.recv)) + '.' : 'Everything comes in <span class="rc-tag ord">on order</span>, so it counts as stock once you mark it arrived.') +
+        ' Shipping and tax are kept with the order, not added to cost per gram or per unit.</div></div>';
   var ingRows = P.rows.filter(function (r) { return !r.pkg; }), pkgRows = P.rows.filter(function (r) { return r.pkg; });
   var html = '';
   if (ingRows.length) html += '<div class="rc-sect">Ingredients</div>' + ingRows.map(rcRowHtml).join('');
@@ -2547,11 +2562,23 @@ function rcSet(idx, field, v) {
   renderReceipt();
   document.getElementById('rc-lines').scrollTop = keep;
 }
+function rcOrderSet(field, v) {
+  var P = pendingReceipt; if (!P) return;
+  if ((field === 'date' || field === 'recv') && !/^\d{4}-\d{2}-\d{2}$/.test(String(v || ''))) { renderReceipt(); return; }
+  // Arrived starts on the order date (an old receipt), and follows a changed
+  // order date until she sets it herself.
+  if (field === 'date' && P.recv === P.date) P.recv = v;
+  if (field === 'here' && v && P.recv < P.date) P.recv = P.date;
+  P[field] = v;
+  var keep = document.getElementById('rc-lines').scrollTop;
+  renderReceipt();
+  document.getElementById('rc-lines').scrollTop = keep;
+}
 function rcCount() {
   var P = pendingReceipt, n = 0, bad = [];
   P.rows.forEach(function (r) { if (r.on) { n++; if (rcProblem(r)) bad.push(r.line.name || '(no name)'); } });
   var el = document.getElementById('rc-count'), btn = document.getElementById('rc-apply');
-  el.textContent = bad.length ? 'Needs a look first: ' + bad.join(', ') + '.' : n ? n + ' line' + (n === 1 ? '' : 's') + ' will come in, on order.' : (P.before ? 'No lines ticked. Import updates the order’s shipping and tax only.' : 'No lines ticked.');
+  el.textContent = bad.length ? 'Needs a look first: ' + bad.join(', ') + '.' : n ? n + ' line' + (n === 1 ? '' : 's') + ' will come in, ' + (P.here ? 'as stock.' : 'on order.') : (P.before ? 'No lines ticked. Import updates the order’s shipping and tax only.' : 'No lines ticked.');
   btn.disabled = !!bad.length || (!n && !P.before);
   btn.textContent = n ? 'Import ' + n + ' line' + (n === 1 ? '' : 's') : 'Update the order';
 }
@@ -2588,7 +2615,8 @@ function rcNewPkg(r, sup) {
 
 function applyReceipt() {
   var P = pendingReceipt; if (!P) return;
-  var d = P.data, bad = P.rows.filter(function (r) { return r.on && rcProblem(r); });
+  var d = Object.assign({}, P.data, { date: P.date }), bad = P.rows.filter(function (r) { return r.on && rcProblem(r); });
+  var here = !!P.here, recv = P.recv;
   if (bad.length) { rcCount(); return; }
   var sup = qaEnsureSupplier(d.supplier || '');
   Store.refresh(STORE_KEY); ingredients = Store.getJSON(STORE_KEY, []) || ingredients;
@@ -2600,8 +2628,10 @@ function applyReceipt() {
       var k = r.target === 'new' ? null : pkgs.filter(function (x) { return String(x.id) === String(r.target); })[0];
       if (!k) { k = rcNewPkg(r, sup); pkgs.push(k); }
       k.purchases = k.purchases || [];
-      k.purchases.push({ date: String(d.date || todayISO()), qty: r.buy.n, totalCost: r.buy.total > 0 ? String(r.buy.total) : '', shipping: '',
-        supplier: sup, orderNum: String(d.orderNum || '').trim(), link: qaLink(r.line.link), onOrder: true });
+      var pu = { date: String(d.date || todayISO()), qty: r.buy.n, totalCost: r.buy.total > 0 ? String(r.buy.total) : '', shipping: '',
+        supplier: sup, orderNum: String(d.orderNum || '').trim(), link: qaLink(r.line.link) };
+      if (here) pu.received = recv; else pu.onOrder = true;
+      k.purchases.push(pu);
       nPkg++; touchedPkg = true;
       return;
     }
@@ -2616,6 +2646,7 @@ function applyReceipt() {
     }
     ing.lots = ing.lots || [];
     var lot = rcLot(ing, r, d, sup);
+    if (here) { delete lot.onOrder; lot.received = recv; }
     var hadLots = ing.lots.some(function (l) { return !l.referenceOnly; });
     ing.lots.push(lot);
     // Its first purchase prices it; a reorder leaves the lot in use as it is.
@@ -2639,7 +2670,7 @@ function applyReceipt() {
   var said = [];
   if (nIng) said.push(nIng + ' ingredient purchase' + (nIng === 1 ? '' : 's') + (nNew ? ' (' + nNew + ' new ingredient' + (nNew === 1 ? '' : 's') + ')' : ''));
   if (nPkg) said.push(nPkg + ' packaging purchase' + (nPkg === 1 ? '' : 's'));
-  Plume.tell((said.length ? 'Added ' + said.join(' and ') + ', all on order. Mark each arrived when the box comes.' : 'Updated the order.') +
+  Plume.tell((said.length ? 'Added ' + said.join(' and ') + (here ? ', in stock as of ' + fmtDate(recv) + '.' : ', all on order. Mark each arrived when the box comes.') : 'Updated the order.') +
     (nNew ? '\n\nNew ingredients came in with what the receipt and the starter list know. Check each one’s usage and phase.' : ''), { title: 'Receipt imported' });
 }
 
