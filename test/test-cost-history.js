@@ -14,7 +14,8 @@ function ok(label, cond, got) {
 const lot = (id, cpg) => ({ id: id, supplier: 'Lotioncrafter', qtyPurchased: '1000', qtyUnit: 'g', costPerG: String(cpg), received: '2026-05-01' });
 const INGS = [
   { id: 'ij', name: 'Jojoba oil', inci: 'Simmondsia Chinensis Seed Oil', phase: 'oil', lots: [lot('L1', 0.04)], activeLotId: 'L1' },
-  { id: 'ir', name: 'Rosehip seed oil', inci: 'Rosa Canina Seed Oil', phase: 'oil', lots: [lot('L1', 0.15)], activeLotId: 'L1' }
+  { id: 'ir', name: 'Rosehip seed oil', inci: 'Rosa Canina Seed Oil', phase: 'oil', lots: [lot('L1', 0.15)], activeLotId: 'L1' },
+  { id: 'ix', name: 'Shea butter', inci: 'Butyrospermum Parkii Butter', phase: 'oil', lots: [{ id: 'L1', supplier: 'Lotioncrafter', qtyPurchased: '450', qtyUnit: 'g', costPerG: '0.02', received: '2026-05-01' }], activeLotId: 'L1' }
 ];
 const FORMS = [{ id: 'fo', name: 'Face oil', type: 'Face oil', lines: [{ ingId: 'ij', pct: '60' }, { ingId: 'ir', pct: '40' }],
   variants: [{ vid: 'v1', num: 1, lines: [{ ingId: 'ij', pct: '60' }, { ingId: 'ir', pct: '40' }], batchSize: '100' }], activeVariantId: 'v1' }];
@@ -25,11 +26,14 @@ const PKGS = [
   { id: 'bx', kind: 'box', capacity: '4 × 4 in', purchases: buy(10, 10) }
 ];
 const BATCHES = [{ id: 'b1', date: '2026-10-01', formulaId: 'fo', formulaName: 'Face oil', formulaType: 'Face oil', batchName: 'October', actualYield: 1000,
-  status: 'ready', batchType: 'production', ingredientSnapshot: [], packagingRuns: [], committed: true, lotDraws: [], packagingDraws: [], lotCode: '261001' }];
+  status: 'ready', batchType: 'production', ingredientSnapshot: [], packagingRuns: [], committed: true, lotDraws: [], packagingDraws: [], lotCode: '261001' },
+  { id: 'b2', date: '2026-10-02', formulaId: 'fo', formulaName: 'Face oil', formulaType: 'Face oil', batchName: 'Second', actualYield: 980, targetYield: 1000,
+  status: 'ready', batchType: 'production', packagingRuns: [], committed: true, lotDraws: [], packagingDraws: [], lotCode: '261002',
+  ingredientSnapshot: [{ ingredientId: 'ij', ingredientName: 'Jojoba oil', grams: 600 }, { ingredientId: 'ir', ingredientName: 'Rosehip seed oil', grams: 400 }] }];
 const PRODUCTS = [
   { id: 'p1', name: 'Face oil 30 mL', status: 'active', formulaId: 'fo', netWtG: 28, netWtDisplay: '1 fl oz', retail: 30,
     packagingRecipe: [{ packagingId: 'k1', quantity: 1 }, { packagingId: 'lb', quantity: 1 }],
-    productionRuns: [{ id: 'old', date: '2026-06-02', units: 10, fill: true, draws: [{ batchId: 'gone', grams: 280, lot: '260601' }], packaging: [] }] },
+    wholesale: 6, productionRuns: [{ id: 'old', date: '2026-06-02', units: 10, fill: true, draws: [{ batchId: 'gone', grams: 280, lot: '260601' }], packaging: [] }] },
   { id: 'kt', name: 'Gift set', status: 'active', productKind: 'kit', kitParts: [{ id: 'q1', productId: 'p1', qty: 2 }],
     packagingRecipe: [{ packagingId: 'bx', quantity: 1 }], productionRuns: [] },
   { id: 'pn', name: 'Face oil mini', status: 'active', formulaId: 'fo', netWtG: 5, packagingRecipe: [], productionRuns: [] }
@@ -89,25 +93,43 @@ const PRODUCTS = [
   // Two face oils at today's $4.422 plus a $1.00 box.
   ok('two face oils at today\'s cost plus the box', kb && kb.kit && Math.abs(kb.unitCost - 9.844) < 1e-6 && Math.abs(kb.ingCost - 8.844) < 1e-6 && kb.pkgCost === 1, kb);
 
-  console.log('\n4. Analytics: Cost to make');
-  ok('it sits in the sidebar under Stock, after Stock history', await page.evaluate(
-    "var b = document.getElementById('ps-nav-costs'); !!b && b.previousElementSibling.id === 'ps-nav-history' && b.textContent.trim() === 'Analytics'"));
-  await page.click('#ps-nav-costs'); await page.waitForTimeout(350);
-  ok('it opens as the side panel titled Analytics, Cost to make first, and marks its button', await page.evaluate("document.getElementById('ps-peek').classList.contains('open') && document.querySelector('.ct-panel h2').textContent === 'Analytics' && document.querySelector('.ct-panel .ct-sec').textContent === 'Cost to make' && document.getElementById('ps-nav-costs').classList.contains('on')"));
-  const listText = await page.evaluate("document.querySelector('.ct-list').innerText.replace(/\\s+/g, ' ')");
-  ok('products sit under their formulation; kits last', /Face oil Face oil 30 mL[\s\S]*Face oil mini[\s\S]*Kits and sample packs Gift set/.test(listText), listText);
-  ok('each shows today\'s cost a unit', /Face oil 30 mL 1 fl oz \$4\.42 a unit today/.test(listText), listText);
-  ok('fills, the change since the first recorded fill, and the margin at retail', /2 fills up 34% since \w{3} \d{4} 85% margin at retail/.test(listText), listText);
-  ok('a product not filled yet says so', /Face oil mini[^]*?not filled yet/.test(listText), listText);
+  console.log('\n4. The Analytics page');
+  ok('Analytics is a link in the sidebar under Stock, after Stock history', await page.evaluate(
+    "var b = document.getElementById('ps-nav-analytics'); !!b && b.previousElementSibling.id === 'ps-nav-history' && b.textContent.trim() === 'Analytics' && b.getAttribute('href') === 'plume-analytics.html'"));
+  await page.goto(previewUrl('analytics')); await page.waitForTimeout(500);
+  await page.evaluate("setRange('all')"); await page.waitForTimeout(150);
+  ok('its own sidebar link is marked as the current page', await page.evaluate("document.getElementById('ps-nav-analytics').classList.contains('on')"));
+  const tiles = await page.evaluate("document.getElementById('an-tiles').innerText.replace(/\\s+/g, ' ')");
+  // Fills: 10 at today's $4.422 (~, from before costs were noted) + 6 at $3.302; the kit adds only its $1.00 box × 2: $66.03.
+  ok('spent making product counts fills, and kits only for their own packaging', /Spent making product ~\$66\.03 16 units filled/.test(tiles), tiles);
+  ok('batches made, with their ingredient cost', /Batches made 2 \$124\.00 in ingredients/.test(tiles), tiles);
+  ok('on hand now, at cost, split four ways', /On hand now, at cost \$[\d.,]+ products \$[\d.,]+ · bulk \$[\d.,]+ · ingredients \$[\d.,]+ · packaging \$[\d.,]+/.test(tiles), tiles);
+  const looks = await page.evaluate("document.getElementById('an-looks').innerText.replace(/\\s+/g, ' ')");
+  ok('a wholesale price under twice the cost is flagged', /Prices to look at 1 [^]*Face oil 30 mL 85% at retail · wholesale 1\.4× cost/.test(looks), looks);
+  ok('an ingredient in stock that no batch has used is listed, with its value', /Ingredients not used in a while 1 [^]*Shea butter \$9\.00 on hand · not used in a batch yet/.test(looks), looks);
+  ok('one a batch used is not', !/Jojoba oil \$/.test(looks), looks);
+  const prow = await page.evaluate("document.querySelector('#an-products tr[data-p=\"p1\"]').innerText.replace(/\\s+/g, ' ')");
+  ok('the product table: cost today, change, margins, on hand', /Face oil 30 mL Face oil · 1 fl oz \$4\.42 \+34% since \w{3} \d{4} 85% 1\.4× 12/.test(prow), prow);
+  await page.evaluate("openProduct('p1')"); await page.waitForTimeout(150);
+  ok('clicking a product opens its cost over time: a point per fill, the older one hollow', await page.evaluate("document.querySelectorAll('#an-products .ct-chart .ct-dot').length === 2 && document.querySelectorAll('#an-products .ct-chart .ct-dot.est').length === 1"));
+  const fills = await page.evaluate("document.querySelector('#an-products .ct-fills').innerText.replace(/\\s+/g, ' ')");
+  ok('and its fills, newest first, with the lot and the split', /Units Ingredients Packaging A unit \w{3} \d+, \d{4} Lot 261001 6 \$2\.35 \$0\.95 \$3\.30 Jun 2, 2026 Lot 260601 10 ~\$3\.47 ~\$0\.95 ~\$4\.42/.test(fills), fills);
+  const brow = await page.evaluate("document.getElementById('an-batches').innerText.replace(/\\s+/g, ' ')");
+  // 600 g jojoba at $0.04 + 400 g rosehip at $0.25 = $124, over 980 g made.
+  ok('the batch table prices a batch and gives its cost per 100 g of what it made', /Second Oct 2, 2026 · Lot 261002 980 g \$124\.00 \$12\.65/.test(brow), brow);
+  await page.evaluate("setFocus('~kits')"); await page.waitForTimeout(100);
+  ok('focusing narrows the products to the group picked', await page.evaluate("document.querySelectorAll('#an-products tbody tr[data-p]').length === 1 && !!document.querySelector('#an-products tr[data-p=\"kt\"]')"));
+  await page.evaluate("setFocus('')");
+  await page.evaluate("document.querySelector('.an-k .an-link').click()"); await page.waitForTimeout(350);
+  ok('Went out opens Stock history on the same period', await page.evaluate("document.getElementById('ps-peek').classList.contains('open') && document.querySelector('.sh-panel .sh-ranges .ps-chip.on').textContent === 'All time'"));
+  await page.evaluate("Plume.peek.close()"); await page.waitForTimeout(200);
 
-  await page.evaluate("Plume.costs.toggle('p1')"); await page.waitForTimeout(150);
-  ok('opening a product draws a point per fill, the older one hollow', await page.evaluate("document.querySelectorAll('.ct-chart .ct-dot').length === 2 && document.querySelectorAll('.ct-chart .ct-dot.est').length === 1"));
-  ok('and a dashed line for today', await page.evaluate("!!document.querySelector('.ct-chart .ct-today') && /today \\$4\\.42/.test(document.querySelector('.ct-chart').textContent)"));
-  const fills = await page.evaluate("document.querySelector('.ct-fills').innerText.replace(/\\s+/g, ' ')");
-  ok('the list runs newest first, with the lot and the split', /Units Ingredients Packaging A unit \w{3} \d+, \d{4} Lot 261001 6 \$2\.35 \$0\.95 \$3\.30 Jun 2, 2026 Lot 260601 10 ~\$3\.47 ~\$0\.95 ~\$4\.42/.test(fills), fills);
-  ok('the note explains ~', /~ marks fills from before costs were recorded; they use today’s prices/.test(await page.evaluate("document.querySelector('.ct-panel .sh-foot').textContent")));
-  await page.evaluate("Plume.costs.find('mini')"); await page.waitForTimeout(100);
-  ok('search narrows the list', await page.evaluate("document.querySelectorAll('.ct-item').length === 1 && /Face oil mini/.test(document.querySelector('.ct-item').innerText)"));
+  console.log('\n4b. The batch costs agree with the batch panel');
+  await page.goto(previewUrl('batchlog')); await page.waitForTimeout(500);
+  await page.evaluate("openBatchDetail('b2'); setBatchTab('ings')"); await page.waitForTimeout(300);
+  const bt = await page.evaluate("(document.querySelector('#d-snapshot .bt-r.tot') || {}).innerText || ''");
+  ok('the batch panel shows the same $124.00', /\$124\.00/.test(bt), bt);
+  await page.goto(previewUrl('costing')); await page.waitForTimeout(500);
 
   console.log('\n5. Reversing a fill takes its point away');
   await page.evaluate("Plume.peek.close()"); await page.waitForTimeout(200);

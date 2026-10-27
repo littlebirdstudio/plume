@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plume - Analytics</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* ──────────────────────────────────────────────────────────────
+     PALETTE — the warm/natural studio feel.
+     Edit these to retheme the whole module.
+     ────────────────────────────────────────────────────────────── */
+
+  /* Surfaces — page background, cards, dividers */
+  --cream:        #F7F4EF;
+  --cream-dark:   #EDE8DF;
+  --cream-border: #D8D0C4;
+  --white:        #FDFCFA;
+
+  /* Bark — primary brand tones (headers, buttons, accents) */
+  --bark:       #7C6A54;
+  --bark-light: #A08C74;
+  --bark-dark:  #4A3F32;
+
+  /* Sage — "good/in-stock/positive" tones */
+  --sage:        #7A8C6E;
+  --sage-light:  #EDF0EA;
+  --sage-dark:   #4E5E44;
+  --sage-border: #C0CEBA; /* soft outline tint for sage-accented controls */
+
+  /* Clay — warm accent / blush highlight */
+  --clay:       #C27B5A;
+  --clay-light: #F5EBE4; /* also used as the in-stock row tint */
+  --clay-dark:  #8A4A2E;
+  --clay-hover: #EFDFD5; /* slightly deeper blush for hovered in-stock rows */
+
+  /* Ink — text */
+  --ink:         #2C2520;
+  --ink-light:   #6B5E54;
+  --ink-lighter: #9C8E84;
+
+  /* Status — warnings and errors */
+  --warning:        #B07020;
+  --warning-bg:     #FDF3E3;
+  --warning-border: #E8D0A0; /* soft outline tint for warning-accented controls */
+  --danger:         #A03020;
+  --danger-bg:      #FCE8E4;
+  --danger-border:  #E8C0B8; /* soft outline tint for danger-accented controls */
+  --success:        #4E5E44;
+
+  /* ──────────────────────────────────────────────────────────────
+     CATEGORICAL — functional color codes.
+     These signal "what kind of thing" (water phase, oil phase, etc).
+     Usually you want these to stay visually distinct even when the
+     palette above changes — they're for recognition, not for theme.
+     ────────────────────────────────────────────────────────────── */
+
+  /* Phase badges (Ingredients, Formulations) */
+  --ph-water-bg:     #E4EEF8; --ph-water-fg:     #2A5C8A;
+  --ph-oil-bg:       #F5ECD8; --ph-oil-fg:       #7A4E10;
+  --ph-cool-down-bg: #E4F0EA; --ph-cool-down-fg: #2A5C40;
+  --ph-active-bg:    #EDE8F8; --ph-active-fg:    #4A3A8A;
+  --ph-other:        #888780; /* "other" phase dot in formulations */
+
+  /* Phase dots (Formulations editor) — pure swatch tones, no bg */
+  --dot-water:     #378ADD;
+  --dot-oil:       #BA7517;
+  --dot-cool-down: #1D9E75;
+  --dot-active:    #7F77DD;
+
+  /* Soap quality bars (Formulations) — fatty acid profile indicators */
+  --q-hardness:     #7C6A54; /* aligns with --bark */
+  --q-cleansing:    #5A8A9F;
+  --q-conditioning: #7A8C6E; /* aligns with --sage */
+  --q-lather:       #C2955A;
+  --q-ins:          #9C6E8A;
+
+  /* Packaging type badges (Packaging) */
+  --pk-container-bg: #E4EEF8; --pk-container-fg: #2A5C8A;
+  --pk-label-bg:     #EDE8F8; --pk-label-fg:     #4A3A8A;
+  --pk-box-bg:       #F5ECD8; --pk-box-fg:       #7A4E10;
+}
+
+body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);min-height:100vh;font-size:14px;line-height:1.6}
+html{background:var(--cream)}
+[hidden]{display:none !important}
+.app-footer{text-align:center;padding:2rem;margin-top:3rem;font-size:11px;color:var(--ink-lighter);border-top:1px solid var(--cream-border);letter-spacing:0.06em}
+body.ps-shell .app-body{max-width:1240px;margin:0;padding:28px clamp(16px,4vw,48px) 48px}
+body.ps-shell .app-footer{background:transparent}
+
+/* ── Analytics (2026-10-26) ─────────────────────────────────────────────
+   Her "command center": status at a glance, what needs a look, every
+   product and batch in a table. Only what Plume records: no sales income
+   (that lives in Square, Etsy and her accounting), no estimates. */
+.an-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:18px 0 6px}
+.an-bar .ps-chips{margin:0}
+.an-focus{font:inherit;font-size:13px;border:1px solid var(--cream-border);border-radius:999px;padding:4px 12px;background:var(--white);color:var(--ink);margin-left:auto;max-width:100%}
+.an-h{font-size:16px;font-weight:600;color:var(--ink);margin:26px 0 10px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.an-h small{font-size:12.5px;font-weight:400;color:var(--ink-lighter)}
+.an-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.an-tile{background:var(--white);border:1px solid var(--cream-border);border-radius:12px;padding:12px 14px;min-width:0}
+.an-k{font-size:12.5px;color:var(--ink-light)}
+.an-n{font-size:24px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1.3}
+.an-s{font-size:12.5px;color:var(--ink-light);font-variant-numeric:tabular-nums;line-height:1.45}
+.an-s b{color:var(--ink);font-weight:600}
+.an-looks{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px;align-items:start}
+.an-look{background:var(--white);border:1px solid var(--cream-border);border-radius:12px;padding:12px 14px;min-width:0}
+.an-look.warm{border-left:4px solid var(--warning)}
+.an-look h3{font-size:14px;font-weight:600;margin:0 0 2px;display:flex;gap:8px;align-items:baseline}
+.an-look h3 .an-ct{font-size:12px;font-weight:500;color:var(--ink-light);background:var(--cream-dark);border-radius:999px;padding:0 8px}
+.an-look .an-why{font-size:12px;color:var(--ink-lighter);margin:0 0 6px}
+.an-li{display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 12px;font-size:13px;padding:5px 0;border-top:1px dashed var(--cream-border);color:var(--ink-light)}
+.an-li > span:first-child{color:var(--ink);flex:1 1 9em;min-width:0}
+.an-li > span:last-child{flex:0 1 auto;margin-left:auto;text-align:right;font-variant-numeric:tabular-nums}
+.an-li a{color:inherit;text-decoration:underline;text-decoration-color:var(--cream-border);text-underline-offset:2px}
+.an-k .an-link{font:inherit;font-size:12px;border:0;background:none;color:var(--bark);cursor:pointer;padding:0;float:right}
+.an-k .an-link:hover{text-decoration:underline}
+.an-more{font:inherit;font-size:12.5px;border:0;background:none;color:var(--bark);cursor:pointer;padding:4px 0 0}
+.an-calm{font-size:13.5px;color:var(--ink-light);background:var(--white);border:1px solid var(--cream-border);border-radius:12px;padding:12px 14px}
+.an-table td,.an-table th{font-variant-numeric:tabular-nums}
+.an-table th.num,.an-table td.num{text-align:right;white-space:nowrap}
+.an-table th button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;white-space:nowrap}
+.an-table th button:hover,.an-table th button.on{color:var(--ink)}
+.an-table th button:focus-visible{outline:2px solid var(--bark);outline-offset:2px}
+.an-table td small{display:block;font-size:12px;color:var(--ink-lighter)}
+.an-table tr.open td{background:var(--cream-dark)}
+.an-table tr.an-det td{background:var(--white);cursor:default;padding:6px 14px 14px}
+.an-table tr.an-det:hover td{background:var(--white)}
+.an-up{color:var(--warning);font-weight:600}
+.an-low{color:var(--warning);font-weight:600}
+.an-dim{color:var(--ink-lighter)}
+.an-det .ct-panel{max-width:640px}
+.an-foot{font-size:12px;color:var(--ink-lighter);line-height:1.55;margin:14px 0 0;max-width:820px}
+@media (max-width:760px){.an-hide-sm{display:none}.an-focus{margin-left:0}}
+</style>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#404834">
+<link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+</head>
+<body>
+
+<div class="app-body">
+  <div id="stor-banner-slot"></div>
+
+  <div class="ps-page-head">
+    <div>
+      <div class="ps-title"><span class="ps-title-icon" data-ps-icon="trend"></span><h1>Analytics</h1></div>
+      <div class="ps-summary" id="an-summary">What it costs to make, what is on hand, and what needs a look.</div>
+    </div>
+  </div>
+
+  <div class="an-bar">
+    <div class="ps-chips" id="an-ranges" role="group" aria-label="Period"></div>
+    <select class="an-focus" id="an-focus" aria-label="Focus on" onchange="setFocus(this.value)"></select>
+  </div>
+
+  <h2 class="an-h">Status <small id="an-period"></small></h2>
+  <div class="an-tiles" id="an-tiles"></div>
+
+  <h2 class="an-h">Needs a look</h2>
+  <div id="an-looks"></div>
+
+  <h2 class="an-h">Products <small>Cost to make one unit today, and how fast each is going. Click one for its cost over time.</small></h2>
+  <div class="ps-table-wrap"><table class="ps-table an-table" id="an-products"></table></div>
+
+  <h2 class="an-h">Batches <small id="an-bsub"></small></h2>
+  <div class="ps-table-wrap"><table class="ps-table an-table" id="an-batches"></table></div>
+
+  <p class="an-foot" id="an-foot"></p>
+</div>
+
+<script src="plume-core.js"></script>
+<script>
+// ── Analytics page (2026-10-26) ───────────────────────────────────────
+// Read-only. Everything comes from what Plume records: fills and kit builds
+// (each notes its unit cost from v1.59), batches (priced as their own
+// Ingredients tab prices them), stock changes (as Stock history counts
+// them), lots and packaging purchases. A fill from before costs were noted
+// uses today's prices, marked ~ (her call). Nothing new is entered here.
+// No sales income: Plume never records what a sale brought in, and she
+// does not want it estimated or entered twice.
+var D = null;
+var range = 'year', focus = '', sortKey = 'name', sortDir = 1, openId = '', lookMore = {};
+var RANGES = [['month', 'This month'], ['last', 'Last month'], ['year', 'This year'], ['12', 'Last 12 months'], ['all', 'All time']];
+var PACE_DAYS = 90, IDLE_DAYS = 180, BULK_DAYS = 60;
+var LINE_RETAIL = 0.6, LINE_WHOLESALE = 2;   // margin at retail; wholesale as a multiple of cost
+
+function esc(s) { return Plume.esc(s); }
+function money(v, est) { return Plume.costs.money(v, est); }
+function iso(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function daysAgo(n) { var d = new Date(); d.setDate(d.getDate() - n); return iso(d); }
+function bounds() {
+  var d = new Date(), y = d.getFullYear(), m = d.getMonth();
+  var first = function (Y, M) { return iso(new Date(Y, M, 1)); };
+  if (range === 'month') return [first(y, m), ''];
+  if (range === 'last') return [first(y, m - 1), first(y, m)];
+  if (range === 'year') return [y + '-01-01', ''];
+  if (range === '12') return [first(y - 1, m + 1), ''];
+  return ['', ''];
+}
+function inRange(date, b) { date = date || ''; return (!b[0] || date >= b[0]) && (!b[1] || date < b[1]); }
+function fmt(s, o) { return s ? Plume.fmtDate(s, o) : ''; }
+function plural(n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); }
+
+function load() {
+  var g = function (k) { var l = Plume.Store.getJSON(k, []); return Array.isArray(l) ? l : []; };
+  D = { products: g('plume-products-v1'), batches: g('aerie-batches-v1'), ings: g('aerie-ingredients-v2'),
+        pkgs: g('aerie-packaging-v2'), forms: g('aerie-formulations-v1') };
+}
+function find(list, id) { for (var i = 0; i < list.length; i++) if (list[i] && list[i].id === id) return list[i]; return null; }
+function isPack(p) { return p.productKind === 'kit' || p.productKind === 'multi'; }
+function groupKey(p) { return isPack(p) ? '~kits' : (p.formulaId || '~none'); }
+function formName(id) { var f = find(D.forms, id); return f ? (f.name || '(unnamed formulation)') : ''; }
+function focused(p) { return !focus || groupKey(p) === focus; }
+
+// ── Per product ──
+function stockOut(p, sinceIso, b) {
+  // Units that left: sold (at markets or at shops), gifted, marketing, damaged.
+  var o = { sold: 0, give: 0, damaged: 0, giveCost: 0, damagedCost: 0, est: false, last: '' };
+  var today = null;
+  ((p.stockLog) || []).forEach(function (e) {
+    if (e.kind !== 'out') return;
+    var date = e.date || '';
+    if (sinceIso && date < sinceIso) return;
+    if (b && !inRange(date, b)) return;
+    var units = e.shopId ? -(parseFloat(e.shopQty) || 0) : -(parseFloat(e.qty) || 0);
+    if (!(units > 0)) return;
+    var uc = e.unitCost > 0 ? e.unitCost : (today === null ? (today = Plume.productUnitCost(p, D)) : today);
+    if (!(e.unitCost > 0)) o.est = true;
+    if (e.reason === 'sold') o.sold += units;
+    else if (e.reason === 'gifted' || e.reason === 'marketing') { o.give += units; o.giveCost += units * uc; }
+    else if (e.reason === 'damaged') { o.damaged += units; o.damagedCost += units * uc; }
+    else return;
+    if (date > o.last) o.last = date;
+  });
+  return o;
+}
+function metrics(p) {
+  if (p._m) return p._m;
+  var parts = Plume.productCostParts(p, D), rows = Plume.costs.rows(p, D);
+  var shelf = Plume.onHand(p), shops = Plume.atShops(p).total;
+  var pace = stockOut(p, daysAgo(PACE_DAYS));
+  var perMonth = (pace.sold + pace.give) / (PACE_DAYS / 30.4);
+  var retail = parseFloat(p.retail) || 0, whole = parseFloat(p.wholesale) || 0, c = parts.total;
+  var lastFill = rows.fills.length ? rows.fills[rows.fills.length - 1].date : '';
+  var everOut = stockOut(p, '');
+  p._m = {
+    parts: parts, rows: rows, change: Plume.costs.change(rows),
+    shelf: shelf, shops: shops, onHand: shelf + shops, perMonth: perMonth,
+    monthsLeft: perMonth > 0 ? (shelf + shops) / perMonth : null,
+    retailM: (retail > 0 && c > 0 && !p.notForSale) ? (retail - c) / retail : null,
+    wholeX: (whole > 0 && c > 0 && !p.notForSale) ? whole / c : null,
+    retail: retail, whole: whole, lastFill: lastFill, lastOut: everOut.last
+  };
+  return p._m;
+}
+function shown(p) {
+  if (!p || p.archived || !focused(p)) return false;
+  return p.status !== 'discontinued' || metrics(p).onHand > 0;
+}
+function paceText(m) {
+  if (m.monthsLeft === null) return '';
+  var wk = m.monthsLeft * 4.35;
+  if (wk < 1.5) return 'about a week';
+  if (m.monthsLeft < 1.5) return 'about ' + Math.round(wk) + ' weeks';
+  return 'about ' + Math.round(m.monthsLeft) + ' months';
+}
+
+// ── Values on hand, at cost ──
+function lotGrams(ing, l) {
+  return Plume.qtyToGrams(l.qtyPurchased || l.stock || '', l.qtyUnit || l.stockUnit || 'g', Plume.densityFor(ing).value);
+}
+function ingValue(ing) {
+  var v = 0;
+  (ing.lots || []).forEach(function (l) {
+    if (!Plume.lotHere(l)) return;
+    var cpg = parseFloat(l.costPerG);
+    if (cpg > 0) v += lotGrams(ing, l) * cpg;
+  });
+  return v;
+}
+function lastUsed() {
+  // The newest batch that took each ingredient.
+  var last = {};
+  D.batches.forEach(function (b) {
+    if (!b || !b.committed) return;
+    (b.ingredientSnapshot || []).forEach(function (s) {
+      if ((parseFloat(s.grams) || 0) > 0 && (!last[s.ingredientId] || (b.date || '') > last[s.ingredientId])) last[s.ingredientId] = b.date || '';
+    });
+  });
+  return last;
+}
+function batchLeft(b) { return b.status === 'discarded' ? 0 : Plume.batchLeftG(b, D.products); }
+
+// ── Status tiles ──
+function tilesHtml() {
+  var b = bounds(), tiles = [];
+  var made = { cost: 0, units: 0, est: false, prods: {} }, out = { sold: 0, give: 0, damaged: 0, lossCost: 0, est: false };
+  D.products.forEach(function (p) {
+    if (!p || !focused(p)) return;
+    Plume.costs.rows(p, D).fills.forEach(function (f) {
+      if (!inRange(f.date, b)) return;
+      // A kit build adds only its own box and insert: its products were
+      // already counted when they were filled.
+      if (f.kit) { made.cost += f.units * f.pkg; made.est = made.est || f.est; return; }
+      made.cost += f.units * f.cost; made.units += f.units; made.est = made.est || f.est; made.prods[p.id] = 1;
+    });
+    var o = stockOut(p, '', b);
+    out.sold += o.sold; out.give += o.give; out.damaged += o.damaged;
+    out.lossCost += o.giveCost + o.damagedCost; out.est = out.est || ((o.give || o.damaged) && o.est);
+  });
+  var nProds = Object.keys(made.prods).length;
+  tiles.push(['Spent making product', money(made.cost, made.est),
+    made.units ? plural(made.units, 'unit') + ' filled' + (nProds > 1 ? ' across ' + nProds + ' products' : '') : 'Nothing filled in this period']);
+
+  var bt = { n: 0, cost: 0, g: 0 };
+  D.batches.forEach(function (x) {
+    if (!x || !x.committed || !inRange(x.date, b)) return;
+    if (focus && (focus.charAt(0) === '~' || x.formulaId !== focus)) return;
+    var c = Plume.batchCost(x, D.ings);
+    bt.n++; bt.cost += c.cost; bt.g += Plume.batchMadeG(x);
+  });
+  tiles.push(['Batches made', String(bt.n), bt.n ? money(bt.cost) + ' in ingredients · ' + Math.round(bt.g).toLocaleString() + ' g made' : 'None in this period']);
+
+  tiles.push(['Went out <button type="button" class="an-link" onclick="Plume.stock.history(range)">Stock history ›</button>', String(out.sold + out.give + out.damaged),
+    (out.sold + out.give + out.damaged) ? '<b>' + out.sold + '</b> sold · <b>' + out.give + '</b> given away · <b>' + out.damaged + '</b> damaged' +
+      ((out.give + out.damaged) ? '<br>Giveaways and damage: ' + money(out.lossCost, out.est) + ' at cost' : '') : 'Nothing recorded in this period']);
+
+  // On hand now, at cost (not tied to the period).
+  var prodV = 0, bulkV = 0;
+  D.products.forEach(function (p) {
+    if (!p || p.archived || !focused(p)) return;
+    var m = metrics(p);
+    if (m.onHand > 0) prodV += m.onHand * m.parts.total;
+  });
+  D.batches.forEach(function (x) {
+    if (!x || !x.committed || x.status === 'depleted' || x.status === 'discarded') return;
+    if (focus && (focus.charAt(0) === '~' || x.formulaId !== focus)) return;
+    var left = batchLeft(x), c = Plume.batchCost(x, D.ings);
+    if (left > 0 && c.perG > 0) bulkV += left * c.perG;
+  });
+  var parts = [['products', prodV, false], ['bulk', bulkV, false]];
+  if (!focus) {
+    var ingV = 0, pkV = 0;
+    D.ings.forEach(function (i) { if (i && !i.archived) ingV += ingValue(i); });
+    D.pkgs.forEach(function (k) { var n = Plume.pkStock(k), uc = Plume.pkgUnitCostOf(k); if (n > 0 && uc) pkV += n * uc; });
+    parts.push(['ingredients', ingV, false], ['packaging', pkV, false]);
+  }
+  var tot = 0; parts.forEach(function (x) { tot += x[1]; });
+  tiles.push(['On hand now, at cost', money(tot), parts.map(function (x) { return x[0] + ' <b>' + money(x[1], x[2]) + '</b>'; }).join(' · ')]);
+
+  if (!focus) {
+    var ib = 0, onOrd = 0, pb = 0;
+    D.ings.forEach(function (i) {
+      (i && i.lots || []).forEach(function (l) {
+        var pr = parseFloat(l.purchasePrice) || 0;
+        if (!(pr > 0) || l.referenceOnly) return;
+        if (l.onOrder) onOrd += pr;
+        else if (l.received && inRange(l.received, b)) ib += pr;
+      });
+    });
+    D.pkgs.forEach(function (k) {
+      (k && k.purchases || []).forEach(function (pu) {
+        if (inRange(pu.date, b)) pb += (parseFloat(pu.totalCost) || 0) + (parseFloat(pu.shipping) || 0);
+      });
+    });
+    tiles.push(['Bought', money(ib + pb), 'ingredients <b>' + money(ib) + '</b> · packaging <b>' + money(pb) + '</b>' + (onOrd > 0 ? '<br>plus ' + money(onOrd) + ' on order' : '')]);
+  }
+  return tiles.map(function (t) {
+    return '<div class="an-tile"><div class="an-k">' + t[0] + '</div><div class="an-n">' + t[1] + '</div><div class="an-s">' + t[2] + '</div></div>';
+  }).join('');
+}
+
+// ── Needs a look ──
+function look(key, title, why, lines, warm) {
+  if (!lines.length) return '';
+  var more = lookMore[key], show = more ? lines : lines.slice(0, 5);
+  return '<div class="an-look' + (warm ? ' warm' : '') + '" data-look="' + key + '"><h3>' + title + ' <span class="an-ct">' + lines.length + '</span></h3>' +
+    '<p class="an-why">' + why + '</p>' + show.map(function (l) { return '<div class="an-li"><span>' + l[0] + '</span><span>' + l[1] + '</span></div>'; }).join('') +
+    (lines.length > 5 ? '<button type="button" class="an-more" onclick="toggleMore(\'' + key + '\')">' + (more ? 'Show fewer' : 'Show all ' + lines.length) + '</button>' : '') + '</div>';
+}
+function prodLink(p) { return '<a href="#" onclick="openProduct(' + esc(JSON.stringify(p.id)) + '); return false">' + esc(p.name || '(unnamed)') + '</a>'; }
+function ingLink(i) { return '<a href="plume-ingredients.html#ql=' + encodeURIComponent(i.id) + '" target="plume-ingredients">' + esc(i.name || '(unnamed)') + '</a>'; }
+function looksHtml() {
+  var prods = D.products.filter(shown), out = '';
+  var marg = [], low = [], slow = [];
+  prods.forEach(function (p) {
+    var m = metrics(p);
+    var r = m.retailM !== null && m.retailM < LINE_RETAIL, w = m.wholeX !== null && m.wholeX < LINE_WHOLESALE;
+    if (r || w) marg.push([prodLink(p), [m.retailM !== null ? Math.round(m.retailM * 100) + '% at retail' : '', m.wholeX !== null ? 'wholesale ' + m.wholeX.toFixed(1) + '× cost' : ''].filter(Boolean).join(' · ')]);
+    if (m.monthsLeft !== null && m.monthsLeft < 1) low.push([prodLink(p), m.onHand + ' left · ' + paceText(m) + ' at your pace']);
+    var quiet = daysAgo(PACE_DAYS);
+    if (m.shelf > 0 && (!m.lastOut || m.lastOut < quiet) && (!m.lastFill || m.lastFill < quiet))
+      slow.push([prodLink(p), m.shelf + ' on the shelf · ' + (m.lastOut ? 'nothing out since ' + fmt(m.lastOut) : 'none out yet')]);
+  });
+  out += look('margin', 'Prices to look at', 'Under ' + Math.round(LINE_RETAIL * 100) + '% margin at retail, or wholesale under ' + LINE_WHOLESALE + '× what it costs to make.', marg, true);
+  out += look('low', 'Running low', 'Less than a month on hand at the pace of the last ' + PACE_DAYS + ' days (sold and given away).', low, true);
+  out += look('slow', 'Slow movers', 'On the shelf with nothing out and nothing filled in ' + PACE_DAYS + ' days.', slow, false);
+
+  // Ingredients: a price jump, and in stock but not used in a while.
+  var usedIn = {};
+  D.forms.forEach(function (f) {
+    if (!f || f.archived) return;
+    (f.lines || []).forEach(function (l) { if (l.ingId) (usedIn[l.ingId] = usedIn[l.ingId] || {})[f.id] = 1; });
+  });
+  var inFocus = function (i) { return !focus || (focus.charAt(0) !== '~' && usedIn[i.id] && usedIn[i.id][focus]); };
+  var jumps = [], idle = [], last = lastUsed(), idleSince = daysAgo(IDLE_DAYS);
+  D.ings.forEach(function (i) {
+    if (!i || i.archived || !inFocus(i)) return;
+    var lots = (i.lots || []).filter(function (l) { return !l.referenceOnly && parseFloat(l.costPerG) > 0 && l.received && !l.madeBatchId; })
+      .sort(function (a, c) { return a.received < c.received ? -1 : a.received > c.received ? 1 : 0; });
+    if (lots.length >= 2) {
+      var nw = lots[lots.length - 1], pv = lots[lots.length - 2];
+      var up = (parseFloat(nw.costPerG) - parseFloat(pv.costPerG)) / parseFloat(pv.costPerG);
+      if (up >= 0.1 && nw.received >= daysAgo(IDLE_DAYS)) {
+        var n = Object.keys(usedIn[i.id] || {}).length;
+        jumps.push([ingLink(i), 'up ' + Math.round(up * 100) + '% · ' + (n ? 'in ' + plural(n, 'formulation') : 'in no formulation')]);
+      }
+    }
+    var v = ingValue(i);
+    if (Plume.stockG(i) > 0 && (!last[i.id] || last[i.id] < idleSince)) idle.push({ v: v, l: [ingLink(i), (v > 0 ? money(v) + ' on hand · ' : '') + (last[i.id] ? 'last used ' + fmt(last[i.id], { month: 'short', year: 'numeric' }) : 'not used in a batch yet')] });
+  });
+  idle.sort(function (a, c) { return c.v - a.v; });
+  out += look('jump', 'Ingredient prices went up', 'The newest lot costs 10% or more per gram than the one before.', jumps, true);
+  out += look('idle', 'Ingredients not used in a while', 'In stock and not in any batch for ' + Math.round(IDLE_DAYS / 30) + ' months. Most money sitting first.', idle.map(function (x) { return x.l; }), false);
+
+  var bulk = [], bulkBefore = daysAgo(BULK_DAYS);
+  D.batches.forEach(function (x) {
+    if (!x || !x.committed || x.status === 'depleted' || x.status === 'discarded' || (x.date || '') >= bulkBefore) return;
+    if (focus && (focus.charAt(0) === '~' || x.formulaId !== focus)) return;
+    var left = batchLeft(x);
+    if (!(left > 0)) return;
+    var c = Plume.batchCost(x, D.ings);
+    bulk.push([batchLink(x), Math.round(left) + ' g left' + (c.perG > 0 ? ' · ' + money(left * c.perG) + ' at cost' : '')]);
+  });
+  out += look('bulk', 'Bulk waiting to be filled', 'Batches made more than ' + Math.round(BULK_DAYS / 30) + ' months ago with bulk left and not marked Used up.', bulk, false);
+  return out ? '<div class="an-looks">' + out + '</div>' : '<div class="an-calm">Nothing needs a look right now.</div>';
+}
+function batchTitle(x) { return (x.batchName || x.formulaName || formName(x.formulaId) || 'Batch') + ', ' + fmt(x.date); }
+function batchLink(x) { return '<a href="plume-batchlog.html#b=' + encodeURIComponent(x.id) + '" target="plume-batchlog">' + esc(batchTitle(x)) + '</a>'; }
+
+// ── Products table ──
+var PCOLS = [
+  ['name', 'Product', ''], ['cost', 'Cost a unit', 'num'], ['change', 'Change', 'num an-hide-sm'],
+  ['retail', 'Margin at retail', 'num'], ['whole', 'Wholesale ÷ cost', 'num an-hide-sm'],
+  ['onhand', 'On hand', 'num'], ['pace', 'Out a month', 'num an-hide-sm'], ['left', 'Lasts', 'num']
+];
+function sortVal(p, k) {
+  var m = metrics(p);
+  if (k === 'name') return (p.name || '').toLowerCase();
+  if (k === 'cost') return m.parts.total;
+  if (k === 'change') return m.change ? m.change.ch : -Infinity;
+  if (k === 'retail') return m.retailM === null ? Infinity : m.retailM;
+  if (k === 'whole') return m.wholeX === null ? Infinity : m.wholeX;
+  if (k === 'onhand') return m.onHand;
+  if (k === 'pace') return m.perMonth;
+  if (k === 'left') return m.monthsLeft === null ? Infinity : m.monthsLeft;
+  return 0;
+}
+function productsHtml() {
+  var list = D.products.filter(shown).sort(function (a, b) {
+    var x = sortVal(a, sortKey), y = sortVal(b, sortKey);
+    return (x < y ? -1 : x > y ? 1 : 0) * sortDir || (a.name || '').localeCompare(b.name || '');
+  });
+  var head = '<thead><tr>' + PCOLS.map(function (c) {
+    var on = sortKey === c[0];
+    return '<th class="' + c[2] + '" aria-sort="' + (on ? (sortDir > 0 ? 'ascending' : 'descending') : 'none') + '"><button type="button" class="' + (on ? 'on' : '') + '" onclick="sortBy(\'' + c[0] + '\')">' + c[1] + (on ? (sortDir > 0 ? ' ↑' : ' ↓') : '') + '</button></th>';
+  }).join('') + '</tr></thead>';
+  if (!list.length) return head + '<tbody><tr><td colspan="8" class="an-dim">No products here yet.</td></tr></tbody>';
+  return head + '<tbody>' + list.map(function (p) {
+    var m = metrics(p), open = openId === p.id;
+    var sub = isPack(p) ? 'kit' : formName(p.formulaId);
+    var ch = m.change ? Math.round(m.change.ch * 100) : null;
+    var row = '<tr class="' + (open ? 'open' : '') + '" data-p="' + esc(p.id) + '" onclick="openProduct(' + esc(JSON.stringify(p.id)) + ')">' +
+      '<td>' + esc(p.name || '(unnamed)') + '<small>' + esc([sub, p.netWtDisplay || ''].filter(Boolean).join(' · ')) + '</small></td>' +
+      '<td class="num">' + (m.parts.total > 0 ? money(m.parts.total) : '<span class="an-dim">no cost yet</span>') + '</td>' +
+      '<td class="num an-hide-sm">' + (ch === null ? '<span class="an-dim">–</span>' : '<span class="' + (ch > 0 ? 'an-up' : '') + '">' + (ch > 0 ? '+' : '') + ch + '%</span><small>since ' + esc(fmt(m.change.date, { month: 'short', year: 'numeric' })) + '</small>') + '</td>' +
+      '<td class="num">' + (m.retailM === null ? '<span class="an-dim">–</span>' : '<span class="' + (m.retailM < LINE_RETAIL ? 'an-low' : '') + '">' + Math.round(m.retailM * 100) + '%</span>') + '</td>' +
+      '<td class="num an-hide-sm">' + (m.wholeX === null ? '<span class="an-dim">–</span>' : '<span class="' + (m.wholeX < LINE_WHOLESALE ? 'an-low' : '') + '">' + m.wholeX.toFixed(1) + '×</span>') + '</td>' +
+      '<td class="num">' + m.onHand + (m.shops ? '<small>' + m.shops + ' at shops</small>' : '') + '</td>' +
+      '<td class="num an-hide-sm">' + (m.perMonth > 0 ? (Math.round(m.perMonth * 10) / 10) : '<span class="an-dim">–</span>') + '</td>' +
+      '<td class="num">' + (m.monthsLeft === null ? '<span class="an-dim">–</span>' : '<span class="' + (m.monthsLeft < 1 ? 'an-low' : '') + '">' + paceText(m).replace('about ', '~') + '</span>') + '</td></tr>';
+    if (open) row += '<tr class="an-det"><td colspan="8"><div class="ct-panel">' + Plume.costs.detail(p, m.rows) + '</div></td></tr>';
+    return row;
+  }).join('') + '</tbody>';
+}
+
+// ── Batches table (in the period) ──
+function batchesHtml() {
+  var b = bounds();
+  var list = D.batches.filter(function (x) {
+    if (!x || !x.committed || !inRange(x.date, b)) return false;
+    return !focus || (focus.charAt(0) !== '~' && x.formulaId === focus);
+  }).sort(function (a, c) { return (c.date || '').localeCompare(a.date || ''); });
+  var head = '<thead><tr><th>Batch</th><th class="num">Made</th><th class="num">Ingredients</th><th class="num">Per 100 g</th><th class="num an-hide-sm">Left</th></tr></thead>';
+  if (!list.length) return head + '<tbody><tr><td colspan="5" class="an-dim">No batches made in this period.</td></tr></tbody>';
+  return head + '<tbody>' + list.map(function (x) {
+    var c = Plume.batchCost(x, D.ings), left = batchLeft(x);
+    return '<tr onclick="Plume.openPage(\'plume-batchlog.html#b=' + encodeURIComponent(x.id) + '\')">' +
+      '<td>' + esc(x.batchName || x.formulaName || formName(x.formulaId) || 'Batch') + '<small>' + esc(fmt(x.date)) + (x.lotCode ? ' · Lot ' + esc(x.lotCode) : '') + (x.status === 'discarded' ? ' · discarded' : '') + '</small></td>' +
+      '<td class="num">' + Math.round(Plume.batchMadeG(x)).toLocaleString() + ' g</td>' +
+      '<td class="num">' + money(c.cost) + (c.missing ? '<small>' + plural(c.missing, 'ingredient') + ' unpriced</small>' : '') + '</td>' +
+      '<td class="num">' + (c.perG > 0 ? money(c.perG * 100) : '<span class="an-dim">–</span>') + '</td>' +
+      '<td class="num an-hide-sm">' + (x.status === 'depleted' ? '<span class="an-dim">used up</span>' : Math.round(left).toLocaleString() + ' g') + '</td></tr>';
+  }).join('') + '</tbody>';
+}
+
+// ── Render ──
+function render() {
+  load();
+  var label = RANGES.filter(function (r) { return r[0] === range; })[0][1];
+  document.getElementById('an-ranges').innerHTML = RANGES.map(function (r) {
+    return '<button type="button" class="ps-chip' + (range === r[0] ? ' on' : '') + '" aria-pressed="' + (range === r[0]) + '" onclick="setRange(\'' + r[0] + '\')">' + r[1] + '</button>';
+  }).join('');
+  var keys = {}, opts = [];
+  D.products.forEach(function (p) { if (p && !p.archived) keys[groupKey(p)] = 1; });
+  Object.keys(keys).forEach(function (k) {
+    opts.push([k, k === '~kits' ? 'Kits and sample packs' : k === '~none' ? 'No formulation' : formName(k) || '(unnamed formulation)']);
+  });
+  opts.sort(function (a, b) { return (a[0].charAt(0) === '~') - (b[0].charAt(0) === '~') || a[1].toLowerCase().localeCompare(b[1].toLowerCase()); });
+  if (focus && !keys[focus]) focus = '';
+  document.getElementById('an-focus').innerHTML = '<option value="">All products</option>' + opts.map(function (o) {
+    return '<option value="' + esc(o[0]) + '"' + (focus === o[0] ? ' selected' : '') + '>' + esc(o[1]) + '</option>';
+  }).join('');
+  document.getElementById('an-period').textContent = label + (focus ? ' · ' + (document.getElementById('an-focus').selectedOptions[0] || {}).textContent : '');
+  document.getElementById('an-tiles').innerHTML = tilesHtml();
+  document.getElementById('an-looks').innerHTML = looksHtml();
+  document.getElementById('an-products').innerHTML = productsHtml();
+  document.getElementById('an-batches').innerHTML = batchesHtml();
+  document.getElementById('an-bsub').textContent = 'Made ' + label.toLowerCase() + '. Ingredient cost as each batch shows it; per 100 g of what the batch made.';
+  var anyEst = D.products.some(function (p) { return Plume.costs.rows(p, D).fills.some(function (f) { return f.est; }); });
+  document.getElementById('an-foot').textContent = 'Each fill notes what one unit cost to make and package that day. Batch costs are the same figures as each batch’s Ingredients tab, at today’s prices. What went out is counted the way Stock history counts it.' +
+    (anyEst ? ' ~ marks fills from before costs were noted; they use today’s prices.' : '') +
+    ' Sales income is not here: what a sale brought in lives in Square, Etsy and your accounting.';
+  D.products.forEach(function (p) { if (p) delete p._m; });
+}
+function setRange(r) { range = r; try { localStorage.setItem('plume-an-range', r); } catch (e) {} render(); }
+function setFocus(f) { focus = f; openId = ''; render(); }
+function sortBy(k) { if (sortKey === k) sortDir = -sortDir; else { sortKey = k; sortDir = (k === 'name') ? 1 : -1; } render(); }
+function toggleMore(k) { lookMore[k] = !lookMore[k]; render(); }
+function openProduct(id) {
+  openId = openId === id ? '' : id; render();
+  var r = document.querySelector('tr[data-p="' + (window.CSS && CSS.escape ? CSS.escape(id) : id) + '"]');
+  if (openId && r && r.scrollIntoView) r.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+if (typeof Plume === 'undefined') {
+  document.body.insertAdjacentHTML('afterbegin',
+    '<div style="background:#F9E9E4;border-bottom:2px solid #D9A695;color:#7A3F2C;' +
+    'padding:16px 20px;font-family:sans-serif;font-size:14px;line-height:1.6">' +
+    '<strong>plume-core.js did not load.</strong><br>' +
+    'This page needs <code>plume-core.js</code> in the same folder as ' +
+    '<code>plume-analytics.html</code>. Upload it to GitHub, wait for the site to rebuild, ' +
+    'then reload with Ctrl+Shift+R (Cmd+Shift+R on a Mac).<br>' +
+    '<em>Your data is safe &mdash; it lives in the browser, not in these files.</em></div>');
+} else {
+  Plume.setModule('analytics');
+  Plume.boot(function () {
+    Plume.shell({ module: 'analytics' });
+    var ic = document.querySelectorAll('[data-ps-icon]');
+    for (var k = 0; k < ic.length; k++) ic[k].innerHTML = Plume.icon(ic[k].getAttribute('data-ps-icon'));
+    try { var r = localStorage.getItem('plume-an-range'); if (r && RANGES.some(function (x) { return x[0] === r; })) range = r; } catch (e) {}
+    render();
+    // Another window saved (a fill, a batch, a stock change): show it on return.
+    Plume.onLibraryChange(render);
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) { ['plume-products-v1', 'aerie-batches-v1', 'aerie-ingredients-v2', 'aerie-packaging-v2', 'aerie-formulations-v1'].forEach(function (k) { if (Plume.Store.refresh) Plume.Store.refresh(k); }); render(); } });
+  });
+}
+</script>
+<footer class="app-footer">Plume by Little Bird Studio &middot; Analytics &middot; <span class="plume-version"></span></footer>
+</body>
+</html>

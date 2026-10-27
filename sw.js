@@ -35,6 +35,7 @@ var APP_FILES = [
   'plume-packaging.html',
   'plume-batchlog.html',
   'plume-costing.html',
+  'plume-analytics.html',
   'plume-core.js',
   'plume-cheatsheet.js',
   'plume-sapdata.js',

@@ -1097,7 +1097,7 @@ function shell(opts) {
       '<nav class="ps-nav-list" aria-label="Stock">' +
         '<button type="button" class="ps-nav" id="ps-nav-stock" onclick="Plume.stock.open()" title="Sold, gifted, marketing, damaged, returned, or reconcile to a count">' + icon('stock') + '<span class="ps-nav-label">Update stock</span></button>' +
         '<button type="button" class="ps-nav" id="ps-nav-history" onclick="Plume.stock.history()" title="Where your stock went: by market or event, month or product, and what it cost">' + icon('history') + '<span class="ps-nav-label">Stock history</span></button>' +
-        '<button type="button" class="ps-nav" id="ps-nav-costs" onclick="Plume.costs.open()" title="Analytics: what one unit of each product cost to make and package, over time">' + icon('trend') + '<span class="ps-nav-label">Analytics</span></button>' +
+        '<a class="ps-nav' + (shellOpts.module === 'analytics' ? ' on' : '') + '" id="ps-nav-analytics" href="plume-analytics.html" target="plume-analytics"' + (shellOpts.module === 'analytics' ? ' aria-current="page"' : '') + ' title="Status at a glance: what it costs to make, what is on hand, what needs a look">' + icon('trend') + '<span class="ps-nav-label">Analytics</span></a>' +
       '</nav>' +
       '<div class="ps-grow"></div>' +
       '<button type="button" class="ps-nav" onclick="if (typeof openSettings === \'function\') openSettings()" title="Settings">' + icon('settings') + '<span class="ps-nav-label">Settings</span></button>' +
@@ -5235,13 +5235,26 @@ function shHtml() {
     (rows.length ? '<div class="sh-actions"><button type="button" class="ps-link-btn" onclick="Plume.stock.copy()">' + icon('copy') + 'Copy as a table</button></div>' : '') +
   '</div>';
 }
+// A batch's ingredient cost, the same figure its Ingredients tab shows:
+// each ingredient's grams at the price in use today. perG divides by the
+// grams made (actual yield when entered), so residue and spills raise it.
+// { cost, perG, missing }
+function batchCost(b, ings) {
+  var made = batchMadeG(b), c = 0, miss = 0;
+  ((b && b.ingredientSnapshot) || []).forEach(function (s) {
+    var g = parseFloat(s.grams) || 0;
+    if (!(g > 0)) return;
+    var cpg = costPerG(fillFind(ings, s.ingredientId));
+    if (cpg === null) miss++; else c += cpg * g;
+  });
+  return { cost: c, perG: made > 0 ? c / made : null, missing: miss };
+}
 // ── Cost to make (2026-10-26) ─────────────────────────────────────────
 // Her ask: "how much it cost to make and package a unit of formula x, over
 // time." A read-only panel in the sidebar, under Stock. One point per fill
 // (or kit build), at the cost the fill recorded; a fill from before costs
 // were recorded uses today's cost, marked ~ (her call). No range or
 // buttons on purpose: she did not want this nickel-and-dimed.
-var ctOpen = '', ctQ = '';
 function ctRows(p, d) {
   var today = productCostParts(p, d), out = [];
   (p.productionRuns || []).forEach(function (r) {
@@ -5308,50 +5321,6 @@ function ctProductTitle(p) {
   var size = String(p.netWtDisplay || '').trim() || ((parseFloat(p.netWtG) > 0) ? p.netWtG + ' g' : '');
   return { name: p.name || '(unnamed)', size: size };
 }
-function ctHtml() {
-  var d = costData(), forms = d.forms, q = ctQ.trim().toLowerCase();
-  var groups = {}, order = [];
-  d.products.forEach(function (p) {
-    if (!p || p.archived) return;
-    var f = fillFind(forms, p.formulaId);
-    var key = (p.productKind === 'kit' || p.productKind === 'multi') ? '~kits' : (f ? f.id : '~none');
-    var title = key === '~kits' ? 'Kits and sample packs' : key === '~none' ? 'No formulation' : (f.name || '(unnamed formulation)');
-    if (q && (p.name || '').toLowerCase().indexOf(q) === -1 && title.toLowerCase().indexOf(q) === -1) return;
-    if (!groups[key]) { groups[key] = { title: title, items: [] }; order.push(key); }
-    groups[key].items.push(p);
-  });
-  order.sort(function (a, b) {
-    if (a.charAt(0) === '~' || b.charAt(0) === '~') return a.charAt(0) === '~' ? 1 : -1;
-    return groups[a].title.toLowerCase().localeCompare(groups[b].title.toLowerCase());
-  });
-  var anyEst = false;
-  var body = order.map(function (k) {
-    var gr = groups[k];
-    return '<div class="ct-form">' + esc(gr.title) + '</div>' + gr.items.map(function (p) {
-      var rows = ctRows(p, d), ch = ctChange(rows), tt = ctProductTitle(p), open = ctOpen === p.id;
-      if (rows.fills.some(function (x) { return x.est; })) anyEst = true;
-      var retail = parseFloat(p.retail), m = (retail > 0 && rows.today.total > 0 && !p.notForSale) ? Math.round((retail - rows.today.total) / retail * 100) : null;
-      var pills = [
-        rows.fills.length ? rows.fills.length + ' fill' + (rows.fills.length === 1 ? '' : 's') : 'not filled yet',
-        ctChangeText(ch),
-        m !== null ? m + '% margin at retail' : ''
-      ].filter(Boolean);
-      return '<div class="ct-item' + (open ? ' open' : '') + '"><button type="button" class="ct-head" aria-expanded="' + open + '" onclick="Plume.costs.toggle(' + esc(JSON.stringify(p.id)) + ')">' +
-        '<span class="ct-name">' + esc(tt.name) + (tt.size ? '<small>' + esc(tt.size) + '</small>' : '') + '</span>' +
-        '<span class="ct-now">' + (rows.today.total > 0 ? ctMoney(rows.today.total) : '<i>no cost yet</i>') + '<small>a unit today</small></span>' +
-        '<span class="ct-pills">' + pills.map(function (x) { return '<span class="sh-pill' + (/^up /.test(x) ? ' ct-up' : '') + '">' + esc(x) + '</span>'; }).join('') + '</span>' +
-        '</button>' + (open ? '<div class="ct-detail">' + ctDetail(p, rows) + '</div>' : '') + '</div>';
-    }).join('');
-  }).join('');
-  return '<div class="sh-panel ct-panel"><div class="sup-title">' + icon('trend') + '<h2>Analytics</h2></div>' +
-    '<h3 class="ct-sec">Cost to make</h3>' +
-    '<p class="ct-sub">What one unit cost to make and package each time you filled it. Open a product to see it over time.</p>' +
-    '<label class="ps-search sh-search">' + icon('search') + '<input type="search" id="ct-q" placeholder="Search products or formulations" value="' + esc(ctQ) + '" oninput="Plume.costs.find(this.value)" aria-label="Search products"></label>' +
-    '<div class="ct-list">' + (body || '<div class="st-empty">' + (q ? 'Nothing matches “' + esc(ctQ) + '”.' : 'No products yet. Products &amp; Costing is where they are set up.') + '</div>') + '</div>' +
-    '<p class="sh-foot">Each fill records what one unit cost that day, at the prices of the lots in use. ' +
-      (anyEst ? '~ marks fills from before costs were recorded; they use today’s prices. ' : '') +
-      'A kit counts its products at their cost today plus the kit’s own packaging.</p></div>';
-}
 function ctDetail(p, rows) {
   if (!rows.fills.length) return '<p class="ct-none">Nothing filled yet. Each fill adds a point here.</p>';
   var t = rows.today;
@@ -5363,24 +5332,10 @@ function ctDetail(p, rows) {
         '<span>' + x.units + '</span><span>' + ctMoney(x.ing, x.est) + '</span><span>' + ctMoney(x.pkg, x.est) + '</span><span><b>' + ctMoney(x.cost, x.est) + '</b></span></div>';
     }).join('') + '</div>';
 }
-function ctRender() { var b = document.getElementById('ps-peek-body'); if (b) b.innerHTML = ctHtml(); }
-function costsOpen() {
-  ctOpen = ''; ctQ = '';
-  openPeek(ctHtml(), {
-    label: 'Analytics',
-    onClose: function () { var b = document.getElementById('ps-nav-costs'); if (b) b.classList.remove('on'); }
-  });
-  ['ps-nav-stock', 'ps-nav-history'].forEach(function (k) { var e = document.getElementById(k); if (e) e.classList.remove('on'); });
-  var b = document.getElementById('ps-nav-costs'); if (b) b.classList.add('on');
-}
-function ctToggle(id) { ctOpen = ctOpen === id ? '' : id; ctRender(); }
-function ctFind(v) {
-  ctQ = v; ctRender();
-  var i = document.getElementById('ct-q'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); }
-}
 function shRender() { var b = document.getElementById('ps-peek-body'); if (b) b.innerHTML = shHtml(); }
-function stockHistory() {
-  shRange = 'year'; shGroup = 'event'; shQ = ''; shOpen = {}; shReason = '';
+function stockHistory(range) {
+  shRange = (range && SH_RANGES.some(function (r) { return r[0] === range; })) ? range : 'year';
+  shGroup = 'event'; shQ = ''; shOpen = {}; shReason = '';
   openPeek(shHtml(), {
     label: 'Stock history',
     onClose: function () { var b = document.getElementById('ps-nav-history'); if (b) b.classList.remove('on'); }
@@ -5478,7 +5433,8 @@ return {
   kitNeeds: kitNeeds, kitShortages: kitShortages, buildKit: buildKit, undoKitBuild: undoKitBuild,
   undoKitText: undoKitText, kitsUsing: kitsUsing, stockPass: stockPass, undoStock: undoStock,
   STOCK_REASONS: STOCK_REASONS, productUnitCost: productUnitCost, productCostParts: productCostParts, stampRunCost: stampRunCost,
-  costs: { open: costsOpen, toggle: ctToggle, find: ctFind, rows: ctRows }, stockReasonLabel: stockReasonLabel, fillUndoBlock: fillUndoBlock,
+  costs: { rows: ctRows, chart: ctChart, detail: ctDetail, change: ctChange, changeText: ctChangeText, money: ctMoney },
+  batchCost: batchCost, pkgUnitCostOf: pkgUnitCostOf, stockReasonLabel: stockReasonLabel, fillUndoBlock: fillUndoBlock,
   consign: { open: consignOpen, shop: csShow, list: csList, add: csAdd, edit: csEdit, typed: csTyped, save: csSave },
   shopsAll: shopsAll, shopAdd: shopAdd, shopName: shopName, atShops: atShops, consignPass: consignPass, settlePass: settlePass,
   shopStock: shopStock, shopEvents: shopEvents, undoStockBlock: undoStockBlock,
