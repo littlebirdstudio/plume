@@ -2139,13 +2139,8 @@ function packagingOptionsHTML(selectedId) {
   return html;
 }
 
-// Mirror of plume-packaging.html calcStock()
-function calcPkgStock(item) {
-  var total = 0;
-  (item.purchases || []).forEach(function(p) { total += parseInt(p.qty, 10) || 0; });
-  (item.adjustments || []).forEach(function(a) { total += parseInt(a.qty, 10) || 0; });
-  return total;
-}
+// Units here: the one rule in core (purchases still on order are not here).
+function calcPkgStock(item) { return Plume.pkStock(item); }
 
 // Normalize a run record so display code can assume a `components` array,
 // regardless of whether it was saved as the legacy single-component shape or

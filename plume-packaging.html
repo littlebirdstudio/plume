@@ -125,6 +125,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);m
 .pr-inp{font-family:'DM Sans',sans-serif;font-size:12px;padding:6px 8px;border:1px solid var(--cream-border);border-radius:3px;background:var(--white);color:var(--ink);width:100%;outline:none}
 .pr-inp:focus{border-color:var(--bark-light)}
 .pr-calc{font-size:11px;color:var(--sage-dark);margin-top:4px;font-weight:500}
+.pr-ord{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:6px;font-size:11px;color:var(--ink-light)}
+.pr-ord .ord{font-size:10px;letter-spacing:0.06em;text-transform:uppercase;border:1px solid var(--clay);color:var(--clay);border-radius:3px;padding:1px 6px}
+.purchase-row.on-order{background:var(--clay-light)}
+.pk-ord{display:block;font-size:10px;color:var(--clay);margin-top:2px;white-space:nowrap}
 .pr-rm{background:none;border:none;cursor:pointer;color:var(--ink-lighter);font-size:16px;padding:2px 4px;line-height:1}
 .pr-rm:hover{color:var(--danger)}
 /* Adjustment log */
@@ -499,29 +503,10 @@ function fmt$(n) {
   return (n !== null && n !== undefined && !isNaN(n)) ? '$' + parseFloat(n).toFixed(2) : '\u2014';
 }
 
-// Calculate total stock from purchase rows + adjustments
-function calcStock(item) {
-  var total = 0;
-  (item.purchases || []).forEach(function(p) { total += parseInt(p.qty, 10) || 0; });
-  (item.adjustments || []).forEach(function(a) { total += parseInt(a.qty, 10) || 0; });
-  return total;
-}
-
-// Get cost/unit from most recent purchase (total cost + shipping) / qty
-function latestCostPerUnit(item) {
-  var purchases = (item.purchases || []).slice();
-  if (!purchases.length) return null;
-  // Sort by date descending, use most recent
-  purchases.sort(function(a, b) {
-    return (b.date || '').localeCompare(a.date || '');
-  });
-  var latest = purchases[0];
-  var qty    = parseInt(latest.qty, 10) || 0;
-  var total  = parseFloat(latest.totalCost) || 0;
-  var ship   = parseFloat(latest.shipping)  || 0;
-  if (qty <= 0) return null;
-  return (total + ship) / qty;
-}
+// Stock and cost per unit: the one rule in core. Purchases still on order
+// are not in stock; shipping is not in the cost per unit (2026-10-26).
+function calcStock(item) { return Plume.pkStock(item); }
+function latestCostPerUnit(item) { return Plume.pkgUnitCostOf(item); }
 
 // ── Data ──────────────────────────────────────────────
 function loadData() {
@@ -687,7 +672,8 @@ function renderTable() {
         '<td>' + Plume.pkDetailHtml(i) + '</td>' +
         '<td class="hide-sm ps-muted">' + esc(i.supplier || '—') + '</td>' +
         '<td class="ps-num">' + (cpu !== null ? '$' + cpu.toFixed(cpu < 0.1 ? 3 : 2) : '<span class="ps-muted">—</span>') + '</td>' +
-        '<td class="ps-num">' + (stock > 0 ? '<span class="stock-pill">' + stock + '</span>' : '<span class="ps-muted">0</span>') + '</td>' +
+        '<td class="ps-num">' + (stock > 0 ? '<span class="stock-pill">' + stock + '</span>' : '<span class="ps-muted">0</span>') +
+          (Plume.pkOnOrder(i) > 0 ? '<span class="pk-ord">+' + Plume.pkOnOrder(i) + ' on order</span>' : '') + '</td>' +
         '<td class="hide-sm">' + (i.link ? '<a class="pk-buy" href="' + esc(i.link) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()">Buy &#8599;</a>' : '') + '</td>' +
       '</tr>';
     });
@@ -724,9 +710,14 @@ function addPurchaseRow(purchase) {
   document.getElementById('purchase-empty') && (document.getElementById('purchase-empty').style.display = 'none');
   var rowId = 'pr-' + Date.now() + Math.random().toString(36).slice(2, 4);
   var div   = document.createElement('div');
-  div.className = 'purchase-row';
+  div.className = 'purchase-row' + (purchase && purchase.onOrder ? ' on-order' : '');
   div.id = rowId;
-  div.innerHTML =
+  // Fields this row does not show (supplier, order #, link, on order, from
+  // a receipt) ride along on the row, or saving the item would drop them.
+  var extra = {};
+  Object.keys(purchase || {}).forEach(function (k) { if (['date', 'qty', 'totalCost', 'shipping'].indexOf(k) === -1) extra[k] = purchase[k]; });
+  div.setAttribute('data-extra', JSON.stringify(extra));
+  div.innerHTML = purchaseOrdHtml(rowId, extra) +
     '<div class="purchase-row-grid">' +
       '<div><div class="pr-lbl">Date</div>' +
         '<input type="date" class="pr-inp" data-field="date" value="' +
@@ -737,7 +728,7 @@ function addPurchaseRow(purchase) {
       '<div><div class="pr-lbl">Total cost ($)</div>' +
         '<input type="number" class="pr-inp" data-field="totalCost" min="0" step="0.01" placeholder="0.00" value="' +
           (purchase && purchase.totalCost ? purchase.totalCost : '') + '" oninput="recalcPurchaseRow(\'' + rowId + '\')"></div>' +
-      '<div><div class="pr-lbl">Shipping attributed ($) <span style="font-weight:300;text-transform:none;letter-spacing:0">optional</span></div>' +
+      '<div><div class="pr-lbl">Shipping ($) <span style="font-weight:300;text-transform:none;letter-spacing:0">optional, kept apart</span></div>' +
         '<input type="number" class="pr-inp" data-field="shipping" min="0" step="0.01" placeholder="0.00" value="' +
           (purchase && purchase.shipping ? purchase.shipping : '') + '" oninput="recalcPurchaseRow(\'' + rowId + '\')"></div>' +
       '<button class="pr-rm" onclick="removePurchaseRow(\'' + rowId + '\')" title="Remove">\u00d7</button>' +
@@ -749,13 +740,35 @@ function addPurchaseRow(purchase) {
   updateModalSummary();
 }
 
+// Shipping is not in cost per unit (2026-10-26, "match ingredients"); the
+// figure is kept on the purchase and counted on Analytics with the order's.
 function calcRowCpu(p) {
   var qty   = parseInt(p.qty, 10) || 0;
   var total = parseFloat(p.totalCost) || 0;
   var ship  = parseFloat(p.shipping)  || 0;
   if (qty <= 0) return 'Enter qty and total cost to calculate cost / unit';
-  var cpu = (total + ship) / qty;
-  return 'Cost / unit: $' + cpu.toFixed(4) + (ship > 0 ? ' (incl. $' + ship.toFixed(2) + ' shipping)' : '');
+  var cpu = total / qty;
+  return 'Cost / unit: $' + cpu.toFixed(4) + (ship > 0 ? ' (shipping of $' + ship.toFixed(2) + ' kept apart)' : '');
+}
+// The on-order strip on a purchase row: where it came from, and Arrived.
+function rowExtra(row) { try { return JSON.parse(row.getAttribute('data-extra') || '{}') || {}; } catch (e) { return {}; } }
+function purchaseOrdHtml(rowId, x) {
+  var bits = [x.supplier ? esc(x.supplier) : '', x.orderNum ? 'order ' + esc(x.orderNum) : '', x.received ? 'arrived ' + esc(x.received) : ''].filter(Boolean);
+  if (!x.onOrder && !bits.length) return '';
+  return '<div class="pr-ord" id="' + rowId + '-ord">' + (x.onOrder ? '<span class="ord">on order</span>' : '') +
+    (bits.length ? '<span>' + bits.join(' \u00b7 ') + '</span>' : '') +
+    (x.onOrder ? '<button type="button" class="btn btn-sm" onclick="markPurchaseArrived(\'' + rowId + '\')">Mark arrived</button>' : '') + '</div>';
+}
+// The box came: the purchase counts as stock from today. Saved with the item.
+function markPurchaseArrived(rowId) {
+  var row = document.getElementById(rowId); if (!row) return;
+  var x = rowExtra(row);
+  delete x.onOrder; if (!x.received) x.received = todayISO();
+  row.setAttribute('data-extra', JSON.stringify(x));
+  row.classList.remove('on-order');
+  var strip = document.getElementById(rowId + '-ord');
+  if (strip) strip.outerHTML = purchaseOrdHtml(rowId, x);
+  updateModalSummary();
 }
 
 function recalcPurchaseRow(rowId) {
@@ -786,12 +799,12 @@ function getPurchaseRows() {
   document.querySelectorAll('#purchase-rows .purchase-row').forEach(function(row) {
     var qty = row.querySelector('[data-field="qty"]').value;
     if (!qty) return;
-    result.push({
+    result.push(Object.assign(rowExtra(row), {
       date:      row.querySelector('[data-field="date"]').value,
       qty:       parseInt(qty, 10) || 0,
       totalCost: row.querySelector('[data-field="totalCost"]').value,
       shipping:  row.querySelector('[data-field="shipping"]').value
-    });
+    }));
   });
   return result;
 }
@@ -868,12 +881,14 @@ function renderAdjLog() {
 function updateModalSummary() {
   // Stock total
   var purchaseTotal = 0;
+  var onOrd = 0;
   document.querySelectorAll('#purchase-rows .purchase-row').forEach(function(row) {
-    purchaseTotal += parseInt(row.querySelector('[data-field="qty"]').value, 10) || 0;
+    var q = parseInt(row.querySelector('[data-field="qty"]').value, 10) || 0;
+    if (rowExtra(row).onOrder) onOrd += q; else purchaseTotal += q;
   });
   var adjTotal = pendingAdjustments.reduce(function(sum, a) { return sum + (parseInt(a.qty,10)||0); }, 0);
   var stock = purchaseTotal + adjTotal;
-  document.getElementById('modal-stock-total').textContent = stock + ' unit' + (stock !== 1 ? 's' : '');
+  document.getElementById('modal-stock-total').textContent = stock + ' unit' + (stock !== 1 ? 's' : '') + (onOrd ? ' (+' + onOrd + ' on order)' : '');
 
   // Most recent cost/unit from purchase rows (sorted by date)
   var rows = [];
@@ -895,11 +910,11 @@ function updateModalSummary() {
     renderStockLine(stock, null);
     return;
   }
-  rows.sort(function(a,b){ return b.date.localeCompare(a.date); });
-  var latest = rows[0];
-  var cpu = (latest.totalCost + latest.shipping) / latest.qty;
+  // The same rule as the list and every other page (core pkgUnitCostOf).
+  var cpu = Plume.pkgUnitCostOf({ purchases: rows });
+  if (cpu === null) { cpuEl.textContent = '\u2014'; noteEl.textContent = 'from most recent priced purchase'; renderStockLine(stock, null); return; }
   cpuEl.textContent  = '$' + cpu.toFixed(4);
-  noteEl.textContent = 'from most recent purchase' + (latest.shipping > 0 ? ' (incl. shipping)' : '');
+  noteEl.textContent = 'from most recent purchase, shipping not included';
   renderStockLine(stock, cpu);
 }
 
@@ -1143,13 +1158,7 @@ function saveItem() {
   if (Plume.pkIsOther(edKind) && !d.other) { Plume.tell('Give it a name. Other is for anything not in the list.'); document.getElementById('f-other').focus(); return; }
   var purchases = getPurchaseRows();
   // Derive current cost/unit for backward compat with costing module
-  var cpu = null;
-  if (purchases.length) {
-    var sorted = purchases.slice().sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
-    var latest = sorted[0];
-    var qty = parseInt(latest.qty,10)||0;
-    if (qty > 0) cpu = ((parseFloat(latest.totalCost)||0) + (parseFloat(latest.shipping)||0)) / qty;
-  }
+  var cpu = Plume.pkgUnitCostOf({ purchases: purchases });
   var old = editingId ? items.find(function(i){ return i.id === editingId; }) : null;
   // Start from the stored item so any field this panel does not show is kept.
   var data = old ? JSON.parse(JSON.stringify(old)) : {};

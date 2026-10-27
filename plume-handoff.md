@@ -3991,3 +3991,60 @@ will be missed, by her and by Formula Finch buyers.
   same, each / total, Correct it, gallons, Quick add, the drawer handing the
   lots back). `test-lotentry.js` types into the new boxes; its "totals only"
   check is replaced (her earlier call, reversed today). 40 suites.
+
+## Session 29 (26 October 2026): Receipts, option A (v1.61)
+
+Her ask (backlog, "Receipts to agents"): send a purchase receipt and have
+the purchase filled in. Option A, her choice: the receipt goes into a
+Claude chat in the project, the chat hands back a small file, and Plume's
+Import shows it line by line before anything is added. No key, no server.
+Option B (a "Read a receipt" button with her own API key, Plume only, never
+Formula Finch) is this plus a front door, later if she wants it.
+
+- **The file**: `kind: 'plume-receipt'`, documented for chats in
+  `plume-receipt-format.md` (also in the project as
+  `claude/plume-receipt-format.md`). Order fields (supplier, orderNum,
+  date, shipping, tax, receiptLink) and `lines`, each `ingredient` (name,
+  inci, count, size, unit, price, priceIs, lotNum, brand, bestBy, link) or
+  `packaging` (name, count in single units, price, priceIs, link).
+  Units are read loosely (`rcUnit`: "fl. oz", "Gallon", "lbs").
+- **The preview** (`previewReceipt`, `#modal-receipt`): the order on a
+  card (items, shipping, tax, "everything comes in on order", "shipping and
+  tax are kept with the order"); every line with a tick, its buy spelled
+  out ("2 × 1 lb = 2 lb · 2 × $11.50 = $23.00") and a "Goes to" choice.
+  Ingredients match by id, name, the starter list's other names (as Quick
+  add), then INCI when only one ingredient has it; the preview says when a
+  match was not by name. No match: a new ingredient, from the starter list
+  when it is there (INCI filled), else with an INCI box that must be filled
+  before Import. Packaging matches by its display name; no match: a new item
+  of kind Other, for her to set later. Lines already in Plume from this
+  order (same supplier and order #) start unticked, and the card says the
+  order came in once already; importing again with nothing ticked updates
+  the order's shipping and tax only.
+- **What it adds**: ingredient lots on order (`onOrder`, `ordered`,
+  `orderNum`, the buy fields, `receiptLink`, `buyLink`), next free `L<n>`
+  id; a reorder leaves the lot in use alone, a first purchase becomes it.
+  Packaging purchases on order (`onOrder`, `supplier`, `orderNum`, `link`).
+  The order to `plume-orders-v1` (`Plume.KEYS.orders`): supplier, orderNum,
+  date, shipping, tax, receiptLink, imported, lines. Ingredients' Export
+  carries `orders`; its Import adds orders it does not have.
+- **Packaging on order** is new: `pkStock` skips on-order purchases,
+  `Plume.pkOnOrder` counts them, the list shows "+24 on order" under the
+  stock, and the purchase row has an on-order strip with **Mark arrived**
+  (dates it `received` today; saved with the item). Purchase rows now keep
+  fields they do not show (`data-extra`), so saving an item no longer drops
+  a purchase's supplier, order # or on-order flag.
+- **Packaging cost per unit no longer includes shipping** (decided
+  2026-10-26, "match ingredients"). One rule, core `pkgUnitCostOf`
+  (newest priced purchase, total / qty), now read by Packaging's list and
+  edit panel, Products & Costing's `pkgUnitCost`, cost to make, inventory
+  at cost. Batches' `calcPkgStock` is core `pkStock`. The shipping box on a
+  purchase stays ("optional, kept apart"); it is counted on Analytics.
+- **Analytics, Bought**: packaging at what was paid, without shipping;
+  packaging on order joins "plus $ on order"; a new line "shipping and tax
+  $X, kept apart" from orders in the period plus any shipping typed on a
+  packaging purchase.
+- Tests: new `test/test-receipts.js` (57: matching by name, other name and
+  INCI, new from the starter list, INCI required, unticking, import, the
+  same receipt twice, Mark arrived on both pages, the backup, every page
+  agreeing on the jar's cost, Analytics). 41 suites.
