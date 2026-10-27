@@ -1537,6 +1537,12 @@ release expects one specific Chromium build; a mismatch fails with "Executable
 doesn't exist", which reads like a broken suite but is a version mismatch.
 `package-lock.json` is committed. See `test/README.md`.
 
+**The GitHub test machine is pinned too: `runs-on: ubuntu-24.04`** (October
+2026). `ubuntu-latest` moved to Ubuntu 26, where Playwright 1.56 cannot install
+Chromium, so every run failed at "Install Chromium" before a single test ran.
+Ubuntu 26 support arrived around Playwright 1.61. Upgrade the two together,
+in their own PR, never one alone.
+
 `test/helpers.js` inlines local `<script src>` files into a self-contained
 preview under `test/tmp/`, because a `file://` page will not reliably fetch
 them. **Adding a new local script file means adding it to `INLINE` there**, or
