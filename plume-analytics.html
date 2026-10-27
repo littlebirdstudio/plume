@@ -332,12 +332,22 @@ function tilesHtml() {
         else if (l.received && inRange(l.received, b)) ib += pr;
       });
     });
+    // Shipping and tax are counted apart, never in what things cost
+    // (2026-10-26): the orders a receipt brought in, plus any shipping typed
+    // on a packaging purchase before then.
+    var st = 0;
     D.pkgs.forEach(function (k) {
       (k && k.purchases || []).forEach(function (pu) {
-        if (inRange(pu.date, b)) pb += (parseFloat(pu.totalCost) || 0) + (parseFloat(pu.shipping) || 0);
+        var pr = parseFloat(pu.totalCost) || 0;
+        if (pu.onOrder) { onOrd += pr; return; }
+        if (inRange(pu.date, b)) { pb += pr; st += parseFloat(pu.shipping) || 0; }
       });
     });
-    tiles.push(['Bought', money(ib + pb), 'ingredients <b>' + money(ib) + '</b> · packaging <b>' + money(pb) + '</b>' + (onOrd > 0 ? '<br>plus ' + money(onOrd) + ' on order' : '')]);
+    (Plume.Store.getJSON('plume-orders-v1', []) || []).forEach(function (o) {
+      if (o && inRange(o.date, b)) st += (parseFloat(o.shipping) || 0) + (parseFloat(o.tax) || 0);
+    });
+    tiles.push(['Bought', money(ib + pb), 'ingredients <b>' + money(ib) + '</b> · packaging <b>' + money(pb) + '</b>' + (onOrd > 0 ? '<br>plus ' + money(onOrd) + ' on order' : '') +
+      (st > 0 ? '<br>shipping and tax <b>' + money(st) + '</b>, kept apart' : '')]);
   }
   return tiles.map(tileHtml).join('');
 }
@@ -596,7 +606,7 @@ if (typeof Plume === 'undefined') {
     render();
     // Another window saved (a fill, a batch, a stock change): show it on return.
     Plume.onLibraryChange(render);
-    document.addEventListener('visibilitychange', function () { if (!document.hidden) { ['plume-products-v1', 'aerie-batches-v1', 'aerie-ingredients-v2', 'aerie-packaging-v2', 'aerie-formulations-v1'].forEach(function (k) { if (Plume.Store.refresh) Plume.Store.refresh(k); }); render(); } });
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) { ['plume-products-v1', 'aerie-batches-v1', 'aerie-ingredients-v2', 'aerie-packaging-v2', 'aerie-formulations-v1', 'plume-orders-v1'].forEach(function (k) { if (Plume.Store.refresh) Plume.Store.refresh(k); }); render(); } });
   });
 }
 </script>

@@ -1212,6 +1212,31 @@
   }
 
   /* ── Seeder modal ── */
+  /* Receipt import (2026-10-26) */
+  .rc-ordcard { background: var(--cream); border: 1px solid var(--cream-border); border-radius: 6px; padding: 10px 12px; margin-bottom: 10px; font-size: 13px; color: var(--ink); }
+  .rc-ordcard .rc-sup { font-weight: 600; }
+  .rc-ordcard .rc-meta { color: var(--ink-light); font-size: 12px; margin-top: 2px; }
+  .rc-ordcard .rc-money { margin-top: 6px; font-size: 12px; color: var(--ink-light); }
+  .rc-ordcard .rc-money b { color: var(--ink); font-weight: 600; }
+  .rc-warn { background: var(--clay-light); border: 1px solid var(--clay); color: var(--ink); border-radius: 6px; padding: 8px 12px; font-size: 12px; margin-bottom: 10px; }
+  .rc-lines { max-height: 52vh; overflow-y: auto; border-top: 1px solid var(--cream-dark); }
+  .rc-sect { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-lighter); padding: 10px 0 4px; }
+  .rc-line { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 4px 8px; padding: 9px 0; border-bottom: 1px solid var(--cream-dark); align-items: start; }
+  .rc-line.off > div { opacity: 0.5; }
+  .rc-line input[type=checkbox] { width: 15px; height: 15px; margin-top: 2px; accent-color: var(--bark); cursor: pointer; }
+  .rc-name { font-size: 13px; font-weight: 500; color: var(--ink); }
+  .rc-buy { font-size: 12px; color: var(--ink-light); margin-top: 1px; }
+  .rc-to { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 6px; font-size: 12px; color: var(--ink-light); }
+  .rc-to select, .rc-to input { font: inherit; font-size: 12px; padding: 4px 6px; border: 1px solid var(--cream-border); border-radius: 4px; background: var(--white); color: var(--ink); max-width: 100%; min-width: 0; }
+  .rc-to select { flex: 0 1 320px; }
+  .rc-to input { flex: 1 1 200px; }
+  .rc-tag { font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; border-radius: 3px; padding: 1px 6px; white-space: nowrap; border: 1px solid var(--cream-border); color: var(--ink-light); font-weight: 400; }
+  .rc-tag.new { border-color: var(--sage-border); color: var(--sage-dark); background: var(--sage-light); }
+  .rc-tag.ord { border-color: var(--clay); color: var(--clay); }
+  .rc-tag.need { border-color: var(--clay); color: var(--white); background: var(--clay); }
+  .rc-note { grid-column: 2; font-size: 11px; color: var(--ink-lighter); }
+  .rc-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; padding-top: 12px; }
+  .rc-count { font-size: 12px; color: var(--ink-light); }
   .seeder-tabs { display: flex; gap: 6px; margin-bottom: 1.25rem; flex-wrap: wrap; }
   .seeder-tab {
     font-family: 'DM Sans', sans-serif;
@@ -1489,7 +1514,7 @@
             <button type="button" onclick="makeStockSolution()" data-icon="formulations">Make a stock solution</button>
             <hr>
             <button type="button" onclick="exportData()" data-icon="download">Export backup</button>
-            <button type="button" onclick="document.getElementById('import-file-input').click()" data-icon="upload">Import or update from a file</button>
+            <button type="button" onclick="document.getElementById('import-file-input').click()" data-icon="upload">Import a file: backup, update or receipt</button>
           </div>
         </div>
       </div>
@@ -1955,6 +1980,26 @@
   </div>
 </div>
 
+<!-- Receipt import (2026-10-26, session 29): a receipt file read in a
+     Claude chat comes in here, line by line, for her to check first. -->
+<div class="modal-overlay" id="modal-receipt">
+  <div class="modal" role="dialog" aria-labelledby="rc-title" style="max-width:760px">
+    <div class="modal-header">
+      <div class="modal-title" id="rc-title">Import a receipt</div>
+      <button class="modal-close" onclick="closeModal('modal-receipt')" aria-label="Close">×</button>
+    </div>
+    <div id="rc-order"></div>
+    <div id="rc-lines" class="rc-lines"></div>
+    <div class="rc-foot">
+      <span id="rc-count" class="rc-count"></span>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="closeModal('modal-receipt')">Cancel</button>
+        <button class="btn btn-sage" id="rc-apply" onclick="applyReceipt()">Import</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-seeder">
   <div class="modal" style="max-width:700px">
     <div class="modal-header">
@@ -2213,7 +2258,7 @@ function saveData() {
 // stock, a stock solution's new ingredient), unless a form is open here.
 function freshenFromStorage() {
   if (document.hidden) return;
-  if (document.querySelector('#modal-add.open, #modal-quick.open, #modal-seeder.open, #modal-lowdown.open, #modal-sap.open')) return;
+  if (document.querySelector('#modal-add.open, #modal-quick.open, #modal-seeder.open, #modal-lowdown.open, #modal-sap.open, #modal-receipt.open')) return;
   var before = Store.get(STORE_KEY);
   Store.refresh(STORE_KEY);
   if (Store.get(STORE_KEY) === before) return;
@@ -2231,7 +2276,9 @@ function saveBrands()    { return Store.setJSON(BRANDS_KEY, brands); }
 // Functions list is now a fixed dropdown — no dynamic storage needed.
 
 function exportData() {
-  var payload = { ingredients: ingredients, suppliers: suppliers };
+  // Orders (shipping and tax from receipts, 2026-10-26) travel with this
+  // backup: they belong to the purchases on these ingredients.
+  var payload = { ingredients: ingredients, suppliers: suppliers, orders: Store.getJSON(ORDERS_KEY, []) || [] };
   var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
   var a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -2298,6 +2345,304 @@ function applyUpdateFile(changes) {
   Plume.tell('Updated ' + changes.length + ' ingredient' + (changes.length === 1 ? '' : 's') + '.', { title: 'Update complete' });
 }
 
+// ── Receipts (2026-10-26, session 29) ─────────────────
+// A receipt read in a Claude chat comes back as a small file
+// (kind 'plume-receipt'; the format is in plume-receipt-format.md). Import
+// shows every line, matched to her library, for her to check: nothing is
+// added without a tick. Ingredient lines become purchases (lots) that start
+// On order; packaging lines become Packaging purchases, also On order.
+// Shipping and tax stay with the order (plume-orders-v1), never in a cost
+// per gram or per unit: she covers them in her markup, and keeps them apart
+// for her accounting.
+var ORDERS_KEY = 'plume-orders-v1';
+var PKG_STORE_KEY = 'aerie-packaging-v2';
+var pendingReceipt = null;
+
+// "fl. oz", "Gallon", "ml" → the lot's units; null when it is not one.
+function rcUnit(u) {
+  var k = String(u || '').toLowerCase().replace(/\./g, '').replace(/\s+/g, ' ').trim();
+  var map = { g: 'g', gram: 'g', grams: 'g', gm: 'g', kg: 'kg', kilo: 'kg', kilogram: 'kg', kilograms: 'kg',
+    oz: 'oz', ounce: 'oz', ounces: 'oz', 'oz wt': 'oz', 'net wt oz': 'oz', lb: 'lb', lbs: 'lb', pound: 'lb', pounds: 'lb',
+    ml: 'mL', milliliter: 'mL', milliliters: 'mL', millilitre: 'mL', l: 'L', liter: 'L', liters: 'L', litre: 'L', litres: 'L',
+    'fl oz': 'fl oz', floz: 'fl oz', 'fluid ounce': 'fl oz', 'fluid ounces': 'fl oz',
+    gal: 'gal', gallon: 'gal', gallons: 'gal' };
+  return map[k] || null;
+}
+function rcNum(v) { var n = parseFloat(String(v == null ? '' : v).replace(/[$,]/g, '')); return isNaN(n) ? NaN : n; }
+function rcMoney(n) { return '$' + (Math.round(n * 100) / 100).toFixed(2); }
+function rcInciKey(s) { return String(s || '').toLowerCase().replace(/\s+/g, ' ').trim(); }
+function rcOrderKey(sup, num) { return rcInciKey(sup) + '|' + rcInciKey(num); }
+
+// The library ingredient a line is, or null: by id, then by name (and the
+// starter list's other names for it, as Quick add does), then by INCI when
+// only one ingredient has it.
+// rcHow says how, for the preview ('' when by its own name).
+var rcHow = '';
+function rcFindIng(line) {
+  rcHow = '';
+  if (line.ingId) { var byId = ingredients.filter(function (i) { return String(i.id) === String(line.ingId); })[0]; if (byId) return byId; }
+  var key = seederNameKey(line.name), keys = key ? [key] : [];
+  SEEDER_ITEMS.forEach(function (it) {
+    var ks = [it.name].concat(it.aka || []).map(seederNameKey);
+    if (key && ks.indexOf(key) !== -1) ks.forEach(function (k) { if (keys.indexOf(k) === -1) keys.push(k); });
+  });
+  var hit = ingredients.filter(function (i) { return keys.indexOf(seederNameKey(i.name)) !== -1; });
+  if (hit.length) {
+    var h = hit.filter(function (i) { return !i.archived; })[0] || hit[0];
+    if (seederNameKey(h.name) !== key) rcHow = 'Matched by another name for it.';
+    return h;
+  }
+  var ik = rcInciKey(line.inci);
+  if (!ik) return null;
+  var byInci = ingredients.filter(function (i) { return !i.archived && rcInciKey(i.inci) === ik; });
+  if (byInci.length === 1) { rcHow = 'Matched by its INCI name.'; return byInci[0]; }
+  return null;
+}
+// The starter-list entry a new ingredient line is, or null.
+function rcFindStarter(line) {
+  var key = seederNameKey(line.name), ik = rcInciKey(line.inci);
+  var byName = SEEDER_ITEMS.filter(function (it) { return key && [it.name].concat(it.aka || []).map(seederNameKey).indexOf(key) !== -1; })[0];
+  if (byName) return byName;
+  if (!ik) return null;
+  var byInci = SEEDER_ITEMS.filter(function (it) { return rcInciKey(it.inci) === ik; });
+  return byInci.length === 1 ? byInci[0] : null;
+}
+function rcPkgs() { Store.refresh(PKG_STORE_KEY); return Store.getJSON(PKG_STORE_KEY, []) || []; }
+function rcFindPkg(line, pkgs) {
+  if (line.pkgId) { var byId = pkgs.filter(function (k) { return String(k.id) === String(line.pkgId); })[0]; if (byId) return byId; }
+  var key = seederNameKey(line.name);
+  return pkgs.filter(function (k) { return key && (seederNameKey(Plume.pkDisplay(k)) === key || seederNameKey(k.name) === key); })[0] || null;
+}
+
+// One line as a purchase: the count, each, price and the totals they make.
+function rcBuy(line) {
+  var n = Math.max(1, Math.round(rcNum(line.count)) || 1);
+  var each = rcNum(line.size), pr = rcNum(line.price);
+  var is = line.priceIs === 'total' ? 'total' : 'each';
+  var total = pr > 0 ? Math.round((is === 'each' ? pr * n : pr) * 100) / 100 : NaN;
+  return { n: n, each: each, unit: rcUnit(line.unit), pr: pr, is: is, total: total };
+}
+function rcBuyText(b, pkg) {
+  var size = pkg ? b.n + ' unit' + (b.n === 1 ? '' : 's')
+    : (b.each > 0 && b.unit ? (b.n > 1 ? b.n + ' × ' + fmtQty(b.each) + ' ' + b.unit + ' = ' + fmtQty(b.n * b.each) + ' ' + b.unit : fmtQty(b.each) + ' ' + b.unit) : 'size not read');
+  var paid = b.total > 0 ? (b.n > 1 && b.is === 'each' ? b.n + ' × ' + rcMoney(b.pr) + ' = ' : '') + rcMoney(b.total) : 'no price';
+  return size + ' · ' + paid;
+}
+
+function previewReceipt(data) {
+  var lines = Array.isArray(data.lines) ? data.lines : [];
+  if (!lines.length) { Plume.tell('This receipt file has no lines in it.', { title: 'Nothing to import' }); return; }
+  Store.refresh(STORE_KEY); ingredients = Store.getJSON(STORE_KEY, []) || ingredients;
+  var pkgs = rcPkgs();
+  var orders = Store.getJSON(ORDERS_KEY, []) || [];
+  var okey = rcOrderKey(data.supplier, data.orderNum);
+  var before = data.orderNum ? orders.filter(function (o) { return rcOrderKey(o.supplier, o.orderNum) === okey; })[0] : null;
+  var rows = lines.map(function (raw, idx) {
+    var line = raw || {};
+    var pkg = line.kind === 'packaging';
+    var r = { idx: idx, line: line, pkg: pkg, buy: rcBuy(line), on: true, target: '', starter: null, inci: line.inci || '', dupe: false };
+    if (pkg) {
+      var k = rcFindPkg(line, pkgs);
+      r.target = k ? k.id : 'new';
+      if (k && data.orderNum) r.dupe = (k.purchases || []).some(function (p) { return rcOrderKey(p.supplier || data.supplier, p.orderNum) === okey; });
+    } else {
+      var ing = rcFindIng(line);
+      r.how = rcHow;
+      r.target = ing ? ing.id : 'new';
+      r.starter = ing ? null : rcFindStarter(line);
+      if (r.starter && !r.inci) r.inci = r.starter.inci || '';
+      if (ing && data.orderNum) r.dupe = (ing.lots || []).some(function (l) { return rcOrderKey(l.supplier || data.supplier, l.orderNum) === okey; });
+    }
+    if (r.dupe) r.on = false;
+    return r;
+  });
+  pendingReceipt = { data: data, rows: rows, pkgs: pkgs, before: before };
+  renderReceipt();
+  openModal('modal-receipt');
+}
+
+function renderReceipt() {
+  var P = pendingReceipt; if (!P) return;
+  var d = P.data;
+  var ship = rcNum(d.shipping), tax = rcNum(d.tax);
+  var money = [];
+  var goods = 0;
+  P.rows.forEach(function (r) { if (r.buy.total > 0) goods += r.buy.total; });
+  money.push('Items <b>' + rcMoney(goods) + '</b>');
+  money.push('Shipping <b>' + (ship >= 0 ? rcMoney(ship) : '—') + '</b>');
+  money.push('Tax <b>' + (tax >= 0 ? rcMoney(tax) : '—') + '</b>');
+  var meta = [d.orderNum ? 'Order ' + esc(d.orderNum) : 'No order number', d.date ? esc(fmtDate(d.date)) : 'no date'];
+  document.getElementById('rc-order').innerHTML =
+    (P.before ? '<div class="rc-warn">This order came in once already, on ' + esc(fmtDate(String(P.before.imported || '').slice(0, 10))) + '. Lines already in Plume are unticked; importing again updates the order’s shipping and tax.</div>' : '') +
+    '<div class="rc-ordcard"><div class="rc-sup">' + esc(d.supplier || 'Supplier not read') + '</div>' +
+      '<div class="rc-meta">' + meta.join(' · ') + (d.receiptLink ? ' · <a href="' + esc(qaLink(d.receiptLink)) + '" target="_blank" rel="noopener">receipt</a>' : '') + '</div>' +
+      '<div class="rc-money">' + money.join(' · ') + '</div>' +
+      '<div class="rc-meta">Everything comes in <span class="rc-tag ord">on order</span>, so it counts as stock once you mark it arrived. Shipping and tax are kept with the order, not added to cost per gram or per unit.</div></div>';
+  var ingRows = P.rows.filter(function (r) { return !r.pkg; }), pkgRows = P.rows.filter(function (r) { return r.pkg; });
+  var html = '';
+  if (ingRows.length) html += '<div class="rc-sect">Ingredients</div>' + ingRows.map(rcRowHtml).join('');
+  if (pkgRows.length) html += '<div class="rc-sect">Packaging</div>' + pkgRows.map(rcRowHtml).join('');
+  document.getElementById('rc-lines').innerHTML = html;
+  rcCount();
+}
+function rcIngOptions(sel) {
+  var list = ingredients.slice().sort(function (a, b) { return String(a.name || '').localeCompare(String(b.name || '')); });
+  return list.map(function (i) {
+    return '<option value="' + esc(i.id) + '"' + (String(i.id) === String(sel) ? ' selected' : '') + '>' + esc(i.name || '(unnamed)') + (i.archived ? ' (archived)' : '') + '</option>';
+  }).join('');
+}
+function rcPkgOptions(pkgs, sel) {
+  var list = pkgs.slice().sort(function (a, b) { return Plume.pkDisplay(a).localeCompare(Plume.pkDisplay(b)); });
+  return list.map(function (k) {
+    return '<option value="' + esc(k.id) + '"' + (String(k.id) === String(sel) ? ' selected' : '') + '>' + esc(Plume.pkDisplay(k)) + '</option>';
+  }).join('');
+}
+// What a ticked line needs before it can come in, or ''.
+function rcProblem(r) {
+  if (!r.on) return '';
+  if (r.target === 'new' && !r.pkg && !String(r.inci || '').trim()) return 'Needs an INCI name to be added as a new ingredient.';
+  if (r.target === 'new' && !String(r.line.name || '').trim()) return 'Needs a name.';
+  if (!r.pkg && !(r.buy.each > 0 && r.buy.unit)) return 'The size was not read. Untick it, or fix it in the file.';
+  if (r.pkg && !(r.buy.n > 0)) return 'How many was not read.';
+  return '';
+}
+function rcRowHtml(r) {
+  var L = r.line, id = 'rc' + r.idx, P = pendingReceipt;
+  var tags = '', to = '';
+  if (r.pkg) {
+    to = '<label for="' + id + '-to">Goes to</label><select id="' + id + '-to" onchange="rcSet(' + r.idx + ',\'target\',this.value)">' +
+      '<option value="new"' + (r.target === 'new' ? ' selected' : '') + '>New packaging item (as Other; set what it is later)</option>' +
+      rcPkgOptions(P.pkgs, r.target) + '</select>';
+    tags = r.target === 'new' ? '<span class="rc-tag new">new item</span>' : '';
+  } else {
+    to = '<label for="' + id + '-to">Goes to</label><select id="' + id + '-to" onchange="rcSet(' + r.idx + ',\'target\',this.value)">' +
+      '<option value="new"' + (r.target === 'new' ? ' selected' : '') + '>' + (r.starter ? 'New ingredient, from the starter list' : 'New ingredient') + '</option>' +
+      rcIngOptions(r.target) + '</select>';
+    if (r.target === 'new') {
+      tags = '<span class="rc-tag new">new ingredient</span>';
+      to += '<input type="text" id="' + id + '-inci" placeholder="INCI name" value="' + esc(r.inci) + '" oninput="rcSet(' + r.idx + ',\'inci\',this.value)" aria-label="INCI name">';
+    }
+  }
+  var notes = [];
+  if (r.how && String(r.target) !== 'new') notes.push(esc(r.how));
+  if (r.dupe) notes.push('Already in Plume from this order.');
+  if (!r.pkg && r.buy.unit && Plume.isVolUnit(r.buy.unit)) notes.push('By volume: turned into grams by its density.');
+  if (L.lotNum) notes.push('Lot ' + esc(L.lotNum));
+  if (L.brand) notes.push('Brand ' + esc(L.brand));
+  var prob = rcProblem(r);
+  return '<div class="rc-line' + (r.on ? '' : ' off') + '" id="' + id + '">' +
+    '<input type="checkbox" id="' + id + '-on"' + (r.on ? ' checked' : '') + ' onchange="rcSet(' + r.idx + ',\'on\',this.checked)" aria-label="Import this line">' +
+    '<div><div class="rc-name">' + esc(L.name || '(no name)') + ' ' + tags + '</div>' +
+      '<div class="rc-buy">' + esc(rcBuyText(r.buy, r.pkg)) + '</div>' +
+      '<div class="rc-to">' + to + '</div></div>' +
+    (notes.length ? '<div class="rc-note">' + notes.join(' · ') + '</div>' : '') +
+    (prob ? '<div class="rc-note" style="color:var(--clay)"><span class="rc-tag need">check</span> ' + esc(prob) + '</div>' : '') +
+  '</div>';
+}
+function rcSet(idx, field, v) {
+  var r = pendingReceipt && pendingReceipt.rows[idx]; if (!r) return;
+  r[field] = v;
+  if (field === 'inci') { rcCount(); return; }   // keep the cursor in the box
+  var keep = document.getElementById('rc-lines').scrollTop;
+  renderReceipt();
+  document.getElementById('rc-lines').scrollTop = keep;
+}
+function rcCount() {
+  var P = pendingReceipt, n = 0, bad = [];
+  P.rows.forEach(function (r) { if (r.on) { n++; if (rcProblem(r)) bad.push(r.line.name || '(no name)'); } });
+  var el = document.getElementById('rc-count'), btn = document.getElementById('rc-apply');
+  el.textContent = bad.length ? 'Needs a look first: ' + bad.join(', ') + '.' : n ? n + ' line' + (n === 1 ? '' : 's') + ' will come in, on order.' : (P.before ? 'No lines ticked. Import updates the order’s shipping and tax only.' : 'No lines ticked.');
+  btn.disabled = !!bad.length || (!n && !P.before);
+  btn.textContent = n ? 'Import ' + n + ' line' + (n === 1 ? '' : 's') : 'Update the order';
+}
+
+// The next free lot id on an ingredient (L1, L2, ...).
+function rcNextLotId(ing) {
+  var max = 0;
+  (ing.lots || []).forEach(function (l) { var m = /^L(\d+)$/.exec(l.id || ''); if (m) max = Math.max(max, parseInt(m[1], 10)); });
+  return 'L' + (max + 1);
+}
+function rcLot(ing, r, d, sup) {
+  var b = r.buy, L = r.line;
+  var size = fmtQty(b.n * b.each);
+  var dens = Plume.isVolUnit(b.unit) ? Plume.densityFor(ing).value : 1;
+  var g = lotSizeToGrams(size, b.unit, dens);
+  var lot = {
+    id: rcNextLotId(ing), supplier: sup, brand: String(L.brand || '').trim(),
+    purchaseSize: size, purchaseUnit: b.unit, purchasePrice: b.total > 0 ? String(b.total) : '',
+    buyCount: String(b.n), buySize: String(b.each), buyPrice: b.pr > 0 ? String(b.pr) : '', buyPriceIs: b.is,
+    costPerG: g && b.total > 0 ? (b.total / g).toFixed(4) : '',
+    qtyPurchased: size, qtyUnit: b.unit,
+    lotNum: String(L.lotNum || '').trim(), received: '', bestBy: String(L.bestBy || '').trim(), orderNum: String(d.orderNum || '').trim(),
+    ordered: String(d.date || '').trim(), buyLink: qaLink(L.link), receiptLink: qaLink(d.receiptLink), referenceOnly: false, onOrder: true, certOther: ''
+  };
+  Plume.CERTS.forEach(function (c) { lot[c.key] = false; });
+  return lot;
+}
+function rcNewPkg(r, sup) {
+  var name = String(r.line.name || '').trim();
+  return { id: Date.now().toString() + Math.random().toString(36).slice(2, 6), kind: 'other', other: name, type: 'other', name: name,
+    capacity: '', color: '', material: '', forProduct: '', part: '', supplier: sup, link: qaLink(r.line.link), notes: 'Added from a receipt. Set what it is in its Details.',
+    purchases: [], adjustments: [] };
+}
+
+function applyReceipt() {
+  var P = pendingReceipt; if (!P) return;
+  var d = P.data, bad = P.rows.filter(function (r) { return r.on && rcProblem(r); });
+  if (bad.length) { rcCount(); return; }
+  var sup = qaEnsureSupplier(d.supplier || '');
+  Store.refresh(STORE_KEY); ingredients = Store.getJSON(STORE_KEY, []) || ingredients;
+  var pkgs = rcPkgs();
+  var nIng = 0, nNew = 0, nPkg = 0, touchedPkg = false;
+  P.rows.forEach(function (r) {
+    if (!r.on) return;
+    if (r.pkg) {
+      var k = r.target === 'new' ? null : pkgs.filter(function (x) { return String(x.id) === String(r.target); })[0];
+      if (!k) { k = rcNewPkg(r, sup); pkgs.push(k); }
+      k.purchases = k.purchases || [];
+      k.purchases.push({ date: String(d.date || todayISO()), qty: r.buy.n, totalCost: r.buy.total > 0 ? String(r.buy.total) : '', shipping: '',
+        supplier: sup, orderNum: String(d.orderNum || '').trim(), link: qaLink(r.line.link), onOrder: true });
+      nPkg++; touchedPkg = true;
+      return;
+    }
+    var ing = r.target === 'new' ? null : ingredients.filter(function (x) { return String(x.id) === String(r.target); })[0];
+    if (!ing) {
+      ing = r.starter ? starterToIngredient(r.starter) : { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8), created: new Date().toISOString(), lots: [], phase: 'other' };
+      ing.name = String(r.line.name || '').trim();
+      ing.inci = String(r.inci || '').trim();
+      if (!ing.phase) ing.phase = 'other';
+      ingredients.push(ing);
+      nNew++;
+    }
+    ing.lots = ing.lots || [];
+    var lot = rcLot(ing, r, d, sup);
+    var hadLots = ing.lots.some(function (l) { return !l.referenceOnly; });
+    ing.lots.push(lot);
+    // Its first purchase prices it; a reorder leaves the lot in use as it is.
+    if (!hadLots) ing.activeLotId = lot.id;
+    nIng++;
+  });
+  if (!saveData()) { ingredients = Store.getJSON(STORE_KEY, []) || ingredients; renderTable(); renderStats(); return; }
+  if (touchedPkg && !Store.setJSON(PKG_STORE_KEY, pkgs)) { Plume.noteSaveFailed(); return; }
+  var orders = Store.getJSON(ORDERS_KEY, []) || [];
+  var okey = rcOrderKey(d.supplier, d.orderNum), rec = d.orderNum ? orders.filter(function (o) { return rcOrderKey(o.supplier, o.orderNum) === okey; })[0] : null;
+  if (!rec) { rec = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6) }; orders.push(rec); }
+  var ship = rcNum(d.shipping), tax = rcNum(d.tax);
+  rec.supplier = sup; rec.orderNum = String(d.orderNum || '').trim(); rec.date = String(d.date || '').trim();
+  rec.shipping = ship >= 0 ? String(ship) : ''; rec.tax = tax >= 0 ? String(tax) : '';
+  rec.receiptLink = qaLink(d.receiptLink); rec.imported = new Date().toISOString();
+  rec.lines = (rec.lines || 0) + nIng + nPkg;
+  Store.setJSON(ORDERS_KEY, orders);
+  pendingReceipt = null;
+  closeModal('modal-receipt');
+  renderTable(); renderStats();
+  var said = [];
+  if (nIng) said.push(nIng + ' ingredient purchase' + (nIng === 1 ? '' : 's') + (nNew ? ' (' + nNew + ' new ingredient' + (nNew === 1 ? '' : 's') + ')' : ''));
+  if (nPkg) said.push(nPkg + ' packaging purchase' + (nPkg === 1 ? '' : 's'));
+  Plume.tell((said.length ? 'Added ' + said.join(' and ') + ', all on order. Mark each arrived when the box comes.' : 'Updated the order.') +
+    (nNew ? '\n\nNew ingredients came in with what the receipt and the starter list know. Check each one’s usage and phase.' : ''), { title: 'Receipt imported' });
+}
+
 function importData(e) {
   var file = e.target.files[0]; if (!file) return;
   var reader = new FileReader();
@@ -2307,6 +2652,8 @@ function importData(e) {
       // An update file (the usage review, 2026-10-26) changes fields on
       // ingredients she already has, by id, after a preview.
       if (data && data.kind === 'plume-ingredient-update') { previewUpdateFile(data); return; }
+      // A receipt (2026-10-26): read in a Claude chat, checked here line by line.
+      if (data && data.kind === 'plume-receipt') { previewReceipt(data); return; }
       var ingData  = Array.isArray(data) ? data : (data.ingredients || []);
       var suppData = Array.isArray(data) ? [] : (data.suppliers || []);
       if (!Array.isArray(ingData)) throw new Error('Invalid format');
@@ -2335,8 +2682,19 @@ function importData(e) {
               suppliers.push(s); addedSupp++;
             }
           });
+          // Orders from a backup: added when this order is not here yet.
+          var ordData = Array.isArray(data) ? [] : (data.orders || []), addedOrd = 0;
+          if (Array.isArray(ordData) && ordData.length) {
+            var ords = Store.getJSON(ORDERS_KEY, []) || [];
+            var haveOrd = new Set(ords.map(function (o) { return rcOrderKey(o.supplier, o.orderNum) + '|' + (o.orderNum ? '' : o.id); }));
+            ordData.forEach(function (o) {
+              if (!o || haveOrd.has(rcOrderKey(o.supplier, o.orderNum) + '|' + (o.orderNum ? '' : o.id))) return;
+              ords.push(o); addedOrd++;
+            });
+            if (addedOrd) Store.setJSON(ORDERS_KEY, ords);
+          }
           saveData(); saveSuppliers(); renderTable(); renderStats();
-          Plume.tell('Imported ' + addedIng + ' ingredients and ' + addedSupp + ' suppliers.', { title: 'Import complete' });
+          Plume.tell('Imported ' + addedIng + ' ingredients and ' + addedSupp + ' suppliers' + (addedOrd ? ' and ' + addedOrd + ' order' + (addedOrd === 1 ? '' : 's') : '') + '.', { title: 'Import complete' });
         } catch(err2) { Plume.tell('Could not read file. Make sure it is a valid Plume backup JSON.'); }
       }, { title: 'Import ' + ingData.length + ' ingredients and ' + suppData.length + ' suppliers?', yes: 'Import' });
     } catch(err) { Plume.tell('Could not read file. Make sure it is a valid Plume backup JSON.'); }

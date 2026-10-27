@@ -2498,26 +2498,8 @@ function formulationCostPerG(f) {
   return formulationCostDetail(f).perG;
 }
 
-function pkgUnitCost(pkg) {
-  if (!pkg) return null;
-  var purchases = pkg.purchases || [];
-  if (!purchases.length) return null;
-  // Most recent purchase: (totalCost + shipping) / qty -- mirrors the
-  // calculation in plume-packaging.html's latestCostPerUnit().
-  var sorted = purchases.slice().sort(function(a, b) {
-    return (b.date || '').localeCompare(a.date || '');
-  });
-  for (var i = 0; i < sorted.length; i++) {
-    var p = sorted[i];
-    var total = parseFloat(p.totalCost) || 0;
-    var ship  = parseFloat(p.shipping)  || 0;
-    var qty   = parseInt(p.qty, 10) || 0;
-    if (qty > 0 && total > 0) {
-      return (total + ship) / qty;
-    }
-  }
-  return null;
-}
+// The one rule in core: newest priced purchase, without shipping (2026-10-26).
+function pkgUnitCost(pkg) { return Plume.pkgUnitCostOf(pkg); }
 
 function computeProductCost(p) {
   var isMulti = (p.productKind === 'multi' || p.productKind === 'kit');

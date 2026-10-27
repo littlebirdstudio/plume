@@ -35,7 +35,7 @@ var Plume = (function () {
 // (v0.4 / v0.5 / v0.6 across five modules). BUMP IT IN EVERY PULL REQUEST,
 // core change or not: it is how "is this the update I just merged?" is
 // answered by looking, and browsers cache .js files stubbornly.
-var VERSION = '1.60';
+var VERSION = '1.61';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -244,7 +244,8 @@ var KEYS = {
   products: 'plume-products-v1',
   suppliers:'aerie-suppliers-v1',
   shops:    'plume-shops-v1',
-  brands:   'aerie-brands-v1'
+  brands:   'aerie-brands-v1',
+  orders:   'plume-orders-v1'
 };
 
 var KEY_LABELS = {
@@ -252,6 +253,7 @@ var KEY_LABELS = {
   'aerie-suppliers-v1':    'Suppliers',
   'plume-shops-v1':        'Consignment shops',
   'aerie-brands-v1':       'Brands',
+  'plume-orders-v1':       'Orders (shipping and tax, from receipts)',
   'aerie-formulations-v1': 'Formulations',
   'aerie-packaging-v2':    'Packaging (incl. photos)',
   'aerie-batches-v1':      'Batches',
@@ -3705,10 +3707,17 @@ function pkDetailHtml(it) {
   if (pkIsOther(it.kind) && !parts.length && it.notes) parts.push('<span class="pk-any">' + esc(String(it.notes).slice(0, 60)) + '</span>');
   return parts.join('<span class="pk-dot">·</span>');
 }
+// Units here. A purchase still on order (from a receipt, 2026-10-26) is not
+// here yet; pkOnOrder counts those.
 function pkStock(it) {
   var t = 0;
-  ((it && it.purchases) || []).forEach(function (p) { t += parseInt(p.qty, 10) || 0; });
+  ((it && it.purchases) || []).forEach(function (p) { if (!p.onOrder) t += parseInt(p.qty, 10) || 0; });
   ((it && it.adjustments) || []).forEach(function (a) { t += parseInt(a.qty, 10) || 0; });
+  return t;
+}
+function pkOnOrder(it) {
+  var t = 0;
+  ((it && it.purchases) || []).forEach(function (p) { if (p.onOrder) t += parseInt(p.qty, 10) || 0; });
   return t;
 }
 function pkSizeNum(s) { var m = String(s || '').match(/\d+(?:\.\d+)?|\.\d+/); return m ? parseFloat(m[0]) : 0; }
@@ -4666,12 +4675,16 @@ function formCostPerG(f, d) {
   });
   return (any && mass > 0) ? cost / mass : null;
 }
+// Cost per unit: the newest priced purchase, what was paid over how many.
+// Shipping is not in it (2026-10-26, her call: "match ingredients"); a
+// shipping figure on an old purchase is kept, and counted with the order's
+// shipping and tax on Analytics instead. Every page reads this one rule.
 function pkgUnitCostOf(pkg) {
   if (!pkg || !(pkg.purchases || []).length) return null;
   var sorted = pkg.purchases.slice().sort(function (a, b) { return (b.date || '').localeCompare(a.date || ''); });
   for (var i = 0; i < sorted.length; i++) {
-    var total = parseFloat(sorted[i].totalCost) || 0, ship = parseFloat(sorted[i].shipping) || 0, qty = parseInt(sorted[i].qty, 10) || 0;
-    if (qty > 0 && total > 0) return (total + ship) / qty;
+    var total = parseFloat(sorted[i].totalCost) || 0, qty = parseInt(sorted[i].qty, 10) || 0;
+    if (qty > 0 && total > 0) return total / qty;
   }
   return null;
 }
@@ -5471,7 +5484,7 @@ return {
            history: stockHistory, range: shRangeSet, group: shGroupSet, toggle: shToggle, reason: shReasonSet, find: shFind, copy: shCopy, rows: shRows },
   pkTypeFor: pkTypeFor, pkForProduct: pkForProduct, pkColored: pkColored, pkIsOther: pkIsOther,
   pkIcon: pkIcon, pkIconFor: pkIconFor, pkProducts: pkProducts, pkProductName: pkProductName,
-  pkKindName: pkKindName, pkLooks: pkLooks, pkDisplay: pkDisplay, pkDetailHtml: pkDetailHtml, pkStock: pkStock,
+  pkKindName: pkKindName, pkLooks: pkLooks, pkDisplay: pkDisplay, pkDetailHtml: pkDetailHtml, pkStock: pkStock, pkOnOrder: pkOnOrder,
   pkGroups: pkGroups, pkMatches: pkMatches, pkSameKey: pkSameKey, pkGuess: pkGuess, pkCss: pkCss,
   pkPicker: pkPicker, pkPickers: pkPickers, pkClose: pkClose,
   batchMadeG: batchMadeG, batchLeftG: batchLeftG, batchNumbersG: batchNumbersG, batchUsedG: batchUsedG, batchFills: batchFills, batchLabel: batchLabel,
