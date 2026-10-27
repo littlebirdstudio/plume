@@ -33,7 +33,7 @@ const BATCHES = [{ id: 'b1', date: '2026-10-01', formulaId: 'fo', formulaName: '
 const PRODUCTS = [
   { id: 'p1', name: 'Face oil 30 mL', status: 'active', formulaId: 'fo', netWtG: 28, netWtDisplay: '1 fl oz', retail: 30,
     packagingRecipe: [{ packagingId: 'k1', quantity: 1 }, { packagingId: 'lb', quantity: 1 }],
-    wholesale: 6, productionRuns: [{ id: 'old', date: '2026-06-02', units: 10, fill: true, draws: [{ batchId: 'gone', grams: 280, lot: '260601' }], packaging: [] }] },
+    wholesale: 6, stockLog: [{ id: 's1', date: '2026-10-10', qty: -3, kind: 'out', reason: 'sold', note: 'Market', unitCost: 3 }], productionRuns: [{ id: 'old', date: '2026-06-02', units: 10, fill: true, draws: [{ batchId: 'gone', grams: 280, lot: '260601' }], packaging: [] }] },
   { id: 'kt', name: 'Gift set', status: 'active', productKind: 'kit', kitParts: [{ id: 'q1', productId: 'p1', qty: 2 }],
     packagingRecipe: [{ packagingId: 'bx', quantity: 1 }], productionRuns: [] },
   { id: 'pn', name: 'Face oil mini', status: 'active', formulaId: 'fo', netWtG: 5, packagingRecipe: [], productionRuns: [] }
@@ -103,13 +103,20 @@ const PRODUCTS = [
   // Fills: 10 at today's $4.422 (~, from before costs were noted) + 6 at $3.302; the kit adds only its $1.00 box × 2: $66.03.
   ok('spent making product counts fills, and kits only for their own packaging', /Spent making product ~\$66\.03 16 units filled/.test(tiles), tiles);
   ok('batches made, with their ingredient cost', /Batches made 2 \$124\.00 in ingredients/.test(tiles), tiles);
-  ok('on hand now, at cost, split four ways', /On hand now, at cost \$[\d.,]+ products \$[\d.,]+ · bulk \$[\d.,]+ · ingredients \$[\d.,]+ · packaging \$[\d.,]+/.test(tiles), tiles);
+  ok('cost of goods sold: units sold at what each cost when it sold', /Cost of goods sold \$9\.00 3 units sold/.test(tiles), tiles);
+  const inv = await page.evaluate("Array.from(document.querySelectorAll('#an-inventory .an-tile')).map(function (t) { return [t.querySelector('.an-k').textContent, parseFloat(t.querySelector('.an-n').textContent.replace(/[^0-9.]/g, ''))]; })");
+  const iv = Object.fromEntries(inv);
+  ok('inventory at cost: a total, then products, bulk, ingredients and packaging', inv.map(x => x[0]).join(',') === 'Total,Finished products,Bulk in batches,Ingredients,Packaging', inv);
+  ok('the four add up to the total', Math.abs(iv['Finished products'] + iv['Bulk in batches'] + iv['Ingredients'] + iv['Packaging'] - iv['Total']) < 0.02, iv);
+  // 1000 g jojoba at $0.04 + 1000 g rosehip at $0.25 (the lot's own price) + 450 g shea at $0.02.
+  ok('ingredients are each lot here at what that lot cost', iv['Ingredients'] === 299, iv);
+  ok('bulk: what is left of each batch at its cost per gram made', iv['Bulk in batches'] === 124, iv);
   const looks = await page.evaluate("document.getElementById('an-looks').innerText.replace(/\\s+/g, ' ')");
   ok('a wholesale price under twice the cost is flagged', /Prices to look at 1 [^]*Face oil 30 mL 85% at retail · wholesale 1\.4× cost/.test(looks), looks);
   ok('an ingredient in stock that no batch has used is listed, with its value', /Ingredients not used in a while 1 [^]*Shea butter \$9\.00 on hand · not used in a batch yet/.test(looks), looks);
   ok('one a batch used is not', !/Jojoba oil \$/.test(looks), looks);
   const prow = await page.evaluate("document.querySelector('#an-products tr[data-p=\"p1\"]').innerText.replace(/\\s+/g, ' ')");
-  ok('the product table: cost today, change, margins, on hand', /Face oil 30 mL Face oil · 1 fl oz \$4\.42 \+34% since \w{3} \d{4} 85% 1\.4× 12/.test(prow), prow);
+  ok('the product table: cost today, change, margins, on hand', /Face oil 30 mL Face oil · 1 fl oz \$4\.42 \+34% since \w{3} \d{4} 85% 1\.4× 9/.test(prow), prow);
   await page.evaluate("openProduct('p1')"); await page.waitForTimeout(150);
   ok('clicking a product opens its cost over time: a point per fill, the older one hollow', await page.evaluate("document.querySelectorAll('#an-products .ct-chart .ct-dot').length === 2 && document.querySelectorAll('#an-products .ct-chart .ct-dot.est').length === 1"));
   const fills = await page.evaluate("document.querySelector('#an-products .ct-fills').innerText.replace(/\\s+/g, ' ')");
@@ -123,6 +130,11 @@ const PRODUCTS = [
   await page.evaluate("document.querySelector('.an-k .an-link').click()"); await page.waitForTimeout(350);
   ok('Went out opens Stock history on the same period', await page.evaluate("document.getElementById('ps-peek').classList.contains('open') && document.querySelector('.sh-panel .sh-ranges .ps-chip.on').textContent === 'All time'"));
   await page.evaluate("Plume.peek.close()"); await page.waitForTimeout(200);
+
+  const pkHere = iv['Packaging'];
+  await page.goto(previewUrl('packaging')); await page.waitForTimeout(500);
+  const pkPage = await page.evaluate("parseFloat(document.getElementById('pk-summary').innerText.match(/\\$([\\d.]+) on hand/)[1])");
+  ok('the packaging figure matches the Packaging page', pkHere === pkPage && pkHere > 0, [pkHere, pkPage]);
 
   console.log('\n4b. The batch costs agree with the batch panel');
   await page.goto(previewUrl('batchlog')); await page.waitForTimeout(500);

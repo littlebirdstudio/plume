@@ -4692,6 +4692,23 @@ function productCostParts(p, d) {
   return out;
 }
 function productUnitCost(p, d) { return productCostParts(p, d).total; }
+// Inventory at cost (2026-10-26), one rule for every page that shows it.
+// Packaging: units in stock at the newest priced purchase; an item below
+// zero counts as none, not as negative money. Ingredients: each lot that is
+// here, at what that lot cost per gram.
+function pkValue(it) {
+  var n = pkStock(it), uc = pkgUnitCostOf(it);
+  return (n > 0 && uc) ? n * uc : 0;
+}
+function ingValue(ing) {
+  var v = 0;
+  ((ing && ing.lots) || []).forEach(function (l) {
+    if (!lotHere(l)) return;
+    var cpg = parseFloat(l.costPerG);
+    if (cpg > 0) v += qtyToGrams(l.qtyPurchased || l.stock || '', l.qtyUnit || l.stockUnit || 'g', densityFor(ing).value) * cpg;
+  });
+  return v;
+}
 // Each fill and kit build notes what one unit cost to make and package that
 // day, at the prices in use then (her call: active-lot prices, the same
 // figure Products & Costing shows; no lot-by-lot blending). Recorded as it
@@ -5434,7 +5451,7 @@ return {
   undoKitText: undoKitText, kitsUsing: kitsUsing, stockPass: stockPass, undoStock: undoStock,
   STOCK_REASONS: STOCK_REASONS, productUnitCost: productUnitCost, productCostParts: productCostParts, stampRunCost: stampRunCost,
   costs: { rows: ctRows, chart: ctChart, detail: ctDetail, change: ctChange, changeText: ctChangeText, money: ctMoney },
-  batchCost: batchCost, pkgUnitCostOf: pkgUnitCostOf, stockReasonLabel: stockReasonLabel, fillUndoBlock: fillUndoBlock,
+  batchCost: batchCost, pkgUnitCostOf: pkgUnitCostOf, pkValue: pkValue, ingValue: ingValue, stockReasonLabel: stockReasonLabel, fillUndoBlock: fillUndoBlock,
   consign: { open: consignOpen, shop: csShow, list: csList, add: csAdd, edit: csEdit, typed: csTyped, save: csSave },
   shopsAll: shopsAll, shopAdd: shopAdd, shopName: shopName, atShops: atShops, consignPass: consignPass, settlePass: settlePass,
   shopStock: shopStock, shopEvents: shopEvents, undoStockBlock: undoStockBlock,
