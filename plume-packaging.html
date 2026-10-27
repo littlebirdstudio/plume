@@ -616,10 +616,8 @@ function importData(e) {
 // her own list was sorted.)
 var groupFilter = '';
 function renderStats() {
-  var totalVal = items.reduce(function(sum, i) {
-    var cpu = latestCostPerUnit(i);
-    return sum + (cpu !== null ? cpu * calcStock(i) : 0);
-  }, 0);
+  // Core's rule, so this matches Analytics (2026-10-26).
+  var totalVal = items.reduce(function(sum, i) { return sum + Plume.pkValue(i); }, 0);
   var kinds = Plume.pkGroups(items.filter(function (i) { return !!i.kind; })).length;
   var unsorted = unsortedItems().length;
   document.getElementById('pk-summary').innerHTML =

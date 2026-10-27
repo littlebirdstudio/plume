@@ -22,7 +22,7 @@ function ok(label, cond, got) {
 }
 
 const PAGES = ['index.html', 'plume-ingredients.html', 'plume-formulations.html',
-  'plume-packaging.html', 'plume-batchlog.html', 'plume-costing.html'];
+  'plume-packaging.html', 'plume-batchlog.html', 'plume-costing.html', 'plume-analytics.html'];
 
 function pngSize(file) {
   const b = fs.readFileSync(file);

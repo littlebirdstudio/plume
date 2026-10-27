@@ -19,7 +19,7 @@ function ok(label, cond, got) {
 const core = fs.readFileSync(path.join(ROOT, 'plume-core.js'), 'utf8');
 const VERSION = (core.match(/var VERSION = '([^']+)'/) || [])[1];
 const PAGES = ['index.html', 'plume-ingredients.html', 'plume-formulations.html',
-               'plume-packaging.html', 'plume-batchlog.html', 'plume-costing.html'];
+               'plume-packaging.html', 'plume-batchlog.html', 'plume-costing.html', 'plume-analytics.html'];
 
 console.log('\n1. No hand-typed versions left');
 ok('core declares a version', !!VERSION, VERSION);
