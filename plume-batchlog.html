@@ -926,8 +926,11 @@ function gramsToLotQty(g, unit, density) {
   if (isNaN(q) || q <= 0) return 0;
   var d = parseFloat(density) || 1.0;
   if (unit === 'g')     return q;
+  if (unit === 'kg')    return q / 1000;
   if (unit === 'mL')    return d > 0 ? q / d : q;
+  if (unit === 'L')     return d > 0 ? q / (1000 * d) : q;
   if (unit === 'fl oz') return d > 0 ? q / (29.5735 * d) : q;
+  if (unit === 'gal')   return d > 0 ? q / (3785.41 * d) : q;
   if (unit === 'oz')    return q / 28.3495;
   if (unit === 'lb')    return q / 453.592;
   return q;

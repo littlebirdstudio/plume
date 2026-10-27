@@ -35,7 +35,7 @@ var Plume = (function () {
 // (v0.4 / v0.5 / v0.6 across five modules). BUMP IT IN EVERY PULL REQUEST,
 // core change or not: it is how "is this the update I just merged?" is
 // answered by looking, and browsers cache .js files stubbornly.
-var VERSION = '1.58';
+var VERSION = '1.60';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -503,12 +503,37 @@ function qtyToGrams(qty, unit, density) {
   if (isNaN(q) || q <= 0) return 0;
   var d = parseFloat(density) || 1.0;
   if (unit === 'g')     return q;
+  if (unit === 'kg')    return q * 1000;
   if (unit === 'mL')    return q * d;
+  if (unit === 'L')     return q * 1000 * d;
   if (unit === 'fl oz') return q * 29.5735 * d;
+  if (unit === 'gal')   return q * 3785.41 * d;   // US gallon
   if (unit === 'oz')    return q * 28.3495;
   if (unit === 'lb')    return q * 453.592;
   return q;
 }
+// The units a lot can be bought and counted in (kg, L and gal added
+// 2026-10-26: a gallon of distilled water had to be typed as 128 fl oz).
+var LOT_UNITS = [['g', 'g'], ['kg', 'kg'], ['oz', 'oz (wt)'], ['lb', 'lb'], ['mL', 'mL'], ['L', 'L'], ['fl oz', 'fl oz'], ['gal', 'gal']];
+function isVolUnit(u) { return u === 'mL' || u === 'L' || u === 'fl oz' || u === 'gal'; }
+function lotUnitOptions(sel) {
+  return LOT_UNITS.map(function (u) { return '<option value="' + u[0] + '"' + (u[0] === sel ? ' selected' : '') + '>' + u[1] + '</option>'; }).join('');
+}
+// Arithmetic in an amount box (2026-10-26, her pick): "2 x 4", "2\u00d74" or
+// "2*4" multiply, so two 4 oz bottles at 9.99 each go in as "2 x 4" and
+// "2 x 9.99". A plain number reads as itself. Returns { value, parts }
+// (parts only when it was a product), or null when it is not a number.
+function mathNum(v) {
+  var s = String(v == null ? '' : v).trim();
+  if (!s) return null;
+  var num = /^(\d+\.?\d*|\.\d+)$/;
+  var bits = s.split(/\s*[x\u00d7*]\s*/i);
+  for (var i = 0; i < bits.length; i++) if (!num.test(bits[i])) return null;
+  var n = 1;
+  bits.forEach(function (b) { n *= parseFloat(b); });
+  return { value: Math.round(n * 10000) / 10000, parts: bits.length > 1 ? bits.map(parseFloat) : null };
+}
+function mathVal(v) { var m = mathNum(v); return m ? m.value : NaN; }
 
 // Total grams on hand across purchased lots.
 //
@@ -5286,6 +5311,7 @@ return {
   onHand: onHand, onHandParts: onHandParts, isKit: isKit, kitPartOk: kitPartOk, kitParts: kitParts,
   kitNeeds: kitNeeds, kitShortages: kitShortages, buildKit: buildKit, undoKitBuild: undoKitBuild,
   undoKitText: undoKitText, kitsUsing: kitsUsing, stockPass: stockPass, undoStock: undoStock,
+  LOT_UNITS: LOT_UNITS, isVolUnit: isVolUnit, lotUnitOptions: lotUnitOptions, mathNum: mathNum, mathVal: mathVal,
   STOCK_REASONS: STOCK_REASONS, productUnitCost: productUnitCost, stockReasonLabel: stockReasonLabel, fillUndoBlock: fillUndoBlock,
   consign: { open: consignOpen, shop: csShow, list: csList, add: csAdd, edit: csEdit, typed: csTyped, save: csSave },
   shopsAll: shopsAll, shopAdd: shopAdd, shopName: shopName, atShops: atShops, consignPass: consignPass, settlePass: settlePass,

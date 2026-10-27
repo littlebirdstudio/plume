@@ -1761,10 +1761,13 @@
             <input type="number" id="f-lowstock" placeholder="e.g. 2" step="0.01" min="0" style="font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 10px;border:1px solid var(--cream-border);border-radius:3px;background:var(--white);color:var(--ink);outline:none;flex:1">
             <select id="f-lowstock-unit" aria-label="Low stock unit" style="font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 10px;border:1px solid var(--cream-border);border-radius:3px;background:var(--white);color:var(--ink);outline:none">
               <option value="g">g</option>
-              <option value="mL">mL</option>
-              <option value="fl oz">fl oz</option>
+              <option value="kg">kg</option>
               <option value="oz">oz (wt)</option>
               <option value="lb">lb</option>
+              <option value="mL">mL</option>
+              <option value="L">L</option>
+              <option value="fl oz">fl oz</option>
+              <option value="gal">gal</option>
             </select>
           </div>
         </div>
@@ -1873,8 +1876,8 @@
           <div class="field span2"><label for="qa-sup">Supplier</label><input type="text" id="qa-sup" list="qa-sup-list" placeholder="e.g. Mountain Rose Herbs" autocomplete="off"><datalist id="qa-sup-list"></datalist></div>
           <div class="field"><label for="qa-order">Order #</label><input type="text" id="qa-order" placeholder="optional"></div>
           <div class="field"><label for="qa-received">Received</label><input type="date" id="qa-received"></div>
-          <div class="field span2"><label for="qa-size">Bought (total)</label><div class="lot-pair qa-bought"><input type="number" id="qa-size" step="0.01" min="0" placeholder="e.g. 16" oninput="qaCost()"><select id="qa-unit" onchange="qaCost()" aria-label="Unit"><option value="g">g</option><option value="oz">oz (wt)</option><option value="lb">lb</option><option value="mL">mL</option><option value="fl oz">fl oz</option></select></div></div>
-          <div class="field"><label for="qa-price">Price paid, total ($)</label><input type="number" id="qa-price" step="0.01" min="0" placeholder="0.00" oninput="qaCost()"></div>
+          <div class="field span2"><label for="qa-size">Bought (total)</label><div class="lot-pair qa-bought"><input type="text" inputmode="decimal" id="qa-size" placeholder="e.g. 16, or 2 x 4" oninput="qaMathInput(this)" onblur="qaMathBlur(this)"><select id="qa-unit" onchange="qaCost()" aria-label="Unit"><option value="g">g</option><option value="kg">kg</option><option value="oz">oz (wt)</option><option value="lb">lb</option><option value="mL">mL</option><option value="L">L</option><option value="fl oz">fl oz</option><option value="gal">gal</option></select></div></div>
+          <div class="field"><label for="qa-price">Price paid, total ($)</label><input type="text" inputmode="decimal" id="qa-price" placeholder="0.00, or 2 x 9.99" oninput="qaMathInput(this)" onblur="qaMathBlur(this)"></div>
           <div class="field"><label>Cost per gram</label><div class="qa-cpg none" id="qa-cpg">From bought and price</div><div class="qa-cpg-note" id="qa-cpg-note"></div></div>
           <div class="field"><label for="qa-lot">Lot #</label><input type="text" id="qa-lot" placeholder="optional"></div>
           <div class="field qa-span3"><label for="qa-link">Purchase link <span class="qa-h">the product page, for reordering</span></label><input type="url" id="qa-link" placeholder="https://…" autocomplete="off"></div>
@@ -2059,6 +2062,8 @@ function lotInp(attrs) {
   if (attrs.id)          html += ' id="' + attrs.id + '"';
   if (attrs.field)       html += ' data-field="' + attrs.field + '"';
   if (attrs.step)        html += ' step="' + attrs.step + '"';
+  if (attrs.inputmode)   html += ' inputmode="' + attrs.inputmode + '"';
+  if (attrs.title)       html += ' title="' + esc(attrs.title) + '"';
   if (attrs.min !== undefined) html += ' min="' + attrs.min + '"';
   if (attrs.placeholder) html += ' placeholder="' + esc(attrs.placeholder) + '"';
   if (attrs.value !== undefined && attrs.value !== null && attrs.value !== '') html += ' value="' + esc(attrs.value) + '"';
@@ -3819,7 +3824,7 @@ function qaOnOrder() {
   });
 }
 function qaClear(keepOrder) {
-  ['qa-name', 'qa-inci', 'qa-size', 'qa-price', 'qa-lot', 'qa-link'].forEach(function(id) { document.getElementById(id).value = ''; });
+  ['qa-name', 'qa-inci', 'qa-size', 'qa-price', 'qa-lot', 'qa-link'].forEach(function(id) { var el = document.getElementById(id); el.value = ''; if (el.dataset) delete el.dataset.expr; });
   fillUsageForm('qa', null);
   document.getElementById('qa-phase').value = 'water';
   document.getElementById('qa-unit').value = 'g';
@@ -3895,11 +3900,17 @@ function qaUseStarter(idx) {
 }
 // The grams the purchase holds, and its cost per gram, as typed.
 function qaPurchase() {
-  var size = qaVal('qa-size'), unit = document.getElementById('qa-unit').value, price = parseFloat(qaVal('qa-price'));
-  var vol = unit === 'mL' || unit === 'fl oz';
+  var sv = Plume.mathVal(qaVal('qa-size')), size = isNaN(sv) ? '' : String(sv);
+  var unit = document.getElementById('qa-unit').value, price = Plume.mathVal(qaVal('qa-price'));
+  var vol = Plume.isVolUnit(unit);
   var dens = vol ? Plume.densityFor({ inci: qaVal('qa-inci'), phase: document.getElementById('qa-phase').value, functionCategory: qaReadFuncs() }) : null;
   var g = lotSizeToGrams(size, unit, dens ? dens.value : 1);
   return { size: size, unit: unit, price: price, grams: g, cpg: g && price > 0 ? price / g : null, dens: dens };
+}
+function qaMathInput(el) { if (el.dataset) delete el.dataset.expr; qaCost(); }
+function qaMathBlur(el) {
+  var m = Plume.mathNum(el.value);
+  if (m && m.parts) { el.dataset.expr = m.parts.join(' \u00d7 '); el.value = fmtQty(m.value); qaCost(); }
 }
 function qaCost() {
   var p = qaPurchase(), el = document.getElementById('qa-cpg'), note = document.getElementById('qa-cpg-note');
@@ -3908,7 +3919,9 @@ function qaCost() {
   el.textContent = '$' + p.cpg.toFixed(4);
   // Bought by volume: say which density turned mL into grams.
   // A plain guess (no density known) says so on the page, not only on hover.
-  note.textContent = p.dens ? 'at ' + p.dens.value + ' g/mL' + (p.dens.source === 'default' ? ', a guess' : '') : '';
+  var spell = [mathSpell(document.getElementById('qa-size'), p.unit), mathSpell(document.getElementById('qa-price'), '', true)]
+    .filter(function (t) { return t.indexOf('=') !== -1; });
+  note.textContent = spell.concat(p.dens ? ['at ' + p.dens.value + ' g/mL' + (p.dens.source === 'default' ? ', a guess' : '')] : []).join(' · ');
   note.title = p.dens ? 'Bought by volume: ' + p.dens.value + ' g/mL turns it into grams (' + (p.dens.why || 'assumed') + ').' : '';
 }
 // The ingredient as typed, or null with the reason shown.
@@ -4563,18 +4576,8 @@ function addLotRow(lot) {
   else if (!adjList.length && lotBoughtMatches(lot)) div.dataset.follows = '1';
 
   // ── Unit option builders ──
-  function purchaseUnitOpts(sel) {
-    return ['g','mL','fl oz','oz','lb'].map(function(u) {
-      var label = u === 'oz' ? 'oz (wt)' : u;
-      return '<option value="' + u + '"' + (u === sel ? ' selected' : '') + '>' + label + '</option>';
-    }).join('');
-  }
-  function qtyUnitOpts(sel) {
-    return ['g','mL','fl oz','oz','lb'].map(function(u) {
-      var label = u === 'oz' ? 'oz (wt)' : u;
-      return '<option value="' + u + '"' + (u === sel ? ' selected' : '') + '>' + label + '</option>';
-    }).join('');
-  }
+  function purchaseUnitOpts(sel) { return Plume.lotUnitOptions(sel); }
+  function qtyUnitOpts(sel) { return Plume.lotUnitOptions(sel); }
 
   // ── The 2026-10-25 refresh: status pills, then three labelled groups ──
   // Every input keeps its data-field, so getLots, duplicateLotRow and
@@ -4618,14 +4621,14 @@ function addLotRow(lot) {
       // enter the total amount and the total paid, not the containers).
       '<div class="lf lf-bought"><label>Bought (total)</label>' +
         '<div class="lot-pair">' +
-          lotInp({ type:'number', field:'purchaseSize', id:id+'-psize', step:'0.01', min:'0', placeholder:'500',
-                   value: lot && lot.purchaseSize ? lot.purchaseSize : '', oninput:"calcLotCostPerG('" + id + "')" }) +
+          lotInp({ field:'purchaseSize', id:id+'-psize', inputmode:'decimal', placeholder:'500, or 2 x 4', title:'The total bought. Several of the same? Type 2 x 4 for two of 4.',
+                   value: lot && lot.purchaseSize ? lot.purchaseSize : '', oninput:"lotMathInput(this,'" + id + "')", onblur:"lotMathBlur(this,'" + id + "')" }) +
           '<select class="lot-inp lot-unit" data-field="purchaseUnit" id="' + id + '-punit" onchange="calcLotCostPerG(\'' + id + '\')">' + purchaseUnitOpts(pUnit) + '</select>' +
         '</div>' +
       '</div>' +
       '<div class="lf"><label>Price paid, total ($)</label>' +
-        lotInp({ type:'number', field:'purchasePrice', id:id+'-pprice', step:'0.01', min:'0', placeholder:'0.00',
-                 value: lot && lot.purchasePrice ? lot.purchasePrice : '', oninput:"calcLotCostPerG('" + id + "')" }) +
+        lotInp({ field:'purchasePrice', id:id+'-pprice', inputmode:'decimal', placeholder:'0.00, or 2 x 9.99', title:'The total paid. Several at one price? Type 2 x 9.99.',
+                 value: lot && lot.purchasePrice ? lot.purchasePrice : '', oninput:"lotMathInput(this,'" + id + "')", onblur:"lotMathBlur(this,'" + id + "')" }) +
       '</div>' +
       '<div class="lf"><label>Cost per gram ($)</label>' +
         lotInp({ type:'number', field:'costPerG', id:id+'-cpg', step:'0.0001', min:'0', placeholder:'auto',
@@ -4747,7 +4750,7 @@ function syncOnHand(rowId) {
   var qty = document.getElementById(rowId + '-qty'), qu = document.getElementById(rowId + '-qunit');
   var show = document.getElementById(rowId + '-qty-show'), note = document.getElementById(rowId + '-qty-note');
   if (!qty || !qu || !show) return;
-  var size = parseFloat((document.getElementById(rowId + '-psize') || {}).value);
+  var size = Plume.mathVal((document.getElementById(rowId + '-psize') || {}).value);
   var unit = (document.getElementById(rowId + '-punit') || {}).value || 'g';
   var follows = row.dataset.follows === '1';
   var boughtG = rowBoughtG(rowId);
@@ -5121,15 +5124,28 @@ function saveNewBrand(val) {
 // ── Auto cost/g calculation ───────────────────────────
 // Conversion table to grams. For mL we need density from the ingredient field.
 function lotSizeToGrams(size, unit, density) {
-  var s = parseFloat(size);
+  var s = Plume.mathVal(size);   // "2 x 4" reads as 8
   if (isNaN(s) || s <= 0) return null;
-  var d = parseFloat(density) || 1.0; // caller resolves via Plume.densityFor
-  if (unit === 'g')     return s;
-  if (unit === 'mL')    return s * d;
-  if (unit === 'fl oz') return s * 29.5735 * d;
-  if (unit === 'oz')    return s * 28.3495; // weight oz, no density needed
-  if (unit === 'lb')    return s * 453.592;
-  return null;
+  if (Plume.LOT_UNITS.every(function (u) { return u[0] !== unit; })) return null;
+  return Plume.qtyToGrams(s, unit, parseFloat(density) || 1.0); // caller resolves density via Plume.densityFor
+}
+// Arithmetic in Bought and Price paid (2026-10-26): while typing, the line
+// under the purchase spells it out; on leaving the box the value becomes the
+// result and the parts are kept on the box (data-expr) for that line.
+function lotMathInput(el, rowId) { if (el.dataset) delete el.dataset.expr; calcLotCostPerG(rowId); }
+function lotMathBlur(el, rowId) {
+  var m = Plume.mathNum(el.value);
+  if (m && m.parts) { el.dataset.expr = m.parts.join(' \u00d7 '); el.value = fmtQty(m.value); calcLotCostPerG(rowId); }
+}
+// "2 \u00d7 4 oz = 8 oz" when a box was a product (typed now, or just turned
+// into its result); otherwise just the amount.
+function mathSpell(el, unit, money) {
+  var m = Plume.mathNum(el.value), parts = (m && m.parts) ? m.parts.join(' \u00d7 ') : (el.dataset ? el.dataset.expr : '');
+  var val = m ? m.value : NaN;
+  var show = function (v) { return money ? '$' + v.toFixed(2) : fmtQty(v) + (unit ? ' ' + unit : ''); };
+  if (!parts) return show(val);
+  var p = parts.split(' \u00d7 ');
+  return (money ? p.slice(0, -1).join(' \u00d7 ') + ' \u00d7 $' + parseFloat(p[p.length - 1]).toFixed(2) : parts + (unit ? ' ' + unit : '')) + ' = ' + show(val);
 }
 
 function calcLotCostPerG(lotId) {
@@ -5140,9 +5156,9 @@ function calcLotCostPerG(lotId) {
   var cpgNote = document.getElementById(lotId + '-cpg-note');
   if (!psize || !punit || !pprice || !cpg) return;
 
-  var size  = psize.value;
+  var size  = Plume.mathVal(psize.value);
   var unit  = punit.value;
-  var price = parseFloat(pprice.value);
+  var price = Plume.mathVal(pprice.value);
   syncOnHand(lotId);
   var sum = document.getElementById(lotId + '-buy-sum');
   if (sum) sum.textContent = '';
@@ -5156,7 +5172,7 @@ function calcLotCostPerG(lotId) {
   // its next save, since Quick add had used the category figure.
   var fd = formDensity();
   var densityVal = fd.value;
-  var needsDensity = (unit === 'mL' || unit === 'fl oz');
+  var needsDensity = Plume.isVolUnit(unit);
   var usingDefault = needsDensity && fd.source === 'default';
 
   var grams = lotSizeToGrams(size, unit, densityVal);
@@ -5165,9 +5181,8 @@ function calcLotCostPerG(lotId) {
   var result = price / grams;
   cpg.value = result.toFixed(4);
   if (sum) {
-    var u = unit === 'oz' ? 'oz' : unit;
-    sum.textContent = fmtQty(parseFloat(size)) + ' ' + u + (unit !== 'g' ? ' (' + fmtQty(grams) + ' g)' : '') +
-      ' for $' + price.toFixed(2) + ', $' + result.toFixed(4) + '/g';
+    sum.textContent = mathSpell(psize, unit) + (unit !== 'g' ? ' (' + fmtQty(grams) + ' g)' : '') +
+      ' for ' + mathSpell(pprice, '', true) + ', $' + result.toFixed(4) + '/g';
   }
   if (cpgNote) {
     if (needsDensity && usingDefault) {
@@ -5290,6 +5305,11 @@ function getLots() {
         f[el.dataset.field] = el.checked;
       } else {
         f[el.dataset.field] = el.value.trim();
+        // "2 x 4" saves as 8 even if the box was never left.
+        if (el.dataset.field === 'purchaseSize' || el.dataset.field === 'purchasePrice') {
+          var mv = Plume.mathNum(f[el.dataset.field]);
+          if (mv && mv.parts) f[el.dataset.field] = String(mv.value);
+        }
       }
     });
     // Preserve the persisted lot id (or absence thereof — saveIngredient
