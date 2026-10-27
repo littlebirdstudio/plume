@@ -4048,3 +4048,12 @@ Formula Finch) is this plus a front door, later if she wants it.
   INCI, new from the starter list, INCI required, unticking, import, the
   same receipt twice, Mark arrived on both pages, the backup, every page
   agreeing on the jar's cost, Analytics). 41 suites.
+
+- **Order date and Already here** (v1.62, same day, her ask): the preview's
+  order card has an Ordered date box (the file's date, or today when the
+  invoice has none, as Dauphine's do) and an On order / Already here switch.
+  Already here shows an Arrived date (starts on the order date, follows it
+  until changed) and brings every line in as stock: lots and packaging
+  purchases get `received`, no `onOrder`. The order record, lots' `ordered`
+  and packaging purchase dates use her date. Re-importing a receipt with a
+  new date and nothing ticked fixes the order's date (`rcOrderSet`).

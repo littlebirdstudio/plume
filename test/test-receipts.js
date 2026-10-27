@@ -162,6 +162,39 @@ const getPkg = (id) => `JSON.parse(localStorage.getItem('aerie-packaging-v2')).f
   const payload = await page.evaluate("(function () { var got = null, B = window.Blob; window.Blob = function (parts) { got = parts[0]; return new B(parts); }; var c = HTMLAnchorElement.prototype.click; HTMLAnchorElement.prototype.click = function () {}; exportData(); window.Blob = B; HTMLAnchorElement.prototype.click = c; return JSON.parse(got); })()");
   ok('Export includes the order', Array.isArray(payload.orders) && payload.orders.length === 1 && payload.orders[0].orderNum === 'LC-48213');
 
+  console.log('\n7b. Her order date, and an order that is already here (2026-10-26, her ask)');
+  const OLD = { kind: 'plume-receipt', supplier: 'Dauphine Organics', orderNum: '29406', shipping: 0, tax: 0,
+    lines: [{ kind: 'ingredient', name: 'Beeswax', count: 1, size: 100, unit: 'g', price: 5, priceIs: 'each' },
+            { kind: 'packaging', name: 'Tin, 2 oz', count: 6, price: 6, priceIs: 'total' }] };
+  await open(OLD); await page.waitForTimeout(150);
+  const today = await page.evaluate('todayISO()');
+  ok('no date on the invoice: the date box starts on today, and the order starts On order', (await val('#rc-date')) === today &&
+    await page.evaluate("document.getElementById('rc-ord-b').classList.contains('on')") && !(await page.evaluate("!!document.getElementById('rc-recv')")));
+  await page.fill('#rc-date', '2026-09-15'); await page.dispatchEvent('#rc-date', 'change'); await page.waitForTimeout(80);
+  ok('changing the date keeps it', (await val('#rc-date')) === '2026-09-15');
+  await page.click('#rc-here-b'); await page.waitForTimeout(80);
+  ok('Already here: an Arrived date, starting on the order date, and the card says so', (await val('#rc-recv')) === '2026-09-15' &&
+    /comes in as stock, arrived on/.test(await txt('#rc-order')) && /will come in, as stock/.test(await txt('#rc-count')), await txt('#rc-count'));
+  await page.fill('#rc-recv', '2026-09-19'); await page.dispatchEvent('#rc-recv', 'change'); await page.waitForTimeout(80);
+  const bwBefore = await page.evaluate(`Plume.stockG(${getIng('Beeswax')})`);
+  await page.click('#rc-apply'); await page.waitForTimeout(250);
+  bw = await page.evaluate(getIng('Beeswax'));
+  const lx = bw.lots[bw.lots.length - 1];
+  ok('the lot is in stock, arrived Sep 19, ordered Sep 15', !lx.onOrder && lx.received === '2026-09-19' && lx.ordered === '2026-09-15' && lx.orderNum === '29406', lx);
+  ok('…and Beeswax has 100 g more on hand', Math.abs((await page.evaluate(`Plume.stockG(${getIng('Beeswax')})`)) - bwBefore - 100) < 1e-6);
+  const tin = (await page.evaluate("JSON.parse(localStorage.getItem('aerie-packaging-v2'))")).filter(k => k.name === 'Tin, 2 oz')[0];
+  ok('the packaging purchase is in stock too, dated Sep 15, arrived Sep 19', tin && !tin.purchases[0].onOrder && tin.purchases[0].date === '2026-09-15' &&
+    tin.purchases[0].received === '2026-09-19' && (await page.evaluate("Plume.pkStock(JSON.parse(localStorage.getItem('aerie-packaging-v2')).filter(function (k) { return k.name === 'Tin, 2 oz'; })[0])")) === 6, tin && tin.purchases);
+  orders = await page.evaluate("JSON.parse(localStorage.getItem('plume-orders-v1'))");
+  ok('the order record carries her date', orders.filter(o => o.orderNum === '29406')[0].date === '2026-09-15');
+  ok('it says they came in as stock', /in stock as of/.test(dialogs[dialogs.length - 1]), dialogs.slice(-1));
+  const fix = JSON.parse(JSON.stringify(OLD));
+  await open(fix); await page.waitForTimeout(120);
+  await page.fill('#rc-date', '2026-09-14'); await page.dispatchEvent('#rc-date', 'change'); await page.waitForTimeout(80);
+  await page.click('#rc-apply'); await page.waitForTimeout(200);
+  orders = await page.evaluate("JSON.parse(localStorage.getItem('plume-orders-v1'))");
+  ok('the same receipt again with a new date: Update the order fixes the order\'s date', orders.filter(o => o.orderNum === '29406').length === 1 && orders.filter(o => o.orderNum === '29406')[0].date === '2026-09-14');
+
   // ── Packaging page ──
   await page.goto(previewUrl('packaging')); await page.waitForTimeout(500);
   console.log('\n8. Packaging: on order, Mark arrived, and cost per unit without shipping');
