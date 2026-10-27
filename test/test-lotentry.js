@@ -55,13 +55,13 @@ const getIng = (id) => `JSON.parse(localStorage.getItem('aerie-ingredients-v2'))
   await page.evaluate("openAdd(); addLotRow();"); await page.waitForTimeout(150);
   let id = await rid(0);
   ok('On hand is not a typed field', await page.evaluate(`${row(0)}.querySelector('[data-field="qtyPurchased"]').type === 'hidden'`));
-  ok('no count or each fields (her call: totals only)', await page.evaluate(`!${row(0)}.querySelector('[data-field="purchaseCount"]') && !${row(0)}.querySelector('[data-field="priceIs"]')`));
+  ok('a new purchase asks How many, Size of each, and Price each or total (2026-10-26)', await page.evaluate(`!!${row(0)}.querySelector('[data-field="buyCount"]') && !!${row(0)}.querySelector('[data-field="buySize"]') && ${row(0)}.querySelectorAll('.lot-is-b').length === 2`));
   ok('before Bought is filled it says it will start there', /Fill in Bought/.test(await text(id + '-qty-note')));
-  await setF(0, 'purchaseSize', '8'); await setF(0, 'purchaseUnit', 'oz'); await setF(0, 'purchasePrice', '20');
+  await setF(0, 'buySize', '8'); await setF(0, 'purchaseUnit', 'oz'); await setF(0, 'buyPrice', '20');
   ok('on hand starts at what was bought (8 oz)', await field(0, 'qtyPurchased') === '8' && await field(0, 'qtyUnit') === 'oz' && /^8 oz/.test(await text(id + '-qty-show')), [await field(0, 'qtyPurchased'), await text(id + '-qty-show')]);
   ok('cost per gram is the total paid over the total bought ($20 / 226.8 g)', Math.abs(parseFloat(await field(0, 'costPerG')) - 20 / (8 * 28.3495)) < 0.0001, await field(0, 'costPerG'));
   ok('a line spells it out', /^8 oz \(226\.8 g\) for \$20\.00, \$0\.0882\/g/.test(await text(id + '-buy-sum')), await text(id + '-buy-sum'));
-  await setF(0, 'purchaseSize', '12');
+  await setF(0, 'buySize', '12');
   ok('changing Bought moves on hand with it (not saved yet)', await field(0, 'qtyPurchased') === '12');
   ok('a new lot has no Adjust button yet', await page.evaluate(`!${row(0)}.querySelector('.lot-adj-btn')`));
 
@@ -70,19 +70,19 @@ const getIng = (id) => `JSON.parse(localStorage.getItem('aerie-ingredients-v2'))
   await page.evaluate("closeModal('modal-add'); viewIngredient('ia'); editCurrent();"); await page.waitForTimeout(200);
   id = await rid(0);
   ok('a saved lot nothing has been used from still follows Bought', await page.evaluate(`${row(0)}.dataset.follows === '1'`) && /Starts at what you bought/.test(await text(id + '-qty-note')));
-  await setF(0, 'purchaseSize', '12');
+  await setF(0, 'buySize', '12');
   ok('fixing what was bought fixes on hand too (12 oz)', await field(0, 'qtyPurchased') === '12');
-  await setF(0, 'purchaseSize', '8');
+  await setF(0, 'buySize', '8');
   await page.evaluate("closeModal('modal-add'); viewIngredient('ig'); editCurrent();"); await page.waitForTimeout(200);
   id = await rid(0);
-  ok('a lot a batch has used from is not reset to what was bought', await page.evaluate(`${row(0)}.dataset.follows !== '1'`) && await field(0, 'qtyPurchased') === '380' && /Moves with Bought/.test(await text(id + '-qty-note')), await text(id + '-qty-note'));
-  await setF(0, 'purchaseSize', '1000');
+  ok('a lot a batch has used from is not reset to what was bought', await page.evaluate(`${row(0)}.dataset.follows !== '1'`) && await field(0, 'qtyPurchased') === '380' && /Batches take from it/.test(await text(id + '-qty-note')), await text(id + '-qty-note'));
+  await setF(0, 'buySize', '1000');
   ok('raising Bought by 500 g raises on hand by 500 g (880 g), and says so', await field(0, 'qtyPurchased') === '880' && /Was 380: moved with Bought/.test(await text(id + '-qty-note')), [await field(0, 'qtyPurchased'), await text(id + '-qty-note')]);
-  await setF(0, 'purchaseUnit', 'lb'); await setF(0, 'purchaseSize', '2');
+  await setF(0, 'purchaseUnit', 'lb'); await setF(0, 'buySize', '2');
   ok('Bought in another unit converts (2 lb is 907.18 g: 787.18 g)', await field(0, 'qtyPurchased') === '787.18', await field(0, 'qtyPurchased'));
-  await setF(0, 'purchaseUnit', 'g'); await setF(0, 'purchaseSize', '100');
+  await setF(0, 'purchaseUnit', 'g'); await setF(0, 'buySize', '100');
   ok('it will not go below zero', await field(0, 'qtyPurchased') === '0' && /below zero/.test(await text(id + '-qty-note')), [await field(0, 'qtyPurchased'), await text(id + '-qty-note')]);
-  await setF(0, 'purchaseSize', '500');
+  await setF(0, 'buySize', '500');
   ok('back to 500 g, back to 380 g, nothing to note', await field(0, 'qtyPurchased') === '380' && !/Was/.test(await text(id + '-qty-note')));
   ok('it has an Adjust button', await page.evaluate(`!!${row(0)}.querySelector('.lot-adj-btn')`));
   await page.evaluate(`openLotAdjust('${id}')`); await page.waitForTimeout(100);
@@ -122,7 +122,7 @@ const getIng = (id) => `JSON.parse(localStorage.getItem('aerie-ingredients-v2'))
   console.log('\n4. Bought changed on a used lot is recorded');
   await page.evaluate(SEED); await page.reload(); await page.waitForTimeout(400);
   await page.evaluate("viewIngredient('ig'); openLotsFromDetails();"); await page.waitForTimeout(300);
-  await setF(0, 'purchaseSize', '1500');
+  await setF(0, 'buySize', '1500');
   await page.evaluate("closeLotsDrawer()"); await page.waitForTimeout(300);
   g = await page.evaluate(getIng('ig'));
   ok('closing the drawer saves 1380 g and a "Bought changed" note', g.lots[0].qtyPurchased === '1380' && g.lots[0].purchaseSize === '1500' &&

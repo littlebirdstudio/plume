@@ -17,7 +17,10 @@ concurrency:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    # Pinned, not ubuntu-latest: that label moved to Ubuntu 26 in October 2026,
+    # and the Playwright these tests pin (1.56) cannot install Chromium there.
+    # Move this forward together with a Playwright upgrade, never alone.
+    runs-on: ubuntu-24.04
 
     steps:
       - uses: actions/checkout@v4
