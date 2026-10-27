@@ -833,10 +833,19 @@
      white purchase cards stand out, as they do in the drawer. */
   #lots-home #lots-block { background: var(--cream); border-radius: 12px; padding: 12px; }
   #lots-block .lot-line-1 { grid-template-columns: 1.3fr 1fr; margin-bottom: 10px; }
-  #lots-block .lot-line-buy { grid-template-columns: 0.55fr 1.5fr 1.2fr 1fr; gap: 10px 12px; }
+  /* Boxes sized to what goes in them (her ask, 2026-10-26). */
+  #lots-block .lot-line-buy { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 10px 16px; }
+  #lots-block .lot-line-buy .lf-count { flex: 0 0 64px; }
+  #lots-block .lot-line-buy .lf-each { flex: 0 0 auto; }
+  #lots-block .lot-line-buy .lf-each .lot-pair .lot-inp:first-child { flex: 0 0 84px; width: 84px; }
+  #lots-block .lot-line-buy .lf-each .lot-unit { flex: 0 0 86px; width: 86px; }
+  #lots-block .lot-line-buy .lf-price { flex: 0 0 auto; }
+  #lots-block .lot-line-buy .lf-price .lot-inp { width: 96px; }
+  #lots-block .lot-line-buy .lf-cpg { flex: 0 0 auto; }
+  #lots-block .lot-line-buy .lf-cpg .lot-inp { width: 96px; }
+  #lots-block .lot-line-buy .lot-buyfixed { flex: 0 1 auto; min-width: 220px; }
   #lots-block .lot-row.lot-locked .lot-buyedit, #lots-block .lot-row.lot-locked .lot-buy-sum { display: none; }
   #lots-block .lot-row:not(.lot-locked) .lot-buyfixed { display: none; }
-  #lots-block .lot-row.lot-locked .lot-buyfixed { grid-column: span 3; }
   .lot-fixed { min-height: 32px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13.5px; color: var(--ink); font-variant-numeric: tabular-nums; }
   .lot-link { font: inherit; font-size: 12.5px; border: 0; background: none; padding: 0; color: var(--bark); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
   .lot-link:focus-visible { outline: 2px solid var(--bark); outline-offset: 2px; }
@@ -849,8 +858,7 @@
   .add-lot-btn { border-radius: 9px; font-size: 13px; padding: 9px 14px; background: var(--white); }
   .add-sup-btn { flex: 0 0 auto; width: auto; white-space: nowrap; }
   @media (max-width: 720px) {
-    #lots-block .lot-line-1, #lots-block .lot-line-2, #lots-block .lot-line-3, #lots-block .lot-line-buy { grid-template-columns: 1fr 1fr; }
-    #lots-block .lot-row.lot-locked .lot-buyfixed { grid-column: 1 / -1; }
+    #lots-block .lot-line-1, #lots-block .lot-line-2, #lots-block .lot-line-3 { grid-template-columns: 1fr 1fr; }
     #lots-block .lf-sup { grid-column: 1 / -1; }
     .lot-top-acts { margin-left: 0; }
   }
@@ -4684,23 +4692,23 @@ function addLotRow(lot) {
       '</div>' +
     '</div>' +
     '<div class="lot-line lot-line-buy">' +
-      '<div class="lf lot-buyedit"><label>How many</label>' +
+      '<div class="lf lf-count lot-buyedit"><label>How many</label>' +
         lotInp({ type:'number', field:'buyCount', id:id+'-bcount', step:'1', min:'1', value: bCount, oninput:"lotBuySync('" + id + "')" }) +
       '</div>' +
-      '<div class="lf lf-bought lot-buyedit"><label>Size of each</label>' +
+      '<div class="lf lf-each lot-buyedit"><label>Size of each</label>' +
         '<div class="lot-pair">' +
           lotInp({ type:'number', field:'buySize', id:id+'-bsize', step:'0.01', min:'0', placeholder:'500', value: bEach, oninput:"lotBuySync('" + id + "')" }) +
           '<select class="lot-inp lot-unit" data-field="purchaseUnit" id="' + id + '-punit" onchange="lotBuySync(\'' + id + '\')">' + purchaseUnitOpts(pUnit) + '</select>' +
         '</div>' +
       '</div>' +
-      '<div class="lf lot-buyedit"><label>Price paid ($) <span class="lot-is" role="group" aria-label="The price is">' + isPill('each', 'each') + isPill('total', 'total') + '</span></label>' +
+      '<div class="lf lf-price lot-buyedit"><label>Price paid ($) <span class="lot-is" role="group" aria-label="The price is">' + isPill('each', 'each') + isPill('total', 'total') + '</span></label>' +
         lotInp({ type:'number', field:'buyPrice', id:id+'-bprice', step:'0.01', min:'0', placeholder:'0.00', value: bPrice, oninput:"lotBuySync('" + id + "')" }) +
         '<input type="hidden" data-field="buyPriceIs" id="' + id + '-bpis" value="' + bIs + '">' +
       '</div>' +
       '<div class="lf lot-buyfixed"><label>Bought</label>' +
         '<div class="lot-fixed"><span id="' + id + '-fixed"></span> <button type="button" class="lot-link" onclick="lotCorrect(\'' + id + '\')">Correct it</button></div>' +
       '</div>' +
-      '<div class="lf"><label>Cost per gram ($)</label>' +
+      '<div class="lf lf-cpg"><label>Cost per gram ($)</label>' +
         lotInp({ type:'number', field:'costPerG', id:id+'-cpg', step:'0.0001', min:'0', placeholder:'auto',
                  value: lot && lot.costPerG ? lot.costPerG : '' }) +
         '<div class="cpg-note-inline" id="' + id + '-cpg-note"></div>' +
