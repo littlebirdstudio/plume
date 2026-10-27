@@ -3878,3 +3878,71 @@ Chromium (the CDN is blocked), but /opt/pw-browsers has build 1243. Pointing
 `PLAYWRIGHT_BROWSERS_PATH` at a folder with `chromium-1194` and
 `chromium_headless_shell-1194` linked to those (plus `chrome-linux` and
 `headless_shell` name links) runs every suite.
+
+### Session 28 (cont., 26 October 2026): Cost to make and the Analytics page (core v1.59)
+
+Her ask, in steps: see what it has cost to make a product over time; then
+"something that functions more like a command center" with status across
+the business, narrowed to a formulation when she wants. Her rules, all
+deliberate: no estimates and no sales income (Plume never records what a
+sale brought in, and she will not enter it twice: that belongs to Square,
+Etsy and her separate accounting tool); nothing new to enter anywhere;
+nothing "nickel-and-dimed"; reuse what is already recorded.
+
+**History of cost over time, so it is not re-litigated.** On 15 May she
+asked that a past batch's cost never change; the per-batch snapshot was
+deferred (no batches yet) and dropped when Costing was rebuilt on 18 May.
+Session 9's "estimated vs actual: rejected" was about which number to price
+from, not history. Session 28 offered lot-by-lot actual cost; she chose the
+simpler version: the same active-lot figure every screen shows, recorded at
+the moment it happens.
+
+- **Each fill and kit build records its unit cost** (`run.unitCost`,
+  `ingCost`, `pkgCost`) via core `stampRunCost` in `makeFill` / `buildKit`,
+  from `Plume.productCostParts(p, d)` (`{ ing, pkg, total }`;
+  `productUnitCost` is now its total, same arithmetic). A kit's parts count
+  as `ing`; `pkg` is its own box. Fills recorded before v1.59 have no cost
+  and read today's, marked ~ (her call).
+- **Batches do NOT record a cost.** Tried and taken out the same day:
+  Analytics must show the same figure as the batch's own Ingredients tab
+  (today's prices), or two screens disagree. `Plume.batchCost(b, ings)`
+  gives that figure and `perG` over the grams made (actual yield when
+  entered).
+- **`plume-analytics.html`** (new page, in `APP_FILES`, test-version and
+  test-pwa). Sidebar: Analytics, a link under Stock after Stock history
+  (`#ps-nav-analytics`). Period chips (remembered, `plume-an-range`) and a
+  focus select (a formulation, or Kits and sample packs).
+  - **Status** (period): Spent making product (fills × their unit cost; a
+    kit build adds only its own packaging, so kit contents are not counted
+    twice), Cost of goods sold (units sold, at the `unitCost` the stock
+    change recorded; shop sales included), Batches made, Went out (sold /
+    given away / damaged, counted as Stock history counts them, with a link
+    that opens Stock history on the same period: `Plume.stock.history(range)`),
+    Bought (lots by received date at `purchasePrice`, packaging purchases by
+    date; on-order lots shown apart).
+  - **Inventory, at cost** (now): Total, Finished products (shelf + shops),
+    Bulk in batches, Ingredients (each lot here at that lot's own cost per
+    gram, `Plume.ingValue`), Packaging (`Plume.pkValue`: stock at the newest
+    priced purchase; below zero counts as none). Each names its largest
+    item. **Packaging's own page now uses `Plume.pkValue` too**, so the two
+    agree (a test checks it); before, negative stock subtracted money and an
+    item whose newest purchase had no price counted nothing.
+  - **Needs a look** (cards appear only when something applies): prices
+    under 60% margin at retail or wholesale under 2× cost; running low (under
+    a month at the last 90 days' pace, sold and given away); slow movers;
+    ingredient prices up 10%+ lot to lot; ingredients in stock and in no
+    batch for six months (most money first); bulk older than two months not
+    marked Used up. The lines are starting guesses, offered to her to change.
+  - **Products** table (sortable): cost a unit today, change since the first
+    fill that recorded its own cost, margin at retail, wholesale ÷ cost, on
+    hand, out a month, lasts. A row opens its cost chart and fills
+    (`Plume.costs.detail`, `chart`, `rows`, all in core).
+  - **Batches** table (period): made, ingredient cost, per 100 g, left.
+- The Cost to make slide-in panel built earlier in the session was replaced
+  by the page; its chart and fill list live on in core.
+- Tests: `test/test-cost-history.js` (29), including agreement with Products
+  & Costing (unit cost), the batch panel (batch cost) and the Packaging page
+  (packaging value). `test-shell.js` counts the Analytics link. 39 suites.
+
+**Not built, her calls:** no revenue figures of any kind; no ingredient total
+at the top of the Ingredients page (Analytics is enough).
