@@ -3946,3 +3946,42 @@ the moment it happens.
 
 **Not built, her calls:** no revenue figures of any kind; no ingredient total
 at the top of the Ingredients page (Analytics is enough).
+
+### Session 28 (cont., 26 October 2026): Purchases in the Stock & cost tab; How many and Size of each (core v1.60)
+
+**What went wrong first, worth remembering.** Her report from the preview:
+she "added some inventory" to Beeswax (454 g bought, 300 g left) by typing
+into its Bought box, and on hand dropped (30 typed: on hand 0). Nothing was
+miscalculated: Bought on a saved lot means "the total of that one purchase"
+and on hand follows it (session 26, lot entry), so typing the new amount
+there read as "this purchase was smaller". The box invited the wrong
+reading; adding stock had no visible door. An arithmetic-in-the-box idea
+("2 x 4") was built and taken out the same hour, her call: hidden features
+will be missed, by her and by Formula Finch buyers.
+
+- **The lots sit in the editor's Stock & cost tab** (her ask: no Manage lots
+  button to press first). The block (`#lots-block`: cards, + Add a purchase,
+  New supplier) lives in `#lots-home` in that tab; the slide-in drawer,
+  still opened from the list and the details page, borrows it
+  (`placeLots('drawer')`) and gives it back on close. Lot styles that were
+  scoped `.drawer .lot-*` are now `#lots-block .lot-*`.
+- **A saved lot shows what was bought as text** ("454 g for $12.00", or
+  "2 × 4 oz = 8 oz for 2 × $9.99 = $19.98") with **Correct it**
+  (`lotCorrect`), which opens the boxes and says correcting moves on hand by
+  the difference and new stock goes in with **+ Add a purchase** (renamed
+  from + Add a lot). Row class `lot-locked`; the repeated line under it is
+  hidden while locked.
+- **A new purchase asks How many** (`buyCount`, starts at 1), **Size of each**
+  (`buySize`) with its unit, and **Price paid** with an each / total switch
+  (`buyPrice`, `buyPriceIs`, starts on each). `lotBuySync` writes the totals
+  into hidden `purchaseSize` / `purchasePrice`, which everything else reads
+  as before. An older lot opens as 1 × its total at its total price. The
+  boxes are sized to their contents (her ask). Quick add asks the same three
+  (`qa-count`, `qa-size`, `qa-price`, `qa-price-is`) and stores the same.
+- **kg, L and gal** (US) in core `qtyToGrams`, `Plume.LOT_UNITS`,
+  `Plume.isVolUnit`, `Plume.lotUnitOptions`; Batches' `gramsToLotQty`
+  inverse; every unit select (lots, Quick add, low stock).
+- Tests: new `test/test-lotbuy.js` (26: her Beeswax case, several of the
+  same, each / total, Correct it, gallons, Quick add, the drawer handing the
+  lots back). `test-lotentry.js` types into the new boxes; its "totals only"
+  check is replaced (her earlier call, reversed today). 40 suites.

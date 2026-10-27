@@ -35,7 +35,7 @@ var Plume = (function () {
 // (v0.4 / v0.5 / v0.6 across five modules). BUMP IT IN EVERY PULL REQUEST,
 // core change or not: it is how "is this the update I just merged?" is
 // answered by looking, and browsers cache .js files stubbornly.
-var VERSION = '1.59';
+var VERSION = '1.60';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -503,12 +503,23 @@ function qtyToGrams(qty, unit, density) {
   if (isNaN(q) || q <= 0) return 0;
   var d = parseFloat(density) || 1.0;
   if (unit === 'g')     return q;
+  if (unit === 'kg')    return q * 1000;
   if (unit === 'mL')    return q * d;
+  if (unit === 'L')     return q * 1000 * d;
   if (unit === 'fl oz') return q * 29.5735 * d;
+  if (unit === 'gal')   return q * 3785.41 * d;   // US gallon
   if (unit === 'oz')    return q * 28.3495;
   if (unit === 'lb')    return q * 453.592;
   return q;
 }
+// The units a lot can be bought and counted in (kg, L and gal added
+// 2026-10-26: a gallon of distilled water had to be typed as 128 fl oz).
+var LOT_UNITS = [['g', 'g'], ['kg', 'kg'], ['oz', 'oz (wt)'], ['lb', 'lb'], ['mL', 'mL'], ['L', 'L'], ['fl oz', 'fl oz'], ['gal', 'gal']];
+function isVolUnit(u) { return u === 'mL' || u === 'L' || u === 'fl oz' || u === 'gal'; }
+function lotUnitOptions(sel) {
+  return LOT_UNITS.map(function (u) { return '<option value="' + u[0] + '"' + (u[0] === sel ? ' selected' : '') + '>' + u[1] + '</option>'; }).join('');
+}
+
 
 // Total grams on hand across purchased lots.
 //
@@ -5449,6 +5460,7 @@ return {
   onHand: onHand, onHandParts: onHandParts, isKit: isKit, kitPartOk: kitPartOk, kitParts: kitParts,
   kitNeeds: kitNeeds, kitShortages: kitShortages, buildKit: buildKit, undoKitBuild: undoKitBuild,
   undoKitText: undoKitText, kitsUsing: kitsUsing, stockPass: stockPass, undoStock: undoStock,
+  LOT_UNITS: LOT_UNITS, isVolUnit: isVolUnit, lotUnitOptions: lotUnitOptions,
   STOCK_REASONS: STOCK_REASONS, productUnitCost: productUnitCost, productCostParts: productCostParts, stampRunCost: stampRunCost,
   costs: { rows: ctRows, chart: ctChart, detail: ctDetail, change: ctChange, changeText: ctChangeText, money: ctMoney },
   batchCost: batchCost, pkgUnitCostOf: pkgUnitCostOf, pkValue: pkValue, ingValue: ingValue, stockReasonLabel: stockReasonLabel, fillUndoBlock: fillUndoBlock,
