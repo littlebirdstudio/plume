@@ -2221,9 +2221,13 @@ function loadData() {
   // and in view. Batches links here to "mark it arrived", which lives in the
   // quick look, so it is one click from the batch that needs it.
   // From the opening questions (2026-11-01): open the starter list.
-  if (location.hash === '#quickadd') {
+  // #quickadd=<words> (Formulations' Lye calculator) opens it searched.
+  if (location.hash === '#quickadd' || location.hash.indexOf('#quickadd=') === 0) {
+    var qaq = '';
+    try { qaq = decodeURIComponent(location.hash.slice(10)); } catch (e) {}
     try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
     openSeeder();
+    if (qaq) { var sq = document.getElementById('seeder-search'); if (sq) { sq.value = qaq; setSeederQuery(qaq); } }
   }
   if (location.hash && location.hash.indexOf('#ql=') === 0) {
     var qlId;
