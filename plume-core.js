@@ -35,7 +35,7 @@ var Plume = (function () {
 // (v0.4 / v0.5 / v0.6 across five modules). BUMP IT IN EVERY PULL REQUEST,
 // core change or not: it is how "is this the update I just merged?" is
 // answered by looking, and browsers cache .js files stubbornly.
-var VERSION = '1.63';
+var VERSION = '1.64';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -886,11 +886,16 @@ function renderThemeChoice(container) {
   var szOpt = function (v, label) {
     return '<button type="button" class="plume-theme-opt' + (sz === v ? ' on' : '') + '" onclick="Plume.setSize(\'' + v + '\')">' + label + '</button>';
   };
-  el.innerHTML = '<div class="plume-theme-row">' + opt('light', 'Light') + opt('dark', 'Dark') + opt('auto', 'Match my computer') + '</div>' +
+  el.innerHTML = '<div class="plume-set-lbl" style="margin-top:0"><label for="plume-business">Your business</label></div>' +
+    '<input type="text" id="plume-business" class="plume-biz" maxlength="60" placeholder="e.g. your studio or shop name" value="' + esc(businessName()) + '"' +
+      ' onblur="Plume.setBusinessName(this.value)" onkeydown="if(event.key===\'Enter\'){this.blur();}">' +
+    '<div class="plume-theme-note">Shows under Formula Finch in the sidebar. Saved when you click away.</div>' +
+    '<div class="plume-set-lbl">Light or dark</div>' +
+    '<div class="plume-theme-row">' + opt('light', 'Light') + opt('dark', 'Dark') + opt('auto', 'Match my computer') + '</div>' +
     '<div class="plume-theme-note">Light or dark applies to every module on this device, and so does the palette below.</div>' +
     '<div class="plume-set-lbl">Size</div><div class="plume-theme-row">' +
       szOpt('smaller', 'Smaller') + szOpt('standard', 'Standard') + szOpt('larger', 'Larger') + '</div>' +
-    '<div class="plume-theme-note">For every page on this device. If your browser is zoomed in or out for Plume, set it back to 100%.</div>' +
+    '<div class="plume-theme-note">For every page on this device. If your browser is zoomed in or out for Formula Finch, set it back to 100%.</div>' +
     '<div class="plume-set-lbl">What\u2019s next pointers</div><div class="plume-theme-row">' +
       '<button type="button" class="plume-theme-opt' + (on ? ' on' : '') + '" onclick="Plume.setTips(true)">Show</button>' +
       '<button type="button" class="plume-theme-opt' + (on ? '' : ' on') + '" onclick="Plume.setTips(false)">Hide</button></div>' +
@@ -973,7 +978,9 @@ function nextCss() {
     'html.plume-no-tips .next-step{display:none}' +
     '.next-off{display:none}' +
     'html.plume-no-tips .next-off{display:block}' +
-    '.plume-set-lbl{font-size:12.5px;font-weight:500;color:var(--ink-light);margin:16px 0 6px}';
+    '.plume-set-lbl{font-size:12.5px;font-weight:500;color:var(--ink-light);margin:16px 0 6px}' +
+    '.plume-biz{font:inherit;font-size:13.5px;width:100%;max-width:320px;padding:7px 10px;border:1px solid var(--cream-border);border-radius:6px;background:var(--white);color:var(--ink);outline:none}' +
+    '.plume-biz:focus{border-color:var(--bark)}';
   var s = document.createElement('style');
   s.id = 'plume-next-css';
   s.textContent = css;
@@ -1007,9 +1014,22 @@ function nextStep(o) {
 // old header. All of it is styled from the palette variables, so palettes
 // and dark mode carry over untouched.
 //
-// BRAND is the only place the app's name lives for the shell, so the
-// eventual rename to Formula Finch is one edit here.
-var BRAND = { name: 'Plume', sub: 'Little Bird Studio', mark: 'P' };
+// BRAND is the only place the app's name lives for the shell.
+// Renamed to Formula Finch 2026-11-01 (her call): one app for everyone, her
+// copy included. The app keeps its own name and finch mark everywhere; the
+// owner's business name (Settings, "Your business") is the line under it.
+// There is deliberately no setting for a logo: a buyer's logo across the
+// whole app would make passing it off as their own too easy (her reasoning).
+var BRAND = { name: 'Formula Finch', mark: 'formula-finch-mark.svg' };
+var BUSINESS_KEY = 'plume-business';
+function businessName() { return String(Store.get(BUSINESS_KEY) || '').trim(); }
+function setBusinessName(v) {
+  v = String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, 60);
+  if (v === businessName()) return;
+  if (v) Store.set(BUSINESS_KEY, v); else Store.remove(BUSINESS_KEY);
+  var subs = document.querySelectorAll('.ps-ws-sub');
+  for (var i = 0; i < subs.length; i++) { subs[i].textContent = v; subs[i].hidden = !v; }
+}
 
 function countOf(key, keep) {
   var list = Store.getJSON ? Store.getJSON(key, []) : [];
@@ -1093,8 +1113,8 @@ function shell(opts) {
     '<aside class="ps-side" id="ps-side" aria-label="Modules">' +
       '<div class="ps-ws">' +
         '<a class="ps-ws-link" href="index.html" title="Home">' +
-          '<span class="ps-ws-mark">' + esc(BRAND.mark) + '</span>' +
-          '<span class="ps-ws-text"><span class="ps-ws-name">' + esc(BRAND.name) + '</span><span class="ps-ws-sub">' + esc(BRAND.sub) + '</span></span>' +
+          '<span class="ps-ws-mark"><img src="' + BRAND.mark + '" alt=""></span>' +
+          '<span class="ps-ws-text"><span class="ps-ws-name">' + esc(BRAND.name) + '</span><span class="ps-ws-sub"' + (businessName() ? '' : ' hidden') + '>' + esc(businessName()) + '</span></span>' +
         '</a>' +
         '<button type="button" class="ps-icon-btn ps-collapse" onclick="Plume.toggleSide()" title="Collapse or expand the sidebar" aria-label="Collapse or expand the sidebar">' + icon('collapse', 'ps-when-open') + icon('expand', 'ps-when-closed') + '</button>' +
       '</div>' +
@@ -1542,7 +1562,7 @@ function renderStorage() {
     html += '<span>Settings</span><span>' + fmtBytes(r.settings) + '</span></div>';
   }
   html += '<div style="font-size:11px;color:var(--ink-lighter);line-height:1.5;margin-top:10px">';
-  html += 'All Plume modules share one browser storage budget of about 5MB, which browsers do not allow to be raised.<br>' +
+  html += 'All Formula Finch modules share one browser storage budget of about 5MB, which browsers do not allow to be raised.<br>' +
           '<span style="opacity:0.75">plume-core.js v' + VERSION + ' &middot; storage: ' + Store.driverName() + '</span></div>' +
           '<div id="plume-app-status" style="font-size:11px;color:var(--ink-lighter);line-height:1.6;margin-top:8px"></div>';
   if (r.rows.length) {
@@ -1622,7 +1642,7 @@ function renderStorBanner() {
   if (pct < STOR_WARN_AT) { slot.innerHTML = ''; return; }
 
   slot.innerHTML = '<div class="stor-banner warn"><div><b>Browser storage is about ' +
-    Math.round(pct * 100) + '% full.</b> Plume stores everything in this browser, and the limit is ' +
+    Math.round(pct * 100) + '% full.</b> Formula Finch stores everything in this browser, and the limit is ' +
     'roughly 5MB for the whole app &mdash; it cannot be raised. Worth exporting a backup and checking ' +
     'Settings to see what is using the room.</div>' +
     '<button class="sb-x" onclick="Plume.dismissStorBanner()" title="Hide until next time">&times;</button></div>';
@@ -1701,9 +1721,9 @@ function injectStyles() {
     '.ps-collapsed .ps-side{width:60px}' +
     '.ps-ws{display:flex;align-items:center;gap:4px;padding:2px 2px 14px 6px}' +
     '.ps-ws-link{display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--ink);min-width:0;flex:1}' +
-    ".ps-ws-mark{width:28px;height:28px;border-radius:8px;background:var(--bark);color:var(--white);display:grid;place-items:center;font:500 18px/1 'Cormorant Garamond',Georgia,serif;flex:none}" +
+    ".ps-ws-mark{width:36px;height:36px;border-radius:9px;background:#FCF6ED;display:grid;place-items:center;flex:none;overflow:hidden}.ps-ws-mark img{width:38px;height:38px;display:block}" +
     '.ps-ws-text{display:flex;flex-direction:column;min-width:0}' +
-    ".ps-ws-name{font:500 21px/1.05 'Cormorant Garamond',Georgia,serif;letter-spacing:.04em;white-space:nowrap}" +
+    ".ps-ws-name{font:400 18px/1.1 'Georgia Pro',Georgia,'Times New Roman',serif;letter-spacing:.01em;white-space:nowrap}" +
     '.ps-ws-sub{font-size:11px;color:var(--ink-lighter);white-space:nowrap}' +
     '.ps-nav-list{display:flex;flex-direction:column;gap:2px}' +
     '.ps-nav{display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:7px;color:var(--ink-light);text-decoration:none;font:inherit;font-size:14px;border:0;background:none;width:100%;text-align:left;cursor:pointer;transition:background .12s,color .12s;white-space:nowrap}' +
@@ -2045,7 +2065,7 @@ function dlgNext() {
   var isAsk = d.kind !== 'tell';
   wrap.innerHTML =
     '<div class="plume-dlg" role="' + (isAsk ? 'alertdialog' : 'dialog') + '" aria-modal="true" aria-labelledby="plume-dlg-t" aria-describedby="plume-dlg-m">' +
-      (o.title ? '<div class="plume-dlg-title" id="plume-dlg-t">' + esc(o.title) + '</div>' : '<span id="plume-dlg-t" hidden>Plume</span>') +
+      (o.title ? '<div class="plume-dlg-title" id="plume-dlg-t">' + esc(o.title) + '</div>' : '<span id="plume-dlg-t" hidden>Formula Finch</span>') +
       // opts.html: a message the caller built as markup, every value already
       // escaped (the volume price repair's table). Everything else is text.
       '<div class="plume-dlg-msg" id="plume-dlg-m">' + (o.html ? String(d.message) : dlgParas(d.message)) + '</div>' +
@@ -2158,7 +2178,7 @@ function showInstallButtons(on) {
 function install() {
   if (!installPrompt) {
     tell('In Chrome, use the install icon at the right of the address bar, or the menu (three dots) then "Cast, save and share" then "Install page as app".',
-         { title: 'Install Plume as an app' });
+         { title: 'Install Formula Finch as an app' });
     return;
   }
   installPrompt.prompt();
@@ -2194,7 +2214,7 @@ function openPage(url) {
 // Settings -> Storage -> "Clear the saved app copy". Removes only the saved
 // app files and the service worker; her data (localStorage) is untouched.
 function resetAppCache() {
-  ask('This removes the saved copy of Plume\'s files and reloads from the site. Your ingredients, formulations, batches and products are not touched.',
+  ask('This removes the saved copy of Formula Finch\'s files and reloads from the site. Your ingredients, formulations, batches and products are not touched.',
     function () {
       var jobs = [];
       try {
@@ -4840,7 +4860,7 @@ function stHtml() {
     '<p class="st-help">' + (stMode === 'consign'
       ? '<b>Consign</b>: units go from your shelf to the shop, still yours until they sell. <a href="#" id="st-cs-link" onclick="Plume.consign.open(); return false">Shops and settling up</a>'
       : stMode === 'count'
-      ? 'How many are on the shelf now. Plume records the difference from what it had. Use this to set real numbers.'
+      ? 'How many are on the shelf now. Formula Finch records the difference from what it had. Use this to set real numbers.'
       : '<b>' + m.label + '</b>: ' + m.hint + '. ' + (m.back ? 'These go back on hand.' : 'These come off what is on hand.') + ' Switch reasons to enter more; Save records them all.') + '</p>' +
     '<div class="st-fields"><div><label for="st-date">Date</label><input type="date" id="st-date"></div>' +
       '<div><label for="st-note">Note</label><input type="text" id="st-note" placeholder="e.g. Market, Oct 18"></div></div>' +
@@ -5084,7 +5104,7 @@ function csListHtml() {
       (last ? ' · last settled ' + esc(fmtDate(last)) : '') + '</small></span><span class="cs-chev">' + icon('chevron') + '</span></button>';
   }).join('');
   return '<div class="st-panel cs-panel"><div class="sup-title">' + icon('shop') + '<h2>Consignment</h2></div>' +
-    '<p class="st-help">Units at shops are still yours: they leave your shelf when you consign them and count as sold when the shop reports. Plume tracks units, not money.</p>' +
+    '<p class="st-help">Units at shops are still yours: they leave your shelf when you consign them and count as sold when the shop reports. Formula Finch tracks units, not money.</p>' +
     (cards ? '<div class="cs-cards">' + cards + '</div>' : '<div class="st-empty">No shops yet. Add one, then consign units to it from here or from Update stock.</div>') +
     '<div class="cs-add"><button type="button" class="ps-link-btn" onclick="Plume.consign.add()">' + icon('plus') + 'Add a shop</button></div>' +
   '</div>';
@@ -5499,6 +5519,7 @@ return {
   PRODUCT_TYPES: PRODUCT_TYPES, isSoapType: isSoapType, fillTypeSelect: fillTypeSelect,
   buildSheet: buildSheet, openSheet: openSheet, stampVersion: stampVersion,
   shell: shell, refreshShell: refreshShell, toggleSide: toggleSide, icon: icon, BRAND: BRAND,
+  businessName: businessName, setBusinessName: setBusinessName,
   peek: { open: openPeek, close: closePeek, isOpen: peekIsOpen },
   suppliers: { open: openSuppliers, add: supAdd, edit: supEdit, cancel: supCancel, save: supSave,
                remove: supRemove, match: supMatch, search: supSearch, nameTyped: supNameTyped, usage: supUsage, list: supAll },

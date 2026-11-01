@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Plume - Products &amp; Costing</title>
+<title>Products &amp; Costing · Formula Finch</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -1171,7 +1171,7 @@ details.bc-tips .bc-note { border: 0; padding: 6px 0 0; margin: 0; font-size: 12
 
 <div class="toast" id="toast"></div>
 
-<footer class="app-footer">Plume by Little Bird Studio &middot; Products &amp; Costing &middot; <span class="plume-version"></span></footer>
+<footer class="app-footer">Formula Finch &middot; Products &amp; Costing &middot; <span class="plume-version"></span></footer>
 
 <script src="plume-core.js"></script>
 <script>
@@ -2397,7 +2397,7 @@ function exportData() {
   var blob = new Blob([JSON.stringify({ products: products, shops: Plume.shopsAll() }, null, 2)], { type:'application/json' });
   var a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'plume-products-' + todayISO() + '.json';
+  a.download = 'formula-finch-products-' + todayISO() + '.json';
   a.click();
 }
 function importData(e) {
@@ -3974,7 +3974,7 @@ function renderFillRow(p) {
   var unmade = parts.filter(function(c) { return !Plume.fillBatches(batches, c.formulaId).length; });
   document.getElementById('run-next').innerHTML = unmade.length ? '<div style="margin-bottom:10px">' + Plume.nextStep({ icon: 'batches',
     title: 'No batch of ' + esc(unmade.map(function(c) { return c.label || 'this formulation'; }).join(' or ')) + ' yet.',
-    text: 'Fills take their grams from a batch. Make one first, or fill from bulk not logged in Plume.',
+    text: 'Fills take their grams from a batch. Make one first, or fill from bulk not logged here.',
     go: 'Make a batch', href: 'plume-batchlog.html#new=' + encodeURIComponent(unmade[0].formulaId) }) + '</div>' : '';
   fillTakes();
 }

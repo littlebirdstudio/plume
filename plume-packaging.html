@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Plume - Packaging Library</title>
+<title>Packaging · Formula Finch</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -564,7 +564,7 @@ function removeAllPhotos() {
 function exportData() {
   var blob = new Blob([JSON.stringify({packaging: items}, null, 2)], {type:'application/json'});
   var a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-  a.download = 'plume-packaging-' + todayISO() + '.json'; a.click();
+  a.download = 'formula-finch-packaging-' + todayISO() + '.json'; a.click();
 }
 
 function importData(e) {
@@ -639,7 +639,7 @@ function renderTable() {
   var unsorted = unsortedItems().length;
   document.getElementById('pk-sort-note').innerHTML = unsorted
     ? '<div class="pk-sort-note">' + unsorted + ' item' + (unsorted === 1 ? ' was' : 's were') + ' saved before kinds and ' + (unsorted === 1 ? 'is' : 'are') +
-      ' listed under Needs sorting. Open one and save it to give it a kind; Plume fills in what it reads from the old name.</div>'
+      ' listed under Needs sorting. Open one and save it to give it a kind; Formula Finch fills in what it reads from the old name.</div>'
     : '';
   var tbody = document.getElementById('tbody');
   if (!list.length && !items.length) {
@@ -1139,7 +1139,7 @@ function openEdit(id) {
   edKind = f.kind || '';
   setFields(f);
   document.getElementById('ed-was').innerHTML = edWasGuess
-    ? '<div class="pk-note">Saved before kinds as <b>' + esc(item.name || '(unnamed)') + '</b>. Plume has filled in what it reads from that name. Check it and save.</div>'
+    ? '<div class="pk-note">Saved before kinds as <b>' + esc(item.name || '(unnamed)') + '</b>. Formula Finch has filled in what it reads from that name. Check it and save.</div>'
     : '';
   renderUsedIn(id);
   resetPurchaseUi();
@@ -1262,6 +1262,6 @@ if (typeof Plume === 'undefined') {
   });
 }
 </script>
-<footer class="app-footer">Plume by Little Bird Studio &middot; Packaging &middot; <span class="plume-version"></span></footer>
+<footer class="app-footer">Formula Finch &middot; Packaging &middot; <span class="plume-version"></span></footer>
 </body>
 </html>
