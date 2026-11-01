@@ -1723,7 +1723,7 @@ function injectStyles() {
     '.ps-ws-link{display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--ink);min-width:0;flex:1}' +
     ".ps-ws-mark{width:36px;height:36px;border-radius:9px;background:#FCF6ED;display:grid;place-items:center;flex:none;overflow:hidden}.ps-ws-mark img{width:38px;height:38px;display:block}" +
     '.ps-ws-text{display:flex;flex-direction:column;min-width:0}' +
-    ".ps-ws-name{font:500 21px/1.05 'Cormorant Garamond',Georgia,serif;letter-spacing:.04em;white-space:nowrap}" +
+    ".ps-ws-name{font:400 18px/1.1 'Georgia Pro',Georgia,'Times New Roman',serif;letter-spacing:.01em;white-space:nowrap}" +
     '.ps-ws-sub{font-size:11px;color:var(--ink-lighter);white-space:nowrap}' +
     '.ps-nav-list{display:flex;flex-direction:column;gap:2px}' +
     '.ps-nav{display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:7px;color:var(--ink-light);text-decoration:none;font:inherit;font-size:14px;border:0;background:none;width:100%;text-align:left;cursor:pointer;transition:background .12s,color .12s;white-space:nowrap}' +

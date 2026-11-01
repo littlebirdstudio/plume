@@ -54,9 +54,13 @@ body {
    dark outline reads in dark mode too. The owner's business name, if set
    in Settings, sits under the tagline. */
 .hero-mark { width: 232px; max-width: 100%; height: auto; display: block; margin: 0 auto 8px; background: #FCF6ED; border-radius: 24px; padding: 10px 14px; box-sizing: border-box; }
-.hero-name { font-family: 'Cormorant Garamond', Georgia, serif; font-weight: 400; font-size: 46px; line-height: 1; letter-spacing: 0.02em; color: var(--ink); }
-.hero-tag { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 20px; font-weight: 500; letter-spacing: 0.01em; color: var(--clay-dark); margin-top: 2px; }
-.hero-biz { font-size: 13px; color: var(--ink-lighter); margin-top: 10px; }
+.hero-name { font-family: 'Georgia Pro', Georgia, 'Times New Roman', serif; font-weight: 400; font-size: 42px; line-height: 1; letter-spacing: 0.02em; color: var(--ink); }
+.hero-tag { font-family: 'Georgia Pro', Georgia, 'Times New Roman', serif; font-size: 17px; font-weight: 400; letter-spacing: 0.01em; color: var(--clay-dark); margin-top: 2px; }
+/* The owner's line (her wording, 2026-11-01): a short divider, then
+   "The workbench of" and the business name. Hidden until one is set. */
+.hero-biz { margin-top: 14px; font-family: 'Georgia Pro', Georgia, 'Times New Roman', serif; font-size: 15px; color: var(--ink-light); }
+.hero-biz::before { content: ""; display: block; width: 48px; height: 1px; background: var(--cream-border); margin: 0 auto 12px; }
+.hero-biz-lead { font-style: italic; color: var(--ink-lighter); }
 .install-btn {
   display: block; margin: 0 auto 28px; padding: 9px 20px;
   font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 400; letter-spacing: 0.03em;
@@ -193,7 +197,7 @@ html.plume-no-tips .module-card.now .card-next { display: none; }
   <img src="formula-finch-botanical.svg" alt="" class="hero-mark">
   <h1 class="hero-name">Formula Finch</h1>
   <p class="hero-tag">From first formula to finished product</p>
-  <p class="hero-biz" id="hero-biz" hidden></p>
+  <p class="hero-biz" id="hero-biz" hidden><span class="hero-biz-lead">The workbench of</span> <span id="hero-biz-name"></span></p>
 </header>
 
 <main class="modules">
@@ -297,7 +301,7 @@ if (typeof Plume !== 'undefined') {
   Plume.Store.init(function () {
     // The owner's business name, under the tagline (Settings, Your business).
     var biz = Plume.businessName(), bizEl = document.getElementById('hero-biz');
-    if (bizEl && biz) { bizEl.textContent = biz; bizEl.hidden = false; }
+    if (bizEl && biz) { document.getElementById('hero-biz-name').textContent = biz; bizEl.hidden = false; }
     var n = function (k, liveOnly) {
       var l = Plume.Store.getJSON(k, []) || [];
       return liveOnly ? l.filter(function (x) { return x && !x.archived; }).length : l.length;
