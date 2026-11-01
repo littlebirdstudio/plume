@@ -110,7 +110,7 @@ const getIngs = "JSON.parse(localStorage.getItem('aerie-ingredients-v2'))";
 
   console.log('\n4. Typing straight onto the page');
   await page.evaluate("viewIngredient('ij'); document.querySelector('#d-body .note-edit[data-field=purpose]').click()"); await page.waitForTimeout(150);
-  ok('the reminder note opens as a rich box with a list button', await page.evaluate("!!document.querySelector('#d-body .note-edit[data-field=purpose] .rt-wrap') && document.querySelectorAll('#d-body .note-edit[data-field=purpose] .rt-btn').length === 3"));
+  ok('the reminder note opens as a rich box with list buttons (bulleted and numbered)', await page.evaluate("!!document.querySelector('#d-body .note-edit[data-field=purpose] .rt-wrap') && document.querySelectorAll('#d-body .note-edit[data-field=purpose] .rt-btn').length === 4 && !!document.querySelector('#d-body .note-edit[data-field=purpose] .rt-btn[title=\"Numbered list\"]')"));
   await page.evaluate("var ed = document.querySelector('#d-body .note-edit[data-field=purpose] .rt-ed'); ed.innerHTML = 'For the <i>beard</i> oil'; ed.dispatchEvent(new Event('blur'))"); await page.waitForTimeout(200);
   ij = (await page.evaluate(getIngs)).find(i => i.id === 'ij');
   ok('clicking away saves it with its marks', ij.purpose === 'For the *beard* oil', ij.purpose);

@@ -277,7 +277,10 @@ console.log('\n1. Units on hand and kits, in core');
   await page.evaluate("document.querySelector('.sh-head').click()");
   ok('opening it lists each product sold there', /Face Oil 1 oz[\s\S]*Sold 3/.test(await page.evaluate("document.querySelector('.sh-detail').textContent")));
   await page.evaluate("Plume.stock.find(''); Plume.stock.group('month')");
-  ok('by month: this month is a row', /October 2026/.test(await page.evaluate("document.querySelector('.sh-list').textContent")));
+  // The current month's name, not a fixed one (it read "October 2026" and
+  // started failing on November 1).
+  const thisMonth = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  ok('by month: this month is a row', (await page.evaluate("document.querySelector('.sh-list').textContent")).indexOf(thisMonth) !== -1);
   // An entry from before costs were recorded uses today's cost, marked ~
   await page.evaluate("var ps=JSON.parse(localStorage.getItem('plume-products-v1')); ps.find(function(p){return p.id==='mo';}).stockLog.push({id:'old1',date:'2026-09-02',qty:-2,kind:'out',reason:'marketing',note:'Fall fair'}); localStorage.setItem('plume-products-v1', JSON.stringify(ps)); Plume.Store.init(function(){ Plume.stock.history(); Plume.stock.group('month'); });");
   await page.waitForTimeout(150);
