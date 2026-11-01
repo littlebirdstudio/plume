@@ -104,6 +104,7 @@ const leaksJs = "(function(){var out=[];Array.prototype.forEach.call(document.qu
           ok(tag + ': goes on to the starter list', went.some((u) => /plume-ingredients\.html$/.test(u)), went);   // a request carries no #fragment
         } else {
           ok(tag + ': choices saved, maintenance off for a new app', su === want, su);
+          ok(tag + ': the questions close', await page.evaluate("getComputedStyle(document.getElementById('ffs-ov')).display === 'none'"));
           const cards = await page.evaluate("Array.prototype.filter.call(document.querySelectorAll('.module-card'),function(c){return c.offsetParent;}).map(function(c){return c.querySelector('.card-step').firstChild.nodeValue+':'+c.dataset.step;}).join(',')");
           ok(tag + ': the right cards, numbered in order', cards === (level === 'make' ? '1:ingredients,2:formulations,3:batches' : '1:ingredients,2:packaging,3:formulations,4:batches,5:costing'), cards);
           ok(tag + ': the business name shows', await page.evaluate("document.getElementById('hero-biz-name').textContent === 'Test Studio'"));
@@ -117,7 +118,7 @@ const leaksJs = "(function(){var out=[];Array.prototype.forEach.call(document.qu
     const page = await fresh(null);
     await page.goto(indexUrl()); await page.waitForTimeout(400);
     await page.click('.ffs-link');   // Skip, use everything
-    ok('Skip uses everything and asks no more', await page.evaluate("Plume.setup().level === 'sell' && Plume.setup().done === true && document.getElementById('ffs-ov').hidden"));
+    ok('Skip uses everything and asks no more', await page.evaluate("Plume.setup().level === 'sell' && Plume.setup().done === true && getComputedStyle(document.getElementById('ffs-ov')).display === 'none'"));
     await page.reload(); await page.waitForTimeout(400);
     ok('and it does not ask again', await page.evaluate("document.getElementById('ffs-ov') === null || document.getElementById('ffs-ov').hidden"));
     await page.close();

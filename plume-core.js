@@ -1089,6 +1089,7 @@ function setupCss() {
   st.id = 'ff-setup-ui-css';
   st.textContent =
     '.ffs-ov{position:fixed;inset:0;z-index:4000;background:color-mix(in srgb,var(--ink) 40%,transparent);display:grid;place-items:center;padding:16px}' +
+    '.ffs-ov[hidden]{display:none}' +
     '.ffs{background:var(--white);color:var(--ink);border-radius:16px;width:min(560px,100%);max-height:calc(100vh - 32px);overflow:auto;padding:28px 28px 22px;box-shadow:0 20px 60px rgba(0,0,0,.25);font-family:"DM Sans",sans-serif}' +
     '.ffs-k{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-lighter);margin-bottom:6px}' +
     '.ffs h2{font:400 26px/1.2 "Georgia Pro",Georgia,serif;margin:0 0 6px;color:var(--ink)}' +
