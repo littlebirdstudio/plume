@@ -581,6 +581,17 @@ body.ps-shell { font-family: 'DM Sans', sans-serif; }
 #fl-arch-btn .ps-i { width: 15px; height: 15px; }
 .fl-arch-n { opacity: .7; font-variant-numeric: tabular-nums; }
 body.ps-shell .cards-grid { grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+/* Tiles or list (2026-11-01). */
+.fl-view { display: inline-flex; }
+.fl-view .ps-chip:first-child { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.fl-view .ps-chip:last-child { border-top-left-radius: 0; border-bottom-left-radius: 0; margin-left: -1px; }
+.fl-table th.num, .fl-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.fl-table td.fl-name { font-weight: 500; }
+.fl-table tr.fl-archived td { color: var(--ink-lighter); }
+.fl-table tbody tr:focus-visible { outline: 2px solid var(--bark); outline-offset: -2px; }
+.fl-sort { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; display: inline-flex; gap: 4px; align-items: center; }
+.fl-sort.on { color: var(--ink); }
+.fl-arrow { display: inline-block; min-width: 0.7em; }
 /* Cards: a dark 2px edge and the name on a medium-tone bar (Heide, 2026-10-18). */
 body.ps-shell .fcard { border: 2px solid var(--ink-light); border-radius: 12px; padding: 0 0 11px; overflow: hidden; display: flex; flex-direction: column; gap: 6px; transition: border-color .12s, box-shadow .12s; }
 body.ps-shell .fcard:hover { border-color: var(--bark); box-shadow: 0 2px 10px color-mix(in srgb, var(--bark-dark) 14%, transparent); }
@@ -737,6 +748,9 @@ body.ps-shell .inci-list { font-size: 13px; color: var(--ink); }
     <div class="ps-toolbar">
       <span class="ps-tab on">All formulations</span>
       <div class="ps-tools">
+        <div class="fl-view" role="group" aria-label="View as">
+          <button type="button" class="ps-chip" id="fl-view-tiles" onclick="setFlView('tiles')" aria-pressed="true">Tiles</button><button type="button" class="ps-chip" id="fl-view-list" onclick="setFlView('list')" aria-pressed="false">List</button>
+        </div>
         <button type="button" class="ps-chip" id="fl-arch-btn" style="display:none" onclick="toggleShowArchived()" aria-pressed="false" title="Show archived formulations in the list. Searching always finds them."></button>
         <button type="button" class="ps-btn-primary" onclick="newFormula()"><span data-ps-icon="plus"></span>New</button>
         <div class="ps-menu-wrap">
@@ -1666,6 +1680,9 @@ function renderCards() {
     return;
   }
 
+  syncFlView();
+  if (flView === 'list') { el.innerHTML = flTableHtml(list); return; }
+
   var lay = boardLayout(list, el);
   var html = lay.mode === 'list'
     ? '<div class="fboard-note">Arrange the cards on a wider screen; here they are listed in board order.</div><div class="cards-grid fboard-list">'
@@ -1675,11 +1692,7 @@ function renderCards() {
     // Per 100 g of the formula as the editor prices it: at the version's own
     // batch size (add-in grams are scaled from it), add-ins only when they
     // count toward the total.
-    var cbs  = Plume.formBatchSize(f);
-    var cl   = (f.lines || []).filter(function (l) { return f.addinsInTotal || !l.addin; });
-    var cb   = Plume.isSoapType(f.type) ? null : calcBatchCost(cl, cbs, cbs);
-    var sp   = Plume.isSoapType(f.type) ? Plume.soapCost(f, ings).perG : null;
-    var cost = cb !== null ? cb / cbs * 100 : (sp !== null ? sp * 100 : null);
+    var cost = formCostPer100(f);
     var costStr = cost !== null ? ('$' + cost.toFixed(2) + ' <span class="ps-muted">/ 100 g</span>') : '<span class="ps-muted">No cost data</span>';
     var d = f.updatedAt ? new Date(f.updatedAt) : null;
     var dateStr = d && !isNaN(d.getTime()) ? d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '';
@@ -1712,6 +1725,79 @@ function renderCards() {
   }
   html += '</div>';
   el.innerHTML = html;
+}
+
+// Cost per 100 g of a formulation as the editor prices it, or null.
+function formCostPer100(f) {
+  var cbs  = Plume.formBatchSize(f);
+  var cl   = (f.lines || []).filter(function (l) { return f.addinsInTotal || !l.addin; });
+  var cb   = Plume.isSoapType(f.type) ? null : calcBatchCost(cl, cbs, cbs);
+  var sp   = Plume.isSoapType(f.type) ? Plume.soapCost(f, ings).perG : null;
+  return cb !== null ? cb / cbs * 100 : (sp !== null ? sp * 100 : null);
+}
+
+// ── Tiles or list (2026-11-01) ─────────────────────────
+// Her words: she prefers the tiles, but a list view may be wanted (by her
+// or a buyer). The choice is plain in the toolbar and kept on this device.
+// The list is a table that sorts by any column header; the tiles keep the
+// board order she arranges.
+var FL_VIEW_KEY = 'plume-fl-view';
+var flView = (function () { try { return localStorage.getItem(FL_VIEW_KEY) === 'list' ? 'list' : 'tiles'; } catch (e) { return 'tiles'; } })();
+var flSort = { key: 'name', dir: 1 };
+function syncFlView() {
+  ['tiles', 'list'].forEach(function (v) {
+    var b = document.getElementById('fl-view-' + v);
+    if (b) { b.classList.toggle('on', flView === v); b.setAttribute('aria-pressed', flView === v ? 'true' : 'false'); }
+  });
+}
+function setFlView(v) {
+  flView = v === 'list' ? 'list' : 'tiles';
+  try { localStorage.setItem(FL_VIEW_KEY, flView); } catch (e) {}
+  renderCards();
+}
+function setFlSort(k) {
+  if (flSort.key === k) flSort.dir = -flSort.dir; else flSort = { key: k, dir: (k === 'changed' || k === 'cost') ? -1 : 1 };
+  renderCards();
+}
+var FL_STATUS_ORDER = { approved: 0, testing: 1, draft: 2, retired: 3 };
+function flTableHtml(list) {
+  var rows = list.map(function (f) {
+    var nv = (f.variants || []).length, av = activeVar(f);
+    var t = f.updatedAt ? new Date(f.updatedAt).getTime() : NaN;
+    return { f: f, name: f.name || '', type: f.type || '', status: f.status || 'draft',
+      versions: nv || 1, using: nv > 1 ? varTitle(av) : '', ings: (f.lines || []).length,
+      cost: formCostPer100(f), changed: isNaN(t) ? null : t };
+  });
+  var k = flSort.key, dir = flSort.dir;
+  rows.sort(function (a, b) {
+    var x = a[k], y = b[k];
+    if (k === 'status') { x = FL_STATUS_ORDER[x]; y = FL_STATUS_ORDER[y]; }
+    // Blanks (no cost, no date) always go last, whichever way it sorts.
+    if (x === null || x === undefined || x === '') return (y === null || y === undefined || y === '') ? 0 : 1;
+    if (y === null || y === undefined || y === '') return -1;
+    var c = typeof x === 'string' ? x.localeCompare(y, undefined, { sensitivity: 'base', numeric: true }) : x - y;
+    return (c || a.name.localeCompare(b.name)) * (c ? dir : 1);
+  });
+  var cols = [['name', 'Name'], ['type', 'Type'], ['status', 'Status'], ['versions', 'Versions'], ['ings', 'Ingredients', 'num'], ['cost', 'Cost / 100 g', 'num'], ['changed', 'Last changed', 'num']];
+  var h = '<div class="ps-table-wrap"><table class="ps-table fl-table"><thead><tr>' + cols.map(function (c) {
+    var on = flSort.key === c[0];
+    return '<th class="' + (c[2] || '') + '" aria-sort="' + (on ? (flSort.dir > 0 ? 'ascending' : 'descending') : 'none') + '">' +
+      '<button type="button" class="fl-sort' + (on ? ' on' : '') + '" onclick="setFlSort(\'' + c[0] + '\')">' + c[1] +
+      '<span class="fl-arrow" aria-hidden="true">' + (on ? (flSort.dir > 0 ? '\u2191' : '\u2193') : '') + '</span></button></th>';
+  }).join('') + '</tr></thead><tbody>';
+  rows.forEach(function (r) {
+    var f = r.f, id = esc(JSON.stringify(f.id));
+    h += '<tr class="' + (f.archived ? 'fl-archived' : '') + '" tabindex="0" onclick="openFormula(' + id + ')" onkeydown="if(event.key===\'Enter\')openFormula(' + id + ')">' +
+      '<td class="fl-name">' + esc(r.name) + (f.archived ? '<span class="arch-tag">archived</span>' : '') + '</td>' +
+      '<td>' + esc(r.type || '\u2014') + '</td>' +
+      '<td>' + statusTag(r.status) + '</td>' +
+      '<td>' + r.versions + (r.using ? ' <span class="ps-muted">\u00b7 using ' + esc(r.using) + '</span>' : '') + '</td>' +
+      '<td class="num">' + r.ings + '</td>' +
+      '<td class="num">' + (r.cost !== null ? '$' + r.cost.toFixed(2) : '<span class="ps-muted">no cost data</span>') + '</td>' +
+      '<td class="num ps-muted">' + (r.changed !== null ? new Date(r.changed).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '') + '</td>' +
+      '</tr>';
+  });
+  return h + '</tbody></table></div>';
 }
 
 // ── The board (2026-10-25) ─────────────────────────────
