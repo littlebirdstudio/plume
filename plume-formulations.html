@@ -684,6 +684,10 @@ body.ps-shell #addin-btn.active, body.ps-shell #addin-btn.on { background: var(-
 #f-instruct { width: 100%; min-height: 110px; font-family: 'DM Sans', sans-serif; font-size: 14px; line-height: 1.6; color: var(--ink); background: var(--white); border: 1px solid var(--cream-border); border-radius: 9px; padding: 10px 12px; resize: vertical; outline: none; }
 #f-instruct:focus { border-color: var(--bark); }
 #f-instruct:disabled { background: var(--cream); border-color: transparent; color: var(--ink); }
+.soap-calc-note { font-size: 12.5px; color: var(--ink-light); margin-top: 8px; padding: 7px 10px; border-left: 3px solid var(--bark-light); background: var(--cream); border-radius: 4px; }
+.lye-lib { font-size: 11.5px; color: var(--ink-light); line-height: 1.45; margin: 2px 0 6px; }
+.lye-lib.miss { color: var(--warning); }
+.lye-lib a { color: var(--bark-dark); }
 #ep-method .rt-wrap, .np-text + .rt-wrap { border-radius: 9px; }
 #ep-method .rt-ed, .np-text + .rt-wrap .rt-ed { font-size: 14px; line-height: 1.6; padding: 10px 12px; }
 #ep-method .rt-ed:focus, .np-text + .rt-wrap .rt-ed:focus { outline: none; }
@@ -839,6 +843,9 @@ body.ps-shell .inci-list { font-size: 13px; color: var(--ink); }
           <button class="ps-chip" id="addin-btn" onclick="toggleAddin()" title="Changes what the search adds: the next ingredient goes in as an add-in, measured in drops or grams">As add-in</button>
         </div>
         <div id="addin-note" style="font-size:12px;color:var(--clay-dark);margin-top:6px;display:none">Add-in mode on: the next ingredient will not be counted in formula %</div>
+        <!-- Soap (2026-11-01, her ask): say that lye and water come from the
+             Lye calculator, so they are not added as ingredients. -->
+        <div class="soap-calc-note" id="soap-calc-note" hidden>Lye and water are calculated for you from your oils (see the Lye calculator). Don't add them as ingredients.</div>
         <div id="ing-count" style="margin-top:6px;font-size:12px;color:var(--ink-lighter)"></div>
 
         <!-- Method, usage log and history: tabs under the recipe. -->
@@ -2052,6 +2059,21 @@ function restoreSoapSettings(f) {
   document.getElementById('soap-water-row').style.display = method === 'water_pct'     ? 'flex' : 'none';
 }
 
+function soapTwiceHtml(ing) {
+  var calcd = isSoap() && ing && !ing.missing ? soapCalcKind(ing) : '';
+  return calcd ? '<div class="warn-txt soap-twice">' + (calcd === 'lye' ? 'Lye is' : 'Water is') + ' calculated for you in the Lye calculator. This line would count it twice; remove it.</div>' : '';
+}
+// What the Lye calculator works out for a soap, so it is never a line:
+// 'lye' (sodium or potassium hydroxide), 'water' (water itself, not a
+// hydrosol or an extract made with water), or ''.
+function soapCalcKind(ing) {
+  var inci = String(ing && ing.inci || '').trim().toLowerCase();
+  var name = String(ing && ing.name || '').trim().toLowerCase();
+  if (/^(sodium|potassium) hydroxide$/.test(inci) || /\b(naoh|koh)\b/.test(name) || /^(sodium|potassium) hydroxide\b/.test(name)) return 'lye';
+  if (/^(aqua|water)( \(water\))?$/.test(inci) || /^(distilled |deionized |deionised )?water$/.test(name)) return 'water';
+  return '';
+}
+
 // ── Soap UI switching ─────────────────────────────────
 function onTypeChange() { markDirty(); updateSoapUI(); updateAddinTotalRow(); renderLines(); recalc(); }
 
@@ -2060,6 +2082,7 @@ function updateSoapUI() {
   // Soap-specific sidebar panels
   document.getElementById('sb-soap-lye').style.display     = soap ? 'block' : 'none';
   document.getElementById('sb-soap-quality').style.display = soap ? 'block' : 'none';
+  document.getElementById('soap-calc-note').hidden = !soap;
   // Batch / oil weight panel
   document.getElementById('batch-panel-hdr').textContent        = soap ? 'Total oil weight' : 'Batch size';
   document.getElementById('batch-soap-note').style.display      = soap ? 'block' : 'none';
@@ -2145,6 +2168,7 @@ function renderSoapLines() {
       oilHtml += '<div style="font-size:10px;color:var(--ink-lighter);margin-top:1px">No ' + lyeLabel + ' SAP &mdash; add in Ingredients library</div>';
     }
     oilHtml += '<div class="ing-inci">' + esc(ing.inci) + '</div>';
+    oilHtml += soapTwiceHtml(ing);
     if (ob.note) oilHtml += ob.note;
     else if (sst === 'partial') oilHtml += '<div class="stock-note">' + Math.round(sg) + 'g on hand &middot; need ' + gFromPct.toFixed(1) + 'g</div>';
     oilHtml += '</div>';
@@ -2185,6 +2209,7 @@ function renderSoapLines() {
         : '<button class="ing-name-btn" onclick="showIngDetail(\'' + ing.id + '\')">' + esc(ing.name) + '</button>') +
         '<span class="addin-badge" style="margin-left:6px">add-in</span>';
       addinHtml += '<div class="ing-inci">' + esc(ing.inci) + '</div>';
+      addinHtml += soapTwiceHtml(ing);
       if (obA.note) addinHtml += obA.note;
       else if (sstA === 'partial') addinHtml += '<div class="stock-note">' + Math.round(sgA) + 'g on hand &middot; need ' + g.toFixed(1) + 'g</div>';
       addinHtml += '</div>';
@@ -2272,6 +2297,23 @@ function onSoapG(idx, v)  { fLines[idx].gramsFixed = v.replace(',', '.'); fLines
 function onSoapGB(idx, v) { fLines[idx].gramsFixed = v.replace(',', '.'); fLines[idx].gramsAt = String(curBs()); markDirty(); renderLines(); recalcSoap(); }
 
 // ── Soap calculations ─────────────────────────────────
+// Under the lye to weigh (2026-11-01): the lye from Ingredients, which the
+// soap's cost and a committed batch already use, in plain view; or, when the
+// library has none, what that means and a way to add it.
+function lyeLibRow(lyeType, grams) {
+  var li = Plume.lyeIngredient(ings, lyeType);
+  var nm = lyeType === 'koh' ? 'Potassium hydroxide' : 'Sodium hydroxide';
+  if (!li) {
+    return '<div class="lye-lib miss">' + nm + ' is not in Ingredients, so it is not in the cost and is not taken from stock. ' +
+      '<a href="plume-ingredients.html#quickadd=' + encodeURIComponent(nm) + '" target="plume-ingredients">Add it from the starter list</a></div>';
+  }
+  var cpg = bestCpg(li), sg = stockG(li);
+  var bits = [];
+  bits.push(cpg !== null ? '$' + (cpg * grams).toFixed(2) + ' in the cost' : 'no price yet');
+  bits.push(sg > 0 ? Plume.fmtG(sg) + ' in stock' : 'none in stock');
+  return '<div class="lye-lib">From ' + esc(li.name) + ': ' + bits.join(' &middot; ') + '. A committed batch takes it from stock.</div>';
+}
+
 function recalcSoap() {
   var bs        = parseFloat(document.getElementById('batch-sz').value) || 1000;
   var superfat  = parseFloat(document.getElementById('soap-superfat').value) || 5;
@@ -2332,6 +2374,7 @@ function recalcSoap() {
       (lyeType === 'koh' && kohPurity < 1
         ? '<div class="lye-row"><span class="lye-label" style="font-size:11px;color:var(--ink-lighter)">Pure KOH needed</span>' +
           '<span style="font-size:11px;color:var(--ink-lighter)">' + pureLye.toFixed(1) + 'g</span></div>' : '') +
+      lyeLibRow(lyeType, actualLye) +
       '<div class="lye-row"><span class="lye-label">Distilled water</span>' +
         '<span class="lye-val">' + waterG.toFixed(1) + 'g</span></div>' +
       '<div class="lye-row"><span class="lye-label" style="font-size:11px;color:var(--ink-lighter)">Water as % of oils</span>' +
@@ -2587,6 +2630,8 @@ function buildRow(l, idx, ing, bs, isAddin) {
   }
   row += '</div>';
   row += '<div class="ing-inci">' + esc(ing.inci) + '</div>';
+  // Soap: lye or water added as a line would be counted twice (2026-11-01).
+  row += soapTwiceHtml(ing);
   // A stock solution: what it puts into this formula, part by part.
   if (!isAddin && effPct > 0 && Plume.stockFormFor(ing, forms)) {
     var parts = Plume.stockExpand([{ ingId: ing.id, w: effPct }], ings, forms).filter(function(p) { return p.via; });
