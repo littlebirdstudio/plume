@@ -81,6 +81,8 @@ body {
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 1.25rem;
 }
+/* Formulating and making (2026-11-01): three cards, kept to their width. */
+html.ff-make .modules { grid-template-columns: repeat(3, minmax(0, 1fr)); max-width: 680px; }
 
 .module-card {
   background: var(--white);
@@ -182,6 +184,7 @@ html.plume-no-tips .module-card.now .card-next { display: none; }
 
 @media (max-width: 1000px) { .modules { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 700px) { .modules { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 700px) { html.ff-make .modules { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 600px) {
   .hero { padding: 2rem 1.5rem 1rem; }
 }
@@ -219,7 +222,7 @@ html.plume-no-tips .module-card.now .card-next { display: none; }
     <div class="card-arrow">Open <span>&rarr;</span></div>
   </a>
 
-  <a href="plume-packaging.html" class="module-card" data-step="packaging">
+  <a href="plume-packaging.html" class="module-card ff-sell-only" data-step="packaging">
     <span class="card-step">2<span class="card-next"> &middot; Next</span></span>
     <svg class="card-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
       <!-- Apothecary bottle -->
@@ -267,7 +270,7 @@ html.plume-no-tips .module-card.now .card-next { display: none; }
     <div class="card-arrow">Open <span>&rarr;</span></div>
   </a>
 
-  <a href="plume-costing.html" class="module-card" data-step="costing">
+  <a href="plume-costing.html" class="module-card ff-sell-only" data-step="costing">
     <span class="card-step">5<span class="card-next"> &middot; Next</span></span>
     <svg class="card-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
       <!-- Balance scale -->
@@ -299,9 +302,25 @@ if (typeof Plume !== 'undefined') {
   Plume.applyTips();
   // Counts for each step, and Next on the first one not started.
   Plume.Store.init(function () {
+    landing();
+    Plume.maybeSetup();
+    // The opening questions and Settings change what shows: draw it again.
+    window.addEventListener('plume-settings', landing);
+  });
+  function landing() {
+    // What they use (2026-11-01): hide the cards of hidden modules, number
+    // the rest in order, and ask the opening questions in a new, empty app.
+    Plume.applySetup();
+    var steps = ['ingredients', 'packaging', 'formulations', 'batches', 'costing'].filter(function (k) {
+      return Plume.shows(k === 'costing' ? 'costing' : k);
+    });
+    steps.forEach(function (k, i) {
+      var sEl = document.querySelector('[data-step="' + k + '"] .card-step');
+      if (sEl && sEl.firstChild) sEl.firstChild.nodeValue = String(i + 1);
+    });
     // The owner's business name, under the tagline (Settings, Your business).
     var biz = Plume.businessName(), bizEl = document.getElementById('hero-biz');
-    if (bizEl && biz) { document.getElementById('hero-biz-name').textContent = biz; bizEl.hidden = false; }
+    if (bizEl) { document.getElementById('hero-biz-name').textContent = biz; bizEl.hidden = !biz; }
     var n = function (k, liveOnly) {
       var l = Plume.Store.getJSON(k, []) || [];
       return liveOnly ? l.filter(function (x) { return x && !x.archived; }).length : l.length;
@@ -314,17 +333,18 @@ if (typeof Plume !== 'undefined') {
       costing:      [n('plume-products-v1', true), 'product', 'products']
     };
     var next = null;
-    ['ingredients', 'packaging', 'formulations', 'batches', 'costing'].forEach(function (k) {
+    steps.forEach(function (k) {
       var el = document.querySelector('[data-count="' + k + '"]');
       var v = c[k][0];
       if (el) el.textContent = v ? v + ' ' + (v === 1 ? c[k][1] : c[k][2]) : 'none yet';
       if (!v && !next) next = k;
     });
+    Array.prototype.forEach.call(document.querySelectorAll('.module-card.now'), function (c) { c.classList.remove('now'); });
     if (next) {
       var card = document.querySelector('[data-step="' + next + '"]');
       if (card) card.classList.add('now');
     }
-  });
+  }
 }
 </script>
 

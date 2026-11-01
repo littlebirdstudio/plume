@@ -76,7 +76,8 @@ const PRODUCTS = [
   console.log('\n3. Settings turns them off');
   await page.evaluate("openSettings()"); await page.waitForTimeout(200);
   ok('Settings has a Show / Hide switch', /What’s next pointers/.test(await page.evaluate("document.getElementById('plume-theme-choice').innerText")));
-  await page.evaluate("Array.from(document.querySelectorAll('#plume-theme-choice .plume-theme-opt')).find(b => b.textContent === 'Hide').click()");
+  // Settings has more Show / Hide rows since 2026-11-01: use this one's row.
+  await page.evaluate("Array.from(Array.from(document.querySelectorAll('#plume-theme-choice .plume-set-lbl')).find(function(l){return /What.s next pointers/.test(l.textContent);}).nextElementSibling.querySelectorAll('.plume-theme-opt')).find(b => b.textContent === 'Hide').click()");
   ok('Hide hides every pointer', await page.evaluate("document.documentElement.classList.contains('plume-no-tips')") && !(await visible('#run-next .next-step')));
   await page.goto(previewUrl('costing')); await seed({}); await page.evaluate("localStorage.setItem('plume-tips', 'off')"); await page.reload(); await page.waitForTimeout(500);
   ok('and the plain line shows instead, after a reload too', await visible('#list-body .next-off') && !(await visible('#list-body .next-step')) &&

@@ -3911,7 +3911,10 @@ function fillBatchSelect(id, formulaId, label, pick) {
       return '<option value="' + esc(b.id) + '"' + (b.id === sel ? ' selected' : '') + '>' + (b.lotCode ? 'Lot ' + esc(b.lotCode) + ' · ' : '') + esc(Plume.batchLabel(b)) + ' · ' +
         Plume.fmtG(Plume.batchLeftG(b, products)) + ' left' + (b.status === 'curing' ? ' (curing)' : '') + '</option>';
     }).join('') +
-    '<option value=""' + (sel ? '' : ' selected') + '>Not from a logged batch</option></select>';
+    // Not from a logged batch (bulk made before she logged batches) is a
+    // maintenance choice (2026-11-01): a new owner logs batches from the
+    // start. Kept on a row that already uses it.
+    ((Plume.shows('maint') || pick === '') ? '<option value=""' + (sel ? '' : ' selected') + '>Not from a logged batch</option>' : '') + '</select>';
 }
 // The product as it is on screen: what Fill will save, then use (her
 // call, 2026-10-20: filling from the saved version after changing the net
@@ -3974,7 +3977,7 @@ function renderFillRow(p) {
   var unmade = parts.filter(function(c) { return !Plume.fillBatches(batches, c.formulaId).length; });
   document.getElementById('run-next').innerHTML = unmade.length ? '<div style="margin-bottom:10px">' + Plume.nextStep({ icon: 'batches',
     title: 'No batch of ' + esc(unmade.map(function(c) { return c.label || 'this formulation'; }).join(' or ')) + ' yet.',
-    text: 'Fills take their grams from a batch. Make one first, or fill from bulk not logged here.',
+    text: 'Fills take their grams from a batch. Make one first' + (Plume.shows('maint') ? ', or fill from bulk not logged here.' : '.'),
     go: 'Make a batch', href: 'plume-batchlog.html#new=' + encodeURIComponent(unmade[0].formulaId) }) + '</div>' : '';
   fillTakes();
 }
@@ -4039,10 +4042,14 @@ function fillTakes() {
     var it = findIn(pkgs, n.packagingId);
     return '<span><span class="pk-thumb">' + Plume.pkIconFor(it) + '</span><b>' + n.quantity + '</b>&nbsp;&times; ' + esc(it ? Plume.pkDisplay(it) : '(a deleted item)') + '</span>';
   }).join('');
-  var grams = [], warn = [];
+  var grams = [], warn = [], noBatch = false;
   plan.draws.forEach(function(d) {
     var b = d.batchId ? findIn(batches, d.batchId) : null;
-    if (!b) { grams.push('no grams tracked' + (multi && d.label ? ' for ' + esc(d.label) : '') + ' (not from a logged batch)'); return; }
+    if (!b) {
+      // Without the maintenance choice a fill needs a batch (2026-11-01).
+      if (!Plume.shows('maint') && !d.batchId) noBatch = true;
+      grams.push('no grams tracked' + (multi && d.label ? ' for ' + esc(d.label) : '') + ' (not from a logged batch)'); return;
+    }
     if (!d.grams) { grams.push('nothing from ' + esc(Plume.batchLabel(b)) + ' by weight (no net weight set; the batch is still recorded)'); return; }
     grams.push('<b>' + Plume.fmtG(d.grams) + '</b> from ' + esc(Plume.batchLabel(b)));
     var left = Plume.batchLeftG(b, products);
@@ -4055,7 +4062,7 @@ function fillTakes() {
     (warn.length ? '<div class="warn">' + warn.join('<br>') + '</div>' : '') +
     (plan.short.length ? '<div class="stop">Not enough in stock. ' + plan.short.map(function(s) { return esc(s.name) + ': needs ' + s.need + ', ' + s.have + ' in stock'; }).join('; ') +
       '. Add the purchase in Packaging, or check the count and the product’s packaging list.</div>' : '');
-  btn.disabled = !!plan.short.length;
+  btn.disabled = !!plan.short.length || noBatch;
 }
 function addKitBuild(p) {
   var u = parseInt(document.getElementById('run-units').value, 10) || 0;

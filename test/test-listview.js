@@ -32,11 +32,10 @@ const forms = [
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await trackDialogs(page, []);
-  await page.addInitScript(([i, f]) => {
-    if (sessionStorage.getItem('s')) return;
-    localStorage.clear(); localStorage.setItem('aerie-ingredients-v2', i); localStorage.setItem('aerie-formulations-v1', f);
-    sessionStorage.setItem('s', '1');
-  }, [JSON.stringify(ings), JSON.stringify(forms)]);
+  // Seed once, after the first load, then reload: an init script guarded by
+  // sessionStorage sometimes ran again on reload (flaky, 2026-11-01).
+  await page.goto(previewUrl('formulations'));
+  await page.evaluate(([i, f]) => { localStorage.clear(); localStorage.setItem('aerie-ingredients-v2', i); localStorage.setItem('aerie-formulations-v1', f); }, [JSON.stringify(ings), JSON.stringify(forms)]);
   await page.goto(previewUrl('formulations'));
   await page.waitForTimeout(400);
   const names = () => page.evaluate("Array.from(document.querySelectorAll('.fl-table tbody tr td.fl-name')).map(function(t){return t.firstChild.textContent;})");

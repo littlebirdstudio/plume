@@ -108,11 +108,11 @@ console.log('\n2. Every palette stays readable in dark');
     ok('the header uses its own dark colours', await page.evaluate("getComputedStyle(document.documentElement).getPropertyValue('--hdr-bg').trim() !== ''"));
     await page.evaluate('openSettings()');
     await page.waitForTimeout(200);
-    const opts = await page.evaluate("Array.from(document.querySelector('#plume-theme-choice .plume-theme-row').querySelectorAll('.plume-theme-opt')).map(function(b){return b.textContent + (b.classList.contains('on') ? '*' : '');})");
+    const opts = await page.evaluate("Array.from(Array.from(document.querySelectorAll('#plume-theme-choice .plume-set-lbl')).find(function(l){return /Light or dark/.test(l.textContent);}).nextElementSibling.querySelectorAll('.plume-theme-opt')).map(function(b){return b.textContent + (b.classList.contains('on') ? '*' : '');})");
     ok('Settings offers Light / Dark / Match my computer, with Dark marked', JSON.stringify(opts) === '["Light","Dark*","Match my computer"]', opts);
     ok('and says it covers every module, and so does the palette',
        /every module[\s\S]*palette/.test(await page.evaluate("document.getElementById('plume-theme-choice').innerText")));
-    await page.click('#plume-theme-choice .plume-theme-opt:first-child');
+    await page.evaluate("Array.from(Array.from(document.querySelectorAll('#plume-theme-choice .plume-set-lbl')).find(function(l){return /Light or dark/.test(l.textContent);}).nextElementSibling.querySelectorAll('.plume-theme-opt')).find(function(b){return b.textContent === 'Light';}).click()");
     await page.waitForTimeout(150);
     ok('choosing Light turns it light at once', !(await isDarkAttr(page)) && (await bodyLum(page)) > 0.7, await bodyLum(page));
     ok('the choice is saved for every page', (await page.evaluate("localStorage.getItem('plume-theme')")) === 'light');

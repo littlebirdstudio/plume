@@ -2077,7 +2077,7 @@
       </div>
 
 
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--cream-border);gap:16px">
+      <div class="ff-maint-only" style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--cream-border);gap:16px">
         <div style="flex:1">
           <div style="font-size:14px;color:var(--ink);margin-bottom:3px">Fill in lowdowns</div>
           <div style="font-size:12px;color:var(--ink-lighter);line-height:1.4">Offers a drafted lowdown for each of your ingredients that has none, from the starter list. Shows every line first. Drafts are marked until you keep or edit them; lowdowns you have written are never touched.</div>
@@ -2085,7 +2085,7 @@
         <button class="btn btn-sm" onclick="closeModal('modal-settings'); openLowdownReview();">Review&hellip;</button>
       </div>
 
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--cream-border);gap:16px">
+      <div class="ff-maint-only" style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--cream-border);gap:16px">
         <div style="flex:1">
           <div style="font-size:14px;color:var(--ink);margin-bottom:3px">Fill in effective pH ranges</div>
           <div style="font-size:12px;color:var(--ink-lighter);line-height:1.4">Offers the starter list's effective pH range, from manufacturer data, for each of your ingredients that has none (mostly preservatives). Formulations uses them to warn when a target or a batch falls outside. Ranges you have entered are never touched.</div>
@@ -2093,10 +2093,10 @@
         <button class="btn btn-sm" onclick="closeModal('modal-settings'); openLowdownReview('optimalPh');">Review&hellip;</button>
       </div>
 
-      <div style="font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-lighter);margin-top:20px;margin-bottom:10px">Maintenance utilities</div>
+      <div class="ff-maint-only" style="font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-lighter);margin-top:20px;margin-bottom:10px">Maintenance utilities</div>
 
 
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--cream-border);gap:16px">
+      <div class="ff-maint-only" style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--cream-border);gap:16px">
         <div style="flex:1">
           <div style="font-size:14px;color:var(--ink);margin-bottom:3px">Check SAP values against reference</div>
           <div style="font-size:12px;color:var(--ink-lighter);line-height:1.4">Compares the SAP values in your library against the SoapCalc reference and shows every difference before changing anything. Applying it overwrites your values with the reference.</div>
@@ -2220,6 +2220,11 @@ function loadData() {
   // #ql=<id> (2026-10-25): the list, with that ingredient's quick look open
   // and in view. Batches links here to "mark it arrived", which lives in the
   // quick look, so it is one click from the batch that needs it.
+  // From the opening questions (2026-11-01): open the starter list.
+  if (location.hash === '#quickadd') {
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+    openSeeder();
+  }
   if (location.hash && location.hash.indexOf('#ql=') === 0) {
     var qlId;
     try { qlId = decodeURIComponent(location.hash.slice(4)); } catch (e) { qlId = location.hash.slice(4); }
@@ -5942,6 +5947,14 @@ function serializeEditForm() {
 // load, so Quick add says so rather than throwing.
 var SEEDER_ITEMS = (typeof PlumeStarter !== 'undefined') ? PlumeStarter.items : [];
 var SEEDER_TYPES = (typeof PlumeStarter !== 'undefined') ? PlumeStarter.types : [];
+// What they make (setup, 2026-11-01) decides what comes first: soap making
+// first for soap, last for skincare. Every type is always offered.
+function seederTypesInOrder() {
+  var make = Plume.setup().make, t = SEEDER_TYPES.slice(), i = t.indexOf('Soap making');
+  if (i < 0 || make === 'both') return t;
+  t.splice(i, 1);
+  return make === 'soap' ? ['Soap making'].concat(t) : t.concat(['Soap making']);
+}
 
 // ── Quick add: one list, by type, with search and type chips ──
 // Reorganized 2026-10-16 for a general audience: the starter list is one
@@ -5970,7 +5983,7 @@ function renderSeederChips() {
   SEEDER_ITEMS.forEach(function(it) { counts[it.type] = (counts[it.type] || 0) + 1; });
   var sel = document.getElementById('seeder-type');
   sel.innerHTML = '<option value="">All types (' + SEEDER_ITEMS.length + ')</option>' +
-    SEEDER_TYPES.map(function(t) {
+    seederTypesInOrder().map(function(t) {
       return '<option value="' + esc(t) + '">' + esc(t) + ' (' + (counts[t] || 0) + ')</option>';
     }).join('');
   sel.value = seederType;
@@ -6025,7 +6038,7 @@ function renderSeederContent() {
     return;
   }
   var html = '';
-  SEEDER_TYPES.forEach(function(t) {
+  seederTypesInOrder().forEach(function(t) {
     var rows = shown.filter(function(r) { return r.it.type === t; });
     if (!rows.length) return;
     // Best match first while searching, alphabetical within each band.
