@@ -632,7 +632,7 @@ body.ps-shell .pkg-builder-hdr .field input { width: 100%; min-width: 0; }
       <div class="bp-tabs">
         <button type="button" class="ps-tab on" id="bt-details" onclick="setBatchTab('details')">Details</button>
         <button type="button" class="ps-tab" id="bt-ings" onclick="setBatchTab('ings')">Ingredients<span class="bp-ct" id="bt-ings-ct"></span></button>
-        <button type="button" class="ps-tab" id="bt-runs" onclick="setBatchTab('runs')">Filled<span class="bp-ct" id="bt-runs-ct"></span></button>
+        <button type="button" class="ps-tab ff-sell-only" id="bt-runs" onclick="setBatchTab('runs')">Filled<span class="bp-ct" id="bt-runs-ct"></span></button>
         <button type="button" class="ps-tab" id="bt-trace" onclick="setBatchTab('trace')">Trace</button>
       </div>
 
@@ -1074,7 +1074,7 @@ function renderList() {
   blSyncPills();
   if (!batches.length) {
     tbody.innerHTML = '<tr><td colspan="6" style="padding:14px 0">' + Plume.nextStep({ icon: 'batches',
-      text: '<b>Log a batch each time you make a formulation.</b> It takes the ingredients from stock, and the products you fill draw on it. Start one here, or with Make batch on a formulation.',
+      text: '<b>Log a batch each time you make a formulation.</b> It takes the ingredients from stock' + (Plume.shows('costing') ? ', and the products you fill draw on it' : '') + '. Start one here, or with Make batch on a formulation.',
       go: 'New batch', onclick: 'openNewBatch()',
       off: '<div class="bl-empty"><p>No batches yet</p><span>Click New batch to log your first one.</span></div>' }) + '</td></tr>';
     return;
@@ -2016,6 +2016,8 @@ function renderTrace(b) {
     html += '</div>';
     if (!fills.length) { box.innerHTML = html; var p0 = document.getElementById('d-trace-pointer'); if (p0) p0.hidden = !draws.length; return; }
   }
+  // Products are hidden at the Formulating and making level (2026-11-01).
+  if (!Plume.shows('costing')) { box.innerHTML = html; var p1 = document.getElementById('d-trace-pointer'); if (p1) p1.hidden = !draws.length; return; }
   html += '<div class="tr-sec"><div class="tr-h"><h3>Where it went</h3><span class="ps-muted">fills from this batch</span></div>';
   if (!fills.length) {
     html += '<div class="bp-note">Nothing filled from this batch yet.</div>';

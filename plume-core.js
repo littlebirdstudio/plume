@@ -35,7 +35,7 @@ var Plume = (function () {
 // (v0.4 / v0.5 / v0.6 across five modules). BUMP IT IN EVERY PULL REQUEST,
 // core change or not: it is how "is this the update I just merged?" is
 // answered by looking, and browsers cache .js files stubbornly.
-var VERSION = '1.65';
+var VERSION = '1.66';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -890,7 +890,7 @@ function renderThemeChoice(container) {
     '<input type="text" id="plume-business" class="plume-biz" maxlength="60" placeholder="e.g. your studio or shop name" value="' + esc(businessName()) + '"' +
       ' onblur="Plume.setBusinessName(this.value)" onkeydown="if(event.key===\'Enter\'){this.blur();}">' +
     '<div class="plume-theme-note">Shows under Formula Finch in the sidebar. Saved when you click away.</div>' +
-    '<div class="plume-set-lbl">Light or dark</div>' +
+    setupRowsHtml() +
     '<div class="plume-theme-row">' + opt('light', 'Light') + opt('dark', 'Dark') + opt('auto', 'Match my computer') + '</div>' +
     '<div class="plume-theme-note">Light or dark applies to every module on this device, and so does the palette below.</div>' +
     '<div class="plume-set-lbl">Size</div><div class="plume-theme-row">' +
@@ -904,6 +904,33 @@ function renderThemeChoice(container) {
       '<button type="button" class="plume-theme-opt' + (pkgTracked() ? ' on' : '') + '" onclick="Plume.setPkgTracking(true)">Track it</button>' +
       '<button type="button" class="plume-theme-opt' + (pkgTracked() ? '' : ' on') + '" onclick="Plume.setPkgTracking(false)">Don\u2019t track</button></div>' +
     '<div class="plume-theme-note">When tracked, each fill takes its packaging from stock, and stops if stock is short. Turn it off if you don\u2019t enter packaging purchases.</div>';
+}
+
+// Settings rows for the setup choices (2026-11-01).
+function setupRowsHtml() {
+  var su = setupState();
+  var pill = function (on, fn, label) {
+    return '<button type="button" class="plume-theme-opt' + (on ? ' on' : '') + '" onclick="' + fn + '">' + label + '</button>';
+  };
+  var kept = su.level === 'make' ? hiddenKept() : [];
+  return '<div class="plume-set-lbl">How you use Formula Finch</div><div class="plume-theme-row">' +
+      pill(su.level === 'make', "Plume.setLevel('make')", 'Formulating and making') +
+      pill(su.level === 'sell', "Plume.setLevel('sell')", 'Formulating, making and selling') + '</div>' +
+    '<div class="plume-theme-note">' + (su.level === 'make'
+      ? 'Ingredients, Formulations and Batches. Packaging, Products &amp; Costing, stock and Analytics are hidden' +
+        (kept.length ? '; your ' + esc(kept.join(' and ')) + ' are kept' : '') + '. Switch back any time.'
+      : 'Everything, including Packaging, Products &amp; Costing, stock and Analytics.') + '</div>' +
+    '<div class="plume-set-lbl">What you make</div><div class="plume-theme-row">' +
+      pill(su.make === 'skincare', "Plume.setMake('skincare')", 'Skincare') +
+      pill(su.make === 'soap', "Plume.setMake('soap')", 'Soap') +
+      pill(su.make === 'both', "Plume.setMake('both')", 'Both') + '</div>' +
+    '<div class="plume-theme-note">Decides what is offered first. Nothing is switched off.</div>' +
+    '<div class="plume-set-lbl">Opening questions</div><div class="plume-theme-row">' +
+      '<button type="button" class="plume-theme-opt" onclick="Plume.openSetup({ again: true })">Go through them again</button></div>' +
+    '<div class="plume-set-lbl">Maintenance tools</div><div class="plume-theme-row">' +
+      pill(su.maint, 'Plume.setMaint(true)', 'Show') + pill(!su.maint, 'Plume.setMaint(false)', 'Hide') + '</div>' +
+    '<div class="plume-theme-note">One-time repairs and reviews, such as filling in drafted lowdowns or checking SAP values. Most people never need them.</div>' +
+    '<div class="plume-set-lbl">Light or dark</div>';
 }
 
 // ══ Size (2026-10-20) ═════════════════════════════════
@@ -958,11 +985,210 @@ function setTips(on) {
 // fills then count units and grams, and never check or take packaging
 // stock. Kept in Store, so it travels with a backup.
 var TRACK_PKG_KEY = 'plume-track-pkg';
-function pkgTracked() { return Store.get(TRACK_PKG_KEY) !== 'off'; }
+function pkgTracked() { return Store.get(TRACK_PKG_KEY) !== 'off' && shows('packaging'); }
 function setPkgTracking(on) {
   Store.set(TRACK_PKG_KEY, on ? 'on' : 'off');
   renderPaletteSwatches();
   try { window.dispatchEvent(new Event('plume-settings')); } catch (e) {}
+}
+
+// ══ Setup: what they make and how they use it (2026-11-01) ═══
+// Asked once, on the start page of a new, empty app (the opening
+// questions), and changeable any time in Settings. Her rule: the app must
+// work whatever is chosen. So a choice only HIDES; nothing is removed or
+// changed, and every hidden part comes back from Settings.
+//   level 'make': Formulating and making (Ingredients, Formulations,
+//     Batches). 'sell': Formulating, making and selling (adds Packaging,
+//     Products & Costing, stock and Analytics). Default 'sell'.
+//   make: 'skincare' | 'soap' | 'both'. Sets defaults only (what Quick add
+//     and the product types offer first); it never switches anything off.
+//   maint: the maintenance tools (one-time repairs and reviews her own
+//     copy has needed). Shown for an app that already had data when this
+//     arrived (hers), hidden for a new one.
+// Kept in Store, so it travels with a backup. Pages hide their parts with
+// two classes on <html>: ff-make (hide .ff-sell-only) and ff-no-maint
+// (hide .ff-maint-only).
+var SETUP_KEY = 'plume-setup';
+var LEVEL_HIDES = { make: { packaging: 1, costing: 1, stock: 1, analytics: 1 } };
+function hasAnyData() {
+  return ['ings', 'forms', 'pkgs', 'batches', 'products'].some(function (k) {
+    var l = Store.getJSON(KEYS[k], []);
+    return Array.isArray(l) && l.length > 0;
+  });
+}
+function setupState() {
+  var s = null;
+  try { s = Store.getJSON(SETUP_KEY, null); } catch (e) {}
+  if (!s || typeof s !== 'object') {
+    var had = hasAnyData();
+    s = { make: 'both', level: 'sell', maint: had, done: had };
+  }
+  return {
+    make: /^(skincare|soap|both)$/.test(s.make) ? s.make : 'both',
+    level: s.level === 'make' ? 'make' : 'sell',
+    maint: !!s.maint, done: !!s.done
+  };
+}
+function saveSetup(patch) {
+  var s = setupState();
+  Object.keys(patch || {}).forEach(function (k) { s[k] = patch[k]; });
+  Store.set(SETUP_KEY, JSON.stringify(s));
+  applySetup();
+  return setupState();
+}
+// Whether a module ('packaging', 'costing', 'stock', 'analytics') or the
+// maintenance tools ('maint') show.
+function shows(key) {
+  var s = setupState();
+  if (key === 'maint') return s.maint;
+  return !(LEVEL_HIDES[s.level] || {})[key];
+}
+function applySetup() {
+  if (typeof document === 'undefined' || !document.documentElement) return;
+  if (!document.getElementById('ff-setup-css')) {
+    var st = document.createElement('style');
+    st.id = 'ff-setup-css';
+    st.textContent = 'html.ff-make .ff-sell-only{display:none!important}html.ff-no-maint .ff-maint-only{display:none!important}';
+    (document.head || document.documentElement).appendChild(st);
+  }
+  var s = setupState(), r = document.documentElement;
+  r.classList.toggle('ff-make', s.level === 'make');
+  r.classList.toggle('ff-no-maint', !s.maint);
+}
+// Changing the level from Settings: hide or show at once; leave a page that
+// is now hidden for the start page.
+var CUR_MODULE_HIDES = { packaging: 'packaging', products: 'costing', costing: 'costing', analytics: 'analytics' };
+function setLevel(level) {
+  saveSetup({ level: level === 'make' ? 'make' : 'sell' });
+  var hidden = CUR_MODULE_HIDES[MODULE_NAME];
+  if (hidden && !shows(hidden)) { location.href = 'index.html'; return; }
+  if (shellOpts) shell(shellOpts);
+  renderPaletteSwatches();
+  try { window.dispatchEvent(new Event('plume-settings')); } catch (e) {}
+}
+function setMake(make) { saveSetup({ make: make }); renderPaletteSwatches(); }
+function setMaint(on) { saveSetup({ maint: !!on }); renderPaletteSwatches(); }
+// What the smaller level keeps out of sight, counted, so Settings can say
+// it is kept.
+function hiddenKept() {
+  var n = function (k) { var l = Store.getJSON(KEYS[k], []); return Array.isArray(l) ? l.filter(function (x) { return x && !x.archived; }).length : 0; };
+  var bits = [], p = n('products'), k = n('pkgs');
+  if (p) bits.push(p + ' product' + (p === 1 ? '' : 's'));
+  if (k) bits.push(k + ' packaging item' + (k === 1 ? '' : 's'));
+  return bits;
+}
+
+// The opening questions (2026-11-01). Four short steps, each skippable:
+// business name, what they make, how they will use it, how to start. On
+// the start page of a new, empty app; again from Settings at any time (then
+// without the last step, since the app has data or a start was chosen).
+var SETUP_STEPS = ['business', 'make', 'level', 'start'];
+function setupCss() {
+  if (document.getElementById('ff-setup-ui-css')) return;
+  var st = document.createElement('style');
+  st.id = 'ff-setup-ui-css';
+  st.textContent =
+    '.ffs-ov{position:fixed;inset:0;z-index:4000;background:color-mix(in srgb,var(--ink) 40%,transparent);display:grid;place-items:center;padding:16px}' +
+    '.ffs{background:var(--white);color:var(--ink);border-radius:16px;width:min(560px,100%);max-height:calc(100vh - 32px);overflow:auto;padding:28px 28px 22px;box-shadow:0 20px 60px rgba(0,0,0,.25);font-family:"DM Sans",sans-serif}' +
+    '.ffs-k{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-lighter);margin-bottom:6px}' +
+    '.ffs h2{font:400 26px/1.2 "Georgia Pro",Georgia,serif;margin:0 0 6px;color:var(--ink)}' +
+    '.ffs p.ffs-sub{margin:0 0 18px;color:var(--ink-light);font-size:14px;line-height:1.5}' +
+    '.ffs-opts{display:flex;flex-direction:column;gap:10px}' +
+    '.ffs-opt{font:inherit;text-align:left;border:1.5px solid var(--cream-border);background:var(--white);color:var(--ink);border-radius:10px;padding:12px 14px;cursor:pointer;display:block;width:100%}' +
+    '.ffs-opt:hover{border-color:var(--bark-light)}.ffs-opt.on{border-color:var(--bark);background:var(--cream)}' +
+    '.ffs-opt b{display:block;font-weight:500;font-size:15px}.ffs-opt span{display:block;font-size:13px;color:var(--ink-light);margin-top:3px;line-height:1.45}' +
+    '.ffs-in{font:inherit;font-size:15px;width:100%;padding:10px 12px;border:1.5px solid var(--cream-border);border-radius:8px;background:var(--white);color:var(--ink);outline:none;box-sizing:border-box}.ffs-in:focus{border-color:var(--bark)}' +
+    '.ffs-foot{display:flex;align-items:center;gap:10px;margin-top:22px}.ffs-grow{flex:1}' +
+    '.ffs-dots{display:flex;gap:6px}.ffs-dots i{width:7px;height:7px;border-radius:50%;background:var(--cream-border)}.ffs-dots i.on{background:var(--bark)}' +
+    '.ffs-btn{font:inherit;font-size:14px;border-radius:999px;padding:8px 18px;cursor:pointer;border:1px solid var(--cream-border);background:var(--white);color:var(--ink)}' +
+    '.ffs-btn.pri{background:var(--bark);border-color:var(--bark);color:var(--white)}' +
+    '.ffs-link{font:inherit;font-size:13px;background:none;border:0;color:var(--ink-lighter);cursor:pointer;text-decoration:underline;padding:4px}' +
+    '.ffs-note{font-size:12.5px;color:var(--ink-lighter);margin-top:12px;line-height:1.45}';
+  (document.head || document.documentElement).appendChild(st);
+}
+var ffs = null;
+function openSetup(opts) {
+  opts = opts || {};
+  setupCss();
+  var cur = setupState();
+  ffs = { i: 0, again: !!opts.again || hasAnyData(), biz: businessName(), make: cur.make, level: cur.level, start: 'empty' };
+  ffs.steps = ffs.again ? SETUP_STEPS.slice(0, 3) : SETUP_STEPS.slice();
+  var ov = document.getElementById('ffs-ov');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.id = 'ffs-ov'; ov.className = 'ffs-ov';
+    document.body.appendChild(ov);
+  }
+  ov.hidden = false;
+  renderSetup();
+}
+function setupOpt(field, val, title, sub) {
+  return '<button type="button" class="ffs-opt' + (ffs[field] === val ? ' on' : '') + '" data-v="' + esc(val) + '" aria-pressed="' + (ffs[field] === val) + '"' +
+    ' onclick="Plume.setupPick(\'' + field + '\',\'' + val + '\')"><b>' + esc(title) + '</b>' + (sub ? '<span>' + esc(sub) + '</span>' : '') + '</button>';
+}
+function renderSetup() {
+  var ov = document.getElementById('ffs-ov');
+  if (!ov || !ffs) return;
+  var step = ffs.steps[ffs.i], last = ffs.i === ffs.steps.length - 1, body = '';
+  if (step === 'business') {
+    body = '<div class="ffs-k">Welcome to Formula Finch</div><h2>What is your business called?</h2>' +
+      '<p class="ffs-sub">It shows under Formula Finch on the start page and in the sidebar. You can leave it blank.</p>' +
+      '<input class="ffs-in" id="ffs-biz" maxlength="60" placeholder="e.g. your studio or shop name" value="' + esc(ffs.biz) + '">';
+  } else if (step === 'make') {
+    body = '<h2>What do you make?</h2><p class="ffs-sub">This decides what Formula Finch offers first. Nothing is switched off: you can make anything.</p>' +
+      '<div class="ffs-opts">' + setupOpt('make', 'skincare', 'Skincare', 'Serums, creams, toners, balms, oils') +
+      setupOpt('make', 'soap', 'Soap', 'Cold and hot process') + setupOpt('make', 'both', 'Both', '') + '</div>';
+  } else if (step === 'level') {
+    body = '<h2>How will you use Formula Finch?</h2><p class="ffs-sub">You can change this any time in Settings. Nothing you enter is ever lost by changing it.</p>' +
+      '<div class="ffs-opts">' +
+      setupOpt('level', 'make', 'Formulating and making', 'Ingredients, Formulations and Batches. For developing, creating and keeping track of what you make.') +
+      setupOpt('level', 'sell', 'Formulating, making and selling', 'Adds Packaging, Products & Costing, stock and Analytics. For the business side of formulating.') + '</div>';
+  } else {
+    body = '<h2>How would you like to start?</h2><p class="ffs-sub">Either way, you can add ingredients one at a time or from the starter list whenever you like.</p>' +
+      '<div class="ffs-opts">' +
+      setupOpt('start', 'starter', 'With starter ingredients', 'Choose from a list of over 250 common ingredients, each with its INCI name, usage rates and notes.') +
+      setupOpt('start', 'empty', 'Empty', 'Start from a blank library.') + '</div>';
+  }
+  var dots = ffs.steps.map(function (s, k) { return '<i class="' + (k === ffs.i ? 'on' : '') + '"></i>'; }).join('');
+  ov.innerHTML = '<div class="ffs" role="dialog" aria-modal="true" aria-label="Getting started">' + body +
+    '<div class="ffs-foot">' + (ffs.i ? '<button type="button" class="ffs-btn" onclick="Plume.setupMove(-1)">Back</button>' : '') +
+    '<div class="ffs-dots" aria-hidden="true">' + dots + '</div><span class="ffs-grow"></span>' +
+    (ffs.again ? '' : '<button type="button" class="ffs-link" onclick="Plume.setupSkip()">Skip, use everything</button>') +
+    '<button type="button" class="ffs-btn pri" id="ffs-next" onclick="Plume.setupMove(1)">' + (last ? 'Done' : 'Next') + '</button></div>' +
+    (ffs.again ? '' : '<div class="ffs-note">Every answer can be changed later in Settings.</div>') + '</div>';
+  var f = document.getElementById('ffs-biz') || document.getElementById('ffs-next');
+  try { f.focus(); } catch (e) {}
+  var bi = document.getElementById('ffs-biz');
+  if (bi) bi.addEventListener('keydown', function (e) { if (e.key === 'Enter') setupMove(1); });
+}
+function setupKeepBiz() { var bi = document.getElementById('ffs-biz'); if (bi) ffs.biz = bi.value; }
+function setupPick(field, val) { setupKeepBiz(); ffs[field] = val; renderSetup(); }
+function setupMove(d) {
+  setupKeepBiz();
+  ffs.i = Math.max(0, ffs.i + d);
+  if (ffs.i >= ffs.steps.length) return setupFinish();
+  renderSetup();
+}
+function setupClose() { var ov = document.getElementById('ffs-ov'); if (ov) ov.hidden = true; }
+function setupFinish() {
+  var st = ffs;
+  setBusinessName(st.biz);
+  saveSetup({ make: st.make, level: st.level, done: true });
+  setupClose();
+  ffs = null;
+  if (!st.again && st.start === 'starter') { location.href = 'plume-ingredients.html#quickadd'; return; }
+  if (shellOpts) shell(shellOpts);
+  try { window.dispatchEvent(new Event('plume-settings')); } catch (e) {}
+  renderPaletteSwatches();
+}
+function setupSkip() { saveSetup({ done: true }); setupClose(); ffs = null; try { window.dispatchEvent(new Event('plume-settings')); } catch (e) {} }
+// On the start page of a new, empty app.
+function maybeSetup() {
+  var raw = null;
+  try { raw = Store.get(SETUP_KEY); } catch (e) {}
+  if (raw || hasAnyData()) return false;
+  openSetup();
+  return true;
 }
 
 function nextCss() {
@@ -1107,8 +1333,8 @@ function shell(opts) {
       (on ? ' aria-current="page"' : '') + ' title="' + esc(m.label) + '">' + icon(m.icon) +
       '<span class="ps-nav-label">' + esc(m.label) + '</span><span class="ps-ct" data-ct="' + m.key + '"></span></a>';
   };
-  var nav = SHELL_MODULES.filter(function (m) { return !m.lib; }).map(link).join('');
-  var lib = SHELL_MODULES.filter(function (m) { return m.lib; }).map(link).join('');
+  var nav = SHELL_MODULES.filter(function (m) { return !m.lib && shows(m.key); }).map(link).join('');
+  var lib = SHELL_MODULES.filter(function (m) { return m.lib && shows(m.key); }).map(link).join('');
   var html =
     '<aside class="ps-side" id="ps-side" aria-label="Modules">' +
       '<div class="ps-ws">' +
@@ -1126,12 +1352,15 @@ function shell(opts) {
       '<div class="ps-nav-h">Actions</div>' +
       '<nav class="ps-nav-list" aria-label="Actions">' + nav + '</nav>' +
       // Stock (2026-10-20): quick tasks from any page, as slide-in panels.
+      // Hidden at the Formulating and making level (2026-11-01).
+      (shows('stock') ? (
       '<div class="ps-nav-h">Stock</div>' +
       '<nav class="ps-nav-list" aria-label="Stock">' +
         '<button type="button" class="ps-nav" id="ps-nav-stock" onclick="Plume.stock.open()" title="Sold, gifted, marketing, damaged, returned, or reconcile to a count">' + icon('stock') + '<span class="ps-nav-label">Update stock</span></button>' +
         '<button type="button" class="ps-nav" id="ps-nav-history" onclick="Plume.stock.history()" title="Where your stock went: by market or event, month or product, and what it cost">' + icon('history') + '<span class="ps-nav-label">Stock history</span></button>' +
         '<a class="ps-nav' + (shellOpts.module === 'analytics' ? ' on' : '') + '" id="ps-nav-analytics" href="plume-analytics.html" target="plume-analytics"' + (shellOpts.module === 'analytics' ? ' aria-current="page"' : '') + ' title="Status at a glance: what it costs to make, what is on hand, what needs a look">' + icon('trend') + '<span class="ps-nav-label">Analytics</span></a>' +
-      '</nav>' +
+      '</nav>'
+      ) : '') +
       '<div class="ps-grow"></div>' +
       '<button type="button" class="ps-nav" onclick="if (typeof openSettings === \'function\') openSettings()" title="Settings">' + icon('settings') + '<span class="ps-nav-label">Settings</span></button>' +
     '</aside>';
@@ -2286,6 +2515,7 @@ function boot(cb) {
   applySize();
   Store.init(function () {
     applyPalette(loadPaletteChoice());
+    applySetup();
     try { fixVolumeLotCosts(); } catch (e) {}
     if (cb) cb();
     renderStorBanner();
@@ -2630,7 +2860,13 @@ function fillTypeSelect(el, current) {
   if (!el) return;
   var html = '<option value="">-- select --</option>';
   var found = false;
-  PRODUCT_TYPES.forEach(function (t) {
+  // Soap first for someone who makes soap (setup, 2026-11-01).
+  var list = PRODUCT_TYPES;
+  if (setupState().make === 'soap') {
+    var cut = PRODUCT_TYPES.indexOf('---');
+    list = PRODUCT_TYPES.slice(cut + 1).concat(['---'], PRODUCT_TYPES.slice(0, cut));
+  }
+  list.forEach(function (t) {
     if (t === '---') { html += '<option disabled>\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500</option>'; return; }
     if (t === current) found = true;
     html += '<option>' + esc(t) + '</option>';
@@ -5520,6 +5756,9 @@ return {
   buildSheet: buildSheet, openSheet: openSheet, stampVersion: stampVersion,
   shell: shell, refreshShell: refreshShell, toggleSide: toggleSide, icon: icon, BRAND: BRAND,
   businessName: businessName, setBusinessName: setBusinessName,
+  setup: setupState, saveSetup: saveSetup, shows: shows, applySetup: applySetup,
+  setLevel: setLevel, setMake: setMake, setMaint: setMaint,
+  openSetup: openSetup, setupPick: setupPick, setupMove: setupMove, setupSkip: setupSkip, maybeSetup: maybeSetup,
   peek: { open: openPeek, close: closePeek, isOpen: peekIsOpen },
   suppliers: { open: openSuppliers, add: supAdd, edit: supEdit, cancel: supCancel, save: supSave,
                remove: supRemove, match: supMatch, search: supSearch, nameTyped: supNameTyped, usage: supUsage, list: supAll },

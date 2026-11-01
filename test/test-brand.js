@@ -33,7 +33,9 @@ ok('the old logo file is gone', !fs.existsSync(path.join(ROOT, 'plume-logo.svg')
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await trackDialogs(page, []);
-  await page.addInitScript(() => { if (!sessionStorage.getItem('s')) { localStorage.clear(); sessionStorage.setItem('s', '1'); } });
+  // No clearing script: a new page starts with empty storage, and a script
+  // that cleared "once" sometimes ran again on reload before the browser had
+  // read its flag back, wiping the data (the flaky "it is kept", 2026-11-01).
   await page.goto(previewUrl('formulations'));
   await page.waitForTimeout(400);
 
