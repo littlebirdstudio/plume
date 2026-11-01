@@ -40,7 +40,7 @@ var APP_FILES = [
   'plume-cheatsheet.js',
   'plume-sapdata.js',
   'plume-starter.js',
-  'plume-logo.svg',
+  'formula-finch-mark.svg',
   'manifest.webmanifest',
   'icons/icon-192.png',
   'icons/icon-512.png',

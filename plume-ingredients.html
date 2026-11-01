@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Plume - — Ingredients Library</title>
+<title>Ingredients · Formula Finch</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -1703,7 +1703,7 @@
     <div class="ed-pane" data-pane="glance" hidden>
       <div class="form-grid">
         <div class="field form-full">
-          <label for="f-choose">The lowdown <span class="hint">— strengths and catches, compared with similar ingredients</span> <span class="draft-tag" id="f-choose-draft" style="display:none" title="Drafted by Plume. Changing the text makes it yours.">draft</span></label>
+          <label for="f-choose">The lowdown <span class="hint">— strengths and catches, compared with similar ingredients</span> <span class="draft-tag" id="f-choose-draft" style="display:none" title="Drafted by Formula Finch. Changing the text makes it yours.">draft</span></label>
           <input type="text" id="f-choose" maxlength="200" placeholder="e.g. natural-leaning, broad-spectrum — but a strong smell that shows in mists">
         </div>
         <div class="field form-full">
@@ -2285,7 +2285,7 @@ function exportData() {
   var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
   var a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'plume-ingredients-' + todayISO() + '.json';
+  a.download = 'formula-finch-ingredients-' + todayISO() + '.json';
   a.click();
 }
 
@@ -2480,7 +2480,7 @@ function renderReceipt() {
   money.push('Tax <b>' + (tax >= 0 ? rcMoney(tax) : '—') + '</b>');
   var meta = [d.orderNum ? 'Order ' + esc(d.orderNum) : 'No order number'];
   document.getElementById('rc-order').innerHTML =
-    (P.before ? '<div class="rc-warn">This order came in once already, on ' + esc(fmtDate(String(P.before.imported || '').slice(0, 10))) + '. Lines already in Plume are unticked; importing again updates the order’s shipping and tax.</div>' : '') +
+    (P.before ? '<div class="rc-warn">This order came in once already, on ' + esc(fmtDate(String(P.before.imported || '').slice(0, 10))) + '. Lines already added are unticked; importing again updates the order’s shipping and tax.</div>' : '') +
     '<div class="rc-ordcard"><div class="rc-sup">' + esc(d.supplier || 'Supplier not read') + '</div>' +
       '<div class="rc-meta">' + meta.join(' · ') + (d.receiptLink ? ' · <a href="' + esc(qaLink(d.receiptLink)) + '" target="_blank" rel="noopener">receipt</a>' : '') + '</div>' +
       '<div class="rc-money">' + money.join(' · ') + '</div>' +
@@ -2540,7 +2540,7 @@ function rcRowHtml(r) {
   }
   var notes = [];
   if (r.how && String(r.target) !== 'new') notes.push(esc(r.how));
-  if (r.dupe) notes.push('Already in Plume from this order.');
+  if (r.dupe) notes.push('Already added from this order.');
   if (!r.pkg && r.buy.unit && Plume.isVolUnit(r.buy.unit)) notes.push('By volume: turned into grams by its density.');
   if (L.lotNum) notes.push('Lot ' + esc(L.lotNum));
   if (L.brand) notes.push('Brand ' + esc(L.brand));
@@ -2726,9 +2726,9 @@ function importData(e) {
           }
           saveData(); saveSuppliers(); renderTable(); renderStats();
           Plume.tell('Imported ' + addedIng + ' ingredients and ' + addedSupp + ' suppliers' + (addedOrd ? ' and ' + addedOrd + ' order' + (addedOrd === 1 ? '' : 's') : '') + '.', { title: 'Import complete' });
-        } catch(err2) { Plume.tell('Could not read file. Make sure it is a valid Plume backup JSON.'); }
+        } catch(err2) { Plume.tell('Could not read file. Make sure it is a valid Formula Finch backup file.'); }
       }, { title: 'Import ' + ingData.length + ' ingredients and ' + suppData.length + ' suppliers?', yes: 'Import' });
-    } catch(err) { Plume.tell('Could not read file. Make sure it is a valid Plume backup JSON.'); }
+    } catch(err) { Plume.tell('Could not read file. Make sure it is a valid Formula Finch backup file.'); }
   };
   reader.readAsText(file);
   document.getElementById('import-file-input').value = '';
@@ -3720,7 +3720,7 @@ function isDraftNote(i, field) {
   return field === 'chooseWhen' && !!i.chooseWhenDraft && !!i.chooseWhen;
 }
 function draftTagHtml(i) {
-  return '<span class="draft-tag" title="Drafted by Plume. Tick to keep it as yours, or click the text to change it.">draft' +
+  return '<span class="draft-tag" title="Drafted by Formula Finch. Tick to keep it as yours, or click the text to change it.">draft' +
     '<button type="button" class="draft-ok" aria-label="Keep this lowdown" title="Keep it" ' +
     'onclick="confirmDraft(event,\'' + i.id + '\')">\u2713</button></span>';
 }
@@ -6311,6 +6311,6 @@ if (typeof Plume === 'undefined') {
   </div>
 </div>
 
-<footer class="app-footer">Plume by Little Bird Studio &middot; Ingredients &middot; <span class="plume-version"></span></footer>
+<footer class="app-footer">Formula Finch &middot; Ingredients &middot; <span class="plume-version"></span></footer>
 </body>
 </html>

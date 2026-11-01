@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Plume - Batch Log</title>
+<title>Batch Log · Formula Finch</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -779,7 +779,7 @@ body.ps-shell .pkg-builder-hdr .field input { width: 100%; min-width: 0; }
 </div>
 
 <footer class="app-footer">
-  Plume by Little Bird Studio &middot; Batch Log &middot; <span class="plume-version"></span>
+  Formula Finch &middot; Batch Log &middot; <span class="plume-version"></span>
 </footer>
 
 <script src="plume-core.js"></script>
@@ -860,7 +860,7 @@ function exportData() {
   var blob = new Blob([JSON.stringify({ batches: batches }, null, 2)], { type: 'application/json' });
   var a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'plume-batches-' + todayISO() + '.json';
+  a.download = 'formula-finch-batches-' + todayISO() + '.json';
   a.click();
 }
 function importData(e) {
@@ -1971,7 +1971,7 @@ function renderTrace(b) {
   if (!draws.length) {
     html += '<div class="bp-note">No supplier lots were recorded for this batch.</div>';
   } else {
-    html += '<div class="bp-note">This is Plume’s first-in-first-out record: it takes the oldest lot of each ingredient first. If you mixed lots at the bench, your own notes are the better record.</div>';
+    html += '<div class="bp-note">This is a first-in-first-out record: it takes the oldest lot of each ingredient first. If you mixed lots at the bench, your own notes are the better record.</div>';
     // Grouped by ingredient, so an ingredient drawn from two lots reads as one.
     var byIng = {}, order = [];
     draws.forEach(function(d) {

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Plume by Little Bird Studio</title>
+<title>Formula Finch</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -48,10 +48,14 @@ body {
   padding: 3rem 1.5rem 1.5rem;
 }
 
-/* Dark mode (plume-core.js sets data-theme and the dark colours). The logo
-   is black line art on white: invert it, then screen it onto the page so its
-   white square disappears and the lines read light. */
-html[data-theme="dark"] .hero-logo { filter: invert(1) hue-rotate(180deg); mix-blend-mode: screen; }
+/* The finch mark, the name in the display face, and the tagline
+   (Formula Finch, 2026-11-01). The mark sits on its own cream tile so its
+   dark outline reads in dark mode too. The owner's business name, if set
+   in Settings, sits under the tagline. */
+.hero-mark { width: 104px; height: 104px; display: block; margin: 0 auto 14px; background: #FCF6ED; border-radius: 26px; padding: 6px; }
+.hero-name { font-family: 'Cormorant Garamond', Georgia, serif; font-weight: 400; font-size: 46px; line-height: 1.05; letter-spacing: 0.02em; color: var(--ink); }
+.hero-tag { font-size: 14px; letter-spacing: 0.06em; color: var(--clay-dark); margin-top: 6px; }
+.hero-biz { font-size: 13px; color: var(--ink-lighter); margin-top: 10px; }
 .install-btn {
   display: block; margin: 0 auto 28px; padding: 9px 20px;
   font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 400; letter-spacing: 0.03em;
@@ -60,13 +64,6 @@ html[data-theme="dark"] .hero-logo { filter: invert(1) hue-rotate(180deg); mix-b
 }
 .install-btn:hover { border-color: var(--sage); color: var(--ink); }
 .install-btn[hidden] { display: none; }
-.hero-logo {
-  display: block;
-  margin: 0 auto;
-  width: clamp(260px, 38vw, 380px);
-  height: auto;
-  user-select: none;
-}
 
 /* ── Module grid ─────────────────────────────────────── */
 .modules {
@@ -192,7 +189,10 @@ html.plume-no-tips .module-card.now .card-next { display: none; }
 <body>
 
 <header class="hero">
-  <img src="plume-logo.svg" alt="Plume by Little Bird Studio" class="hero-logo">
+  <img src="formula-finch-mark.svg" alt="" class="hero-mark">
+  <h1 class="hero-name">Formula Finch</h1>
+  <p class="hero-tag">From first formula to finished product</p>
+  <p class="hero-biz" id="hero-biz" hidden></p>
 </header>
 
 <main class="modules">
@@ -280,10 +280,10 @@ html.plume-no-tips .module-card.now .card-next { display: none; }
 </main>
 
 <!-- Shown only when Chrome offers to install (core's beforeinstallprompt). -->
-<button class="install-btn plume-install" hidden onclick="Plume.install()">Install Plume as an app</button>
+<button class="install-btn plume-install" hidden onclick="Plume.install()">Install Formula Finch as an app</button>
 
 <footer class="app-footer">
-  Plume by Little Bird Studio &nbsp;·&nbsp; <span class="plume-version"></span> &nbsp;·&nbsp; Made with <span class="heart">♡</span> for small formulators
+  Formula Finch &nbsp;·&nbsp; <span class="plume-version"></span> &nbsp;·&nbsp; Made with <span class="heart">♡</span> for small formulators
 </footer>
 
 <!-- To stamp the version, register the offline copy and offer the install. -->
@@ -294,6 +294,9 @@ if (typeof Plume !== 'undefined') {
   Plume.applyTips();
   // Counts for each step, and Next on the first one not started.
   Plume.Store.init(function () {
+    // The owner's business name, under the tagline (Settings, Your business).
+    var biz = Plume.businessName(), bizEl = document.getElementById('hero-biz');
+    if (bizEl && biz) { bizEl.textContent = biz; bizEl.hidden = false; }
     var n = function (k, liveOnly) {
       var l = Plume.Store.getJSON(k, []) || [];
       return liveOnly ? l.filter(function (x) { return x && !x.archived; }).length : l.length;

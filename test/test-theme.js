@@ -108,7 +108,7 @@ console.log('\n2. Every palette stays readable in dark');
     ok('the header uses its own dark colours', await page.evaluate("getComputedStyle(document.documentElement).getPropertyValue('--hdr-bg').trim() !== ''"));
     await page.evaluate('openSettings()');
     await page.waitForTimeout(200);
-    const opts = await page.evaluate("Array.from(document.querySelectorAll('#plume-theme-choice .plume-theme-row:first-child .plume-theme-opt')).map(function(b){return b.textContent + (b.classList.contains('on') ? '*' : '');})");
+    const opts = await page.evaluate("Array.from(document.querySelector('#plume-theme-choice .plume-theme-row').querySelectorAll('.plume-theme-opt')).map(function(b){return b.textContent + (b.classList.contains('on') ? '*' : '');})");
     ok('Settings offers Light / Dark / Match my computer, with Dark marked', JSON.stringify(opts) === '["Light","Dark*","Match my computer"]', opts);
     ok('and says it covers every module, and so does the palette',
        /every module[\s\S]*palette/.test(await page.evaluate("document.getElementById('plume-theme-choice').innerText")));
@@ -169,8 +169,10 @@ console.log('\n2. Every palette stays readable in dark');
     fs.writeFileSync(out, html);
     const { ctx, page } = await open('file://' + out, 'dark');
     ok('it goes dark with the rest', (await isDarkAttr(page)) && (await bodyLum(page)) < 0.03, await bodyLum(page));
-    ok('the logo is inverted to read light on dark',
-       /invert/.test(await page.evaluate("getComputedStyle(document.querySelector('.hero-logo')).filter")));
+    // The finch mark (2026-11-01) sits on its own cream tile in both themes,
+    // never inverted, so its colours and dark outline stay as drawn.
+    ok('the finch mark keeps its cream tile, not inverted',
+       await page.evaluate("(function(){var cs=getComputedStyle(document.querySelector('.hero-mark'));return cs.backgroundColor==='rgb(252, 246, 237)'&&!/invert/.test(cs.filter);})()"));
     await ctx.close();
   }
 

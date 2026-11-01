@@ -130,8 +130,8 @@ const getPkg = (id) => `JSON.parse(localStorage.getItem('aerie-packaging-v2')).f
   console.log('\n4. The same receipt again');
   await open(RECEIPT); await page.waitForTimeout(150);
   ok('it says the order came in already', /came in once already/.test(await txt('#rc-order')));
-  ok('the lines already in Plume are unticked', (await page.evaluate("[0,1,2,5].every(function (i) { return !document.getElementById('rc' + i + '-on').checked; })")) &&
-    /Already in Plume from this order/.test(await txt('#rc0')));
+  ok('the lines already added are unticked', (await page.evaluate("[0,1,2,5].every(function (i) { return !document.getElementById('rc' + i + '-on').checked; })")) &&
+    /Already added from this order/.test(await txt('#rc0')));
   ok('the new ones now match what the first import made', (await val('#rc3-to')) === dw.id && (await val('#rc6-to')) === br.id);
   ok('…and are unticked too', (await page.evaluate("[3,4,6].every(function (i) { return !document.getElementById('rc' + i + '-on').checked; })")));
   ok('the button updates the order only', (await txt('#rc-apply')) === 'Update the order' && !(await page.evaluate("document.getElementById('rc-apply').disabled")));

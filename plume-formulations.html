@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Plume - Formulations</title>
+<title>Formulations · Formula Finch</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -965,7 +965,7 @@ body.ps-shell .inci-list { font-size: 13px; color: var(--ink); }
 <div class="modal-ov" id="m-new">
   <div class="modal">
     <div class="modal-hdr"><div class="modal-title">New formulation</div><button class="modal-x" onclick="closeModal('m-new')">x</button></div>
-    <div class="field"><label>Formula name *</label><input type="text" id="new-name" placeholder="e.g. Plume Rose Facial Serum"></div>
+    <div class="field"><label>Formula name *</label><input type="text" id="new-name" placeholder="e.g. Rose Facial Serum"></div>
     <div class="field">
       <label>Product type</label>
       <select id="new-type">
@@ -1114,7 +1114,7 @@ body.ps-shell .inci-list { font-size: 13px; color: var(--ink); }
   </div>
 </div>
 
-<footer class="app-footer">Plume by Little Bird Studio &middot; Formulations &middot; <span class="plume-version"></span></footer>
+<footer class="app-footer">Formula Finch &middot; Formulations &middot; <span class="plume-version"></span></footer>
 
 <script src="plume-core.js"></script>
 <script>
@@ -1155,7 +1155,7 @@ function exportData() {
   var blob = new Blob([JSON.stringify({ formulations: forms }, null, 2)], { type: 'application/json' });
   var a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'plume-formulations-' + todayISO() + '.json';
+  a.download = 'formula-finch-formulations-' + todayISO() + '.json';
   a.click();
 }
 
@@ -1637,7 +1637,7 @@ function renderCards() {
   renderListChrome(live);
   if (!forms.length) {
     el.innerHTML = Plume.nextStep({ icon: 'formulations',
-      text: '<b>Design your first formulation</b> from your ingredients, in percentages. Plume works out the grams for any batch size.',
+      text: '<b>Design your first formulation</b> from your ingredients, in percentages. Formula Finch works out the grams for any batch size.',
       go: 'New formulation', onclick: 'newFormula()',
       off: '<div class="empty"><p>No formulations yet</p><span style="font-size:13px">Click New to start building your first formula.</span></div>' });
     return;
@@ -2898,7 +2898,7 @@ function inciPanelHtml(items, footNote) {
         return '<strong>' + esc(e.name) + '</strong> comes from ' + names.join(' and ') +
           '. Listed once, at the position of the first.';
       }).join('<br>') +
-      '<div style="margin-top:5px">Its real total is the two added together, which Plume ' +
+      '<div style="margin-top:5px">Its real total is the two added together, which Formula Finch ' +
       'cannot know from a blend, so check whether it belongs higher up.</div></div>';
   }
 
@@ -4164,7 +4164,7 @@ function renderPhRangeWarn() {
     return '<div class="pw">' + esc(Plume.effPhIssueText(x, 'target')).replace(esc(x.ing.name || ''), '<b>' + link(x.ing) + '</b>') + '</div>';
   }).join('');
   html += Plume.effPhUnknown(withParts, ings).map(function (ing) {
-    return '<div class="pu">No effective pH range is recorded for ' + link(ing) + ', so Plume cannot check it against the target.</div>';
+    return '<div class="pu">No effective pH range is recorded for ' + link(ing) + ', so Formula Finch cannot check it against the target.</div>';
   }).join('');
   box.innerHTML = html;
   box.hidden = !html;

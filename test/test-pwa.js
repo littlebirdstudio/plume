@@ -42,7 +42,7 @@ console.log('\n1. Manifest, icons, page tags, saved-file list');
 {
   const m = JSON.parse(fs.readFileSync(path.join(ROOT, 'manifest.webmanifest'), 'utf8'));
   ok('manifest has a name, short name and start page',
-     !!m.name && m.short_name === 'Plume' && m.start_url === './index.html', m);
+     !!m.name && m.short_name === 'Formula Finch' && m.start_url === './index.html', m);
   ok('opens as its own window (standalone)', m.display === 'standalone');
   ok('scope is the app folder, so every module is inside the app', m.scope === './');
   const want = { '192x192|any': 192, '512x512|any': 512, '512x512|maskable': 512 };
