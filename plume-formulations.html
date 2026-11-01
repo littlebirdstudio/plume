@@ -673,6 +673,9 @@ body.ps-shell #addin-btn.active, body.ps-shell #addin-btn.on { background: var(-
 #f-instruct { width: 100%; min-height: 110px; font-family: 'DM Sans', sans-serif; font-size: 14px; line-height: 1.6; color: var(--ink); background: var(--white); border: 1px solid var(--cream-border); border-radius: 9px; padding: 10px 12px; resize: vertical; outline: none; }
 #f-instruct:focus { border-color: var(--bark); }
 #f-instruct:disabled { background: var(--cream); border-color: transparent; color: var(--ink); }
+#ep-method .rt-wrap, .np-text + .rt-wrap { border-radius: 9px; }
+#ep-method .rt-ed, .np-text + .rt-wrap .rt-ed { font-size: 14px; line-height: 1.6; padding: 10px 12px; }
+#ep-method .rt-ed:focus, .np-text + .rt-wrap .rt-ed:focus { outline: none; }
 .fe-hint { font-size: 12.5px; color: var(--ink-lighter); margin-top: 6px; }
 body.ps-shell .hist-row, body.ps-shell .use-entry { font-size: 13px; padding: 10px 0; }
 body.ps-shell .hist-date, body.ps-shell .use-date { font-size: 13px; }
@@ -3610,8 +3613,10 @@ function selectNotes() {
       } });
   var t = document.getElementById('np-text');
   t.value = fn.value;
+  // The same formatting bar as Instructions; it writes into the textarea.
+  var r = Plume.rt.attach('np-text', { label: 'Formulation notes', tall: '300px' });
   t.addEventListener('input', function () { fn.value = t.value; markDirty(); });
-  setTimeout(function () { t.focus(); }, 250);
+  setTimeout(function () { if (r) r.focus(); else t.focus(); }, 250);
 }
 
 function loadVariantIntoEditor() {
@@ -3639,6 +3644,7 @@ function loadVariantIntoEditor() {
   });
   document.getElementById('f-status').value   = v.status || 'draft';
   document.getElementById('f-instruct').value = v.instructions || '';
+  Plume.rt.refresh('f-instruct');
   document.getElementById('f-ph-min').value = v.phMin || '';
   document.getElementById('f-ph-max').value = v.phMax || '';
   checkPhField(document.getElementById('f-ph-min'));
@@ -4793,6 +4799,8 @@ if (typeof Plume === 'undefined') {
   Plume.setModule('formulations');
   Plume.boot(function () {
     Plume.shell({ module: 'formulations' });
+    // Instructions get the Bold / Italic / List bar (2026-11-01, her ask).
+    Plume.rt.attach('f-instruct', { label: 'Instructions', tall: '120px' });
     // A supplier renamed from the Suppliers panel changes the names on lots
     // and items; take the fresh copy so the next save does not undo it.
     Plume.onLibraryChange(function () { ings = Store.getJSON(ING_KEY, []) || []; });

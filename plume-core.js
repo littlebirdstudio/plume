@@ -35,7 +35,7 @@ var Plume = (function () {
 // (v0.4 / v0.5 / v0.6 across five modules). BUMP IT IN EVERY PULL REQUEST,
 // core change or not: it is how "is this the update I just merged?" is
 // answered by looking, and browsers cache .js files stubbornly.
-var VERSION = '1.62';
+var VERSION = '1.63';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -2661,6 +2661,8 @@ var SHEET_CSS =
   '.sec-title{font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;' +
   'color:#666;border-bottom:1px solid #ccc;padding-bottom:4px;margin-bottom:8px}' +
   '.inci{font-size:11px;color:#666;line-height:1.8}' +
+  // Instructions keep her bold, italic and lists (2026-11-01).
+  '.rt-text ol,.rt-text ul{margin:4px 0;padding-left:24px}.rt-text li{margin:2px 0}.rt-text strong{font-weight:700}' +
   // % is a reference beside the name; Grams is what goes on the scale.
   // Grams lead the row, beside the tick box (her order, 2026-10-18).
   'td.pc,th.pc{text-align:right;color:#777;font-size:11.5px;padding:5px 0 5px 14px;white-space:nowrap;font-weight:400}' +
@@ -2907,7 +2909,7 @@ function buildSheet(o) {
     built.table +
     (o.instructions ? '<div class="sec"><div class="sec-title">' +
       (o.isSoap ? 'Process instructions' : 'Formulation instructions') +
-      '</div><p style="white-space:pre-wrap">' + esc(o.instructions) + '</p></div>' : '') +
+      '</div><div class="rt-text">' + rtToHtml(o.instructions) + '</div></div>' : '') +
     phSheetBlock(o) +
     '<div class="sec"><div class="sec-title">INCI list (label order)</div>' +
     '<div class="inci">' + esc(built.inci) + '</div></div>' +
@@ -2994,6 +2996,11 @@ function inciMerged(entries) {
 // ══ Rich text (2026-10-24) ════════════════════════════
 // Bold, italic and bulleted lists in the text-heavy ingredient fields (the
 // lowdown, What I had in mind, formulating notes, expanded details, claims).
+// Numbered lists (2026-11-01, her ask): saved as "1. " at the start of a
+// line, and added to Formulations' Instructions and Formulation notes, where
+// steps are listed. A list keeps the number it starts at, so steps split by a
+// blank line or a note still read 1, 2, 3 then 4, 5. A number needs ". " or
+// ") " after it, so "2.5 g" and "50 g" stay as typed.
 // Her call: she sees the formatting as she types; it is SAVED as plain text
 // with simple marks, **bold**, *italic* and "- " at the start of a list line,
 // so backups, search and exports stay readable and nothing stored is HTML.
@@ -3006,24 +3013,33 @@ function inciMerged(entries) {
 // A bold+italic "***x***" reads as both.
 var RT_BOLD = /(^|[^\d])\*\*(?=[^\s*])([^*\n]*?[^\s*])\*\*(?!\d)/g;
 var RT_ITAL = /(^|[^*\d])\*(?=[^\s*])([^*\n]*?[^\s*])\*(?![*\d])/g;
+var RT_NUM = /^\s*(\d{1,3})[.)]\s+(.*)$/;
 function rtInline(t) {
   return t.replace(RT_BOLD, '$1<strong>$2</strong>').replace(RT_ITAL, '$1<em>$2</em>');
 }
 function rtToHtml(md) {
   try { rtStyle(); } catch (e) {}
-  var lines = esc(String(md == null ? '' : md)).split('\n'), out = '', list = false, para = [];
+  var lines = esc(String(md == null ? '' : md)).split('\n'), out = '', list = '', para = [];
   var flush = function () { if (para.length) { out += para.map(rtInline).join('<br>'); para = []; } };
+  var close = function () { if (list) { out += '</' + list + '>'; list = ''; } };
   lines.forEach(function (ln) {
-    var m = /^\s*[-•]\s+(.*)$/.exec(ln);
+    var m = /^\s*[-•]\s+(.*)$/.exec(ln), n = m ? null : RT_NUM.exec(ln);
     if (m) {
-      if (!list) { flush(); out += (out ? '' : '') + '<ul class="rt-ul">'; list = true; }
+      if (list !== 'ul') { close(); flush(); out += '<ul class="rt-ul">'; list = 'ul'; }
       out += '<li>' + rtInline(m[1]) + '</li>';
+    } else if (n) {
+      if (list !== 'ol') {
+        close(); flush();
+        var st = parseInt(n[1], 10);
+        out += '<ol class="rt-ol"' + (st > 1 ? ' start="' + st + '"' : '') + '>'; list = 'ol';
+      }
+      out += '<li>' + rtInline(n[2]) + '</li>';
     } else {
-      if (list) { out += '</ul>'; list = false; }
+      close();
       para.push(ln);
     }
   });
-  if (list) out += '</ul>';
+  close();
   flush();
   return out;
 }
@@ -3045,8 +3061,14 @@ function rtFromEl(root) {
     var ital = tag === 'i' || tag === 'em' || (n.style && n.style.fontStyle === 'italic');
     if (tag === 'ul' || tag === 'ol') {
       if (cur) push();
+      // A numbered list counts on from where it starts (its start number).
+      var num = tag === 'ol' ? (parseInt(n.getAttribute('start'), 10) || 1) : 0;
       Array.prototype.forEach.call(n.childNodes, function (li) {
-        cur = '- '; Array.prototype.forEach.call(li.childNodes || [], function (c) { walk(c); }); push();
+        if (li.nodeType !== 1) return;
+        var nested = li.nodeName.toLowerCase();
+        if (nested === 'ul' || nested === 'ol') { walk(li); return; }
+        cur = num ? (num++) + '. ' : '- ';
+        Array.prototype.forEach.call(li.childNodes || [], function (c) { walk(c); }); push();
       });
       return;
     }
@@ -3090,7 +3112,7 @@ function rtFromEl(root) {
 }
 // An editing box with a small toolbar. opts.single: one line (Enter does not
 // start a new one, no list button). Returns { wrap, ed, get, set, focus }.
-var RT_ICONS = { b: '<b>B</b>', i: '<i style="font-family:Georgia,serif">I</i>', ul: '&bull;&thinsp;List' };
+var RT_ICONS = { b: '<b>B</b>', i: '<i style="font-family:Georgia,serif">I</i>', ul: '&bull;&thinsp;List', ol: '1.&thinsp;List' };
 function rtEditor(value, opts) {
   opts = opts || {};
   rtStyle();
@@ -3099,12 +3121,12 @@ function rtEditor(value, opts) {
   var bar = document.createElement('div');
   bar.className = 'rt-bar';
   var btns = [['b', 'bold', 'Bold'], ['i', 'italic', 'Italic']];
-  if (!opts.single) btns.push(['ul', 'insertUnorderedList', 'Bulleted list']);
+  if (!opts.single) { btns.push(['ul', 'insertUnorderedList', 'Bulleted list']); btns.push(['ol', 'insertOrderedList', 'Numbered list']); }
   btns.forEach(function (b) {
     var x = document.createElement('button');
     x.type = 'button'; x.className = 'rt-btn'; x.innerHTML = RT_ICONS[b[0]]; x.title = b[2]; x.setAttribute('aria-label', b[2]);
     x.onmousedown = function (e) { e.preventDefault(); };   // keep the selection
-    x.onclick = function (e) { e.preventDefault(); ed.focus(); try { document.execCommand(b[1], false, null); } catch (err) {} if (opts.onInput) opts.onInput(); };
+    x.onclick = function (e) { e.preventDefault(); ed.focus(); try { document.execCommand(b[1], false, null); } catch (err) {} renumber(); if (opts.onInput) opts.onInput(); };
     bar.appendChild(x);
   });
   // A character limit (the field's maxlength; 2026-10-26 fix: the rich boxes
@@ -3126,7 +3148,19 @@ function rtEditor(value, opts) {
   if (opts.label) ed.setAttribute('aria-label', opts.label);
   if (opts.placeholder) ed.setAttribute('data-ph', opts.placeholder);
   ed.innerHTML = rtToHtml(value);
-  ed.addEventListener('input', function () { showCount(); if (opts.onInput) opts.onInput(); });
+  // Numbered lists count on: a list started below a note or a bulleted list
+  // carries on from the last number above it, so steps read 1 to 6 then 7.
+  var renumber = function () {
+    var prevEnd = 0;
+    Array.prototype.forEach.call(ed.querySelectorAll('ol'), function (o) {
+      if (o.parentElement && o.parentElement.closest('li')) return;
+      if (prevEnd) o.setAttribute('start', String(prevEnd + 1));
+      var st = parseInt(o.getAttribute('start'), 10) || 1, items = 0;
+      Array.prototype.forEach.call(o.children, function (c) { if (c.nodeName.toLowerCase() === 'li') items++; });
+      prevEnd = st + Math.max(items, 1) - 1;
+    });
+  };
+  ed.addEventListener('input', function () { renumber(); showCount(); if (opts.onInput) opts.onInput(); });
   ed.addEventListener('beforeinput', function (e) {
     if (!max || !/^insert/.test(e.inputType || '') || e.inputType === 'insertFromPaste') return;
     var sel = window.getSelection && window.getSelection();
@@ -3156,6 +3190,8 @@ function rtEditor(value, opts) {
     wrap: wrap, ed: ed,
     get: function () { return rtFromEl(ed); },
     set: function (v) { ed.innerHTML = rtToHtml(v); showCount(); },
+    // A locked field (an approved version's Instructions): read only, no bar.
+    setDisabled: function (off) { ed.contentEditable = off ? 'false' : 'true'; wrap.classList.toggle('rt-off', !!off); },
     focus: function () {
       ed.focus();
       try { var r = document.createRange(); r.selectNodeContents(ed); r.collapse(false); var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r); } catch (err) {}
@@ -3169,7 +3205,8 @@ function rtEditor(value, opts) {
 var rtAttached = {};
 function rtAttach(id, opts) {
   var el = document.getElementById(id);
-  if (!el || rtAttached[id]) return null;
+  // A box made afresh each time (a slide-in panel's) can be attached again.
+  if (!el || (rtAttached[id] && rtAttached[id].src === el)) return null;
   opts = opts || {};
   var r = rtEditor(el.value, {
     single: opts.single, placeholder: el.getAttribute('placeholder') || '', label: opts.label,
@@ -3179,6 +3216,12 @@ function rtAttach(id, opts) {
   el.style.display = 'none';
   el.parentNode.insertBefore(r.wrap, el.nextSibling);
   if (opts.tall) r.ed.style.minHeight = opts.tall;
+  r.src = el;
+  // Disabling the original (the approval lock does) locks the box too.
+  r.setDisabled(el.disabled);
+  try {
+    new MutationObserver(function () { r.setDisabled(el.disabled); }).observe(el, { attributes: true, attributeFilter: ['disabled'] });
+  } catch (e) {}
   rtAttached[id] = r;
   return r;
 }
@@ -3192,7 +3235,8 @@ var RT_CSS = '.rt-wrap{border:1px solid var(--cream-border);border-radius:4px;ba
   '.rt-ed{font-family:"DM Sans",sans-serif;font-size:13px;line-height:1.55;color:var(--ink);padding:8px 10px;min-height:60px;outline:none;white-space:pre-wrap;word-wrap:break-word}' +
   '.rt-single .rt-ed{min-height:0;white-space:normal}' +
   '.rt-ed:empty:before{content:attr(data-ph);color:var(--ink-lighter)}' +
-  '.rt-ed ul,.rt-ul{margin:4px 0;padding-left:20px}.rt-ul li,.rt-ed li{margin:1px 0}' +
+  '.rt-ed ul,.rt-ul,.rt-ed ol,.rt-ol{margin:4px 0;padding-left:22px}.rt-ul li,.rt-ol li,.rt-ed li{margin:1px 0}' +
+  '.rt-off{background:var(--cream);border-color:transparent}.rt-off .rt-bar{display:none}' +
   '.rt-text strong,.rt-ed b,.rt-ed strong{font-weight:600}' +
   '.rt-count{margin-left:auto;align-self:center;font-size:11px;color:var(--ink-lighter);padding:0 4px;font-variant-numeric:tabular-nums}' +
   '.rt-count.full{color:var(--warning)}';
