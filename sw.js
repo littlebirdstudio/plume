@@ -41,6 +41,7 @@ var APP_FILES = [
   'plume-sapdata.js',
   'plume-starter.js',
   'formula-finch-mark.svg',
+  'formula-finch-botanical.svg',
   'manifest.webmanifest',
   'icons/icon-192.png',
   'icons/icon-512.png',

@@ -24,6 +24,7 @@ pages.forEach(function (f) {
 const man = JSON.parse(fs.readFileSync(path.join(ROOT, 'manifest.webmanifest'), 'utf8'));
 ok('install name is Formula Finch', man.name === 'Formula Finch' && man.short_name === 'Formula Finch');
 ok('the finch mark is in the offline copy', /'formula-finch-mark\.svg'/.test(fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8')));
+ok('the landing page shows the botanical artwork', /<img src="formula-finch-botanical\.svg"[^>]*class="hero-mark"/.test(fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8')));
 ok('the old logo file is gone', !fs.existsSync(path.join(ROOT, 'plume-logo.svg')));
 
 (async () => {
