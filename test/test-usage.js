@@ -70,7 +70,7 @@ console.log('\n0. The starter list');
   const c = {}; vm.createContext(c);
   vm.runInContext(fs.readFileSync(path.join(ROOT, 'plume-starter.js'), 'utf8') + ';this.PS = PlumeStarter;', c);
   const items = c.PS.items, by = n => items.find(i => i.name === n);
-  ok('271 items, every one on the new fields', items.length === 271 && items.every(i => i.usageV2 === true), items.length);
+  ok('266 items, every one on the new fields', items.length === 266 && items.every(i => i.usageV2 === true), items.length);
   ok('none carries the old min, max, flag or restrictions', items.every(i => !('min' in i) && !('max' in i) && !('flag' in i) && !('restrictions' in i)),
      items.filter(i => 'min' in i || 'max' in i || 'flag' in i).map(i => i.name));
   ok('removed at her direction', ['Comfrey', 'Orris root', 'Black seed oil', 'Berry wax', 'Camellia oil (tea seed)'].every(n => !by(n)));

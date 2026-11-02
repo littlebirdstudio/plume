@@ -100,15 +100,15 @@ console.log('\n1b. The starter list review (v2.5)');
      items.filter(i => SOL.indexOf(i.solubility) === -1).map(i => i.name + ': ' + i.solubility));
   ok('most say how to get it in', items.filter(i => i.solNote).length >= 200, items.filter(i => i.solNote).length);
   const ADDED = ['Sodium phytate', 'Phytic acid (50% solution)', 'Sodium gluconate', 'Tetrasodium glutamate diacetate (GLDA)',
-    'Gluconolactone (PHA)', 'Mandelic acid', 'Willow bark extract', 'Ectoin', 'Alpha-bisabolol', 'N-acetyl glucosamine (NAG)',
-    'Sodium ascorbyl phosphate (SAP)', 'Caffeine', 'Centella asiatica extract (glycerite)', 'Matrixyl 3000 (peptide blend)', 'Sepimax Zen',
+    'Gluconolactone (PHA)', 'Mandelic acid', 'Willow bark extract', 'Alpha-bisabolol', 'N-acetyl glucosamine (NAG)',
+    'Sodium ascorbyl phosphate (SAP)', 'Caffeine', 'Centella asiatica extract (glycerite)',
     'Hemisqualane', 'Coco-caprylate/caprate', 'Phenoxyethanol + ethylhexylglycerin (PE 9010)', 'Leucidal Liquid SF',
     'Leucidal Liquid (radish root ferment)', 'Euxyl K 712', 'Geogard Ultra', 'Sodium hydroxide solution (10 to 20%, for pH)',
     'Citric acid solution (10 to 50%)', 'Sodium citrate', 'Polyglyceryl-4 caprate', 'PEG-40 hydrogenated castor oil', 'Pentylene glycol',
     'Mica (cosmetic grade)', 'Iron oxides', 'Titanium dioxide (colorant)', 'Ultramarine blue', 'Fragrance oil (skin-safe)'];
-  ok('the 33 additions are offered', ADDED.every(byName), ADDED.filter(n => !byName(n)));
-  ok('her two keeps stay', !!byName('Olivem 2090') && !!byName('Actifcol advanced botanical'));
-  ok('the ones she skipped are not added', !known('Ascorbyl glucoside') && !known('Sensolene') && !known('LexFeel WOW') && !known('Argireline'));
+  ok('the 30 additions are offered', ADDED.every(byName), ADDED.filter(n => !byName(n)));
+  ok('her keep stays', !!byName('Olivem 2090'));
+  ok('the ones she skipped are not added, and the two supplier blends are gone', ['Ceramide complex', 'Actifcol advanced botanical', 'Ectoin', 'Matrixyl 3000 (peptide blend)', 'Sepimax Zen'].every(n => !known(n)) && !known('Ascorbyl glucoside') && !known('Sensolene') && !known('LexFeel WOW') && !known('Argireline'));
   ok('additions use the current usage fields: a range, or a note on how much', ADDED.every(n => byName(n).usageV2 && (byName(n).recMin || byName(n).effMin || byName(n).usageNote)), ADDED.filter(n => !(byName(n).recMin || byName(n).effMin || byName(n).usageNote)));
   ok('no review-only fields', items.every(i => !i.source && !i.why && !i.id));
   ok('every lowdown is 200 characters or less', items.every(i => i.chooseWhen && i.chooseWhen.length <= 200),
