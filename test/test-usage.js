@@ -82,7 +82,7 @@ console.log('\n0. The starter list');
      items.filter(i => i.safeMax && i.safeMax !== 'none' && i.recMax && f(i.recMax) > f(i.safeMax)).map(i => i.name));
   ok('safe limits are numbers, none, or left out', items.every(i => i.safeMax === undefined || i.safeMax === 'none' || /^\d*\.?\d+$/.test(i.safeMax)));
   ok('Arginine says its amount depends on use', /pH adjuster/.test(by('Arginine').usageNote || ''));
-  ok('Ylang ylang takes her safe limit', by('Ylang ylang essential oil').safeMax === '0.8');
+  ok('Ylang ylang takes her safe limit (safety review: the IFRA face limit)', by('Ylang ylang essential oil').safeMax === '0.18');
 }
 
 (async () => {
