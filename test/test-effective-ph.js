@@ -86,7 +86,7 @@ const SEED = `
   ok('the field is labelled Effective pH range', await page.evaluate("Array.from(document.querySelectorAll('label')).some(l => l.textContent.trim() === 'Effective pH range') && !Array.from(document.querySelectorAll('label')).some(l => /Optimal pH/.test(l.textContent))"));
   ok('every preservative in the starter list has a range it can read, and a source', await page.evaluate(`(function () {
     var ps = SEEDER_ITEMS.filter(function (it) { return it.optimalPh; });
-    return ps.length === 10 && ps.every(function (it) { return Plume.effPhRange(it.optimalPh) && it.phSource; });
+    return ps.length === 15 && ps.every(function (it) { return Plume.effPhRange(it.optimalPh) && it.phSource; });
   })()`));
   ok('Quick add brings the range but not the source', await page.evaluate("(function () { var i = starterToIngredient(SEEDER_ITEMS.filter(function (it) { return it.name === 'Optiphen'; })[0]); return i.optimalPh === '4 – 8' && !('phSource' in i); })()"));
   await page.evaluate("openLowdownReview('optimalPh')"); await page.waitForTimeout(200);
