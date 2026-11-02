@@ -49,7 +49,11 @@ ok('no borrowed prose', items.every(i => !i.generalInfo), items.filter(i => i.ge
 ok('no stored SAP numbers', items.every(i => !(i.soap && (i.soap.naoh || i.soap.koh))));
 const known = n => items.some(i => i.name.toLowerCase() === n.toLowerCase() || (i.aka || []).some(a => a.toLowerCase() === n.toLowerCase()));
 // Removed at her direction in the usage review (2026-10-26).
-const REMOVED = ['comfrey', 'orris root', 'black seed oil', 'berry wax'];
+// And in the starter list review (2026-11-01), as too obscure for a starter list.
+const REMOVED_V25 = ['bacuri butter', 'kombo butter', 'kpangnan butter', 'mafura butter', 'tucuma butter', 'ucuuba butter',
+  'buriti oil', 'pracaxi oil', 'myrica fruit wax', 'melissa hydrosol', 'sapogel q', 'gum arabic', 'gum tragacanth',
+  'lemon balm essential oil', 'yarrow essential oil'];
+const REMOVED = ['comfrey', 'orris root', 'black seed oil', 'berry wax'].concat(REMOVED_V25);
 const lost = FB.filter(r => REMOVED.indexOf(r.name.toLowerCase()) === -1 && !known(r.name) &&
   !String(r.inci).split(/\s+or\s+|,\s*or\s+/i).map(norm).some(k => items.some(i => norm(i.inci) === k)));
 ok('every directory ingredient is still offered, as itself or merged', lost.length === 0, lost.map(r => r.name));
@@ -57,7 +61,7 @@ ok('every directory ingredient is still offered, as itself or merged', lost.leng
 // still be recognised, except where one name covers two grades (which grade
 // her "Coconut oil" is cannot be known).
 const unrec = FB.filter(r => REMOVED.indexOf(r.name.toLowerCase()) === -1 && !known(r.name)).map(r => r.name).sort();
-ok('the four she removed are gone', REMOVED.every(n => !byName(n.replace(/^./, c => c.toUpperCase()))));
+ok('the ones she removed are gone', REMOVED.every(n => !known(n)), REMOVED.filter(known));
 ok('directory names are recognised, bar the three that cover two grades',
    JSON.stringify(unrec) === JSON.stringify(['Aloe vera', 'Coconut oil', 'Sodium hyaluronate']), unrec);
 ok('folded names are kept as former names', (byName('Rosehip seed oil').aka || []).indexOf('Rosehip oil') !== -1);
@@ -73,11 +77,52 @@ ok('rosemary CO2 extract sits with the antioxidants', /antioxidants/.test((byNam
 ok('no INCI is left cut off mid-list', items.every(i => !/(\(and\)|\bor)\s*$/.test(i.inci)),
    items.filter(i => /(\(and\)|\bor)\s*$/.test(i.inci)).map(i => i.name + ': ' + i.inci));
 ok('waters are tagged Base / solvent', ['Distilled water', 'Rose hydrosol', 'Aloe vera juice'].every(n => (byName(n).functionCategory || []).indexOf('Base / solvent') !== -1));
-ok('hydrosols are co-tagged Fragrance (her call)', items.filter(i => /hydrosol/i.test(i.name)).every(i => (i.functionCategory || []).indexOf('Fragrance') !== -1));
+// Co-tagged Fragrance where the scent is the point (her call; the starter
+// list review of 2026-11-01 left chamomile, helichrysum, rosemary and witch
+// hazel as Base / solvent, witch hazel also Active).
+ok('scented hydrosols are co-tagged Fragrance (her call)', ['Lavender hydrosol', 'Rose hydrosol', 'Neroli hydrosol', 'Peppermint hydrosol', 'Rose geranium hydrosol']
+   .every(n => (byName(n).functionCategory || []).indexOf('Fragrance') !== -1));
 ok('lowdowns say inexpensive, not cheap', items.every(i => !/\bcheap/i.test(i.chooseWhen || '')),
    items.filter(i => /\bcheap/i.test(i.chooseWhen || '')).map(i => i.name));
 ok('directory brand names are properly cased',
    !!byName('Sucragel AOF Bio') && !!byName('Spectrastat G2 Natural (MB)') && !!byName('SCS (sodium coco sulfate)'));
+
+console.log('\n1b. The starter list review (v2.5)');
+{
+  const FC = ['Emollient', 'Humectant', 'Base / solvent', 'Emulsifier', 'Preservative', 'Chelator', 'Active', 'pH Adjuster', 'Thickener',
+    'Solubilizer', 'Surfactant', 'Exfoliant', 'Essential oil', 'Fragrance', 'Colorant', 'Other'];
+  const SOL = ['water', 'oil', 'both', 'water-dispersible', 'oil-dispersible'];
+  ok('version 2.5', Starter.version === '2.5', Starter.version);
+  ok('every item has one or more categories from the app\'s list',
+     items.every(i => Array.isArray(i.functionCategory) && i.functionCategory.length && i.functionCategory.every(c => FC.indexOf(c) !== -1)),
+     items.filter(i => !(Array.isArray(i.functionCategory) && i.functionCategory.length && i.functionCategory.every(c => FC.indexOf(c) !== -1))).map(i => i.name));
+  ok('every item says what it dissolves in', items.every(i => SOL.indexOf(i.solubility) !== -1),
+     items.filter(i => SOL.indexOf(i.solubility) === -1).map(i => i.name + ': ' + i.solubility));
+  ok('most say how to get it in', items.filter(i => i.solNote).length >= 200, items.filter(i => i.solNote).length);
+  const ADDED = ['Sodium phytate', 'Phytic acid (50% solution)', 'Sodium gluconate', 'Tetrasodium glutamate diacetate (GLDA)',
+    'Gluconolactone (PHA)', 'Mandelic acid', 'Willow bark extract', 'Ectoin', 'Alpha-bisabolol', 'N-acetyl glucosamine (NAG)',
+    'Sodium ascorbyl phosphate (SAP)', 'Caffeine', 'Centella asiatica extract (glycerite)', 'Matrixyl 3000 (peptide blend)', 'Sepimax Zen',
+    'Hemisqualane', 'Coco-caprylate/caprate', 'Phenoxyethanol + ethylhexylglycerin (PE 9010)', 'Leucidal Liquid SF',
+    'Leucidal Liquid (radish root ferment)', 'Euxyl K 712', 'Geogard Ultra', 'Sodium hydroxide solution (10 to 20%, for pH)',
+    'Citric acid solution (10 to 50%)', 'Sodium citrate', 'Polyglyceryl-4 caprate', 'PEG-40 hydrogenated castor oil', 'Pentylene glycol',
+    'Mica (cosmetic grade)', 'Iron oxides', 'Titanium dioxide (colorant)', 'Ultramarine blue', 'Fragrance oil (skin-safe)'];
+  ok('the 33 additions are offered', ADDED.every(byName), ADDED.filter(n => !byName(n)));
+  ok('her two keeps stay', !!byName('Olivem 2090') && !!byName('Actifcol advanced botanical'));
+  ok('the ones she skipped are not added', !known('Ascorbyl glucoside') && !known('Sensolene') && !known('LexFeel WOW') && !known('Argireline'));
+  ok('additions use the current usage fields: a range, or a note on how much', ADDED.every(n => byName(n).usageV2 && (byName(n).recMin || byName(n).effMin || byName(n).usageNote)), ADDED.filter(n => !(byName(n).recMin || byName(n).effMin || byName(n).usageNote)));
+  ok('no review-only fields', items.every(i => !i.source && !i.why && !i.id));
+  ok('every lowdown is 200 characters or less', items.every(i => i.chooseWhen && i.chooseWhen.length <= 200),
+     items.filter(i => !i.chooseWhen || i.chooseWhen.length > 200).map(i => i.name));
+  ok('PE 9010 answers to Preservative PE', known('Preservative PE'));
+  const DRAFTED = ['chooseWhen', 'solNote', 'usageNote', 'caution', 'function'];
+  const draftedText = i => DRAFTED.map(f => i[f] || '').join(' ');
+  ok('no em dashes in drafted text', items.every(i => !/\u2014/.test(draftedText(i))), items.filter(i => /\u2014/.test(draftedText(i))).map(i => i.name));
+  const UK = /\b\w*(colour|flavour|odour|(oxid|stabil|moistur|sensit|solubil|neutral|standard|polar)is(e|es|ed|ing|ation))\b/i;
+  ok('drafted text uses US spelling', items.every(i => !UK.test(draftedText(i))), items.filter(i => UK.test(draftedText(i))).map(i => i.name + ': ' + draftedText(i).match(UK)[0]));
+  ok('still sorted by type, then name', items.every((x, k) => !k ||
+     (Starter.types.indexOf(items[k - 1].type) < Starter.types.indexOf(x.type)) ||
+     (items[k - 1].type === x.type && items[k - 1].name.localeCompare(x.name) <= 0)));
+}
 
 console.log('\n2. Oils reach SoapCalc by their starter names');
 const oils = items.filter(i => /Carrier oils|Butters and fats|Waxes/.test(i.type));
@@ -206,6 +251,11 @@ ok('most oils, butters and waxes are covered', oils.filter(i => Sap.lookup(i.nam
     ok('murumuru, unknown on purpose, arrives with no SAP', !(f('Murumuru butter').soap && f('Murumuru butter').soap.naoh));
     ok('the grouping type and former names are not stored on the ingredient', lib.every(i => i.type === undefined && i.aka === undefined));
     ok('no borrowed prose arrives', lib.every(i => !i.generalInfo));
+    const jo = items.find(i => i.name === 'Coconut oil (76°)');
+    ok('categories, solubility and its note arrive on the ingredient (v2.5)',
+       JSON.stringify(f('Coconut oil (76°)').functionCategory) === JSON.stringify(jo.functionCategory) &&
+       f('Coconut oil (76°)').solubility === jo.solubility && f('Coconut oil (76°)').solNote === jo.solNote && !!jo.solNote,
+       [f('Coconut oil (76°)').functionCategory, f('Coconut oil (76°)').solubility, f('Coconut oil (76°)').solNote]);
     ok('each starts with no lots and its own id',
        f('Neem oil').lots.length === 0 && new Set(lib.map(i => i.id)).size === lib.length);
     await search(page, 'neem');
