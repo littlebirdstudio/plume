@@ -124,6 +124,21 @@ console.log('\n1b. The starter list review (v2.5)');
      (items[k - 1].type === x.type && items[k - 1].name.localeCompare(x.name) <= 0)));
 }
 
+console.log('\n1c. The safety review (2026-11-02)');
+{
+  const SAFE = { 'Tea tree essential oil': '0.1', 'Rose otto essential oil': '0.006', 'Eucalyptus essential oil': '1',
+    'Ylang ylang essential oil': '0.18', 'Geranium essential oil': '4.5', 'Rose geranium essential oil': '4.5',
+    'Palmarosa essential oil': '0.9', 'Tranexamic acid': '3', 'Neem oil': '10', 'Tamanu oil': '20' };
+  ok('her ten safe limits', Object.keys(SAFE).every(n => byName(n).safeMax === SAFE[n]),
+     Object.keys(SAFE).filter(n => byName(n).safeMax !== SAFE[n]).map(n => n + ': ' + byName(n).safeMax));
+  ok('no recommended range reaches above its safe limit',
+     items.every(i => !(i.safeMax && i.safeMax !== 'none' && i.recMax && +i.recMax > +i.safeMax + 1e-9)),
+     items.filter(i => i.safeMax && i.safeMax !== 'none' && i.recMax && +i.recMax > +i.safeMax + 1e-9).map(i => i.name));
+  ok('tea tree says adults only, the wash and shampoo levels, and no sprays',
+     /Adults only/.test(byName('Tea tree essential oil').caution) && /1% in face washes/.test(byName('Tea tree essential oil').caution) &&
+     /2% in shampoo/.test(byName('Tea tree essential oil').caution) && /aerosols/.test(byName('Tea tree essential oil').caution));
+}
+
 console.log('\n2. Oils reach SoapCalc by their starter names');
 const oils = items.filter(i => /Carrier oils|Butters and fats|Waxes/.test(i.type));
 const expected = ['Shea butter', 'Olive oil', 'Coconut oil (76°)', 'Coconut oil, virgin', 'Castor oil', 'Grapeseed oil',
