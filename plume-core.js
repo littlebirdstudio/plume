@@ -35,7 +35,7 @@ var Plume = (function () {
 // (v0.4 / v0.5 / v0.6 across five modules). BUMP IT IN EVERY PULL REQUEST,
 // core change or not: it is how "is this the update I just merged?" is
 // answered by looking, and browsers cache .js files stubbornly.
-var VERSION = '1.70';
+var VERSION = '1.71';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -4136,11 +4136,19 @@ var PK_PARTS = ['Front', 'Back', 'Top', 'Bottom', 'Wrap'];
 // group decides which fields the form asks for; type is what the rest of
 // the app already read before kinds existed (container / box / label ...).
 var PK_GROUPS = [
-  { key: 'bottles', label: 'Bottles, jars and tubes', short: 'Bottles and jars', type: 'container' },
-  { key: 'boxes',   label: 'Boxes and bags',          short: 'Boxes and bags',   type: 'box' },
-  { key: 'labels',  label: 'Labels and stickers',     short: 'Labels',           type: 'label' },
-  { key: 'bands',   label: 'Bands and wraps',         short: 'Bands and wraps',  type: 'other' },
-  { key: 'other',   label: 'Caps and other',          short: 'Caps and other',   type: 'closure' }
+  { key: 'bottles',  label: 'Bottles, jars and tubes',        short: 'Bottles and jars', type: 'container' },
+  // Caps, pumps and tops bought on their own (her ask, 2026-11-04): they sit
+  // next to the bottles they go on. Before, only "Cap / closure" existed,
+  // under "Caps and other".
+  { key: 'closures', label: 'Caps, pumps and tops',           short: 'Caps and tops',    type: 'closure' },
+  { key: 'boxes',    label: 'Boxes and bags',                 short: 'Boxes and bags',   type: 'box' },
+  { key: 'labels',   label: 'Labels and stickers',            short: 'Labels',           type: 'label' },
+  { key: 'bands',    label: 'Bands and wraps',                short: 'Bands and wraps',  type: 'other' },
+  // Things that go in with a product (her ask, 2026-11-04: reusable wipes
+  // and cloths). Bought, stocked and costed like packaging; a product lists
+  // them with its packaging, and each fill takes them from stock.
+  { key: 'extras',   label: 'Extras included with products',  short: 'Extras',           type: 'extra' },
+  { key: 'other',    label: 'Other',                          short: 'Other',            type: 'other' }
 ];
 var PK_KINDS = [
   { key: 'dropper', label: 'Dropper bottle',      group: 'bottles' },
@@ -4148,11 +4156,18 @@ var PK_KINDS = [
   { key: 'mist',    label: 'Spray bottle',        group: 'bottles' },
   { key: 'airless', label: 'Airless pump bottle', group: 'bottles' },
   { key: 'bottle',  label: 'Bottle with cap',     group: 'bottles' },
+  { key: 'vial',    label: 'Vial with cap',       group: 'bottles' },
   { key: 'roller',  label: 'Roller bottle',       group: 'bottles' },
   { key: 'jar',     label: 'Jar',                 group: 'bottles' },
   { key: 'tin',     label: 'Tin',                 group: 'bottles' },
   { key: 'lipTube', label: 'Lip balm tube',       group: 'bottles' },
   { key: 'squeeze', label: 'Squeeze tube',        group: 'bottles' },
+  { key: 'screwcap',   label: 'Screw cap',        group: 'closures' },
+  { key: 'cap',        label: 'Cap / closure',    group: 'closures' },
+  { key: 'pumpTop',    label: 'Pump top',         group: 'closures' },
+  { key: 'sprayTop',   label: 'Spray top',        group: 'closures' },
+  { key: 'dropperTop', label: 'Dropper top',      group: 'closures' },
+  { key: 'reducer',    label: 'Orifice reducer',  group: 'closures' },
   { key: 'box',     label: 'Box',                 group: 'boxes' },
   { key: 'mailer',  label: 'Mailer box',          group: 'boxes' },
   { key: 'pouch',   label: 'Bag / pouch',         group: 'boxes' },
@@ -4163,10 +4178,24 @@ var PK_KINDS = [
   { key: 'shrink',  label: 'Shrink band',         group: 'bands' },
   { key: 'sleeve',  label: 'Soap sleeve',         group: 'bands' },
   { key: 'belly',   label: 'Belly band',          group: 'bands' },
-  { key: 'cap',     label: 'Cap / closure',       group: 'other' },
+  { key: 'cloth',   label: 'Reusable wipe / cloth', group: 'extras' },
+  { key: 'spatula', label: 'Spatula / scoop',     group: 'extras' },
+  { key: 'insert',  label: 'Card / insert',       group: 'extras' },
+  { key: 'extra',   label: 'Other extra',         group: 'extras', other: true },
   { key: 'other',   label: 'Other',               group: 'other', other: true }
 ];
-var PK_LEGACY_GROUP = { container: 'bottles', box: 'boxes', label: 'labels', closure: 'other', other: 'other' };
+// Size and material suggestions that fit the group (2026-11-04).
+var PK_SIZE_HINT = {
+  closures: 'e.g. 20-410, 24 mm',
+  extras: 'e.g. 8 × 8 in, pack of 5'
+};
+var PK_MATERIALS_FOR = {
+  closures: ['Plastic', 'Aluminum', 'Bamboo', 'Glass'],
+  extras: ['Cotton', 'Bamboo', 'Microfiber', 'Wood', 'Plastic', 'Paper']
+};
+function pkMaterialsFor(kind) { var k = pkKind(kind); return (k && PK_MATERIALS_FOR[k.group]) || PK_MATERIALS; }
+function pkSizeHint(kind) { var k = pkKind(kind); return (k && PK_SIZE_HINT[k.group]) || 'e.g. 1 oz, 30 ml, 2 × 2 × 4 in'; }
+var PK_LEGACY_GROUP = { container: 'bottles', box: 'boxes', label: 'labels', closure: 'closures', extra: 'extras', other: 'other' };
 
 function pkColor(c) {
   c = String(c || '').toLowerCase().trim();
@@ -4187,7 +4216,7 @@ function pkGroupKey(it) {
   var k = pkKindOf(it);
   return k ? k.group : (PK_LEGACY_GROUP[it && it.type] || 'other');
 }
-function pkGroup(key) { for (var i = 0; i < PK_GROUPS.length; i++) if (PK_GROUPS[i].key === key) return PK_GROUPS[i]; return PK_GROUPS[4]; }
+function pkGroup(key) { for (var i = 0; i < PK_GROUPS.length; i++) if (PK_GROUPS[i].key === key) return PK_GROUPS[i]; return PK_GROUPS[PK_GROUPS.length - 1]; }
 function pkTypeFor(kind) { var k = pkKind(kind); return k ? pkGroup(k.group).type : 'other'; }
 // Labels and stickers are for a product and never take a color; bands and
 // wraps may have both; bottles and boxes have a color and a material.
@@ -4221,7 +4250,18 @@ var PK_DRAW = {
   sleeve:  function (f, o) { return '<rect x="3" y="10" width="26" height="12" rx="3" fill="#E7E3DC" stroke="' + PK_EDGE + '" stroke-width="1"/>' + pkBody('M8 9h16v14H8z', f, o) + '<path d="M11 14h10M11 17h7" stroke="' + PK_EDGE + '" stroke-width="1"/>'; },
   belly:   function (f, o) { return '<rect x="6" y="7" width="20" height="4.5" rx="1.5" fill="' + PK_DARK + '"/>' + pkBody('M7 11.5h18v14a3 3 0 0 1-3 3H10a3 3 0 0 1-3-3z', '#E7E3DC', 1) + pkBody('M6.5 16h19v5h-19z', f, o); },
   cap:     function (f, o) { return pkBody('M8 9h16v12.5a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 8 21.5z', f, o) + '<path d="M11 9v15M14 9v15M17 9v15M20 9v15" stroke="' + PK_EDGE + '" stroke-width=".8" opacity=".5"/>'; },
-  other:   function (f, o) { return pkBody('M6 6h20v20H6z', f, o) + '<path d="M12 16h8M16 12v8" stroke="' + PK_EDGE + '" stroke-width="1.2"/>'; }
+  other:   function (f, o) { return pkBody('M6 6h20v20H6z', f, o) + '<path d="M12 16h8M16 12v8" stroke="' + PK_EDGE + '" stroke-width="1.2"/>'; },
+  // 2026-11-04: a vial, the closures bought on their own, and the extras.
+  vial:    function (f, o) { return '<rect x="12.5" y="2.5" width="7" height="6" rx="1" fill="' + PK_DARK + '"/>' + pkBody('M13 8.5h6v19.5a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 13 28z', f, o); },
+  screwcap: function (f, o) { return pkBody('M8 11h16v9.5a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 8 20.5z', f, o) + '<path d="M8 11h16" stroke="' + PK_EDGE + '" stroke-width="1.2"/><path d="M10.5 14.5v6M13 14.5v6M15.5 14.5v6M18 14.5v6M20.5 14.5v6" stroke="' + PK_EDGE + '" stroke-width=".9" opacity=".55"/>'; },
+  pumpTop: function (f, o) { return '<path d="M13.5 3h11v2.5h-8.4v4h-2.6z" fill="' + PK_DARK + '"/>' + pkBody('M10.5 9.5h11v5a1.5 1.5 0 0 1-1.5 1.5h-8a1.5 1.5 0 0 1-1.5-1.5z', f, o) + '<path d="M16 16v13" stroke="' + PK_EDGE + '" stroke-width="1.2" stroke-linecap="round"/>'; },
+  sprayTop: function (f, o) { return '<rect x="12.5" y="3" width="7" height="5.5" rx="1.2" fill="' + PK_DARK + '"/><path d="M19.5 4.8h3" stroke="' + PK_DARK + '" stroke-width="1.6"/>' + pkBody('M10.5 8.5h11v5.5a1.5 1.5 0 0 1-1.5 1.5h-8a1.5 1.5 0 0 1-1.5-1.5z', f, o) + '<path d="M16 15.5v13.5" stroke="' + PK_EDGE + '" stroke-width="1.2" stroke-linecap="round"/>'; },
+  dropperTop: function (f, o) { return '<ellipse cx="16" cy="6" rx="3" ry="3.5" fill="' + PK_DARK + '"/>' + pkBody('M11.5 9h9v4.5a1.2 1.2 0 0 1-1.2 1.2h-6.6a1.2 1.2 0 0 1-1.2-1.2z', f, o) + '<path d="M15 14.7h2v12.3l-1 2-1-2z" fill="#EAF2F5" stroke="' + PK_EDGE + '" stroke-width="1"/>'; },
+  reducer: function (f, o) { return pkBody('M9 11.5h14v3H9z', f, o) + pkBody('M11 14.5h10l-1 8h-8z', f, o) + '<circle cx="16" cy="13" r="1.2" fill="' + PK_EDGE + '"/>'; },
+  cloth:   function (f, o) { return pkBody('M6 9h20v14H6z', f, o) + '<path d="M6 13h20M6 17h20" stroke="' + PK_EDGE + '" stroke-width=".8" opacity=".45"/><path d="M26 9l-3.5 3.5V23" fill="none" stroke="' + PK_EDGE + '" stroke-width="1" opacity=".7"/>'; },
+  spatula: function (f, o) { return pkBody('M14.5 3.5h3l.6 16h-4.2z', f, o) + pkBody('M12 19.5h8l-.8 7.5a2 2 0 0 1-2 1.8h-2.4a2 2 0 0 1-2-1.8z', f, o); },
+  insert:  function (f, o) { return pkBody('M5 8h22v16H5z', f, o) + '<path d="M9 13h10M9 16.5h14M9 20h8" stroke="' + PK_EDGE + '" stroke-width="1.1"/>'; },
+  extra:   function (f, o) { return pkBody('M16 4l3.3 7 7.2.9-5.3 5 1.4 7.6L16 20.8 9.4 24.5l1.4-7.6-5.3-5 7.2-.9z', f, o); }
 };
 function pkIcon(kind, color) {
   var draw = PK_DRAW[kind] || PK_DRAW.other;
@@ -4303,7 +4343,7 @@ function pkOnOrder(it) {
   return t;
 }
 function pkSizeNum(s) { var m = String(s || '').match(/\d+(?:\.\d+)?|\.\d+/); return m ? parseFloat(m[0]) : 0; }
-var PK_GROUP_ORDER = { bottles: 0, boxes: 1, labels: 2, bands: 3, other: 4, sort: 5 };
+var PK_GROUP_ORDER = { bottles: 0, closures: 1, boxes: 2, labels: 3, bands: 4, extras: 5, other: 6, sort: 7 };
 // Color order inside a kind: the swatch list's order (Amber, Blue, Green...),
 // then any other color typed, alphabetically, then items with no color.
 function pkColorRank(c) {
@@ -4368,13 +4408,14 @@ var PK_KIND_RULES = [
   [/pump/i, 'pump'], [/roll(er|-on)/i, 'roller'], [/lip.*tube|balm tube/i, 'lipTube'], [/tube/i, 'squeeze'],
   [/jar/i, 'jar'], [/\btins?\b/i, 'tin'], [/barcode/i, 'barcode'], [/square/i, 'square'], [/round sticker|seal/i, 'round'],
   [/shrink/i, 'shrink'], [/sleeve/i, 'sleeve'], [/belly/i, 'belly'], [/sticker/i, 'round'], [/label/i, 'label'],
-  [/mailer|shipper/i, 'mailer'], [/box|carton/i, 'box'], [/bag|pouch/i, 'pouch'], [/\bcaps?\b|\blids?\b|closure/i, 'cap'], [/bottle/i, 'bottle']
+  [/mailer|shipper/i, 'mailer'], [/box|carton/i, 'box'], [/bag|pouch/i, 'pouch'], [/orifice|reducer/i, 'reducer'], [/screw[- ]?caps?/i, 'screwcap'],
+  [/\bcaps?\b|\blids?\b|closure/i, 'cap'], [/\bvials?\b/i, 'vial'], [/bottle/i, 'bottle'], [/wipes?\b|cloths?\b/i, 'cloth'], [/spatula|scoop/i, 'spatula']
 ];
 function pkGuess(oldName, products) {
   var s = String(oldName || '');
   var g = { kind: 'other', other: '', capacity: '', color: '', material: '', forProduct: '', part: '' };
   for (var i = 0; i < PK_KIND_RULES.length; i++) if (PK_KIND_RULES[i][0].test(s)) { g.kind = PK_KIND_RULES[i][1]; break; }
-  if (g.kind === 'other') g.other = s.trim();
+  if (pkIsOther(g.kind)) g.other = s.trim();
   var N = '(\\d+(?:\\.\\d+)?|\\.\\d+)';
   var z = function (v) { return v && v.charAt(0) === '.' ? '0' + v : v; };
   var dim = s.match(new RegExp(N + '\\s*(?:in|")?\\s*[x×]\\s*' + N + '(?:\\s*(?:in|")?\\s*[x×]\\s*' + N + ')?', 'i'));
@@ -6074,7 +6115,7 @@ return {
            history: stockHistory, range: shRangeSet, group: shGroupSet, toggle: shToggle, reason: shReasonSet, find: shFind, copy: shCopy, rows: shRows },
   pkTypeFor: pkTypeFor, pkForProduct: pkForProduct, pkColored: pkColored, pkIsOther: pkIsOther,
   pkIcon: pkIcon, pkIconFor: pkIconFor, pkProducts: pkProducts, pkProductName: pkProductName,
-  pkKindName: pkKindName, pkLooks: pkLooks, pkDisplay: pkDisplay, pkDetailHtml: pkDetailHtml, pkStock: pkStock, pkOnOrder: pkOnOrder,
+  pkKindName: pkKindName, pkMaterialsFor: pkMaterialsFor, pkSizeHint: pkSizeHint, pkLooks: pkLooks, pkDisplay: pkDisplay, pkDetailHtml: pkDetailHtml, pkStock: pkStock, pkOnOrder: pkOnOrder,
   pkGroups: pkGroups, pkMatches: pkMatches, pkSameKey: pkSameKey, pkGuess: pkGuess, pkCss: pkCss,
   pkPicker: pkPicker, pkPickers: pkPickers, pkClose: pkClose,
   batchMadeG: batchMadeG, batchLeftG: batchLeftG, batchNumbersG: batchNumbersG, batchUsedG: batchUsedG, batchFills: batchFills, batchLabel: batchLabel,
