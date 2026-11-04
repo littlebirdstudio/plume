@@ -144,7 +144,9 @@ const PRODUCTS = [
     const p1 = s.find(i => i.id === 'p1'), p4 = s.find(i => i.id === 'p4'), p5 = s.find(i => i.id === 'p5');
     ok('a sorted item has its kind, size, color and material', p1.kind === 'dropper' && p1.capacity === '1 oz' && p1.color === 'Amber' && p1.material === 'Glass', p1);
     ok('its name becomes the display string, for readers that only know .name', p1.name === 'Dropper bottle \u00b7 1 oz \u00b7 Amber glass', p1.name);
-    ok('its type follows the kind', p1.type === 'container' && p5.type === 'closure', [p1.type, p5.type]);
+    // Other left the caps group on 2026-11-04 (caps, pumps and tops have
+    // their own), so its type is now 'other'.
+    ok('its type follows the kind', p1.type === 'container' && p5.type === 'other', [p1.type, p5.type]);
     ok('purchases and stock are untouched', JSON.stringify(p1.purchases) === JSON.stringify(OLD[0].purchases) && p1.image === PHOTO);
     ok('an item left alone keeps its old name and no kind', !p4.kind && p4.name === 'Serum label front 3.5x1.25', p4);
     ok('Other keeps the name typed for it', p5.kind === 'other' && p5.name === 'Tissue paper', p5);
@@ -171,7 +173,7 @@ const PRODUCTS = [
     await page.waitForTimeout(400);
     ok('it opens as a panel on the right', await page.evaluate("(function(){var r=document.querySelector('#m-add .modal').getBoundingClientRect();return Math.round(r.right)===innerWidth && r.top===0;})()"));
     ok('with no Name field and no photo upload', await page.evaluate("!document.getElementById('f-name') && !document.querySelector('#m-add input[type=file]')"));
-    ok('it starts with "What is it?" and the fields wait for a pick', await page.evaluate("document.querySelectorAll('#e-kinds button').length === 22 && document.getElementById('e-fields').style.display === 'none'"));
+    ok('it starts with "What is it?" and the fields wait for a pick', await page.evaluate("document.querySelectorAll('#e-kinds button').length === Plume.PK_KINDS.length && Plume.PK_KINDS.length === 32 && document.getElementById('e-fields').style.display === 'none'"));
     await page.evaluate("saveItem()");
     ok('saving without a kind says to pick one', dialogs.some(t => /Pick what it is/.test(t)), dialogs);
     await page.click('#e-kinds button[data-kind="dropper"]');

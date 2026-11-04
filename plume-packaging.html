@@ -188,7 +188,19 @@ table.pk th:nth-child(6) { width: 52px; }
 /* Each kind is a heading with its drawing; its items sit indented beneath
    it on a guide line, with a gap before the next kind (her ask, 2026-10-18:
    the kinds were hard to pick out in the list). */
-.pk .pk-g td { background: color-mix(in srgb, var(--bark) 9%, var(--white)); padding: 8px 10px; border-top: 1.5px solid var(--ink-lighter); border-bottom: 1.5px solid var(--cream-border); cursor: default; }
+.pk .pk-g td { background: color-mix(in srgb, var(--bark) 9%, var(--white)); padding: 8px 10px; border-top: 1.5px solid var(--ink-lighter); border-bottom: 1.5px solid var(--cream-border); cursor: pointer; }
+/* Folding kinds (2026-11-04). */
+.pk-g td { position: relative; }
+.pk-g-chev { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--ink-lighter); display: inline-flex; }
+.pk-g-chev .ps-i { width: 18px; height: 18px; transition: transform .15s; }
+.pk-g.closed .pk-g-chev .ps-i { transform: rotate(-90deg); }
+.pk-g:focus-visible td { outline: 2px solid var(--bark); outline-offset: -2px; }
+.pk .pk-gap.tight td { height: 6px; }
+.pk-chips-row { display: flex; align-items: flex-start; gap: 12px; }
+.pk-chips-row .ps-chips { flex: 1; min-width: 0; }
+.pk-fold-all { font: inherit; font-size: 12.5px; border: 0; background: none; color: var(--ink-light); text-decoration: underline; cursor: pointer; padding: 6px 2px; white-space: nowrap; }
+.pk-fold-all:hover { color: var(--ink); }
+.type-extra { background: color-mix(in srgb, var(--bark) 14%, var(--white)); color: var(--bark-dark); }
 .ps-table tbody tr.pk-g:hover td { background: color-mix(in srgb, var(--bark) 9%, var(--white)); }
 .pk-g-in { display: inline-flex; align-items: center; vertical-align: middle; }
 .pk-g .pk-g-ic { width: 30px; height: 30px; margin-right: 10px; }
@@ -297,7 +309,7 @@ body.ps-shell .btn-sm { font-size: 12px; }
 
   <!-- List: grouped by kind, sizes small to large, then color -->
   <section id="pk-list-view">
-    <div class="ps-chips" id="pk-chips"></div>
+    <div class="pk-chips-row"><div class="ps-chips" id="pk-chips"></div><button type="button" class="pk-fold-all" id="pk-fold-all" onclick="pkToggleAll()" hidden>Close all</button></div>
     <div class="pk-search"><label class="ps-search"><span data-ps-icon="search"></span><input type="search" id="search" placeholder="Search kind, size, color, material, product or supplier" oninput="renderTable()" aria-label="Search packaging"></label></div>
     <div id="pk-sort-note"></div>
     <div class="ps-table-wrap">
@@ -629,8 +641,30 @@ function renderChips() {
   document.getElementById('pk-chips').innerHTML = items.length ? h : '';
 }
 
-var GROUP_TAG = { bottles: ['type-container', 'Container'], boxes: ['type-box', 'Box / bag'], labels: ['type-label', 'Label'],
-                  bands: ['type-other', 'Band / wrap'], other: ['type-closure', 'Cap / other'], sort: ['type-other', 'Not sorted yet'] };
+var GROUP_TAG = { bottles: ['type-container', 'Container'], closures: ['type-closure', 'Cap / top'], boxes: ['type-box', 'Box / bag'], labels: ['type-label', 'Label'],
+                  bands: ['type-other', 'Band / wrap'], extras: ['type-extra', 'Extra'], other: ['type-other', 'Other'], sort: ['type-other', 'Not sorted yet'] };
+
+// Kinds fold up (her ask, 2026-11-04): a kind's heading opens and closes its
+// items, remembered on this device. A search shows every match, open.
+var PK_CLOSED_KEY = 'plume-pk-closed';
+var pkClosed = (function () { try { return JSON.parse(localStorage.getItem(PK_CLOSED_KEY) || '[]') || []; } catch (e) { return []; } })();
+function pkGKey(g) { return g.section + '|' + g.name; }
+function pkIsClosed(g) { return pkClosed.indexOf(pkGKey(g)) !== -1; }
+function pkSaveClosed() { try { localStorage.setItem(PK_CLOSED_KEY, JSON.stringify(pkClosed)); } catch (e) {} }
+function pkToggle(key) {
+  var i = pkClosed.indexOf(key);
+  if (i === -1) pkClosed.push(key); else pkClosed.splice(i, 1);
+  pkSaveClosed(); renderTable();
+}
+function pkToggleAll() {
+  var shown = Plume.pkGroups(items).map(pkGKey);
+  var anyOpen = shown.some(function (k) { return pkClosed.indexOf(k) === -1; });
+  pkClosed = anyOpen ? shown : [];
+  pkSaveClosed(); renderTable();
+}
+function pkGroupKeydown(e, key) {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pkToggle(key); }
+}
 
 function renderTable() {
   var q = document.getElementById('search').value;
@@ -658,14 +692,22 @@ function renderTable() {
       '</span></div></td></tr>';
     return;
   }
-  var h = '';
-  Plume.pkGroups(list).forEach(function (g, gi) {
+  var h = '', searching = !!q.trim(), groups = Plume.pkGroups(list);
+  var allClosed = groups.every(pkIsClosed);
+  document.getElementById('pk-fold-all').hidden = searching || groups.length < 2;
+  document.getElementById('pk-fold-all').textContent = allClosed ? 'Open all' : 'Close all';
+  groups.forEach(function (g, gi) {
     var t = GROUP_TAG[g.section] || GROUP_TAG.sort;
-    if (gi) h += '<tr class="pk-gap" aria-hidden="true"><td colspan="6"></td></tr>';
-    h += '<tr class="pk-g"><td colspan="6"><span class="pk-g-in"><span class="pk-thumb pk-g-ic">' + Plume.pkIcon(g.kind || 'other', '') + '</span><span class="gn">' + esc(g.name) + '</span>' +
+    var closed = !searching && pkIsClosed(g), key = pkGKey(g);
+    var inStock = g.items.reduce(function (sum, i) { return sum + Math.max(0, calcStock(i)); }, 0);
+    if (gi) h += '<tr class="pk-gap' + (closed && pkIsClosed(groups[gi - 1]) && !searching ? ' tight' : '') + '" aria-hidden="true"><td colspan="6"></td></tr>';
+    h += '<tr class="pk-g' + (closed ? ' closed' : '') + '" tabindex="0" role="button" aria-expanded="' + !closed + '" data-g="' + esc(key) + '"' +
+      ' onclick="pkToggle(this.getAttribute(\'data-g\'))" onkeydown="pkGroupKeydown(event, this.getAttribute(\'data-g\'))">' +
+      '<td colspan="6"><span class="pk-g-in"><span class="pk-thumb pk-g-ic">' + Plume.pkIcon(g.kind || 'other', '') + '</span><span class="gn">' + esc(g.name) + '</span>' +
       '<span class="type-badge ' + t[0] + '">' + t[1] + '</span>' +
-      '<span class="gc">' + g.items.length + (g.items.length === 1 ? ' item' : ' items') + '</span>' +
-      '</span></td></tr>';
+      '<span class="gc">' + g.items.length + (g.items.length === 1 ? ' item' : ' items') + (closed ? ' · ' + inStock + ' in stock' : '') + '</span>' +
+      '</span><span class="pk-g-chev" aria-hidden="true">' + Plume.icon('chevron') + '</span></td></tr>';
+    if (closed) return;
     g.items.forEach(function (i, n) {
       var stock = calcStock(i);
       var cpu = latestCostPerUnit(i);
@@ -1007,7 +1049,8 @@ function edLive(colorChanged) {
   document.getElementById('ed-title').textContent = edKind ? Plume.pkKindName(d) : (editingId ? 'Packaging item' : 'New packaging item');
   document.getElementById('ed-as').innerHTML = edKind ? 'Shows everywhere as <b>' + esc(Plume.pkDisplay(d)) + '</b>' : '';
   quick('color', Plume.PK_COLORS.map(function (c) { return c.label; }), true);
-  quick('material', Plume.PK_MATERIALS, false);
+  quick('material', Plume.pkMaterialsFor(edKind), false);
+  document.getElementById('f-capacity').placeholder = Plume.pkSizeHint(edKind);
   quick('part', Plume.PK_PARTS, false);
   if (colorChanged) renderKinds();
   // Same kind, size, color, material, product and part as another item?
