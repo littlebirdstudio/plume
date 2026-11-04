@@ -131,7 +131,7 @@ const leaksJs = "(function(){var out=[];Array.prototype.forEach.call(document.qu
       const page = await fresh(data({ 'plume-setup': JSON.stringify({ make, level, maint: false, done: true }) }));
       for (const mod of ['ingredients', 'formulations', 'batchlog']) {
         await page.goto(previewUrl(mod)); await page.waitForTimeout(450);
-        const side = await page.evaluate("Array.prototype.map.call(document.querySelectorAll('#ps-side .ps-nav-label'),function(s){return s.textContent;}).join(',')");
+        const side = await page.evaluate("Array.prototype.map.call(Array.prototype.filter.call(document.querySelectorAll('#ps-side .ps-nav-label'),function(s){return !s.closest('#ps-backup');}),function(s){return s.textContent;}).join(',')");
         const wantSide = level === 'make' ? 'Ingredients,Suppliers,Formulations,Batches,Settings'
           : 'Ingredients,Packaging,Suppliers,Formulations,Batches,Products & Costing,Update stock,Stock history,Analytics,Settings';
         if (mod === 'ingredients') ok(tag + ': the sidebar', side === wantSide, side);

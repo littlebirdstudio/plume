@@ -2406,6 +2406,8 @@ function importData(e) {
   reader.onload = function(ev) {
     try {
       var data = JSON.parse(ev.target.result);
+      // A "Back up everything" file goes to Restore, which shows what is in it (2026-11-04).
+      if (Plume.backup.isFull(data)) { Plume.backup.preview(data); return; }
       var arr  = data.products || (Array.isArray(data) ? data : []);
       // The import runs in the dialog's callback, after she answers.
       Plume.ask('Duplicates by id will be skipped.', function() {

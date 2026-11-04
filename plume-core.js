@@ -35,7 +35,7 @@ var Plume = (function () {
 // (v0.4 / v0.5 / v0.6 across five modules). BUMP IT IN EVERY PULL REQUEST,
 // core change or not: it is how "is this the update I just merged?" is
 // answered by looking, and browsers cache .js files stubbornly.
-var VERSION = '1.69';
+var VERSION = '1.70';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -1363,12 +1363,20 @@ function shell(opts) {
       '</nav>'
       ) : '') +
       '<div class="ps-grow"></div>' +
-      '<button type="button" class="ps-nav" onclick="if (typeof openSettings === \'function\') openSettings()" title="Settings">' + icon('settings') + '<span class="ps-nav-label">Settings</span></button>' +
+      '<div class="ps-backup" id="ps-backup" hidden></div>' +
+      '<button type="button" class="ps-nav" onclick="Plume.openSettings()" title="Settings">' + icon('settings') + '<span class="ps-nav-label">Settings</span></button>' +
     '</aside>';
   document.body.insertAdjacentHTML('afterbegin', html);
   document.body.classList.add('ps-shell');
   document.body.classList.toggle('ps-collapsed', sideCollapsed());
   refreshShell();
+  renderBackupNudge();
+  // A backup made in another window clears the reminder here too.
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) return;
+    Store.refresh(BACKUP_META_KEY); Store.refresh(BACKUP_SNOOZE_KEY);
+    renderBackupNudge();
+  });
 }
 function toggleSide() { setSideCollapsed(!document.body.classList.contains('ps-collapsed')); }
 
@@ -1776,7 +1784,9 @@ function renderStorage() {
   var pct = Math.min(100, (r.total / STOR_LIMIT) * 100);
   var bar = pct > 80 ? 'var(--clay)' : 'var(--sage)';
 
-  var html = '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px">';
+  var html = '<div class="plume-set-lbl" style="margin-top:0">Backups</div><div id="plume-backup-box"></div>' +
+    '<div class="plume-set-lbl">Space used</div>';
+  html += '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px">';
   html += '<span style="color:var(--ink-light)">' + fmtBytes(r.total) + ' of about 5 MB</span>';
   html += '<span style="color:var(--ink-lighter)">' + pct.toFixed(0) + '%</span></div>';
   html += '<div style="height:6px;background:var(--cream-dark);border-radius:3px;overflow:hidden;margin-bottom:12px">';
@@ -1800,6 +1810,8 @@ function renderStorage() {
     html += '<div id="stor-drill"></div>';
   }
   el.innerHTML = html;
+  renderBackupBox();
+  checkKeep(renderBackupBox);
   if (storDrillOpen) renderStorDrill();
   setTimeout(renderAppStatus, 0);
 }
@@ -1861,8 +1873,7 @@ function renderStorBanner() {
   if (storFailed) {
     slot.innerHTML = '<div class="stor-banner crit"><div><b>Storage is full &mdash; your changes are not being saved.</b><br>' +
       'Download a backup now so nothing is lost, then free up space. Packaging photos are usually the largest item; Settings shows the breakdown.' +
-      (typeof window.exportData === 'function'
-        ? '<br><button class="btn" onclick="exportData()">Download backup now</button>' : '') +
+      '<br><button class="btn" onclick="Plume.backup.now()">Download a backup of everything</button>' +
       '</div></div>';
     return;
   }
@@ -1892,6 +1903,246 @@ function noteSaveFailed() {
 }
 function noteSaveOk() { storFailed = false; }
 
+// ══ Backups: everything in one file (2026-11-04) ══════
+// Each module's Export button saves only that module, so restoring after a
+// loss took every file from about the same day (and brands, shops and the
+// setup choices were in none of them). "Back up everything" saves every
+// Formula Finch key in one file, exactly as stored, and Restore puts that
+// file back after showing what is in it and downloading what is here now.
+// Only keys starting aerie- or plume- are Formula Finch's: other sites on
+// the same address (github.io) can share this browser storage.
+// The last backup is kept as BACKUP_META_KEY {at, sig}: sig is a short
+// fingerprint of the data then, so a reminder only shows once something
+// has changed. Never part of a backup itself.
+var BACKUP_KIND     = 'formula-finch-backup';
+var BACKUP_META_KEY = 'plume-backup-meta';
+var BACKUP_SNOOZE_KEY = 'plume-backup-snooze';
+var BACKUP_DUE_DAYS = 7;
+var BACKUP_SNOOZE_DAYS = 3;
+var BACKUP_SKIP = [BACKUP_META_KEY, BACKUP_SNOOZE_KEY, 'plume-restored'];
+// What the restore preview counts, in the order of the work.
+var BACKUP_COUNTS = [
+  ['aerie-ingredients-v2', 'Ingredients'], ['aerie-suppliers-v1', 'Suppliers'],
+  ['aerie-formulations-v1', 'Formulations'], ['aerie-batches-v1', 'Batches'],
+  ['aerie-packaging-v2', 'Packaging items'], ['plume-products-v1', 'Products'],
+  ['plume-orders-v1', 'Orders'], ['plume-shops-v1', 'Consignment shops'], ['aerie-brands-v1', 'Brands']
+];
+
+function isAppKey(k) { return /^(aerie|plume)-/.test(k) && BACKUP_SKIP.indexOf(k) === -1; }
+function appKeys() { return Store.keys().filter(isAppKey).sort(); }
+
+// A short fingerprint of the data, not a security hash: it only has to
+// tell "changed since the backup" from "not changed".
+function dataSig() {
+  var h = 2166136261, ks = appKeys();
+  for (var i = 0; i < ks.length; i++) {
+    var s = ks[i] + '\u0000' + (Store.get(ks[i]) || '') + '\u0001';
+    for (var j = 0; j < s.length; j++) { h ^= s.charCodeAt(j); h = Math.imul(h, 16777619) >>> 0; }
+  }
+  return ks.length + ':' + h.toString(36);
+}
+function hasData() {
+  return BACKUP_COUNTS.some(function (c) { var n = countOf(c[0]); return n !== null && n > 0; });
+}
+function backupMeta() { var m = Store.getJSON(BACKUP_META_KEY, null); return m && m.at ? m : null; }
+
+function backupData() {
+  var keys = {}, ks = appKeys();
+  for (var i = 0; i < ks.length; i++) keys[ks[i]] = Store.get(ks[i]);
+  return { kind: BACKUP_KIND, format: 1, app: BRAND.name, appVersion: VERSION,
+           business: businessName(), created: new Date().toISOString(), keys: keys };
+}
+function isFullBackup(d) { return !!(d && d.kind === BACKUP_KIND && d.keys && typeof d.keys === 'object'); }
+
+function saveFile(name, text) {
+  var blob = new Blob([text], { type: 'application/json' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a); a.click(); a.parentNode.removeChild(a);
+  setTimeout(function () { try { URL.revokeObjectURL(a.href); } catch (e) {} }, 4000);
+}
+
+// suffix: '' for an ordinary backup, 'before-restore' for the safety copy.
+function backupNow(suffix) {
+  var d = backupData();
+  saveFile('formula-finch-backup-' + todayISO() + (suffix ? '-' + suffix : '') + '.json', JSON.stringify(d));
+  if (!suffix) {
+    Store.setJSON(BACKUP_META_KEY, { at: d.created, sig: dataSig() });
+    Store.remove(BACKUP_SNOOZE_KEY);
+    askKeep();
+    renderBackupNudge();
+    if (document.getElementById('plume-backup-box')) renderBackupBox();
+  }
+  return d;
+}
+
+// ── Keeping the data: ask the browser not to clear it ──
+// Chrome and Edge decide on their own (installed apps and much-used sites
+// are kept); Firefox asks the person; Safari keeps an installed app's data.
+var keepState = null;   // 'kept' | 'not' | 'unknown'
+function checkKeep(cb) {
+  try {
+    if (!navigator.storage || !navigator.storage.persisted) { keepState = 'unknown'; if (cb) cb(); return; }
+    navigator.storage.persisted().then(function (p) { keepState = p ? 'kept' : 'not'; if (cb) cb(); },
+                                       function () { keepState = 'unknown'; if (cb) cb(); });
+  } catch (e) { keepState = 'unknown'; if (cb) cb(); }
+}
+function askKeep(cb) {
+  try {
+    if (!navigator.storage || !navigator.storage.persist) { keepState = 'unknown'; if (cb) cb(); return; }
+    navigator.storage.persist().then(function (p) {
+      keepState = p ? 'kept' : 'not';
+      if (document.getElementById('plume-backup-box')) renderBackupBox();
+      if (cb) cb();
+    }, function () { keepState = 'unknown'; if (cb) cb(); });
+  } catch (e) { keepState = 'unknown'; if (cb) cb(); }
+}
+function askKeepClick() {
+  askKeep(function () {
+    if (keepState !== 'kept') tell(
+      'The browser decides this for itself. It is most likely to agree once Formula Finch is installed as an app, ' +
+      'or after you have used it for a while. Until then, regular backups are what keep your work safe.',
+      { title: 'The browser has not agreed yet' });
+  });
+}
+
+function agoText(iso) {
+  var t = Date.parse(iso); if (isNaN(t)) return '';
+  var days = Math.floor((Date.now() - t) / 86400000);
+  return days <= 0 ? 'today' : days === 1 ? 'yesterday' : days + ' days ago';
+}
+
+// The Backups block at the top of Storage in every Settings.
+function renderBackupBox() {
+  var el = document.getElementById('plume-backup-box');
+  if (!el) return;
+  var m = backupMeta();
+  var keep = keepState === 'kept' ? 'Yes. The browser has agreed not to clear Formula Finch’s data.'
+           : keepState === 'not' ? 'Not yet. The browser may clear it if the computer runs short of space, and Safari after about a week unused.'
+           : 'This browser does not say.';
+  el.innerHTML =
+    '<div class="plume-bk-row"><span class="plume-bk-k">Last full backup</span><span>' +
+      (m ? esc(fmtDate(m.at.slice(0, 10))) + ' (' + agoText(m.at) + ')' + (m.sig !== dataSig() ? ', changes since' : ', nothing changed since') : 'None yet') + '</span></div>' +
+    '<div class="plume-bk-row"><span class="plume-bk-k">Kept by the browser</span><span>' + esc(keep) + '</span></div>' +
+    '<div class="plume-theme-row" style="margin-top:10px">' +
+      '<button type="button" class="plume-theme-opt on" onclick="Plume.backup.now()">' + icon('download') + ' Back up everything</button>' +
+      '<button type="button" class="plume-theme-opt" onclick="Plume.backup.pick()">' + icon('upload') + ' Restore from a backup</button>' +
+      (keepState === 'not' ? '<button type="button" class="plume-theme-opt" onclick="Plume.backup.askKeep()">Ask the browser to keep it</button>' : '') +
+    '</div>' +
+    '<div class="plume-theme-note">One file with everything: ingredients, suppliers, formulations, batches, packaging, products, orders and your settings. ' +
+      'Keep it somewhere other than this computer, such as cloud storage or email. Each module’s own Export still works for sharing one part.</div>';
+}
+
+// ── The reminder: one quiet line in the sidebar ──
+// Shows only when there is data and either there has never been a full
+// backup, or the last one is a week old and something has changed since.
+// "Later" hides it for three days.
+function backupDue() {
+  if (!hasData()) return false;
+  var snooze = Store.get(BACKUP_SNOOZE_KEY);
+  if (snooze && Date.parse(snooze) > Date.now()) return false;
+  var m = backupMeta();
+  if (!m) return true;
+  var age = (Date.now() - Date.parse(m.at)) / 86400000;
+  return age >= BACKUP_DUE_DAYS && m.sig !== dataSig();
+}
+function renderBackupNudge() {
+  var el = document.getElementById('ps-backup');
+  if (!el) return;
+  if (!backupDue()) { el.hidden = true; el.innerHTML = ''; return; }
+  var m = backupMeta();
+  el.hidden = false;
+  el.innerHTML =
+    '<button type="button" class="ps-nav ps-bk-go" onclick="Plume.backup.now()" title="Download one file with everything">' + icon('download') +
+      '<span class="ps-nav-label"><span class="ps-bk-t">Back up now</span><span class="ps-bk-s">' +
+      (m ? 'Last backup ' + esc(agoText(m.at)) : 'No full backup yet') + '</span></span><i class="ps-bk-dot" aria-hidden="true"></i></button>' +
+    '<button type="button" class="ps-bk-later" onclick="Plume.backup.later()" title="Remind me in three days">Later</button>';
+}
+function backupLater() {
+  Store.set(BACKUP_SNOOZE_KEY, new Date(Date.now() + BACKUP_SNOOZE_DAYS * 86400000).toISOString());
+  renderBackupNudge();
+}
+
+// ── Restore ──
+function pickBackup() {
+  var inp = document.getElementById('plume-restore-file');
+  if (!inp) {
+    inp = document.createElement('input');
+    inp.type = 'file'; inp.accept = '.json,application/json'; inp.id = 'plume-restore-file'; inp.hidden = true;
+    inp.onchange = function () { var f = inp.files && inp.files[0]; inp.value = ''; if (f) readBackupFile(f); };
+    document.body.appendChild(inp);
+  }
+  inp.click();
+}
+function readBackupFile(file) {
+  var r = new FileReader();
+  r.onload = function () {
+    var d = null;
+    try { d = JSON.parse(r.result); } catch (e) {}
+    if (!isFullBackup(d)) {
+      tell('This is not a "Back up everything" file. A file from one module’s Export goes back in through that module’s Import.',
+           { title: 'Not a full backup' });
+      return;
+    }
+    previewRestore(d);
+  };
+  r.readAsText(file);
+}
+function countIn(raw) {
+  if (raw === null || raw === undefined) return 0;
+  try { var v = JSON.parse(raw); return Array.isArray(v) ? v.length : 0; } catch (e) { return 0; }
+}
+function restoreRows(d) {
+  return BACKUP_COUNTS.map(function (c) {
+    return { label: c[1], file: countIn(d.keys[c[0]]), here: countIn(Store.get(c[0])) };
+  }).filter(function (r) { return r.file || r.here; });
+}
+function previewRestore(d) {
+  var rows = restoreRows(d);
+  var made = d.created ? fmtDate(String(d.created).slice(0, 10)) : 'an unknown date';
+  var html = '<p>Backup made ' + esc(made) + (d.business ? ' for ' + esc(d.business) : '') +
+      (d.appVersion ? ', Formula Finch ' + esc(d.appVersion) : '') + '.</p>' +
+    '<table class="plume-bk-tbl"><thead><tr><th></th><th>In the backup</th><th>Here now</th></tr></thead><tbody>' +
+    rows.map(function (r) {
+      return '<tr' + (r.file < r.here ? ' class="fewer"' : '') + '><td>' + esc(r.label) + '</td><td>' + r.file + '</td><td>' + r.here + '</td></tr>';
+    }).join('') + '</tbody></table>' +
+    '<p>Restoring <b>replaces everything here</b> with the backup. First, a copy of what is here now downloads, ' +
+      'so you can go back. Close Formula Finch in any other windows or tabs first.</p>';
+  ask(html, function () { doRestore(d); }, { title: 'Restore this backup?', yes: 'Replace everything', danger: true, html: true });
+}
+function doRestore(d) {
+  backupNow('before-restore');
+  var failed = [], keys = Object.keys(d.keys).filter(isAppKey);
+  appKeys().forEach(function (k) { if (keys.indexOf(k) === -1) Store.remove(k); });
+  keys.forEach(function (k) { if (!Store.set(k, d.keys[k])) failed.push(k); });
+  Store.setJSON(BACKUP_META_KEY, { at: d.created || new Date().toISOString(), sig: dataSig() });
+  // Tells other open windows to reload, so none of them saves old data over it.
+  try { localStorage.setItem('plume-restored', String(Date.now())); } catch (e) {}
+  if (failed.length) {
+    tell('Some parts could not be saved: ' + failed.map(function (k) { return KEY_LABELS[k] || k; }).join(', ') +
+         '. Browser storage may be full. The copy of what was here before is in your downloads.',
+         { title: 'The restore did not finish' });
+    return;
+  }
+  tell('Everything from the backup is back. The page will now reload.', { title: 'Restored', onClose: function () { location.reload(); } });
+}
+function watchRestore() {
+  try { window.addEventListener('storage', function (e) { if (e.key === 'plume-restored') location.reload(); }); } catch (e) {}
+}
+
+// ── Settings on a page without its own (Analytics, 2026-11-04) ──
+// The sidebar's Settings did nothing there. Pages with a Settings dialog
+// keep it; any other page gets the shared settings in the slide-in panel.
+function openSettingsAny() {
+  if (typeof window.openSettings === 'function') { window.openSettings(); return; }
+  openPeek('<div class="plume-set-peek"><div><div class="plume-theme-note" style="margin-top:14px">Choose the color palette for the whole app.</div>' +
+    '<div id="palette-swatches" class="palette-swatch-grid"></div></div>' +
+    '<div class="plume-set-div"></div><div id="storage-body"></div></div>', { label: 'Settings' });
+  renderPaletteSwatches();
+  renderStorage();
+}
+
 // ══ Shared styles ═════════════════════════════════════
 // Injected so a module only has to provide the slot elements, not the CSS.
 function injectStyles() {
@@ -1906,6 +2157,35 @@ function injectStyles() {
   '.plume-theme-opt:last-child{border-right:none}.plume-theme-opt:hover{color:var(--ink)}' +
   '.plume-theme-opt.on{background:var(--cream-dark);color:var(--bark-dark);font-weight:500}' +
   '.plume-theme-note{font-size:12px;color:var(--ink-lighter);line-height:1.4;margin-bottom:6px}' +
+  // Backups (2026-11-04): Settings block, restore preview, sidebar reminder.
+  '.plume-bk-row{display:flex;gap:12px;font-size:12.5px;line-height:1.45;padding:3px 0;color:var(--ink)}' +
+  '.plume-bk-k{flex:0 0 140px;color:var(--ink-lighter)}' +
+  '.plume-theme-opt .ps-i{width:14px;height:14px;vertical-align:-2px;margin-right:2px}' +
+  '.plume-bk-tbl{border-collapse:collapse;width:100%;font-size:13px;margin:4px 0 12px}' +
+  '.plume-bk-tbl th{font-weight:500;color:var(--ink-lighter);text-align:right;padding:4px 8px;border-bottom:1px solid var(--cream-border);white-space:nowrap}' +
+  '.plume-bk-tbl td{padding:4px 8px;border-bottom:1px solid var(--cream-border);text-align:right;font-variant-numeric:tabular-nums}' +
+  '.plume-bk-tbl th:first-child,.plume-bk-tbl td:first-child{text-align:left}' +
+  '.plume-bk-tbl tr.fewer td{color:var(--clay,#A0522D);font-weight:500}' +
+  '.ps-backup{position:relative;margin:0 0 4px}' +
+  '.ps-bk-go{align-items:flex-start;padding-right:46px}' +
+  '.ps-bk-go .ps-nav-label{display:flex;flex-direction:column;min-width:0}' +
+  '.ps-bk-t{color:var(--ink);font-weight:500}.ps-bk-s{font-size:11.5px;color:var(--ink-lighter)}' +
+  '.ps-bk-dot{position:absolute;left:21px;top:6px;width:7px;height:7px;border-radius:50%;background:var(--amber,#C8902E)}' +
+  '.ps-bk-later{position:absolute;right:4px;top:8px;font:inherit;font-size:11.5px;border:0;background:none;color:var(--ink-lighter);cursor:pointer;padding:2px 4px;text-decoration:underline}' +
+  '.ps-bk-later:hover{color:var(--ink)}' +
+  '.ps-collapsed .ps-bk-later{display:none}.ps-collapsed .ps-bk-go{padding-right:8px}' +
+  '.plume-set-peek{padding:4px 2px 16px}' +
+  '.plume-set-div{border-top:1px solid var(--cream-border);margin:20px 0 4px}' +
+  // The palette swatches, for Settings in the slide-in panel; modules with
+  // their own Settings dialog style them in their own CSS.
+  '.plume-set-peek .palette-swatch-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}' +
+  '.plume-set-peek .palette-swatch{display:flex;flex-direction:column;align-items:stretch;gap:6px;padding:6px;border:1px solid var(--cream-border);border-radius:5px;background:var(--white);cursor:pointer;font-family:inherit}' +
+  '.plume-set-peek .palette-swatch:hover{border-color:var(--bark-light)}' +
+  '.plume-set-peek .palette-swatch.active{border-color:var(--bark);border-width:2px;padding:5px;box-shadow:0 0 0 2px var(--cream)}' +
+  '.plume-set-peek .palette-swatch-stripes{display:flex;height:32px;border-radius:3px;overflow:hidden;border:1px solid var(--cream-border)}' +
+  '.plume-set-peek .palette-swatch-stripes span{flex:1;height:100%;display:block}' +
+  '.plume-set-peek .palette-swatch-label{font-size:11px;color:var(--ink-light);text-align:center}' +
+  '.plume-set-peek .palette-swatch.active .palette-swatch-label{color:var(--ink);font-weight:600}' +
   '.stor-banner b{font-weight:600}' +
   '.stor-banner .sb-x{margin-left:auto;background:none;border:none;font-size:16px;line-height:1;color:inherit;opacity:0.5;cursor:pointer;padding:0 2px;flex-shrink:0}' +
   '.stor-banner .sb-x:hover{opacity:1}' +
@@ -2512,6 +2792,7 @@ function boot(cb) {
   injectStyles();
   stampVersion();
   Store.onQuotaError(noteSaveFailed);
+  watchRestore();
   applyTips();
   applySize();
   Store.init(function () {
@@ -5749,6 +6030,10 @@ return {
   selectPalette: selectPalette, renderPaletteSwatches: renderPaletteSwatches,
   loadPaletteChoice: loadPaletteChoice, savePaletteChoice: savePaletteChoice,
   storageReport: storageReport, renderStorage: renderStorage,
+  backup: { now: function () { return backupNow(''); }, data: backupData, isFull: isFullBackup, pick: pickBackup, read: readBackupFile,
+            preview: previewRestore, restore: doRestore, later: backupLater, due: backupDue, sig: dataSig, meta: backupMeta,
+            askKeep: askKeepClick, keepState: function () { return keepState; }, nudge: renderBackupNudge, DUE_DAYS: BACKUP_DUE_DAYS },
+  openSettings: openSettingsAny,
   toggleStorDrill: toggleStorDrill, renderStorBanner: renderStorBanner,
   dismissStorBanner: dismissStorBanner,
   noteSaveFailed: noteSaveFailed, noteSaveOk: noteSaveOk,
