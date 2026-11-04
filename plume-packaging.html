@@ -573,6 +573,8 @@ function importData(e) {
   reader.onload = function(ev) {
     try {
       var data = JSON.parse(ev.target.result);
+      // A "Back up everything" file goes to Restore, which shows what is in it (2026-11-04).
+      if (Plume.backup.isFull(data)) { Plume.backup.preview(data); return; }
       var arr = data.packaging || (Array.isArray(data) ? data : []);
       // The dialog does not block, so the merge runs in its onYes callback,
       // with its own try so a bad record still reports as before.

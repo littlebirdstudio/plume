@@ -2689,6 +2689,8 @@ function importData(e) {
   reader.onload = function(ev) {
     try {
       var data = JSON.parse(ev.target.result);
+      // A "Back up everything" file goes to Restore, which shows what is in it (2026-11-04).
+      if (Plume.backup.isFull(data)) { Plume.backup.preview(data); return; }
       // An update file (the usage review, 2026-10-26) changes fields on
       // ingredients she already has, by id, after a preview.
       if (data && data.kind === 'plume-ingredient-update') { previewUpdateFile(data); return; }
