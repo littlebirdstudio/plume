@@ -2500,7 +2500,7 @@ function formulationCostPerG(f) {
   return formulationCostDetail(f).perG;
 }
 
-// The one rule in core: newest priced purchase, without shipping (2026-10-26).
+// The one rule in core: the average cost of what is on hand, without shipping (2026-11-04).
 function pkgUnitCost(pkg) { return Plume.pkgUnitCostOf(pkg); }
 
 function computeProductCost(p) {

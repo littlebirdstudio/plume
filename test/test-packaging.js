@@ -233,7 +233,8 @@ const PRODUCTS = [
     await page.click('#et-stock');
     ok('the Stock tab shows stock, purchases and adjustments without the detail fields', await page.evaluate("document.getElementById('ed-pane-details').style.display === 'none' && document.querySelectorAll('#ed-pane-stock .purchase-row').length === 1 && !!document.querySelector('#ed-pane-stock #modal-stock-total')"));
     await page.evaluate("addPurchaseRow({ date: '2026-10-15', qty: 12, totalCost: '6.00', shipping: '' })");
-    ok('a new purchase updates the count under the title at once', /36 in stock \u00b7 \$0\.50 per unit/.test(await page.evaluate("document.getElementById('ed-stockline').innerText")), await page.evaluate("document.getElementById('ed-stockline').innerText"));
+    // Average of what is on hand (2026-11-04): (24 x $0.62 + 12 x $0.50) / 36 = $0.58.
+    ok('a new purchase updates the count under the title at once', /36 in stock \u00b7 \$0\.58 per unit/.test(await page.evaluate("document.getElementById('ed-stockline').innerText")), await page.evaluate("document.getElementById('ed-stockline').innerText"));
     await page.evaluate("closeModal('m-add'); openEdit('p3')");
     ok('the next item opens on the tab used last', await page.evaluate("document.getElementById('ed-pane-stock').style.display !== 'none'"));
     await page.evaluate("closeModal('m-add'); openAdd()");
