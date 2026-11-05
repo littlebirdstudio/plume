@@ -35,7 +35,7 @@ var Plume = (function () {
 // (v0.4 / v0.5 / v0.6 across five modules). BUMP IT IN EVERY PULL REQUEST,
 // core change or not: it is how "is this the update I just merged?" is
 // answered by looking, and browsers cache .js files stubbornly.
-var VERSION = '1.71';
+var VERSION = '1.72';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -5298,18 +5298,51 @@ function formCostPerG(f, d) {
   });
   return (any && mass > 0) ? cost / mass : null;
 }
-// Cost per unit: the newest priced purchase, what was paid over how many.
+// Cost per unit: the AVERAGE COST OF WHAT IS ON HAND (2026-11-04, her call:
+// "I don't actually know which 10 mL amber bottle stock I am pulling from").
+// Before, it was the newest priced purchase, so a reorder at a higher price
+// repriced every unit still on the shelf at once.
+// Walked in date order: a purchase that has arrived blends its price into
+// the average by count, (on hand x average + bought x price) / (on hand +
+// bought); fills, commits and other adjustments take units out at the
+// average and leave it unchanged. When stock has run out (or below zero),
+// the next purchase starts the average fresh at its own price. A purchase
+// still on order does not count until it arrives; an item with nothing
+// arrived yet falls back to its newest priced purchase, so a first order
+// still has a cost. A purchase with no price adds units at the average.
 // Shipping is not in it (2026-10-26, her call: "match ingredients"); a
 // shipping figure on an old purchase is kept, and counted with the order's
 // shipping and tax on Analytics instead. Every page reads this one rule.
+// Fills already made keep the cost stamped on them when they were made.
+function pkgPrice(pu) {
+  var total = parseFloat(pu.totalCost) || 0, qty = parseInt(pu.qty, 10) || 0;
+  return (qty > 0 && total > 0) ? total / qty : null;
+}
+function pkgNewestPrice(purchases) {
+  var sorted = purchases.slice().sort(function (a, b) { return (b.date || '').localeCompare(a.date || ''); });
+  for (var i = 0; i < sorted.length; i++) { var pr = pkgPrice(sorted[i]); if (pr !== null) return pr; }
+  return null;
+}
 function pkgUnitCostOf(pkg) {
   if (!pkg || !(pkg.purchases || []).length) return null;
-  var sorted = pkg.purchases.slice().sort(function (a, b) { return (b.date || '').localeCompare(a.date || ''); });
-  for (var i = 0; i < sorted.length; i++) {
-    var total = parseFloat(sorted[i].totalCost) || 0, qty = parseInt(sorted[i].qty, 10) || 0;
-    if (qty > 0 && total > 0) return total / qty;
-  }
-  return null;
+  var ev = [];
+  pkg.purchases.forEach(function (pu, i) {
+    if (pu.onOrder) return;
+    var q = parseInt(pu.qty, 10) || 0;
+    if (q > 0) ev.push({ date: pu.date || '', buy: 1, qty: q, price: pkgPrice(pu), n: i });
+  });
+  (pkg.adjustments || []).forEach(function (a, i) {
+    var q = parseInt(a.qty, 10) || 0;
+    if (q) ev.push({ date: a.date || '', buy: 0, qty: q, n: i });
+  });
+  // By date; on the same day a purchase comes before what is taken out.
+  ev.sort(function (a, b) { return a.date.localeCompare(b.date) || (b.buy - a.buy) || (a.n - b.n); });
+  var on = 0, avg = null;
+  ev.forEach(function (e) {
+    if (e.buy && e.price !== null) avg = (on <= 0 || avg === null) ? e.price : (on * avg + e.qty * e.price) / (on + e.qty);
+    on = (e.buy && on < 0 ? 0 : on) + e.qty;
+  });
+  return avg !== null ? avg : pkgNewestPrice(pkg.purchases);
 }
 // One unit's cost, split into what went in it and what it went into
 // (2026-10-26, for Cost to make). A kit's parts count whole, packaging and
@@ -5340,7 +5373,7 @@ function productCostParts(p, d) {
 }
 function productUnitCost(p, d) { return productCostParts(p, d).total; }
 // Inventory at cost (2026-10-26), one rule for every page that shows it.
-// Packaging: units in stock at the newest priced purchase; an item below
+// Packaging: units in stock at their average cost (pkgUnitCostOf); an item below
 // zero counts as none, not as negative money. Ingredients: each lot that is
 // here, at what that lot cost per gram.
 function pkValue(it) {

@@ -197,28 +197,31 @@ const getPkg = (id) => `JSON.parse(localStorage.getItem('aerie-packaging-v2')).f
 
   // ── Packaging page ──
   await page.goto(previewUrl('packaging')); await page.waitForTimeout(500);
-  console.log('\n8. Packaging: on order, Mark arrived, and cost per unit without shipping');
+  console.log('\n8. Packaging: on order, Mark arrived, and cost per unit (average, without shipping)');
   ok('the list shows 24 in stock and +24 on order', /24/.test(await txt('tr[data-id="k3"] .stock-pill')) && /\+24 on order/.test(await txt('tr[data-id="k3"]')), await txt('tr[data-id="k3"]'));
-  ok('cost per unit is the newest purchase without shipping: $21.60 / 24 = $0.90', (await page.evaluate(`Plume.pkgUnitCostOf(${getPkg('k3')})`)) === 0.9 && /\$0\.90/.test(await txt('tr[data-id="k3"]')));
+  // Average of what is on hand (2026-11-04): the 24 here at $1.00, without
+  // shipping; the 24 on order at $0.90 do not count until they arrive.
+  ok('cost per unit is the average of what is here, without shipping: $24 / 24 = $1.00, the order not counted yet', (await page.evaluate(`Plume.pkgUnitCostOf(${getPkg('k3')})`)) === 1 && /\$1\.00/.test(await txt('tr[data-id="k3"]')));
   await page.evaluate("openEdit('k3'); setEdTab('stock')"); await page.waitForTimeout(200);
   const rowIds = await page.evaluate("Array.from(document.querySelectorAll('#purchase-rows .purchase-row')).map(function (r) { return r.id; })");
   const ordRow = rowIds[1];
   ok('the receipt purchase shows On order, supplier and order #, and Mark arrived', /on order/.test(await txt('#' + ordRow + '-ord')) && /Lotioncrafter · order LC-48213/.test(await txt('#' + ordRow + '-ord')) &&
     await page.evaluate(`!!document.querySelector('#${ordRow}-ord button')`), await txt('#' + ordRow + '-ord'));
   ok('the old purchase with $6 shipping: cost/unit $1.0000, shipping kept apart', /Cost \/ unit: \$1\.0000 \(shipping of \$6\.00 kept apart\)/.test(await txt('#' + rowIds[0] + '-calc')), await txt('#' + rowIds[0] + '-calc'));
-  ok('the panel says 24 units (+24 on order), $0.9000 per unit', /24 units \(\+24 on order\)/.test(await txt('#modal-stock-total')) && (await txt('#modal-cost-per-unit')) === '$0.9000', [await txt('#modal-stock-total'), await txt('#modal-cost-per-unit')]);
+  ok('the panel says 24 units (+24 on order), $1.0000 per unit', /24 units \(\+24 on order\)/.test(await txt('#modal-stock-total')) && (await txt('#modal-cost-per-unit')) === '$1.0000', [await txt('#modal-stock-total'), await txt('#modal-cost-per-unit')]);
   await page.click('#' + ordRow + '-ord button'); await page.waitForTimeout(100);
   ok('Mark arrived: 48 units, no on order', /^48 units$/.test(await txt('#modal-stock-total')), await txt('#modal-stock-total'));
+  ok('and the cost blends in: (24 x $1.00 + 24 x $0.90) / 48 = $0.9500', (await txt('#modal-cost-per-unit')) === '$0.9500', await txt('#modal-cost-per-unit'));
   await page.evaluate("saveItem()"); await page.waitForTimeout(200);
   jar = await page.evaluate(getPkg('k3'));
   ok('saved: still from the receipt (supplier, order #), arrived today, 48 in stock', !jar.purchases[1].onOrder && jar.purchases[1].orderNum === 'LC-48213' && jar.purchases[1].supplier === 'Lotioncrafter' &&
     jar.purchases[1].received === (await page.evaluate('todayISO()')) && (await page.evaluate(`Plume.pkStock(${getPkg('k3')})`)) === 48, jar.purchases[1]);
   ok('the old purchase keeps its $6 shipping figure', jar.purchases[0].shipping === '6');
-  ok('the item\'s stored cost is $0.9000 too', jar.cost === '0.9000', jar.cost);
+  ok('the item\'s stored cost is $0.9500 too', jar.cost === '0.9500', jar.cost);
 
   console.log('\n9. Every page agrees on the jar\'s cost per unit');
   await page.goto(previewUrl('costing')); await page.waitForTimeout(500);
-  ok('Products & Costing: $0.90', (await page.evaluate(`pkgUnitCost(${getPkg('k3')})`)) === 0.9);
+  ok('Products & Costing: $0.95', Math.abs((await page.evaluate(`pkgUnitCost(${getPkg('k3')})`)) - 0.95) < 1e-9);
   await page.goto(previewUrl('batchlog')); await page.waitForTimeout(500);
   ok('Batch log stock: 48', (await page.evaluate(`calcPkgStock(${getPkg('k3')})`)) === 48);
 
