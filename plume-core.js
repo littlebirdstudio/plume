@@ -474,6 +474,19 @@ function esc(s) {
 function openModal(id)  { var e = document.getElementById(id); if (e) e.classList.add('open'); }
 function closeModal(id) { var e = document.getElementById(id); if (e) e.classList.remove('open'); }
 
+// DATES, ONE RULE (2026-11-05). A day is always the LOCAL calendar day.
+// Saved moments (createdAt, updatedAt, a backup's time) are full ISO
+// timestamps, which are UTC: slicing the first ten characters gives the
+// UTC day, which in Alaska is tomorrow from 3 pm (4 pm in summer). Turn a
+// moment into a day with localDay(), never .slice(0, 10); test-dates.js
+// fails if a slice of a timestamp field comes back. Day strings
+// ('YYYY-MM-DD') are read with parseLocalDate / fmtDate, never new Date().
+function localDay(iso) {
+  var t = iso instanceof Date ? iso : new Date(iso);
+  if (isNaN(t)) return String(iso || '').slice(0, 10);
+  var p = function (n) { return (n < 10 ? '0' : '') + n; };
+  return t.getFullYear() + '-' + p(t.getMonth() + 1) + '-' + p(t.getDate());
+}
 function todayISO() {
   var d = new Date();
   return d.getFullYear() + '-' +
@@ -2234,16 +2247,9 @@ function askKeepClick() {
   });
 }
 
-// The local calendar day of a saved moment (2026-11-05): slicing the ISO
-// string gave the UTC day, so an evening backup in Alaska showed tomorrow.
-function localDay(iso) {
-  var t = new Date(iso); if (isNaN(t)) return String(iso || '').slice(0, 10);
-  var p = function (n) { return (n < 10 ? '0' : '') + n; };
-  return t.getFullYear() + '-' + p(t.getMonth() + 1) + '-' + p(t.getDate());
-}
 function agoText(iso) {
   var t = Date.parse(iso); if (isNaN(t)) return '';
-  var days = Math.round((Date.parse(localDay(new Date().toISOString())) - Date.parse(localDay(iso))) / 86400000);
+  var days = Math.round((Date.parse(todayISO()) - Date.parse(localDay(iso))) / 86400000);
   return days <= 0 ? 'today' : days === 1 ? 'yesterday' : days + ' days ago';
 }
 
@@ -5093,7 +5099,7 @@ function migrateBatches(batches, forms, products) {
     return (a.date || '').localeCompare(b.date || '') || (a.createdAt || '').localeCompare(b.createdAt || '') || String(a.id).localeCompare(String(b.id));
   });
   need.forEach(function (b) {
-    b.lotCode = nextLotCode(b.date || (b.createdAt || '').slice(0, 10), batches, products, b.id);
+    b.lotCode = nextLotCode(b.date || (b.createdAt ? localDay(b.createdAt) : ''), batches, products, b.id);
     changed = true;
   });
   (batches || []).forEach(function (b) {
@@ -6338,7 +6344,7 @@ return {
   stockParts: stockParts, stockExpand: stockExpand, stockLabelItems: stockLabelItems, stockWithParts: stockWithParts, stockInci: stockInci, stockNewIng: stockNewIng,
   Store: Store, KEYS: KEYS, KEY_LABELS: KEY_LABELS,
   esc: esc, openModal: openModal, closeModal: closeModal,
-  todayISO: todayISO, parseLocalDate: parseLocalDate, fmtDate: fmtDate, fmtBytes: fmtBytes,
+  todayISO: todayISO, localDay: localDay, parseLocalDate: parseLocalDate, fmtDate: fmtDate, fmtBytes: fmtBytes,
   costPerG: costPerG, qtyToGrams: qtyToGrams, stockG: stockG,
   densityFor: densityFor, DENSITY_BY_INCI: DENSITY_BY_INCI, DENSITY_HINTS: DENSITY_HINTS,
   normDensityInci: normDensityInci,
