@@ -189,6 +189,23 @@ const base = {
     await ctx.close();
   }
 
+  console.log('\n7. Dates are the local day (2026-11-05)');
+  {
+    // An evening backup in Alaska is the next day in UTC.
+    const ctx = await browser.newContext({ timezoneId: 'America/Anchorage' });
+    const page = await ctx.newPage();
+    page.on('pageerror', (e) => errors.push('tz: ' + e.message));
+    await trackDialogs(page, []);
+    await page.goto(previewUrl('formulations'));
+    await page.evaluate((s) => { localStorage.clear(); Object.keys(s).forEach(function (k) { localStorage.setItem(k, s[k]); });
+      localStorage.setItem('plume-backup-meta', JSON.stringify({ at: '2026-11-06T02:30:00.000Z', sig: 'x' })); }, base);
+    await page.goto(previewUrl('formulations')); await page.waitForTimeout(400);
+    await page.evaluate('Plume.openSettings()'); await page.waitForTimeout(200);
+    const t = await page.evaluate("document.getElementById('plume-backup-box').innerText");
+    ok('a backup at 5:30 pm in Alaska shows that day, not the next', /Nov 5, 2026/.test(t) && !/Nov 6/.test(t), t);
+    await ctx.close();
+  }
+
   ok('no page errors', errors.length === 0, errors);
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');

@@ -35,7 +35,7 @@ var Plume = (function () {
 // (v0.4 / v0.5 / v0.6 across five modules). BUMP IT IN EVERY PULL REQUEST,
 // core change or not: it is how "is this the update I just merged?" is
 // answered by looking, and browsers cache .js files stubbornly.
-var VERSION = '1.72';
+var VERSION = '1.73';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -90,18 +90,204 @@ var Store = (function () {
     }
   };
 
+  // ── IndexedDB (2026-11-05, storage safety step 2) ──────────────────────
+  // localStorage holds about 5MB for the whole app, however big the disk;
+  // IndexedDB's share is a part of the disk (Chrome, Edge, Safari: up to
+  // about 60%; Firefox 10% or 10GB, more once persisted). Formula Finch's
+  // data keys (aerie-*, plume-*) live here; DEVICE_KEYS (small display
+  // choices some code reads straight from localStorage, often before Store
+  // is ready, to avoid a flash) and other sites' keys stay in localStorage.
+  //
+  // THE MOVE. localStorage is the inbox: this driver never writes a data
+  // key there, so a data key found in localStorage at load is either the
+  // whole app from before the move, or a stray from an old cached page.
+  //   - No MOVED_KEY marker yet: the whole app from before. Copied in,
+  //     REPLACING what IndexedDB holds, read back and compared key by key,
+  //     and only then removed from localStorage and the marker written. If
+  //     anything does not match, nothing is removed and this page carries on
+  //     with localStorage, as before.
+  //   - Marker present: a stray. Copied in (it is newer), then removed.
+  //   - Nothing in either, but the marker says the data moved: the browser
+  //     cleared it. Reported (state 'lost') so a page can say so and offer
+  //     Restore, instead of quietly showing an empty app.
+  //
+  // WRITES are asynchronous. save() updates memory, starts the write and
+  // returns true; a failed write calls the quota handler when it fails.
+  // Store.whenSaved(cb) waits for every write started so far (Restore uses
+  // it before reloading), and a page with writes still in flight asks
+  // before it is closed.
+  //
+  // OTHER WINDOWS. localStorage let a page re-read a key another window had
+  // just written (Store.refresh, saveList). Here each committed write is
+  // announced on a BroadcastChannel; every page keeps the latest value it
+  // has heard in `shadow`, and peek reads that.
+  var IDB_NAME = 'formula-finch', IDB_STORE = 'kv', MOVED_KEY = 'plume-storage-moved';
+  var DEVICE_KEYS = ['plume-theme', 'plume-size', 'plume-tips', 'plume-side-collapsed', 'plume-lot-sticker', 'plume-fl-view',
+                     'plume-batch-view', 'plume-an-range', 'plume-compare', 'plume-pk-closed', 'plume-restored', MOVED_KEY];
+  function isDataKey(k) { return /^(aerie|plume)-/.test(k) && DEVICE_KEYS.indexOf(k) === -1; }
+  var idbState = { state: 'none' };   // 'new' | 'moved-now' | 'stray' | 'in-idb' | 'lost' | 'fallback'
+
+  function idbDriverMake() {
+    var db = null, shadow = {}, pending = 0, waiters = [], chan = null;
+    function lsData() {
+      var out = {};
+      try { for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (isDataKey(k)) out[k] = localStorage.getItem(k); } } catch (e) {}
+      return out;
+    }
+    function lsOther() {
+      var out = {};
+      try { for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (!isDataKey(k)) out[k] = localStorage.getItem(k); } } catch (e) {}
+      return out;
+    }
+    function readAll(cb) {
+      var out = {};
+      try {
+        var tx = db.transaction(IDB_STORE, 'readonly'), st = tx.objectStore(IDB_STORE), req = st.openCursor();
+        req.onsuccess = function () { var c = req.result; if (c) { out[c.key] = c.value; c.continue(); } };
+        tx.oncomplete = function () { cb(out); };
+        tx.onerror = tx.onabort = function () { cb(null); };
+      } catch (e) { cb(null); }
+    }
+    function writeAll(data, replace, cb) {
+      try {
+        var tx = db.transaction(IDB_STORE, 'readwrite'), st = tx.objectStore(IDB_STORE);
+        if (replace) st.clear();
+        Object.keys(data).forEach(function (k) { st.put(data[k], k); });
+        tx.oncomplete = function () { cb(true); };
+        tx.onerror = tx.onabort = function () { cb(false); };
+      } catch (e) { cb(false); }
+    }
+    function settle() { if (pending === 0) { var w = waiters; waiters = []; w.forEach(function (f) { try { f(); } catch (e) {} }); } }
+    function announce(msg) { try { if (chan) chan.postMessage(msg); } catch (e) {} }
+    function write(k, v, del) {
+      pending++;
+      var done = function (good) {
+        pending--;
+        if (good) announce(del ? { t: 'del', k: k } : { t: 'set', k: k, v: v });
+        else if (drv.onFail) drv.onFail(k);
+        settle();
+      };
+      try {
+        var tx = db.transaction(IDB_STORE, 'readwrite'), st = tx.objectStore(IDB_STORE);
+        if (del) st.delete(k); else st.put(v, k);
+        tx.oncomplete = function () { done(true); };
+        tx.onerror = function (e) { if (e && e.preventDefault) e.preventDefault(); };
+        tx.onabort = function () { done(false); };
+      } catch (e) { done(false); }
+    }
+    var drv = {
+      name: 'IndexedDB',
+      onFail: null,
+      load: function (cb, fallback) {
+        var req;
+        try { req = indexedDB.open(IDB_NAME, 1); } catch (e) { fallback(); return; }
+        req.onupgradeneeded = function () { try { req.result.createObjectStore(IDB_STORE); } catch (e) {} };
+        req.onblocked = function () { fallback(); };
+        req.onerror = function () { fallback(); };
+        req.onsuccess = function () {
+          db = req.result;
+          db.onversionchange = function () { try { db.close(); } catch (e) {} };
+          readAll(function (have) {
+            if (!have) { fallback(); return; }
+            var inbox = lsData(), inKeys = Object.keys(inbox), moved = null;
+            try { moved = localStorage.getItem(MOVED_KEY); } catch (e) {}
+            var finish = function (data, state, extra) {
+              idbState = Object.assign({ state: state }, extra || {});
+              shadow = Object.assign({}, data);
+              try {
+                chan = new BroadcastChannel('formula-finch-store');
+                chan.onmessage = function (e) {
+                  var m = e.data || {};
+                  if (m.t === 'set') shadow[m.k] = m.v; else if (m.t === 'del') delete shadow[m.k];
+                };
+              } catch (e) {}
+              try { window.addEventListener('beforeunload', function (e) { if (pending > 0) { e.preventDefault(); e.returnValue = ''; } }); } catch (e) {}
+              cb(Object.assign({}, lsOther(), data));
+            };
+            if (inKeys.length && !moved) {
+              // The whole app from before the move: copy, read back, compare.
+              writeAll(inbox, true, function (good) {
+                if (!good) { fallback('copy-failed'); return; }
+                readAll(function (back) {
+                  var same = back && Object.keys(back).length === inKeys.length && inKeys.every(function (k) { return back[k] === inbox[k]; });
+                  if (!same) { fallback('check-failed'); return; }
+                  try {
+                    localStorage.setItem(MOVED_KEY, JSON.stringify({ at: new Date().toISOString(), keys: inKeys.length }));
+                    inKeys.forEach(function (k) { localStorage.removeItem(k); });
+                  } catch (e) {}
+                  finish(back, 'moved-now', { keys: inKeys.length });
+                });
+              });
+            } else if (inKeys.length) {
+              // A stray from an old page: newer than what is here.
+              writeAll(inbox, false, function (good) {
+                if (!good) { fallback('stray-failed'); return; }
+                try { inKeys.forEach(function (k) { localStorage.removeItem(k); }); } catch (e) {}
+                finish(Object.assign({}, have, inbox), 'stray', { keys: inKeys });
+              });
+            } else {
+              var n = Object.keys(have).length, info = null;
+              try { info = moved ? JSON.parse(moved) : null; } catch (e) {}
+              finish(have, (!n && moved) ? 'lost' : (n ? 'in-idb' : 'new'), info ? { movedAt: info.at } : null);
+            }
+          });
+        };
+      },
+      save: function (k, v) {
+        if (!isDataKey(k)) { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } }
+        shadow[k] = v; write(k, v, false); return true;
+      },
+      remove: function (k) {
+        if (!isDataKey(k)) { try { localStorage.removeItem(k); } catch (e) {} return; }
+        delete shadow[k]; write(k, null, true);
+      },
+      peek: function (k) {
+        if (!isDataKey(k)) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+        return Object.prototype.hasOwnProperty.call(shadow, k) ? shadow[k] : null;
+      },
+      whenSaved: function (cb) { if (pending === 0) cb(); else waiters.push(cb); },
+      pending: function () { return pending; }
+    };
+    return drv;
+  }
+
   var DRIVER  = localDriver;
   var mem     = {};
   var ready   = false;
   var quotaFn = null;
+  var chosen  = false;
 
+  // IndexedDB on the website (https, or http on this computer), where the
+  // browser has it. A page opened from a file (file://, the test previews,
+  // which seed and check localStorage directly) keeps localStorage unless it
+  // sets window.PLUME_STORE = 'idb'; window.PLUME_STORE = 'local' keeps it
+  // anywhere. If IndexedDB cannot be opened, or the move cannot be checked,
+  // the page carries on with localStorage, as before.
   function init(cb) {
-    DRIVER.load(function (data) {
-      mem   = data || {};
-      ready = true;
-      if (cb) cb();
-    });
+    var done = function (data) { mem = data || {}; ready = true; if (cb) cb(); };
+    if (!chosen && DRIVER === localDriver) {
+      chosen = true;
+      var wantLocal = false;
+      try {
+        wantLocal = window.PLUME_STORE === 'local' || typeof indexedDB === 'undefined' || !indexedDB ||
+          (location.protocol === 'file:' && window.PLUME_STORE !== 'idb');
+      } catch (e) { wantLocal = true; }
+      if (!wantLocal) {
+        var idb = idbDriverMake();
+        idb.onFail = function (k) { if (quotaFn) quotaFn(k); };
+        var fell = false;
+        idb.load(function (data) { if (fell) return; DRIVER = idb; done(data); }, function (why) {
+          if (fell) return; fell = true;
+          idbState = { state: 'fallback', why: why || 'unavailable' };
+          localDriver.load(done);
+        });
+        return;
+      }
+    }
+    DRIVER.load(done);
   }
+
+  function whenSaved(cb) { if (DRIVER.whenSaved) DRIVER.whenSaved(cb); else cb(); }
 
   function get(key) {
     return Object.prototype.hasOwnProperty.call(mem, key) ? mem[key] : null;
@@ -160,6 +346,7 @@ var Store = (function () {
   function useDriver(d) {
     if (!d || typeof d.load !== 'function' || typeof d.save !== 'function') return false;
     DRIVER = d;
+    chosen = true;
     ready  = false;
     return true;
   }
@@ -170,7 +357,12 @@ var Store = (function () {
     useDriver: useDriver,
     onQuotaError: function (fn) { quotaFn = fn; },
     isReady:      function () { return ready; },
-    driverName:   function () { return DRIVER.name; }
+    driverName:   function () { return DRIVER.name; },
+    whenSaved:    whenSaved,
+    pending:      function () { return DRIVER.pending ? DRIVER.pending() : 0; },
+    moveState:    function () { return idbState; },
+    isDataKey:    isDataKey,
+    DEVICE_KEYS:  DEVICE_KEYS
   };
 })();
 
@@ -309,6 +501,7 @@ function fmtDate(str, opts) {
 }
 
 function fmtBytes(b) {
+  if (b >= 1073741824) { var g = b / 1073741824; return (g >= 10 ? Math.round(g) : g.toFixed(1).replace(/\.0$/, '')) + ' GB'; }
   return b >= 1048576 ? (b / 1048576).toFixed(2) + ' MB' : Math.round(b / 1024) + ' KB';
 }
 
@@ -1770,8 +1963,29 @@ function storageReport() {
   return { rows: rows, settings: settings, total: total };
 }
 
-var STOR_LIMIT   = 5 * 1024 * 1024;
+var STOR_LIMIT   = 5 * 1024 * 1024;   // localStorage, for every browser
 var STOR_WARN_AT = 0.75;
+// In the browser's database the room is a share of the disk, asked for once
+// at boot (navigator.storage.estimate); null until known, or if not told.
+var storQuota = null;
+function inDatabase() { return Store.driverName() === 'IndexedDB'; }
+function storLimit() { return inDatabase() ? storQuota : STOR_LIMIT; }
+function askQuota() {
+  try {
+    if (!inDatabase() || !navigator.storage || !navigator.storage.estimate) return;
+    navigator.storage.estimate().then(function (q) {
+      storQuota = q && q.quota > 0 ? q.quota : null;
+      if (document.getElementById('storage-body')) renderStorage();
+    }, function () {});
+  } catch (e) {}
+}
+function whereText() {
+  var m = Store.moveState() || {};
+  if (inDatabase()) return 'This browser\u2019s database (IndexedDB)' +
+    (m.state === 'moved-now' ? ', moved there just now' : '') + '. Room grows with your disk.';
+  if (m.state === 'fallback') return 'This browser\u2019s small storage (about 5 MB). The browser\u2019s database could not be used here, so nothing was moved.';
+  return 'This browser\u2019s small storage (about 5 MB).';
+}
 var storFailed   = false;
 var storAlerted  = false;
 var storHidden   = false;
@@ -1780,17 +1994,18 @@ var storDrillOpen = false;
 function renderStorage() {
   var el = document.getElementById('storage-body');
   if (!el) return;
-  var r   = storageReport();
-  var pct = Math.min(100, (r.total / STOR_LIMIT) * 100);
+  var r   = storageReport(), lim = storLimit();
+  var pct = lim ? Math.min(100, (r.total / lim) * 100) : 0;
   var bar = pct > 80 ? 'var(--clay)' : 'var(--sage)';
 
   var html = '<div class="plume-set-lbl" style="margin-top:0">Backups</div><div id="plume-backup-box"></div>' +
+    '<div class="plume-set-lbl">Where it is kept</div><div class="plume-theme-note" id="stor-where" style="margin:0 0 4px">' + esc(whereText()) + '</div>' +
     '<div class="plume-set-lbl">Space used</div>';
   html += '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px">';
-  html += '<span style="color:var(--ink-light)">' + fmtBytes(r.total) + ' of about 5 MB</span>';
-  html += '<span style="color:var(--ink-lighter)">' + pct.toFixed(0) + '%</span></div>';
+  html += '<span style="color:var(--ink-light)">' + fmtBytes(r.total) + (!inDatabase() ? ' of about 5 MB' : lim ? ' of about ' + fmtBytes(lim) + ' this browser allows' : ' used') + '</span>';
+  html += '<span style="color:var(--ink-lighter)">' + (lim ? (pct < 1 && r.total ? 'under 1' : pct.toFixed(0)) + '%' : '') + '</span></div>';
   html += '<div style="height:6px;background:var(--cream-dark);border-radius:3px;overflow:hidden;margin-bottom:12px">';
-  html += '<div style="height:100%;width:' + pct.toFixed(1) + '%;background:' + bar + '"></div></div>';
+  html += '<div style="height:100%;width:' + Math.max(pct, r.total ? 0.5 : 0).toFixed(1) + '%;background:' + bar + '"></div></div>';
 
   r.rows.forEach(function (row) {
     if (row.bytes < 512) return;
@@ -1802,7 +2017,8 @@ function renderStorage() {
     html += '<span>Settings</span><span>' + fmtBytes(r.settings) + '</span></div>';
   }
   html += '<div style="font-size:11px;color:var(--ink-lighter);line-height:1.5;margin-top:10px">';
-  html += 'All Formula Finch modules share one browser storage budget of about 5MB, which browsers do not allow to be raised.<br>' +
+  html += (inDatabase() ? 'All Formula Finch modules share one place in this browser; how much room it gives depends on the browser and the size of your disk.<br>'
+                        : 'All Formula Finch modules share one browser storage budget of about 5MB, which browsers do not allow to be raised.<br>') +
           '<span style="opacity:0.75">plume-core.js v' + VERSION + ' &middot; storage: ' + Store.driverName() + '</span></div>' +
           '<div id="plume-app-status" style="font-size:11px;color:var(--ink-lighter);line-height:1.6;margin-top:8px"></div>';
   if (r.rows.length) {
@@ -1879,13 +2095,24 @@ function renderStorBanner() {
   }
   if (storHidden) { slot.innerHTML = ''; return; }
 
-  var pct = storageReport().total / STOR_LIMIT;
+  var lost = (Store.moveState() || {}).state === 'lost';
+  if (lost) {
+    var at = (Store.moveState() || {}).movedAt;
+    slot.innerHTML = '<div class="stor-banner crit"><div><b>Formula Finch\u2019s data in this browser is gone.</b><br>' +
+      'It moved to the browser\u2019s database' + (at ? ' on ' + esc(fmtDate(localDay(at))) : '') +
+      ', and the browser has since cleared it. Your latest "Back up everything" file puts it all back.' +
+      '<br><button class="btn" onclick="Plume.backup.pick()">Restore from a backup</button></div></div>';
+    return;
+  }
+  var lim = storLimit();
+  var pct = lim ? storageReport().total / lim : 0;
   if (pct < STOR_WARN_AT) { slot.innerHTML = ''; return; }
 
   slot.innerHTML = '<div class="stor-banner warn"><div><b>Browser storage is about ' +
-    Math.round(pct * 100) + '% full.</b> Formula Finch stores everything in this browser, and the limit is ' +
-    'roughly 5MB for the whole app &mdash; it cannot be raised. Worth exporting a backup and checking ' +
-    'Settings to see what is using the room.</div>' +
+    Math.round(pct * 100) + '% full.</b> ' + (inDatabase()
+      ? 'This browser is close to the room it gives Formula Finch. Worth backing up everything and checking Settings to see what is using the room.'
+      : 'Formula Finch stores everything in this browser, and the limit is roughly 5MB for the whole app &mdash; it cannot be raised. ' +
+        'Worth backing up everything and checking Settings to see what is using the room.') + '</div>' +
     '<button class="sb-x" onclick="Plume.dismissStorBanner()" title="Hide until next time">&times;</button></div>';
 }
 
@@ -2007,9 +2234,16 @@ function askKeepClick() {
   });
 }
 
+// The local calendar day of a saved moment (2026-11-05): slicing the ISO
+// string gave the UTC day, so an evening backup in Alaska showed tomorrow.
+function localDay(iso) {
+  var t = new Date(iso); if (isNaN(t)) return String(iso || '').slice(0, 10);
+  var p = function (n) { return (n < 10 ? '0' : '') + n; };
+  return t.getFullYear() + '-' + p(t.getMonth() + 1) + '-' + p(t.getDate());
+}
 function agoText(iso) {
   var t = Date.parse(iso); if (isNaN(t)) return '';
-  var days = Math.floor((Date.now() - t) / 86400000);
+  var days = Math.round((Date.parse(localDay(new Date().toISOString())) - Date.parse(localDay(iso))) / 86400000);
   return days <= 0 ? 'today' : days === 1 ? 'yesterday' : days + ' days ago';
 }
 
@@ -2023,7 +2257,7 @@ function renderBackupBox() {
            : 'This browser does not say.';
   el.innerHTML =
     '<div class="plume-bk-row"><span class="plume-bk-k">Last full backup</span><span>' +
-      (m ? esc(fmtDate(m.at.slice(0, 10))) + ' (' + agoText(m.at) + ')' + (m.sig !== dataSig() ? ', changes since' : ', nothing changed since') : 'None yet') + '</span></div>' +
+      (m ? esc(fmtDate(localDay(m.at))) + ' (' + agoText(m.at) + ')' + (m.sig !== dataSig() ? ', changes since' : ', nothing changed since') : 'None yet') + '</span></div>' +
     '<div class="plume-bk-row"><span class="plume-bk-k">Kept by the browser</span><span>' + esc(keep) + '</span></div>' +
     '<div class="plume-theme-row" style="margin-top:10px">' +
       '<button type="button" class="plume-theme-opt on" onclick="Plume.backup.now()">' + icon('download') + ' Back up everything</button>' +
@@ -2100,7 +2334,7 @@ function restoreRows(d) {
 }
 function previewRestore(d) {
   var rows = restoreRows(d);
-  var made = d.created ? fmtDate(String(d.created).slice(0, 10)) : 'an unknown date';
+  var made = d.created ? fmtDate(localDay(d.created)) : 'an unknown date';
   var html = '<p>Backup made ' + esc(made) + (d.business ? ' for ' + esc(d.business) : '') +
       (d.appVersion ? ', Formula Finch ' + esc(d.appVersion) : '') + '.</p>' +
     '<table class="plume-bk-tbl"><thead><tr><th></th><th>In the backup</th><th>Here now</th></tr></thead><tbody>' +
@@ -2117,8 +2351,16 @@ function doRestore(d) {
   appKeys().forEach(function (k) { if (keys.indexOf(k) === -1) Store.remove(k); });
   keys.forEach(function (k) { if (!Store.set(k, d.keys[k])) failed.push(k); });
   Store.setJSON(BACKUP_META_KEY, { at: d.created || new Date().toISOString(), sig: dataSig() });
-  // Tells other open windows to reload, so none of them saves old data over it.
-  try { localStorage.setItem('plume-restored', String(Date.now())); } catch (e) {}
+  // In the browser's database writes finish a moment later: wait for them
+  // (and for any that failed) before saying it is done and reloading.
+  Store.whenSaved(function () {
+    // Tells other open windows to reload, so none of them saves old data over it.
+    try { localStorage.setItem('plume-restored', String(Date.now())); } catch (e) {}
+    restoreDone(failed);
+  });
+}
+function restoreDone(failed) {
+  if (storFailed && !failed.length) failed = ['some parts'];
   if (failed.length) {
     tell('Some parts could not be saved: ' + failed.map(function (k) { return KEY_LABELS[k] || k; }).join(', ') +
          '. Browser storage may be full. The copy of what was here before is in your downloads.',
@@ -2796,6 +3038,7 @@ function boot(cb) {
   applyTips();
   applySize();
   Store.init(function () {
+    askQuota();
     applyPalette(loadPaletteChoice());
     applySetup();
     try { fixVolumeLotCosts(); } catch (e) {}

@@ -11,8 +11,9 @@
    (Cache-first would open a fraction faster and make every update one step
    late; Heide changes Plume often, so freshness wins.)
 
-   THIS FILE NEVER TOUCHES HER DATA. Her library lives in localStorage,
-   which a service worker cannot see. Clearing these caches (Settings ->
+   THIS FILE NEVER TOUCHES HER DATA. Her library lives in the browser's
+   database (IndexedDB, since v1.73; localStorage before), which this file
+   never opens. Clearing these caches (Settings ->
    Storage -> "Clear the saved app copy") only removes copies of app files.
 
    APP_FILES must list every file the app loads. test-pwa.js fails if a page
