@@ -18,10 +18,15 @@ const TMP = path.join(__dirname, 'tmp');
 
 const INLINE = ['plume-core.js', 'plume-cheatsheet.js', 'plume-sapdata.js', 'plume-starter.js'];
 
-function buildPreview(module) {
+// A page opened from a file keeps its data in localStorage, as every suite
+// seeds and checks it there. opts.store 'idb' makes the preview use the
+// browser's database, as the app does on its website (test-idb.js).
+function buildPreview(module, opts) {
+  opts = opts || {};
   fs.mkdirSync(TMP, { recursive: true });
-  const srcPath = path.join(ROOT, 'plume-' + module + '.html');
+  const srcPath = path.join(ROOT, (module === 'index' ? 'index' : 'plume-' + module) + '.html');
   let page = fs.readFileSync(srcPath, 'utf8');
+  if (opts.store === 'idb') page = page.replace(/<head>/i, () => '<head>\n<script>window.PLUME_STORE = \'idb\';</script>');
 
   for (const dep of INLINE) {
     const tag = '<script src="' + dep + '"></script>';
@@ -37,13 +42,13 @@ function buildPreview(module) {
       + 'un-inlined. Add it to INLINE in test/helpers.js.');
   }
 
-  const out = path.join(TMP, 'preview-' + module + '.html');
+  const out = path.join(TMP, 'preview-' + module + (opts.store === 'idb' ? '-idb' : '') + '.html');
   fs.writeFileSync(out, page);
   return out;
 }
 
-function previewUrl(module) {
-  return 'file://' + buildPreview(module);
+function previewUrl(module, opts) {
+  return 'file://' + buildPreview(module, opts);
 }
 
 // Plume's in-page dialogs (Plume.tell / ask / askValue) replaced the

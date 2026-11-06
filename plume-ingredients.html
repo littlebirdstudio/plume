@@ -2489,7 +2489,7 @@ function renderReceipt() {
   money.push('Tax <b>' + (tax >= 0 ? rcMoney(tax) : '—') + '</b>');
   var meta = [d.orderNum ? 'Order ' + esc(d.orderNum) : 'No order number'];
   document.getElementById('rc-order').innerHTML =
-    (P.before ? '<div class="rc-warn">This order came in once already, on ' + esc(fmtDate(String(P.before.imported || '').slice(0, 10))) + '. Lines already added are unticked; importing again updates the order’s shipping and tax.</div>' : '') +
+    (P.before ? '<div class="rc-warn">This order came in once already, on ' + esc(fmtDate(P.before.imported ? Plume.localDay(P.before.imported) : '')) + '. Lines already added are unticked; importing again updates the order’s shipping and tax.</div>' : '') +
     '<div class="rc-ordcard"><div class="rc-sup">' + esc(d.supplier || 'Supplier not read') + '</div>' +
       '<div class="rc-meta">' + meta.join(' · ') + (d.receiptLink ? ' · <a href="' + esc(qaLink(d.receiptLink)) + '" target="_blank" rel="noopener">receipt</a>' : '') + '</div>' +
       '<div class="rc-money">' + money.join(' · ') + '</div>' +
