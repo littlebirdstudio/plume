@@ -35,7 +35,7 @@ var Plume = (function () {
 // (v0.4 / v0.5 / v0.6 across five modules). BUMP IT IN EVERY PULL REQUEST,
 // core change or not: it is how "is this the update I just merged?" is
 // answered by looking, and browsers cache .js files stubbornly.
-var VERSION = '1.73';
+var VERSION = '1.74';
 
 // ══ Store ═════════════════════════════════════════════
 // A single seam between Plume and wherever its data actually lives.
@@ -123,8 +123,11 @@ var Store = (function () {
   // has heard in `shadow`, and peek reads that.
   var IDB_NAME = 'formula-finch', IDB_STORE = 'kv', MOVED_KEY = 'plume-storage-moved';
   var DEVICE_KEYS = ['plume-theme', 'plume-size', 'plume-tips', 'plume-side-collapsed', 'plume-lot-sticker', 'plume-fl-view',
-                     'plume-batch-view', 'plume-an-range', 'plume-compare', 'plume-pk-closed', 'plume-restored', MOVED_KEY];
-  function isDataKey(k) { return /^(aerie|plume)-/.test(k) && DEVICE_KEYS.indexOf(k) === -1; }
+                     'plume-batch-view', 'plume-an-range', 'plume-compare', 'plume-pk-closed', 'plume-restored', MOVED_KEY,
+                     'plume-problems'];
+  // Heartbeats, one key per window (plume-alive-<id>), are device keys too.
+  function isDeviceKey(k) { return DEVICE_KEYS.indexOf(k) !== -1 || k.indexOf('plume-alive-') === 0; }
+  function isDataKey(k) { return /^(aerie|plume)-/.test(k) && !isDeviceKey(k); }
   var idbState = { state: 'none' };   // 'new' | 'moved-now' | 'stray' | 'in-idb' | 'lost' | 'fallback'
 
   function idbDriverMake() {
@@ -362,6 +365,7 @@ var Store = (function () {
     pending:      function () { return DRIVER.pending ? DRIVER.pending() : 0; },
     moveState:    function () { return idbState; },
     isDataKey:    isDataKey,
+    isDeviceKey:  isDeviceKey,
     DEVICE_KEYS:  DEVICE_KEYS
   };
 })();
@@ -2038,8 +2042,10 @@ function renderStorage() {
     html += '<button class="plume-link-btn" onclick="Plume.toggleStorDrill()">What is using the room?</button>';
     html += '<div id="stor-drill"></div>';
   }
+  html += '<div class="plume-set-lbl">Recent problems</div><div id="plume-prob-box"></div>';
   el.innerHTML = html;
   renderBackupBox();
+  renderProblems();
   checkKeep(renderBackupBox);
   if (storDrillOpen) renderStorDrill();
   setTimeout(renderAppStatus, 0);
@@ -2132,6 +2138,7 @@ function renderStorBanner() {
 function dismissStorBanner() { storHidden = true; renderStorBanner(); }
 
 function noteSaveFailed() {
+  try { probNote('storage', 'A save did not go through' + (arguments[0] ? ' (' + (KEY_LABELS[arguments[0]] || arguments[0]) + ')' : '') + '. Browser storage may be full.'); } catch (e) {}
   storFailed = true;
   renderStorBanner();
   if (!storAlerted) {
@@ -2159,7 +2166,7 @@ var BACKUP_META_KEY = 'plume-backup-meta';
 var BACKUP_SNOOZE_KEY = 'plume-backup-snooze';
 var BACKUP_DUE_DAYS = 7;
 var BACKUP_SNOOZE_DAYS = 3;
-var BACKUP_SKIP = [BACKUP_META_KEY, BACKUP_SNOOZE_KEY, 'plume-restored'];
+var BACKUP_SKIP = [BACKUP_META_KEY, BACKUP_SNOOZE_KEY, 'plume-restored', 'plume-problems'];
 // What the restore preview counts, in the order of the work.
 var BACKUP_COUNTS = [
   ['aerie-ingredients-v2', 'Ingredients'], ['aerie-suppliers-v1', 'Suppliers'],
@@ -2168,7 +2175,7 @@ var BACKUP_COUNTS = [
   ['plume-orders-v1', 'Orders'], ['plume-shops-v1', 'Consignment shops'], ['aerie-brands-v1', 'Brands']
 ];
 
-function isAppKey(k) { return /^(aerie|plume)-/.test(k) && BACKUP_SKIP.indexOf(k) === -1; }
+function isAppKey(k) { return /^(aerie|plume)-/.test(k) && BACKUP_SKIP.indexOf(k) === -1 && k.indexOf('plume-alive-') !== 0; }
 function appKeys() { return Store.keys().filter(isAppKey).sort(); }
 
 // A short fingerprint of the data, not a security hash: it only has to
@@ -2424,6 +2431,15 @@ function injectStyles() {
   '.ps-collapsed .ps-bk-later{display:none}.ps-collapsed .ps-bk-go{padding-right:8px}' +
   '.plume-set-peek{padding:4px 2px 16px}' +
   '.plume-set-div{border-top:1px solid var(--cream-border);margin:20px 0 4px}' +
+  // Recent problems (2026-11-07).
+  '.plume-prob{border-top:1px solid var(--cream-border);padding:8px 0;font-size:12.5px;line-height:1.45}' +
+  '.plume-prob:first-child{border-top:0;padding-top:2px}' +
+  '.plume-prob-h{display:flex;gap:8px;align-items:baseline}.plume-prob-h b{font-weight:600;color:var(--ink)}' +
+  '.plume-prob-n{color:var(--ink-lighter);font-size:11.5px}' +
+  '.plume-prob-when{margin-left:auto;color:var(--ink-lighter);font-size:11.5px;white-space:nowrap}' +
+  '.plume-prob-m{color:var(--ink-light)}.plume-prob-msg{color:var(--ink);word-break:break-word}.plume-prob-w{color:var(--ink-lighter);font-size:11.5px}' +
+  '.plume-prob-t{color:var(--ink-lighter);font-size:11.5px;word-break:break-word}' +
+  '.plume-prob-report{width:100%;min-height:140px;margin-top:8px;font:11.5px/1.45 ui-monospace,Menlo,Consolas,monospace;border:1px solid var(--cream-border);border-radius:4px;padding:8px;background:var(--white);color:var(--ink);box-sizing:border-box}' +
   // The palette swatches, for Settings in the slide-in panel; modules with
   // their own Settings dialog style them in their own CSS.
   '.plume-set-peek .palette-swatch-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}' +
@@ -3036,6 +3052,228 @@ if (typeof window !== 'undefined' && typeof window.addEventListener === 'functio
 // The one asynchronous moment in a Plume page: hydrate, then render.
 // When the driver becomes IndexedDB or an API, this is the only place
 // that has to wait — everything downstream stays synchronous.
+
+// ══ Recent problems (2026-11-07) ══════════════════════
+// Her ask after the app froze once and she could not remember what she had
+// been doing: a quiet record of what went wrong, to troubleshoot her own
+// copy and other people's. Nothing pops up and nothing leaves the computer;
+// Settings shows the list, with Copy for support (a plain-text report the
+// owner chooses to send) and Clear.
+//
+// What is noted, at most PROB_MAX entries, newest first:
+//   error    an error in the app's code (window error, unhandled rejection);
+//            the same message within 10 s is counted, not repeated
+//   stall    the page stopped responding for 4 s or more and then came back
+//            (a 1 s timer that fired late while the page was in view; gaps
+//            over 5 min are a sleeping computer and are not noted)
+//   unclosed a window that did not close normally: it froze and was closed,
+//            crashed, or the computer was shut down with it open. Each
+//            window keeps its own heartbeat key (PROB_ALIVE_PREFIX + its id,
+//            every 5 s and on every click, with what was open and the last
+//            clicks). One key per window, never a shared list: moving to
+//            another module starts the new page while the old one is
+//            leaving, and a shared list lost the old page's removal.
+//            Closing removes the key, a frozen page keeps it, and a browser
+//            putting a page to sleep marks it paused. The next page to start
+//            reports any heartbeat over PROB_STALE_MS old.
+//   storage  a save that failed, or the browser's database not usable
+// Each entry has the module, what was open (a dialog or panel title) and the
+// last few clicks, so "what was I doing?" has an answer.
+// Kept in localStorage (a device key, never in a backup): it has to work
+// even when the browser's database does not.
+var PROB_KEY = 'plume-problems', PROB_ALIVE_PREFIX = 'plume-alive-', PROB_MAX = 40;
+var PROB_STALE_MS = 150000, PROB_BEAT_MS = 5000, PROB_STALL_MS = 4000, PROB_SLEEP_MS = 300000;
+var probWin = Math.random().toString(36).slice(2, 10), probTrail = [], probStarted = false, probLeaving = false;
+
+function probModule() {
+  var f = (location.pathname.split('/').pop() || 'index.html').replace(/\.html$/, '')
+    .replace(/^preview-(.*?)(-idb)?$/, 'plume-$1');   // the test previews
+  var names = { 'index': 'Start page', 'plume-ingredients': 'Ingredients', 'plume-formulations': 'Formulations', 'plume-batchlog': 'Batches',
+                'plume-packaging': 'Packaging', 'plume-costing': 'Products & Costing', 'plume-analytics': 'Analytics' };
+  return names[f] || f;
+}
+function probOpen() {
+  // What is open: a dialog, a slide-in panel, or the page's own heading.
+  try {
+    var m = document.querySelector('.modal-ov.open .modal-hdr h2, .modal-ov.open h2, .modal-ov.open h3');
+    if (m && m.textContent.trim()) return m.textContent.trim().slice(0, 60);
+    var pk = document.getElementById('ps-peek');
+    if (pk && pk.classList.contains('open')) { var l = document.getElementById('ps-peek-label'); if (l) return (l.textContent || '').trim().slice(0, 60); }
+    var fn = document.getElementById('f-name');
+    if (fn && fn.value && fn.offsetParent) return 'Formula: ' + fn.value.slice(0, 50);
+  } catch (e) {}
+  return '';
+}
+function probRead() { try { var l = JSON.parse(localStorage.getItem(PROB_KEY) || '[]'); return Array.isArray(l) ? l : []; } catch (e) { return []; } }
+function probWrite(l) { try { localStorage.setItem(PROB_KEY, JSON.stringify(l.slice(0, PROB_MAX))); } catch (e) {} }
+function probNote(kind, msg, extra) {
+  try {
+    var l = probRead(), now = new Date().toISOString();
+    var last = l[0];
+    if (last && last.kind === kind && last.msg === msg && Date.now() - Date.parse(last.at) < 10000) {
+      last.count = (last.count || 1) + 1; last.at = now; probWrite(l); return;
+    }
+    l.unshift(Object.assign({ at: now, kind: kind, module: probModule(), open: probOpen(), msg: String(msg || '').slice(0, 300),
+      version: VERSION, trail: probTrail.slice(-6) }, extra || {}));
+    probWrite(l);
+    var box = document.getElementById('plume-prob-box'); if (box) renderProblems();
+  } catch (e) {}
+}
+
+function probClickText(t) {
+  var el = t && t.closest ? t.closest('button, a, [role="button"], [onclick], tr[data-id], .fl-card, .ps-chip, input[type="checkbox"], select') : null;
+  if (!el) return '';
+  var s = (el.getAttribute('aria-label') || el.getAttribute('title') || el.innerText || el.value || '').replace(/\s+/g, ' ').trim();
+  return s.slice(0, 50);
+}
+function probBeat(extra) {
+  // Once the page is leaving, nothing writes the heartbeat back: the browser
+  // can send "hidden" after "pagehide" when moving to another module.
+  if (probLeaving) return;
+  try {
+    localStorage.setItem(PROB_ALIVE_PREFIX + probWin, JSON.stringify(Object.assign({ at: new Date().toISOString(), module: probModule(),
+      open: probOpen(), trail: probTrail.slice(-6), version: VERSION }, extra || {})));
+  } catch (e) {}
+}
+function probGone() { try { localStorage.removeItem(PROB_ALIVE_PREFIX + probWin); } catch (e) {} }
+function probAlive() {
+  var out = {};
+  try {
+    for (var i = 0; i < localStorage.length; i++) {
+      var k = localStorage.key(i);
+      if (k && k.indexOf(PROB_ALIVE_PREFIX) === 0) { try { out[k.slice(PROB_ALIVE_PREFIX.length)] = JSON.parse(localStorage.getItem(k)) || {}; } catch (e) { out[k.slice(PROB_ALIVE_PREFIX.length)] = {}; } }
+    }
+  } catch (e) {}
+  return out;
+}
+function probCheckUnclosed() {
+  try {
+    var all = probAlive();
+    Object.keys(all).forEach(function (id) {
+      if (id === probWin) return;
+      var a = all[id] || {}, age = Date.now() - Date.parse(a.at);
+      // A page the browser put to sleep (moving between modules keeps the
+      // last page asleep for a few minutes; a hidden tab may sleep longer).
+      // Not a problem: it is dropped after 10 minutes, and a page that wakes
+      // writes its heartbeat again.
+      if (a.paused && age < 600000) return;
+      if (!a.paused && !(age > PROB_STALE_MS)) return;
+      if (!a.paused) {
+        var l = probRead();
+        l.unshift({ at: a.at, kind: 'unclosed', module: a.module || '', open: a.open || '', version: a.version || '',
+          msg: 'Did not close normally: it may have frozen and been closed, crashed, or the computer was shut down with it open.',
+          trail: a.trail || [], noticed: new Date().toISOString() });
+        probWrite(l);
+      }
+      localStorage.removeItem(PROB_ALIVE_PREFIX + id);
+    });
+  } catch (e) {}
+}
+
+// Errors are caught from the moment core loads.
+try {
+  window.addEventListener('error', function (e) {
+    if (!e || !e.message) return;   // a missing image or script, not code
+    var src = (e.filename || '').split('/').pop();
+    probNote('error', e.message, { where: src ? src + (e.lineno ? ':' + e.lineno : '') : '' });
+  });
+  window.addEventListener('unhandledrejection', function (e) {
+    var r = e && e.reason; probNote('error', (r && (r.message || String(r))) || 'A task failed', { where: 'promise' });
+  });
+} catch (e) {}
+
+function startProblems() {
+  if (probStarted) return; probStarted = true;
+  probCheckUnclosed();
+  probBeat();
+  // Every window beats, hidden ones too: each module opens in a window of
+  // its own, and a hidden one is still open. Browsers slow a hidden page's
+  // timers to about once a minute, inside PROB_STALE_MS.
+  setInterval(function () { probBeat(); }, PROB_BEAT_MS);
+  document.addEventListener('visibilitychange', function () { if (document.hidden) probBeat({ hiddenAt: new Date().toISOString() }); else probBeat(); });
+  document.addEventListener('click', function (e) {
+    var t = probClickText(e.target); if (!t) return;
+    var d = new Date(), hh = d.getHours(), mm = d.getMinutes();
+    probTrail.push((hh % 12 || 12) + ':' + (mm < 10 ? '0' : '') + mm + ' ' + t);
+    if (probTrail.length > 12) probTrail.shift();
+    probBeat();
+  }, true);
+  window.addEventListener('pagehide', function (e) {
+    if (e && e.persisted) { probBeat({ paused: true }); probLeaving = true; }
+    else { probLeaving = true; probGone(); }
+  });
+  window.addEventListener('pageshow', function (e) { if (e && e.persisted) { probLeaving = false; probBeat(); } });
+  document.addEventListener('freeze', function () { probBeat({ paused: true }); });
+  document.addEventListener('resume', function () { probBeat(); });
+  // Stalls: a 1 s timer that fires late while the page is in view.
+  var last = Date.now(), wasVisible = !document.hidden;
+  setInterval(function () {
+    var now = Date.now(), gap = now - last, vis = !document.hidden;
+    if (vis && wasVisible && gap >= PROB_STALL_MS && gap < PROB_SLEEP_MS) {
+      probNote('stall', 'Stopped responding for about ' + Math.round(gap / 1000) + ' seconds, then recovered.', { secs: Math.round(gap / 1000) });
+    }
+    last = now; wasVisible = vis;
+  }, 1000);
+}
+
+function probWhen(iso) {
+  var d = new Date(iso); if (isNaN(d)) return '';
+  var hh = d.getHours(), mm = d.getMinutes();
+  return fmtDate(localDay(d)) + ', ' + (hh % 12 || 12) + ':' + (mm < 10 ? '0' : '') + mm + (hh < 12 ? ' am' : ' pm');
+}
+var PROB_LABEL = { error: 'Error', stall: 'Stopped responding', unclosed: 'Did not close normally', storage: 'Saving' };
+function renderProblems() {
+  var el = document.getElementById('plume-prob-box'); if (!el) return;
+  var l = probRead();
+  if (!l.length) { el.innerHTML = '<div class="plume-theme-note" style="margin:0">None recorded.</div>'; return; }
+  el.innerHTML = l.slice(0, 8).map(function (p) {
+    return '<div class="plume-prob"><div class="plume-prob-h"><b>' + esc(PROB_LABEL[p.kind] || p.kind) + '</b>' +
+      (p.count > 1 ? ' <span class="plume-prob-n">×' + p.count + '</span>' : '') +
+      '<span class="plume-prob-when">' + esc(probWhen(p.at)) + '</span></div>' +
+      '<div class="plume-prob-m">' + esc(p.module || '') + (p.open ? ' · ' + esc(p.open) : '') + '</div>' +
+      (p.kind !== 'unclosed' && p.kind !== 'stall' ? '<div class="plume-prob-msg">' + esc(p.msg) + (p.where ? ' <span class="plume-prob-w">(' + esc(p.where) + ')</span>' : '') + '</div>' : '') +
+      (p.trail && p.trail.length ? '<div class="plume-prob-t">Last clicks: ' + p.trail.map(esc).join(' › ') + '</div>' : '') +
+      '</div>';
+  }).join('') + (l.length > 8 ? '<div class="plume-theme-note">' + (l.length - 8) + ' more in the report.</div>' : '') +
+  '<div class="plume-theme-row" style="margin-top:10px">' +
+    '<button type="button" class="plume-theme-opt" onclick="Plume.problems.copy()">Copy for support</button>' +
+    '<button type="button" class="plume-theme-opt" onclick="Plume.problems.clear()">Clear</button></div>' +
+  '<textarea id="plume-prob-report" class="plume-prob-report" readonly hidden aria-label="Report for support"></textarea>' +
+  '<div class="plume-theme-note" id="plume-prob-said"></div>';
+}
+function problemReport() {
+  var m = Store.moveState() || {}, lines = [];
+  lines.push('Formula Finch problem report');
+  lines.push('Made: ' + probWhen(new Date().toISOString()));
+  lines.push('Version: ' + VERSION + ' · Storage: ' + Store.driverName() + (m.state ? ' (' + m.state + ')' : '') +
+    ' · Kept by the browser: ' + (keepState || 'not checked'));
+  lines.push('Browser: ' + (navigator.userAgent || ''));
+  lines.push('Installed as an app: ' + (function () { try { return matchMedia('(display-mode: standalone)').matches ? 'yes' : 'no'; } catch (e) { return '?'; } })());
+  var counts = BACKUP_COUNTS.map(function (c) { var n = countOf(c[0]); return n ? c[1] + ' ' + n : ''; }).filter(Boolean).join(', ');
+  lines.push('Records: ' + (counts || 'none') + ' · Size: ' + fmtBytes(storageReport().total));
+  lines.push('');
+  probRead().forEach(function (p) {
+    lines.push('- ' + probWhen(p.at) + ' · ' + (PROB_LABEL[p.kind] || p.kind) + (p.count > 1 ? ' ×' + p.count : '') +
+      ' · ' + (p.module || '') + (p.open ? ' · ' + p.open : '') + ' · v' + (p.version || '?'));
+    lines.push('  ' + p.msg + (p.where ? ' (' + p.where + ')' : ''));
+    if (p.trail && p.trail.length) lines.push('  Last clicks: ' + p.trail.join(' > '));
+  });
+  return lines.join('\n');
+}
+function problemsCopy() {
+  var text = problemReport(), ta = document.getElementById('plume-prob-report'), said = document.getElementById('plume-prob-said');
+  var shown = function (msg) {
+    if (ta) { ta.value = text; ta.hidden = false; ta.focus(); ta.select(); }
+    if (said) said.textContent = msg;
+  };
+  try {
+    navigator.clipboard.writeText(text).then(function () {
+      if (said) said.textContent = 'Copied. Paste it into an email or message. It holds no recipes, only what is listed here.';
+    }, function () { shown('Select the text below and copy it.'); });
+  } catch (e) { shown('Select the text below and copy it.'); }
+}
+function problemsClear() { probWrite([]); renderProblems(); }
+
 function boot(cb) {
   injectStyles();
   stampVersion();
@@ -3043,8 +3281,12 @@ function boot(cb) {
   watchRestore();
   applyTips();
   applySize();
+  startProblems();
   Store.init(function () {
     askQuota();
+    var ms = Store.moveState() || {};
+    if (ms.state === 'fallback' && ms.why && ms.why !== 'unavailable') probNote('storage', 'The browser\u2019s database could not be used (' + ms.why + '); the data stayed in small storage.');
+    if (ms.state === 'lost') probNote('storage', 'The browser had cleared Formula Finch\u2019s data in its database.');
     applyPalette(loadPaletteChoice());
     applySetup();
     try { fixVolumeLotCosts(); } catch (e) {}
@@ -6357,6 +6599,8 @@ return {
             preview: previewRestore, restore: doRestore, later: backupLater, due: backupDue, sig: dataSig, meta: backupMeta,
             askKeep: askKeepClick, keepState: function () { return keepState; }, nudge: renderBackupNudge, DUE_DAYS: BACKUP_DUE_DAYS },
   openSettings: openSettingsAny,
+  problems: { list: probRead, note: probNote, report: problemReport, copy: problemsCopy, clear: problemsClear, render: renderProblems,
+              checkUnclosed: probCheckUnclosed, alive: probAlive, STALE_MS: PROB_STALE_MS },
   toggleStorDrill: toggleStorDrill, renderStorBanner: renderStorBanner,
   dismissStorBanner: dismissStorBanner,
   noteSaveFailed: noteSaveFailed, noteSaveOk: noteSaveOk,
