@@ -1,8 +1,9 @@
 # Plume by Little Bird Studio — Project Handoff
 
-**Last updated:** 16 October 2026 (sessions 6-16)
+**Last updated:** 7 November 2026 (sessions 30 to 32 at the end: the app is now Formula Finch, v1.73). Before that 26 October 2026 (session 29).
 
-> **READ THE SESSIONS 15-16 SECTION AT THE END FIRST.** Claude now has write
+> **READ SESSIONS 30 TO 32 AT THE END FIRST**: the app was renamed Formula Finch, its data now lives in the browser's database (IndexedDB), and dates have one rule. Then the sessions 15-16 section.
+> **Earlier note:** Claude now has write
 > access to the repository and work goes through pull requests, which changes
 > the working loop described further down. Several statements in the older
 > sections are superseded there, including the claim that the GitHub connector
@@ -4057,3 +4058,139 @@ Formula Finch) is this plus a front door, later if she wants it.
   purchases get `received`, no `onOrder`. The order record, lots' `ordered`
   and packaging purchase dates use her date. Re-importing a receipt with a
   new date and nothing ticked fixes the order's date (`rcOrderSet`).
+
+## Session 30 (1 November 2026): Rich text in Formulations, the rename to Formula Finch, a list view, opening questions, soap lye (v1.63 to v1.67)
+
+From this session on the app is **Formula Finch**, and work happens in a
+chat dedicated to it; formulation work moved to its own chat, which reads
+`claude/plume-lineup-handoff.md`. The backlog (`claude/plume-backlog.md`)
+holds decisions and open items; this handoff records what was built.
+
+- **Formatting in Instructions and Formulation notes** (v1.63, PR #65): the
+  Bold / Italic / List bar from the ingredient notes, plus a new **1. List**
+  button everywhere. Stored as plain marks (`**bold**`, `*italic*`, `- `,
+  `1. `), so backups and search stay readable; `RT_NUM` keeps a list's
+  start number so steps count on past a note; "2.5 g" is left alone. An
+  approved version's Instructions are read only with no bar. The bench
+  sheet prints the formatting. test-kits no longer names a month.
+- **Rename to Formula Finch** (v1.64, PR #66): one app for everyone, her
+  copy included; Plume is only her skincare line. Name everywhere (titles,
+  footers, manifest, messages, export names `formula-finch-*.json`); finch
+  mark in the sidebar and the icon set; landing page = the botanical artwork
+  (`formula-finch-botanical.svg`, no words), name and tagline in Georgia
+  Pro (Georgia fallback; the font cannot be shipped), "The workbench of
+  <business>" under a short divider; footer "Made with ♡ for small-batch
+  formulators". **Your business** in Settings (`plume-business`). No logo
+  setting across the app, by design. Unchanged on purpose: page file names,
+  storage keys, the `Plume` namespace.
+- **Formulations: Tiles or List** (v1.65, PR #67): the list (Name, Type,
+  Status, Versions, Ingredients, Cost / 100 g, Last changed) sorts by any
+  column; tiles stay the default (`plume-fl-view`). `formCostPer100()`
+  shared by both.
+- **Opening questions and levels** (v1.66, PR #68): on a new, empty app:
+  business name, what you make (Skincare / Soap / Both), the level
+  (*Formulating and making*: Ingredients, Formulations, Batches; or
+  *Formulating, making and selling*: adds Packaging, Products & Costing,
+  stock, Analytics), and start empty or with the starter list. All
+  skippable and changeable in Settings. Her rule: **the app works whatever
+  is chosen; a choice only hides, never removes data.** Maintenance tools
+  (fill in lowdowns, effective pH, SAP check, remove photos, "Not from a
+  logged batch") sit behind one Settings switch. An app with data and no
+  setup counts as everything with maintenance on, and nothing is written.
+  `plume-setup`; CSS `html.ff-make .ff-sell-only`, `html.ff-no-maint
+  .ff-maint-only`; `.ffs-ov[hidden]{display:none}` (the overlay's grid
+  display had beaten `hidden`). Seed tests with goto, evaluate, goto: a
+  sessionStorage-guarded init script sometimes wiped data on reload.
+- **Soap lye and water** (v1.67, PR #69): a soap formula says lye and water
+  come from the Lye calculator; a lye or water line on a soap is flagged as
+  counted twice (water stays an ordinary line in skincare, her call). The
+  Lye calculator shows the lye from Ingredients (`Plume.lyeIngredient`, by
+  INCI then name): its cost in this soap and stock, and that a committed
+  batch takes it; with none, a link opens the starter list searched for it
+  (`#quickadd=<words>`). Water is not costed or deducted (her call).
+
+## Session 31 (1 to 4 November 2026): The starter list review, backups, packaging (v1.68 to v1.72)
+
+- **Starter list v2.5** (v1.68, PR #70), from her review page: every item
+  has `functionCategory` (array from `FUNCTION_CATEGORIES`), `solubility`
+  (water, oil, both, water-dispersible, oil-dispersible) and, for most,
+  `solNote`; Quick add copies all three. 21 removed as too obscure or too
+  specific (supplier blends and specialty actives belong in a buyer's own
+  library: her rule), 30 added (natural chelators, PE 9010 and other
+  preservatives with effective pH, pH solutions, solubilizers, colorants,
+  skin-safe fragrance oil, common actives). 266 items. Drafted text uses US
+  spelling.
+- **Starter list safety review** (v1.69, PR #71), from her spreadsheet: ten
+  safe limits set to the leave-on face figure (tea tree 0.1 per SCCS, rose
+  otto 0.006, eucalyptus 1, ylang ylang 0.18 per IFRA 51 Cat 5B, geranium
+  and rose geranium 4.5, palmarosa 0.9, tranexamic acid 3, neem 10, tamanu
+  20); body or rinse-off figures kept in usage notes; recommended ranges
+  lowered where above the limit. Consequence: a rinse-off product above a
+  face limit gets the firm warning (she had declined separate rinse-off
+  limits on 26 October).
+- **Backups in one file** (v1.70, PR #72): Settings > Backups, every module
+  (`Plume.backup`): Back up everything (every `aerie-`/`plume-` key, as
+  stored; not other sites' keys; `formula-finch-backup-<date>.json`, kind
+  `formula-finch-backup`); Restore shows counts in the file beside here,
+  downloads a `-before-restore` copy, replaces, reloads other windows
+  (`plume-restored`). A full backup through a module's Import goes to the
+  restore preview. `navigator.storage.persist()` asked on each backup.
+  Sidebar reminder (`#ps-backup`): no full backup yet, or 7 days with
+  changes since (fingerprint `dataSig`); Later hides it 3 days
+  (`plume-backup-meta`, `plume-backup-snooze`). Her verdict: "present but
+  not annoying." Settings on Analytics did nothing (no dialog of its own):
+  `Plume.openSettings()` now opens the shared settings in the slide-in
+  panel there.
+- **Packaging additions** (v1.71, PR #73): Vial with cap; a group **Caps,
+  pumps and tops** after the bottles (Screw cap, Cap / closure, Pump top,
+  Spray top, Dropper top, Orifice reducer; size hint is neck size);
+  **Extras included with products** (Reusable wipe / cloth, Spatula /
+  scoop, Card / insert, Other extra; type `extra`), stocked and costed like
+  packaging; "Other" its own group. Kinds fold up in the list (click or
+  Enter on a heading; `plume-pk-closed`; Close all / Open all; a search
+  shows every match).
+- **Packaging cost per unit is the average of what is on hand** (v1.72, PR
+  #74), her call ("I don't actually know which 10 mL amber bottle stock I
+  am pulling from"). `pkgUnitCostOf` walks purchases and adjustments by
+  date: an arrived purchase blends in by count, stock moves leave the
+  average alone, an empty shelf starts it fresh; on-order purchases count
+  once arrived; nothing arrived falls back to the newest priced purchase.
+  Fills keep the cost stamped when made.
+
+## Session 32 (5 November 2026): Storage safety step 2, and dates (v1.73)
+
+- **Data in the browser's database** (PR #75). On the website, Store uses
+  IndexedDB (`formula-finch`, store `kv`); a page opened from a file keeps
+  localStorage unless `window.PLUME_STORE = 'idb'` (the test previews rely
+  on this). The move: localStorage is the inbox. No marker: copy every data
+  key, read back, compare, then remove from localStorage and write
+  `plume-storage-moved`; any failure leaves localStorage as it was (state
+  `fallback`). Marker present: a stray data key from an old page is taken
+  in. Nothing anywhere but the marker: state `lost`, a red banner with
+  Restore. `DEVICE_KEYS` (theme, size, tips, sidebar, views, compare,
+  folded kinds, sticker size, restored, the marker) stay in localStorage.
+  Writes are asynchronous: `set()` returns true, failures raise the storage
+  banner, `Store.whenSaved` waits (Restore uses it), closing with writes in
+  flight asks. Other windows hear each committed write on a
+  BroadcastChannel; `peek` reads the latest heard. Settings shows where it
+  is kept and room from `navigator.storage.estimate()`. Checked over http:
+  3.5 MB moved in 0.4 s; 12 MB held afterwards. Her copy moved on 5
+  November; Settings confirmed "This browser's database (IndexedDB)."
+- **Dates are the local day.** Third time the same bug: a saved moment
+  (UTC timestamp) cut to a day with `.slice(0, 10)` is tomorrow in Alaska
+  from 3 pm. Rule: `Plume.localDay(moment)`; day strings through
+  `parseLocalDate` / `fmtDate`. Fixed backup dates, the receipt's "came in
+  once already" date and the lot code fallback. `test-dates.js` scans the
+  source for the pattern and runs in America/Anchorage at 5:30 pm.
+
+**Working loop now:** preview (artifact) first and wait for her approval;
+then branch from origin/main, tests, PR via `gh api` (GraphQL is blocked),
+green CI, and an explicit "good to go" before she squash-merges on GitHub.
+Run each test suite on its own (`npm test` stops at the first failure);
+Playwright needs `PLAYWRIGHT_BROWSERS_PATH` pointing at the installed
+Chromium. 70+ suites.
+
+**Next, agreed:** sample data (the third way to start); her business logo
+on printouts, starting with the bench sheet; the Purpose label on the
+formulation header. Then the business side: Lite edition and licensing, a
+release branch, beta testers. See the backlog.
